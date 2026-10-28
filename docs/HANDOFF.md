@@ -82,7 +82,65 @@ kaze has **never been built on macOS**. Expect small fixes.
 - `font_family` is accepted but not supported yet (kaze warns).
 - Glyph cache is safe only with one window / one UI goroutine (add a mutex before multi-window).
 - Closing a tab whose ConPTY close times out can keep that screen in memory until ConPTY lets go.
-- Smaller items: see the deferred list in the final review notes, if you have them; otherwise grep tests for `TODO`.
+- Smaller items: the full later-fix backlog is below, and every "minor (deferred)" line is in `docs/history/plan-1-ledger.md`.
+
+## Where kaze came from
+
+Patrick (the owner) started kaze on 2026-10-27 after seeing **sir Sat's** terminal. sir Sat is Patrick's senior/lead at work; his own terminal is written in **Swift** (likely macOS-only), very lightweight, memory-lean and fitted to his workflow. His key idea, which kaze copies: **only redraw what changed** (dirty tracking). sir Sat's terminal also has a **browser button** that opens a separate Chromium window; that's kaze's "browser button" later feature. Swift was ruled out for kaze because Swift on Windows has no usable UI toolkit; Go + Gio was chosen instead.
+
+Patrick's daily terminal before kaze was **Warp** (Windows and Mac). He uses it like a plain terminal; the one Warp feature he relies on is the pane that says a tab's Claude session is done or needs him (that's Plan 3's alerts). He runs 3-4 tabs at once, flips between them, and wants side-by-side only for related things (a lead agent and its subagents: Plan 2). He doesn't speak or type Japanese, but his work output is full of it, so Japanese must display correctly (no IME needed).
+
+He also considered Zellij; the answer was: it runs inside kaze, but kaze's own tabs are needed for the per-tab Claude features.
+
+## Working with the owner
+
+- **Plain language, short.** TL;DR first. No jargon; explain terms the first time. Use tables for status.
+- **Recommend, don't survey.** When there's a choice, give one recommendation and why. End decision questions with the recommendation.
+- **One question at a time, with context first** ("here's what I found, so: X or Y?").
+- **No em dashes** in anything written for him. 12-hour times. Translate any Japanese you quote.
+- **"how far along are we" / "update?" = report only**: re-check live state (git log, status) before any summary, show a progress bar plus a table, never stop or restart work to answer.
+- **Brainstorm before building** anything new; he approves the design, then the plan. Once approved, **don't stop for check-ins**: run to the end, stop only for blockers, irreversible actions, or real decisions.
+- **Never commit or push unless asked**; never push to `main` (his git hook blocks it: branch + PR, he merges). **Never AI attribution** in commits or PRs.
+- He was fine with parallel agents ("can some tasks run in parallel?") when tasks don't share files: use separate git worktrees and merge when the main checkout is idle.
+- **Smart App Control stays ON** on the Windows laptop (turning it off is irreversible). Live with the occasional "Part of this app has been blocked" pop-up during builds; rebuild with a new build id when an exe is blocked.
+
+## The Windows laptop setup (for reference)
+
+- Repo: `C:\Users\john\Desktop\kaze`. Go 1.27 installed in `%LOCALAPPDATA%\Programs\go` (zip install; winget/go.dev downloads failed, `dl.google.com` worked).
+- His daily build: `C:\Users\john\Desktop\kaze-app\kaze.exe` (built with `-H=windowsgui`, test-launched until Smart App Control allowed it).
+- pwsh profile: `C:\Users\john\OneDrive\Documents\PowerShell\profile.ps1` (has the PSReadLine lines below).
+- Test runs used `GOTMPDIR` under the Desktop because App Control blocks test binaries in the default temp dir.
+- Backup of the pre-rewrite history: `C:\Users\john\Desktop\kaze-backup\kaze-before-rewrite-2026-10-28.bundle`.
+
+## Incidents in Plan 1 (and the rules they produced)
+
+1. **OOM crash.** A RED test for "clamp 65535x65535 to 4096" ran before the clamp existed and allocated billions of cells, crashing the machine and the session. Rule: RED tests must fail safely (bounded sizes, pure-function tests for limits).
+2. **Stray keystrokes.** Two GUI-testing agents used global SendKeys/SendInput while kaze wasn't the foreground window; `cls` and `echo hello-kaze-selection second-word` landed in Patrick's live Claude Code window. Later, benchmark windows grabbed focus and ~11 of his real keystrokes went into a bench shell, and 3 `flood.exe` lines landed in his pwsh history (not yet removed; ask him). Rules: never inject global input; bench mode drops real input by default; bench shells don't save history; launch without activating.
+3. **Smart App Control** blocks fresh unsigned binaries at random. Not an incident, a fact of life on that laptop.
+
+## Later-fix backlog (from the final whole-branch review)
+
+Fix before or during the Mac milestone: Option-as-Alt toggle; NFD combining marks; Hiragino paths; wheel units; macOS memory reading.
+
+Later:
+- TakeDirty allocates per call (render hot path); a few missing screen/vt tests (combining-mark escape, wide char while wrap pending, CAN/SUB inside OSC/DCS, split ST, truncated colon groups, colon-mask reset).
+- UTF-8 second-byte ranges (E0/ED/F0/F4) not validated (harmless: renders a replacement glyph).
+- ptyx: 3s wait-test limit could flake on slow CI; small Resize-vs-Close race window; Read/Write after Close reach the closed pty.
+- Multi-param `CSI ... T` treated as scroll-down.
+- Cmd+nav/Enter still encode on macOS.
+- Ctrl+Alt+letter dropped on US Windows layout.
+- Hidden tabs resized every frame during a window drag.
+- Input silently dropped if the write queue (1024 chunks) fills behind a stuck shell.
+- Glyph cache unguarded across goroutines (fine with one window); double-line box junction overlap; per-size font caches never dropped.
+- Selection: addSelectionRows allocates per change; no test for returning to view offset 0; ideographic space U+3000 isn't a word stop (matters for Japanese double-click).
+- Scrollback ~30MB per tab when full (20-byte cells).
+- Shift+Enter submits in Claude Code (needs the kitty keyboard protocol); Alt+Enter works.
+- A ConPTY close timeout keeps that tab's screen alive until ConPTY releases.
+- kaze's own keypress p99 (~24ms) and first frame (~0.45s).
+
+## If this repo goes public
+
+History was already scrubbed once (before the first push). Personal/work context was re-added afterwards in `docs/HANDOFF.md`, `docs/history/` and `CLAUDE.md`. Before going public again: remove or neutralize those (names, employer details, ticket keys like `V3-...`, local paths, the ledger), and check `git log --all -p` with a grep, because history keeps old versions. The scrub script used last time replaced terms with `git filter-repo` on text blobs only (fonts untouched) and moved authors to `283561876+patrick-gogo@users.noreply.github.com`.
 
 ## Optional shell setup
 

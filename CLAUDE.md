@@ -1,7 +1,7 @@
 # kaze: notes for Claude Code
 
 kaze is the owner's personal, lightweight terminal emulator, built around running Claude Code all day.
-Go + Gio, Windows and macOS from one codebase, "Midnight" look. This repo is **public**.
+Go + Gio, Windows and macOS from one codebase, "Midnight" look. This repo is **private** (the owner's own).
 
 **Start every session by reading `docs/HANDOFF.md`**: current status, decisions, known gaps, the Mac
 checklist and what's next. The authority for behaviour is the spec
@@ -37,9 +37,12 @@ checklist and what's next. The authority for behaviour is the spec
 - **Commits:** `type(scope): Verb ...` (e.g. `fix(render): Keep text readable on colored backgrounds`).
   **No AI attribution** of any kind (no `Co-Authored-By`, no "Generated with").
 - **Never push to `main`.** Branch, push the branch, open a PR. The owner merges.
-- **Public repo:** never commit personal or work details (names, employer, ticket keys, local user paths,
-  emails, secrets). Use neutral examples like `feature/TICKET-123` and `%USERPROFILE%` / `~`.
-- **Talk to the owner in plain language**, lead with a recommendation, keep it short.
+- **Private repo:** context and names are fine; **never commit secrets** (tokens, keys, passwords, credentials).
+  If the repo ever goes public again, scrub first (see `docs/HANDOFF.md`, "If this repo goes public").
+- **How to talk to the owner:** see `docs/HANDOFF.md`, "Working with the owner". Short version: plain language,
+  TL;DR first, lead with a recommendation, one question at a time with context first, no em dashes.
+- **History:** `docs/history/` holds the full Plan 1 ledger (every ruling, incident and deferred item) and key
+  task reports. Check it before re-deciding something.
 
 ## Build and test
 
