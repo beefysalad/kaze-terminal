@@ -64,16 +64,31 @@ func NewManager(start func(env []string) (ptyx.Session, error), cols, rows int, 
 	return &Manager{start: start, onChange: onChange, baseEnv: baseEnv(os.Environ()), cols: cols, rows: rows}
 }
 
-// baseEnv drops an inherited KAZE_TAB_ID so a kaze started inside a kaze tab gets clean IDs.
+// Inherited terminal identity is dropped (a kaze started from Windows Terminal or
+// VS Code must not claim to be them) and kaze's own is set. KAZE_TAB_ID is
+// dropped too so a kaze started inside a kaze tab gets clean IDs.
+var droppedEnv = []string{"KAZE_TAB_ID", "TERM", "COLORTERM", "TERM_PROGRAM", "TERM_PROGRAM_VERSION", "WT_SESSION", "WT_PROFILE_ID"}
+
+var identityEnv = []string{"TERM=xterm-256color", "COLORTERM=truecolor", "TERM_PROGRAM=kaze"}
+
 func baseEnv(env []string) []string {
-	out := make([]string, 0, len(env)+1)
+	out := make([]string, 0, len(env)+len(identityEnv)+1)
 	for _, e := range env {
-		if len(e) >= 12 && strings.EqualFold(e[:12], "KAZE_TAB_ID=") { // Windows env names ignore case
-			continue
+		if !isDropped(e) {
+			out = append(out, e)
 		}
-		out = append(out, e)
 	}
-	return out
+	return append(out, identityEnv...)
+}
+
+func isDropped(e string) bool {
+	name, _, _ := strings.Cut(e, "=")
+	for _, d := range droppedEnv {
+		if strings.EqualFold(name, d) { // Windows env names ignore case
+			return true
+		}
+	}
+	return false
 }
 
 // New starts a shell in a new tab at the end and makes it active.

@@ -346,3 +346,38 @@ func TestCloseAllWaitsForACloseInProgress(t *testing.T) {
 		t.Fatalf("CloseAll took %v; its wait must be bounded", d)
 	}
 }
+
+func countPrefixFold(env []string, prefix string) (n int, last string) {
+	for _, e := range env {
+		if len(e) >= len(prefix) && strings.EqualFold(e[:len(prefix)], prefix) {
+			n++
+			last = e
+		}
+	}
+	return n, last
+}
+
+// Shells and TUIs pick features from these, so a kaze started from Windows
+// Terminal must not claim to be Windows Terminal.
+func TestNewTabSetsKazeTerminalIdentity(t *testing.T) {
+	t.Setenv("TERM_PROGRAM", "vscode")
+	t.Setenv("TERM_PROGRAM_VERSION", "1.2.3")
+	t.Setenv("WT_SESSION", "abc")
+	t.Setenv("WT_PROFILE_ID", "{xyz}")
+	t.Setenv("TERM", "dumb")
+	t.Setenv("COLORTERM", "")
+	m, st := newManager(t)
+	mustNew(t, m)
+	env := st.envs[0]
+	for _, gone := range []string{"TERM_PROGRAM_VERSION=", "WT_SESSION=", "WT_PROFILE_ID="} {
+		if n, got := countPrefixFold(env, gone); n != 0 {
+			t.Errorf("inherited %s passed on: %q", gone, got)
+		}
+	}
+	for _, want := range []string{"TERM=xterm-256color", "COLORTERM=truecolor", "TERM_PROGRAM=kaze"} {
+		name := want[:strings.IndexByte(want, '=')+1]
+		if n, got := countPrefixFold(env, name); n != 1 || got != want {
+			t.Errorf("%d %s entries, last %q; want exactly %q", n, name, got, want)
+		}
+	}
+}
