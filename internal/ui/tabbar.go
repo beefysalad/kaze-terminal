@@ -3,6 +3,9 @@ package ui
 import (
 	"image"
 	"image/color"
+	"os"
+	"strings"
+	"unicode"
 
 	"gioui.org/font"
 	"gioui.org/font/opentype"
@@ -15,6 +18,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/patrick-gogo/kaze/assets/fonts"
+	"github.com/patrick-gogo/kaze/internal/render"
 	"github.com/patrick-gogo/kaze/internal/tabs"
 )
 
@@ -39,6 +43,10 @@ const chromeFace = "JetBrains Mono"
 type chrome struct {
 	shaper *text.Shaper
 	hits   barHits
+
+	faces   []font.FontFace
+	covered map[rune]bool   // rune -> some face has it
+	loaded  map[string]bool // system font files already added
 }
 
 func newChrome() *chrome {
@@ -53,11 +61,104 @@ func newChrome() *chrome {
 		}
 		faces = append(faces, font.FontFace{Font: font.Font{Typeface: font.Typeface(src.name)}, Face: f})
 	}
-	return &chrome{shaper: text.NewShaper(text.NoSystemFonts(), text.WithCollection(faces))}
+	return &chrome{
+		shaper:  text.NewShaper(text.NoSystemFonts(), text.WithCollection(faces)),
+		faces:   faces,
+		covered: map[rune]bool{},
+		loaded:  map[string]bool{},
+	}
+}
+
+// fit makes s drawable: for each rune the bundled fonts lack, it adds the system font
+// the terminal grid would use (once, only now), and drops runes no font has so a title never shows a box.
+func (c *chrome) fit(s string) string {
+	added := false
+	var out *strings.Builder // nil until a rune is changed or dropped
+	for i, r := range s {
+		keep, w := true, r
+		switch {
+		case r == '\t' || r == '\n' || r == '\r':
+			w = ' '
+		case !c.usable(r, &added):
+			keep = false
+		}
+		if out == nil && (!keep || w != r) {
+			out = &strings.Builder{}
+			out.WriteString(s[:i])
+		}
+		if out != nil && keep {
+			out.WriteRune(w)
+		}
+	}
+	if added {
+		c.shaper = text.NewShaper(text.NoSystemFonts(), text.WithCollection(c.faces))
+	}
+	if out == nil {
+		return s
+	}
+	return out.String()
+}
+
+// maxCovered bounds the rune cache; a hostile title stream cannot grow it forever.
+const maxCovered = 4096
+
+// maxFontFile keeps big collections and emoji fonts out of memory; their runes are trimmed.
+var maxFontFile int64 = 8 << 20
+
+// usable reports whether r can be drawn, loading its system font on first need.
+func (c *chrome) usable(r rune, added *bool) bool {
+	if ok, seen := c.covered[r]; seen {
+		return ok
+	}
+	ok := false
+	// Cf covers bidi overrides and zero-width marks; Zl/Zp would break the one-line label.
+	if !unicode.IsControl(r) && !unicode.In(r, unicode.Cf, unicode.Zl, unicode.Zp) {
+		ok = render.BundledCovers(r)
+		if !ok {
+			if p := render.SystemFontFor(r); p != "" {
+				var fresh bool
+				ok, fresh = c.addFont(p)
+				*added = *added || fresh
+			}
+		}
+	}
+	if len(c.covered) >= maxCovered {
+		clear(c.covered)
+	}
+	c.covered[r] = ok
+	return ok
+}
+
+// addFont parses a system font file into the collection. fresh is true only when this call
+// added faces; a bad or oversized file adds nothing and is not retried.
+func (c *chrome) addFont(path string) (ok, fresh bool) {
+	if done, seen := c.loaded[path]; seen {
+		return done, false
+	}
+	defer func() {
+		if recover() != nil {
+			ok, fresh = false, false
+		}
+		c.loaded[path] = ok
+	}()
+	if st, err := os.Stat(path); err != nil || st.Size() > maxFontFile {
+		return false, false
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return false, false
+	}
+	ff, err := opentype.ParseCollection(data)
+	if err != nil || len(ff) == 0 {
+		return false, false
+	}
+	c.faces = append(c.faces, ff...)
+	return true, true
 }
 
 // label records one line of text so its size is known before it is placed.
 func (c *chrome) label(gtx layout.Context, s string, size unit.Sp, col color.NRGBA) (op.CallOp, image.Point) {
+	s = c.fit(s)
 	m := op.Record(gtx.Ops)
 	mat := op.Record(gtx.Ops)
 	paint.ColorOp{Color: col}.Add(gtx.Ops)
@@ -93,7 +194,7 @@ func (c *chrome) layoutTabBar(gtx layout.Context, list []*tabs.Tab, active tabs.
 		if on {
 			fg = colActiveFG
 		}
-		call, size := c.label(gtx, tabLabel(t, def), 12, fg)
+		call, size := c.label(gtx, c.tabLabelFit(t, def), 12, fg)
 		w := padX + size.X + gap + closeSize.X + padX
 		if on {
 			w += dot + gap
@@ -133,4 +234,9 @@ func (c *chrome) layoutStatus(gtx layout.Context, s string, height int) {
 	paint.FillShape(ops, colBorder, clip.Rect{Max: image.Pt(width, 1)}.Op())
 	call, size := c.label(gtx, s, 11, colStatusFG)
 	place(ops, call, image.Pt(width-size.X-gtx.Dp(14), (height-size.Y)/2))
+}
+
+// tabLabelFit is tabLabel with the title cleaned for the tab bar's fonts before it is shortened.
+func (c *chrome) tabLabelFit(t *tabs.Tab, def string) string {
+	return tabLabelWith(t, def, c.fit)
 }
