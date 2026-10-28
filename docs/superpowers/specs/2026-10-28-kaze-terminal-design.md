@@ -98,6 +98,7 @@ When Claude Code in any tab finishes its turn or needs Patrick (a question, a pe
 - The hook sends a small message to kaze over a local channel (named pipe on Windows, Unix socket on macOS, or equivalent: builder's choice).
 - kaze ships the hook command and documents how to add it to Claude Code settings.
 - Alert clears when Patrick switches to that tab.
+- *Note 2026-10-28 (Plan 3):* the local channel is TCP on `127.0.0.1` (a random port) with a random 32-byte token per kaze run, passed to each tab as `KAZE_NOTIFY` and `KAZE_NOTIFY_TOKEN`, instead of a named pipe or Unix socket. No extra dependency, and the same code on Windows and macOS. The token keeps other local programs from faking alerts.
 
 ### 6.5 Status bar
 
@@ -148,6 +149,7 @@ Plan 3 is the next plan. It covers the frame of the window: alerts, sound, title
   - Folder: the shell reports it with OSC 7 from its prompt. kaze documents a small snippet for pwsh (`$PROFILE`) and zsh (`~/.zshrc`); adding it to the owner's profile needs the owner's yes.
   - Branch: kaze reads `.git/HEAD` (walking up from the folder; handles worktrees' `gitdir:` files) without running git; refresh on folder change and when HEAD changes.
   - Each tab has its own folder and branch.
+- *Note 2026-10-28 (Plan 3 as built):* the "needs you" dot is a **static** amber dot, not a pulsing one: a pulse would redraw the window all the time and break the idle-CPU goal. Claude Code's `idle_prompt` reminders ("waiting for your input" after about a minute) and `auth_success` are **dropped**, so only `permission_prompt` and `elicitation_dialog` (or an older Claude Code that sends no type) raise "needs you". The branch is also re-read on tab switch and when the window regains focus, because Claude Code can switch branches without a new prompt.
 
 Order after Plan 3: Plan 2 (subagent child tabs, 6.3), Plan 4 (Claude usage in the status bar, 6.5), the Mac milestone, then section 7.
 
