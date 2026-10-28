@@ -83,8 +83,60 @@ func TestVisibleCellSpansScrollbackAndScreen(t *testing.T) {
 }
 
 func TestVisibleCellOutOfRangeIsBlank(t *testing.T) {
+	blank := screen.Cell{Rune: ' ', Width: 1, FG: screen.DefaultColor, BG: screen.DefaultColor}
 	s := screen.NewWithScrollback(2, 1, 10)
-	if s.VisibleCell(5, 0) != s.Cell(5, 0) {
+	if s.VisibleCell(5, 0) != blank || s.VisibleCell(0, 3) != blank {
 		t.Fatal("out of range should be blank")
+	}
+	for _, r := range "abcd" {
+		s.Print(r)
+		s.LineFeed()
+		s.CarriageReturn()
+	}
+	s.SetViewOffset(3) // larger than the 1 visible row
+	if s.VisibleCell(5, 0) != blank || s.VisibleCell(0, 1) != blank || s.VisibleCell(-1, 0) != blank {
+		t.Fatal("out of range with an offset should be blank")
+	}
+	if s.VisibleCell(0, 0).Rune != 'b' {
+		t.Fatalf("got %q", s.VisibleCell(0, 0).Rune)
+	}
+}
+
+func feed1(s *screen.Screen, text string) {
+	for _, r := range text {
+		s.Print(r)
+		s.LineFeed()
+		s.CarriageReturn()
+	}
+}
+
+func TestViewStaysAnchoredWhileRingFills(t *testing.T) {
+	s := screen.NewWithScrollback(1, 1, 10)
+	feed1(s, "abc")
+	s.SetViewOffset(2)
+	feed1(s, "d")
+	if s.VisibleCell(0, 0).Rune != 'b' {
+		t.Fatalf("got %q", s.VisibleCell(0, 0).Rune)
+	}
+}
+
+func TestViewStaysAnchoredWhenRingIsFull(t *testing.T) {
+	s := screen.NewWithScrollback(1, 1, 5)
+	feed1(s, "abcdefgh") // ring holds d..h
+	s.SetViewOffset(2)   // shows g
+	if s.VisibleCell(0, 0).Rune != 'g' {
+		t.Fatalf("setup: got %q", s.VisibleCell(0, 0).Rune)
+	}
+	feed1(s, "i") // evicts d; g must not move
+	if s.VisibleCell(0, 0).Rune != 'g' {
+		t.Fatalf("view crept to %q", s.VisibleCell(0, 0).Rune)
+	}
+	feed1(s, "jkl") // g is evicted after 'l'? ring is g..k then h..l
+	if s.ViewOffset() > s.ScrollbackLen() {
+		t.Fatal("offset must stay within history")
+	}
+	feed1(s, "mnop")
+	if s.VisibleCell(0, 0).Rune != s.ScrollbackLine(0)[0].Rune {
+		t.Fatal("once evicted, the view pins to the oldest line")
 	}
 }
