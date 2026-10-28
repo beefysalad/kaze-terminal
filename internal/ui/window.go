@@ -274,6 +274,9 @@ func (win *window) setFocused(f bool) {
 	if win.mgr != nil {
 		if t := win.mgr.Active(); t != nil {
 			sendFocus(t, f)
+			if f {
+				win.staleBranch(t)
+			}
 		}
 	}
 	win.w.Invalidate()
@@ -457,6 +460,7 @@ func (win *window) switchedTo(t *tabs.Tab) {
 		sendFocus(t, true)
 	}
 	win.lastTab = t
+	win.staleBranch(t)
 	win.endGesture()
 	// One renderer serves every tab: dropping its strips frees the hidden tab's
 	// buffers and makes the shown tab draw in full.

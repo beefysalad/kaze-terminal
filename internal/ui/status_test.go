@@ -126,8 +126,58 @@ func TestBranchCacheIsPerTab(t *testing.T) {
 	win.statusParts() // second is active
 	win.mgr.SetActive(tab.ID)
 	win.statusParts()
+	win.statusParts()
 	if len(*calls) != 2 {
-		t.Fatalf("switching back re-read the branch: %v", *calls)
+		t.Fatalf("frames without a switch re-read the branch: %v", *calls)
+	}
+}
+
+// Claude Code can switch the branch without a prompt redraw, so the rare
+// moments the owner looks again (tab switch, window focus) re-read it once.
+func TestBranchRereadOnTabSwitch(t *testing.T) {
+	win, tab, calls := statusWindow(t)
+	report(t, tab, tmp(t))
+	win.switchedTo(tab)
+	win.statusParts()
+	second, err := win.mgr.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	report(t, second, tmp(t))
+	win.switchedTo(second)
+	win.statusParts()
+	n := len(*calls)
+	branch := "feature/x"
+	win.branchFn = func(dir string) string { *calls = append(*calls, dir); return branch }
+	win.mgr.SetActive(tab.ID)
+	win.switchedTo(tab)
+	for range 3 {
+		win.statusParts()
+	}
+	if len(*calls) != n+1 {
+		t.Fatalf("switching back: %d lookups, want 1", len(*calls)-n)
+	}
+	if got := win.statusParts().Branch; got != branch {
+		t.Fatalf("branch %q, want %q", got, branch)
+	}
+}
+
+func TestBranchRereadOnFocusGain(t *testing.T) {
+	win, tab, calls := statusWindow(t)
+	win.focused = true
+	report(t, tab, tmp(t))
+	win.statusParts()
+	win.setFocused(false)
+	win.statusParts()
+	if len(*calls) != 1 {
+		t.Fatalf("losing focus re-read the branch: %v", *calls)
+	}
+	win.setFocused(true)
+	for range 3 {
+		win.statusParts()
+	}
+	if len(*calls) != 2 {
+		t.Fatalf("focus gain: %d lookups, want 2", len(*calls))
 	}
 }
 

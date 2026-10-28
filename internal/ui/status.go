@@ -55,6 +55,12 @@ func (win *window) statusParts() statusParts {
 	return p
 }
 
+// staleBranch makes the next frame re-read t's branch. Claude Code can switch
+// branches with no prompt redraw, so tab switch and focus gain (both rare) re-check.
+func (win *window) staleBranch(t *tabs.Tab) {
+	delete(win.locs, t.ID)
+}
+
 // pruneLocs forgets closed tabs.
 func (win *window) pruneLocs(list []*tabs.Tab) {
 	for id := range win.locs { // deleting during range is safe in Go
