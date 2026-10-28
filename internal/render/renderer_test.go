@@ -275,3 +275,69 @@ func TestResizeRedrawsEverything(t *testing.T) {
 		t.Fatalf("strips = %d, want %d", len(h.r.strips), stripCount)
 	}
 }
+
+// frameSel is frame with a selection passed to Layout.
+func (h *harness) frameSel(sel *Selection) int {
+	before := h.r.Stats().RowsRedrawn
+	gtx := layout.Context{Ops: new(op.Ops), Constraints: layout.Exact(image.Pt(2000, 2000)), Now: time.Now()}
+	h.r.Layout(gtx, h.s, sel)
+	return h.r.Stats().RowsRedrawn - before
+}
+
+func TestSelectedCellsUseSelectionColor(t *testing.T) {
+	h := newHarness(t, 20, 6)
+	h.frame()
+	sel := &Selection{Start: Point{5, 1}, End: Point{8, 1}, Active: true}
+	h.frameSel(sel)
+	w, ch := h.r.CellSize()
+	at := func(col, row int) color.RGBA { return h.r.pixelAt(col*w, row*ch) }
+	want := h.r.pal.Selection
+	if got := at(6, 1); got != (color.RGBA{want.R, want.G, want.B, 0xff}) {
+		t.Fatalf("selected cell is %v, want selection color", got)
+	}
+	if got := at(10, 1); got == (color.RGBA{want.R, want.G, want.B, 0xff}) {
+		t.Fatal("cell outside the selection was painted with the selection color")
+	}
+}
+
+func TestSelectionChangeRedrawsOnlyAffectedRows(t *testing.T) {
+	h := newHarness(t, 20, 6)
+	h.frame()
+	a := &Selection{Start: Point{0, 1}, End: Point{3, 2}, Active: true}
+	if n := h.frameSel(a); n != 2 {
+		t.Fatalf("selecting 2 rows redrew %d", n)
+	}
+	if n := h.frameSel(a); n != 0 {
+		t.Fatalf("unchanged selection redrew %d rows", n)
+	}
+	b := &Selection{Start: Point{0, 1}, End: Point{3, 1}, Active: true} // row 2 leaves, row 1 loses its tail
+	if n := h.frameSel(b); n != 2 {
+		t.Fatalf("shrinking redrew %d rows, want 2", n)
+	}
+	if n := h.frameSel(nil); n != 1 {
+		t.Fatalf("clearing redrew %d rows, want 1", n)
+	}
+}
+
+func TestSelectionFollowsViewOffset(t *testing.T) {
+	h := newHarness(t, 4, 2)
+	h.out("aaaa\r\nbbbb\r\ncccc") // "aaaa" scrolls into history; rows: aaaa / bbbb / cccc
+	h.frame()
+	sel := &Selection{Start: Point{0, 0}, End: Point{3, 0}, Active: true} // the history row
+	h.frameSel(sel)                                                       // offset 0: not visible
+	h.s.Lock()
+	h.s.Screen().SetViewOffset(1)
+	h.s.Unlock()
+	h.frameSel(sel)
+	w, ch := h.r.CellSize()
+	want := h.r.pal.Selection
+	if got := h.r.pixelAt(w*3, 0); got != (color.RGBA{want.R, want.G, want.B, 0xff}) {
+		t.Fatalf("history row not highlighted when scrolled into view: %v (cellH %d)", got, ch)
+	}
+}
+
+// pixelAt reads a drawn pixel by window coordinates, across strips.
+func (r *Renderer) pixelAt(x, y int) color.RGBA {
+	st := r.strips[y/r.cellH/r.rowsPerStrip]
+	return st.img.RGBAAt(x, y-st.row0*r.cellH)
+}

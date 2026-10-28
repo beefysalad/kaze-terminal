@@ -65,6 +65,9 @@ type Renderer struct {
 	drawn        []screen.Cell // what the strips show, row-major
 	snap         []screen.Cell // rows copied out under the session lock
 	snapRows     []int
+	snapSel      []bool // per cell: selected in the snapshot
+	drawnSel     []bool // per cell: drawn selected
+	lastSel      Selection
 	rowsPerStrip int
 	strips       []strip
 
@@ -107,6 +110,7 @@ func NewRenderer(fontSize float32, palette Palette) *Renderer {
 func (r *Renderer) Release() {
 	r.cols, r.rows = 0, 0
 	r.strips, r.drawn, r.snap, r.snapRows = nil, nil, nil, nil
+	r.snapSel, r.drawnSel, r.lastSel = nil, nil, Selection{}
 	r.curImg, r.curDrawn = nil, cursorState{}
 }
 
@@ -122,10 +126,9 @@ func (r *Renderer) Stats() Stats {
 	return st
 }
 
-// Layout draws the session. sel is accepted for the selection overlay, which is not drawn yet.
+// Layout draws the session. sel is the current selection, or nil for none.
 func (r *Renderer) Layout(gtx layout.Context, s *term.Session, sel *Selection) layout.Dimensions {
-	_ = sel
-	held := r.snapshot(s)
+	held := r.snapshot(s, sel)
 	if r.needStrips {
 		r.buildStrips()
 	}
@@ -142,7 +145,7 @@ func (r *Renderer) Layout(gtx layout.Context, s *term.Session, sel *Selection) l
 // snapshot copies the dirty rows and cursor out under the lock, so the reader
 // goroutine is not blocked while they are rasterized. It reports true when a
 // synchronized update holds this frame back.
-func (r *Renderer) snapshot(s *term.Session) (held bool) {
+func (r *Renderer) snapshot(s *term.Session, sel *Selection) (held bool) {
 	s.Lock()
 	defer s.Unlock()
 	a, scr := s.Applier(), s.Screen()
@@ -170,10 +173,28 @@ func (r *Renderer) snapshot(s *term.Session) (held bool) {
 	} else {
 		r.snapRows = append(r.snapRows, dirty...)
 	}
+	base := scr.ScrollbackLen() - scr.ViewOffset() // absolute row of visible row 0
+	cur := Selection{}
+	if sel != nil && sel.Active {
+		cur = *sel
+	}
+	if cur != r.lastSel {
+		r.addSelectionRows(r.lastSel, cur, base)
+		r.lastSel = cur
+	}
 	for _, row := range r.snapRows {
 		line := r.snap[row*cols : (row+1)*cols]
+		sline := r.snapSel[row*cols : (row+1)*cols]
 		for c := range line {
 			line[c] = scr.VisibleCell(c, row)
+			sline[c] = cur.Contains(Point{c, base + row})
+		}
+		for c := range line {
+			// A wide char is selected as a whole, whichever half the selection touches.
+			if line[c].Width == 2 && c+1 < cols {
+				sline[c] = sline[c] || sline[c+1]
+				sline[c+1] = sline[c]
+			}
 		}
 	}
 
@@ -188,12 +209,33 @@ func (r *Renderer) snapshot(s *term.Session) (held bool) {
 	return false
 }
 
+// addSelectionRows queues the visible rows covered by the old and new selection for redraw.
+func (r *Renderer) addSelectionRows(old, cur Selection, base int) {
+	queued := make([]bool, r.rows)
+	for _, row := range r.snapRows {
+		queued[row] = true
+	}
+	for _, sel := range []Selection{old, cur} {
+		if !sel.Active {
+			continue
+		}
+		lo, hi := sel.bounds()
+		for row := max(lo.Row-base, 0); row <= min(hi.Row-base, r.rows-1); row++ {
+			if !queued[row] {
+				queued[row] = true
+				r.snapRows = append(r.snapRows, row)
+			}
+		}
+	}
+}
+
 // resize runs under the session lock, so it only sizes the cell copy; the strip
 // images, the large allocation, are made by buildStrips after the lock is released.
 func (r *Renderer) resize(cols, rows int) {
 	r.cols, r.rows = cols, rows
 	r.full, r.needStrips = true, true
 	r.snap = make([]screen.Cell, cols*rows)
+	r.snapSel = make([]bool, cols*rows)
 }
 
 func (r *Renderer) buildStrips() {
@@ -203,6 +245,7 @@ func (r *Renderer) buildStrips() {
 	for i := range r.drawn {
 		r.drawn[i].Rune = -1 // matches no real cell, so every cell is drawn once
 	}
+	r.drawnSel = make([]bool, cols*rows)
 	r.rowsPerStrip = (rows + stripCount - 1) / stripCount
 	r.strips = r.strips[:0]
 	for row0 := 0; row0 < rows; row0 += r.rowsPerStrip {
@@ -222,12 +265,14 @@ func (r *Renderer) rasterizeDirty() {
 	for _, row := range r.snapRows {
 		now := r.snap[row*cols : (row+1)*cols]
 		was := r.drawn[row*cols : (row+1)*cols]
+		selNow := r.snapSel[row*cols : (row+1)*cols]
+		selWas := r.drawnSel[row*cols : (row+1)*cols]
 		st := &r.strips[row/r.rowsPerStrip]
 		y := (row - st.row0) * r.cellH
 		changed := false
 		for c := 0; c < cols; c++ {
 			cell := now[c]
-			diff := cell != was[c]
+			diff := cell != was[c] || selNow[c] != selWas[c]
 			if cell.Width == 2 && c+1 < cols {
 				diff = diff || now[c+1] != was[c+1] // the lead owns its right half's pixels
 			}
@@ -237,10 +282,16 @@ func (r *Renderer) rasterizeDirty() {
 			if !diff {
 				continue
 			}
-			r.drawCell(st.img, c*r.cellW, y, cell, nil)
+			var over *colors
+			if selNow[c] {
+				fg, _ := cellColors(r.pal, cell)
+				over = &colors{fg: fg, bg: r.pal.Selection}
+			}
+			r.drawCell(st.img, c*r.cellW, y, cell, over)
 			changed = true
 		}
 		copy(was, now)
+		copy(selWas, selNow)
 		if changed {
 			r.stats.RowsRedrawn++
 			st.dirty = true
