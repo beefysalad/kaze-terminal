@@ -28,6 +28,7 @@ import (
 	"github.com/patrick-gogo/kaze/internal/input"
 	"github.com/patrick-gogo/kaze/internal/ptyx"
 	"github.com/patrick-gogo/kaze/internal/render"
+	"github.com/patrick-gogo/kaze/internal/screen"
 	"github.com/patrick-gogo/kaze/internal/tabs"
 	"github.com/patrick-gogo/kaze/internal/term"
 )
@@ -73,6 +74,13 @@ type window struct {
 
 	memMB   float64
 	memRead time.Time
+
+	sels       map[tabs.TabID]*tabSel
+	clicks     clicks
+	held       pointer.Buttons // buttons down, to tell which one a press or release changed
+	toApp      bool            // the current mouse gesture is reported to the app, not selecting
+	dragPos    image.Point     // last drag position relative to the grid, for auto-scroll
+	scrolledAt time.Time
 }
 
 // Run drives the window until it closes. It returns after every shell is closed.
@@ -88,6 +96,7 @@ func Run(w *app.Window, opt Options) error {
 		barTag:   new(int),
 		defTitle: shellName(opt.Shell),
 		focused:  true, wantFocus: true,
+		sels: map[tabs.TabID]*tabSel{},
 	}
 	return win.loop()
 }
@@ -182,6 +191,7 @@ func (win *window) frame(gtx layout.Context) error {
 	if win.mgr == nil {
 		// The first shell starts at the real window size, not a guess.
 		win.mgr = tabs.NewManager(win.start, cols, rows, win.w.Invalidate)
+		win.mgr.SetScrollback(win.opt.Config.ScrollbackLines)
 		t, err := win.mgr.New()
 		if err != nil {
 			return fmt.Errorf("start %q: %w", win.opt.Shell, err)
@@ -200,9 +210,12 @@ func (win *window) frame(gtx layout.Context) error {
 	}
 	active = win.mgr.Active()
 	win.switchedTo(active)
+	list := win.mgr.Tabs()
+	win.pruneSels(list)
+	win.autoScroll(gtx, active, cw, ch)
+	sel := win.checkSel(active)
 
 	ops := gtx.Ops
-	list := win.mgr.Tabs()
 
 	// Tab bar.
 	bar := gtx
@@ -221,7 +234,7 @@ func (win *window) frame(gtx layout.Context) error {
 	off := op.Offset(grid.Min).Push(ops)
 	tg := gtx
 	tg.Constraints = layout.Exact(grid.Size())
-	win.rend.Layout(tg, active.Session, nil)
+	win.rend.Layout(tg, active.Session, &sel)
 	off.Pop()
 	g.Pop()
 
@@ -252,10 +265,9 @@ func (win *window) switchedTo(t *tabs.Tab) {
 		sendFocus(t, true)
 	}
 	win.lastTab = t
-	// The renderer's cells belong to the previous tab; the cell diff then redraws only what differs.
-	t.Session.Lock()
-	t.Session.Screen().MarkAllDirty()
-	t.Session.Unlock()
+	// One renderer serves every tab: dropping its strips frees the hidden tab's
+	// buffers and makes the shown tab draw in full.
+	win.rend.Release()
 	win.updateTitle(t)
 }
 
@@ -311,10 +323,7 @@ func (win *window) barEvents(gtx layout.Context) {
 
 func (win *window) termEvents(gtx layout.Context, t *tabs.Tab, cw, ch int) {
 	m := modes(t.Session)
-	kinds := pointer.Press | pointer.Release | pointer.Scroll
-	if m.MouseButton || m.MouseAny {
-		kinds |= pointer.Drag
-	}
+	kinds := pointer.Press | pointer.Release | pointer.Scroll | pointer.Drag | pointer.Cancel
 	if m.MouseAny {
 		kinds |= pointer.Move // only then, so hovering never wakes the idle window
 	}
@@ -352,7 +361,7 @@ func (win *window) termEvents(gtx layout.Context, t *tabs.Tab, cw, ch int) {
 		case transfer.DataEvent:
 			win.paste(t, e, m)
 		case pointer.Event:
-			win.onPointer(t, e, m, cw, ch)
+			win.onPointer(gtx, t, e, m, cw, ch)
 		}
 	}
 	if edited && !win.composing {
@@ -381,7 +390,7 @@ func (win *window) onKey(gtx layout.Context, t *tabs.Tab, e key.Event, m term.Mo
 	case actPaste:
 		gtx.Execute(clipboard.ReadCmd{Tag: win.termTag})
 	case actCopy:
-		// TODO(Task 12): copy the selection once selection lands.
+		win.copySel(gtx, t)
 	default:
 		if out.data != nil {
 			t.Session.Write(out.data)
@@ -403,42 +412,53 @@ func (win *window) paste(t *tabs.Tab, e transfer.DataEvent, m term.Modes) {
 
 func mouseOn(m term.Modes) bool { return m.MouseX10 || m.MouseButton || m.MouseAny }
 
-func buttonOf(b pointer.Buttons) int {
-	switch {
-	case b.Contain(pointer.ButtonPrimary):
-		return 0
-	case b.Contain(pointer.ButtonTertiary):
-		return 1
-	case b.Contain(pointer.ButtonSecondary):
-		return 2
-	}
-	return -1
-}
-
-func (win *window) onPointer(t *tabs.Tab, e pointer.Event, m term.Modes, cw, ch int) {
+func (win *window) onPointer(gtx layout.Context, t *tabs.Tab, e pointer.Event, m term.Modes, cw, ch int) {
 	p := e.Position.Round().Sub(win.gridMin)
-	col, row := 0, 0
-	if cw > 0 && ch > 0 {
-		cols, rows := win.mgr.Size()
-		col = min(max(p.X/cw, 0), cols-1)
-		row = min(max(p.Y/ch, 0), rows-1)
-	}
+	cols, rows := win.mgr.Size()
+	col, row := gridCell(p, cw, ch, cols, rows)
 	switch e.Kind {
 	case pointer.Press:
 		win.wantFocus = true
 		win.w.Invalidate()
-		if mouseOn(m) {
-			t.Session.Write(input.EncodeMouse(buttonOf(e.Buttons), true, e.Modifiers, col, row, false, m))
+		btn := pressedButton(win.held, e.Buttons)
+		first := win.held == 0
+		win.held = e.Buttons
+		if first {
+			// Shift lets the user select even when the app has the mouse.
+			win.toApp = mouseOn(m) && e.Modifiers&key.ModShift == 0
+		}
+		if win.toApp {
+			t.Session.Write(input.EncodeMouse(btn, true, e.Modifiers, col, row, false, m))
+			return
+		}
+		if btn == 0 {
+			win.selectPress(t, p, e.Time, cw, ch)
 		}
 	case pointer.Release:
-		if mouseOn(m) {
-			// Gio reports the buttons still held; the released one is unknown, so report it as left.
-			t.Session.Write(input.EncodeMouse(0, false, e.Modifiers, col, row, false, m))
+		btn := releasedButton(win.held, e.Buttons)
+		win.held = e.Buttons
+		if win.toApp {
+			if mouseOn(m) {
+				t.Session.Write(input.EncodeMouse(btn, false, e.Modifiers, col, row, false, m))
+			}
+			return
+		}
+		if btn == 0 {
+			win.selectRelease(gtx, t)
+		}
+	case pointer.Cancel:
+		win.held, win.toApp = 0, false
+		if ts := win.sels[t.ID]; ts != nil {
+			ts.end()
 		}
 	case pointer.Drag, pointer.Move:
-		if mouseOn(m) {
-			t.Session.Write(input.EncodeMouse(buttonOf(e.Buttons), true, e.Modifiers, col, row, true, m))
+		if win.toApp || e.Kind == pointer.Move {
+			if mouseOn(m) {
+				t.Session.Write(input.EncodeMouse(xtermButton(e.Buttons), true, e.Modifiers, col, row, true, m))
+			}
+			return
 		}
+		win.selectDrag(t, p, cw, ch)
 	case pointer.Scroll:
 		unit, perNotch := float32(120), 3 // Windows reports 120 per wheel notch
 		if runtime.GOOS == "darwin" {
@@ -474,4 +494,120 @@ func (win *window) snapToBottom(s *term.Session) {
 	if moved {
 		win.w.Invalidate()
 	}
+}
+
+func (win *window) selOf(id tabs.TabID) *tabSel {
+	ts := win.sels[id]
+	if ts == nil {
+		ts = &tabSel{}
+		win.sels[id] = ts
+	}
+	return ts
+}
+
+// pruneSels forgets the selections of closed tabs.
+func (win *window) pruneSels(list []*tabs.Tab) {
+	if len(win.sels) <= len(list) {
+		return
+	}
+	keep := make(map[tabs.TabID]*tabSel, len(list))
+	for _, t := range list {
+		if ts := win.sels[t.ID]; ts != nil {
+			keep[t.ID] = ts
+		}
+	}
+	win.sels = keep
+}
+
+// pointAt maps a grid pixel to an absolute point; call with the session locked.
+func (win *window) pointAt(scr *screen.Screen, p image.Point, cw, ch int) render.Point {
+	cols, rows := scr.Size()
+	return absPoint(p, cw, ch, cols, rows, scr.ScrollbackLen()-scr.ViewOffset())
+}
+
+func (win *window) selectPress(t *tabs.Tab, p image.Point, at time.Duration, cw, ch int) {
+	s := t.Session
+	s.Lock()
+	scr := s.Screen()
+	ap := win.pointAt(scr, p, cw, ch)
+	win.selOf(t.ID).begin(scr, ap, win.clicks.press(at, ap))
+	s.Unlock()
+	win.dragPos = p
+	win.w.Invalidate()
+}
+
+func (win *window) selectDrag(t *tabs.Tab, p image.Point, cw, ch int) {
+	ts := win.sels[t.ID]
+	if ts == nil || !ts.dragging {
+		return
+	}
+	s := t.Session
+	s.Lock()
+	ts.extend(s.Screen(), win.pointAt(s.Screen(), p, cw, ch))
+	s.Unlock()
+	win.dragPos = p
+	win.w.Invalidate()
+}
+
+func (win *window) selectRelease(gtx layout.Context, t *tabs.Tab) {
+	ts := win.sels[t.ID]
+	if ts == nil || !ts.dragging {
+		return
+	}
+	ts.end()
+	if win.opt.Config.CopyOnSelect && ts.sel.Active {
+		win.copySel(gtx, t)
+	}
+}
+
+// autoScroll scrolls the view while a selection drag is held above or below the grid.
+func (win *window) autoScroll(gtx layout.Context, t *tabs.Tab, cw, ch int) {
+	ts := win.sels[t.ID]
+	if ts == nil || !ts.dragging || win.toApp || ch <= 0 {
+		return
+	}
+	_, rows := win.mgr.Size()
+	dir := edgeDir(win.dragPos.Y, rows*ch)
+	if dir == 0 {
+		return
+	}
+	if gtx.Now.Sub(win.scrolledAt) >= autoScrollEvery {
+		win.scrolledAt = gtx.Now
+		s := t.Session
+		s.Lock()
+		scr := s.Screen()
+		if !scr.OnAltScreen() { // full-screen apps have no history to scroll
+			scr.SetViewOffset(scr.ViewOffset() - dir)
+			ts.extend(scr, win.pointAt(scr, win.dragPos, cw, ch))
+		}
+		s.Unlock()
+	}
+	gtx.Execute(op.InvalidateCmd{At: win.scrolledAt.Add(autoScrollEvery)})
+}
+
+// checkSel drops or shifts the active tab's selection when the screen moved
+// under it, and returns what to draw.
+func (win *window) checkSel(t *tabs.Tab) render.Selection {
+	ts := win.sels[t.ID]
+	if ts == nil {
+		return render.Selection{}
+	}
+	t.Session.Lock()
+	ts.check(t.Session.Screen())
+	t.Session.Unlock()
+	return ts.sel
+}
+
+func (win *window) copySel(gtx layout.Context, t *tabs.Tab) {
+	ts := win.sels[t.ID]
+	if ts == nil || !ts.sel.Active {
+		return
+	}
+	t.Session.Lock()
+	text := render.SelectedText(t.Session.Screen(), ts.sel)
+	t.Session.Unlock()
+	if text == "" {
+		return
+	}
+	gtx.Execute(clipboard.WriteCmd{Type: "application/text", Data: io.NopCloser(strings.NewReader(text))})
 }

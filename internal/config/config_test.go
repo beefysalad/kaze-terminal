@@ -171,3 +171,17 @@ func TestKnownActionsAreTheRealOnes(t *testing.T) {
 		t.Fatalf("KnownActions = %v, want %v", got, want)
 	}
 }
+
+func TestCopyOnSelect(t *testing.T) {
+	if Default().CopyOnSelect {
+		t.Fatal("copy_on_select defaults to on, want off")
+	}
+	cfg, warns, err := Load(write(t, "copy_on_select = true\n"))
+	if err != nil || len(warns) != 0 || !cfg.CopyOnSelect {
+		t.Fatalf("copy_on_select = true: cfg %v, warns %v, err %v", cfg.CopyOnSelect, warns, err)
+	}
+	cfg, warns, err = Load(write(t, "copy_on_select = \"yes\"\n"))
+	if err != nil || len(warns) != 1 || cfg.CopyOnSelect {
+		t.Fatalf("copy_on_select = \"yes\": cfg %v, warns %v, err %v", cfg.CopyOnSelect, warns, err)
+	}
+}

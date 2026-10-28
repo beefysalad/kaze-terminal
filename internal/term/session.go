@@ -60,12 +60,21 @@ type Session struct {
 // only from the notifier goroutine, without the lock held, after output is applied or the
 // process exits; bursts may coalesce into one call.
 func NewSession(p ptyx.Session, cols, rows int, onChange func()) *Session {
+	return NewSessionWithScrollback(p, cols, rows, -1, onChange)
+}
+
+// NewSessionWithScrollback is NewSession with a history cap in lines; a negative cap keeps the default.
+func NewSessionWithScrollback(p ptyx.Session, cols, rows, scrollback int, onChange func()) *Session {
 	if onChange == nil {
 		onChange = func() {}
 	}
 	cols, rows = clampSize(cols, rows)
+	scr := screen.New(cols, rows)
+	if scrollback >= 0 {
+		scr = screen.NewWithScrollback(cols, rows, scrollback)
+	}
 	s := &Session{
-		scr:      screen.New(cols, rows),
+		scr:      scr,
 		pty:      p,
 		onChange: onChange,
 		notifyCh: make(chan struct{}, 1),

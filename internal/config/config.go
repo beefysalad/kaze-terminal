@@ -30,6 +30,7 @@ type Config struct {
 	ScrollbackLines int               `toml:"scrollback_lines"` // default 10000, max 100000
 	Colors          map[string]string `toml:"colors"`           // "fg", "bg", "cursor", "selection", "color0".."color15": "#rrggbb"
 	Keys            map[string]string `toml:"keys"`             // action -> shortcut text; parsed by the caller
+	CopyOnSelect    bool              `toml:"copy_on_select"`   // copy a selection when the mouse is released
 }
 
 // KnownActions are the action names accepted under [keys]; the window binds each one.
@@ -124,6 +125,13 @@ func Load(path string) (Config, []string, error) {
 			default:
 				cfg.ScrollbackLines = int(n)
 			}
+		case "copy_on_select":
+			b, ok := v.(bool)
+			if !ok {
+				warn("copy_on_select must be true or false, got %v; using false", v)
+				continue
+			}
+			cfg.CopyOnSelect = b
 		case "colors":
 			loadColors(v, &cfg, warn)
 		case "keys":

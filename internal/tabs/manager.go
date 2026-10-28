@@ -47,6 +47,7 @@ type Manager struct {
 	nextID  TabID
 	cols    int
 	rows    int
+	sbLines int // history cap for new tabs; negative keeps the screen default
 
 	active atomic.Int64 // TabID of the active tab, 0 when there is none
 }
@@ -57,7 +58,7 @@ func NewManager(start func(env []string) (ptyx.Session, error), cols, rows int, 
 	if onChange == nil {
 		onChange = func() {}
 	}
-	return &Manager{start: start, onChange: onChange, baseEnv: baseEnv(os.Environ()), cols: cols, rows: rows}
+	return &Manager{start: start, onChange: onChange, baseEnv: baseEnv(os.Environ()), cols: cols, rows: rows, sbLines: -1}
 }
 
 // baseEnv drops an inherited KAZE_TAB_ID so a kaze started inside a kaze tab gets clean IDs.
@@ -77,7 +78,7 @@ func (m *Manager) New() (*Tab, error) {
 	m.mu.Lock()
 	m.nextID++
 	id := m.nextID
-	cols, rows := m.cols, m.rows
+	cols, rows, sb := m.cols, m.rows, m.sbLines
 	m.mu.Unlock()
 
 	env := append(slices.Clip(m.baseEnv), "KAZE_TAB_ID="+strconv.Itoa(int(id)))
@@ -86,7 +87,7 @@ func (m *Manager) New() (*Tab, error) {
 		return nil, err
 	}
 	e := &entry{tab: &Tab{ID: id}}
-	s := term.NewSession(p, cols, rows, func() { m.notify(e) })
+	s := term.NewSessionWithScrollback(p, cols, rows, sb, func() { m.notify(e) })
 	e.sess.Store(s)
 	e.tab.Session = s
 
@@ -257,4 +258,11 @@ func (m *Manager) ResizeAll(cols, rows int) {
 	for _, e := range es {
 		e.tab.Session.Resize(cols, rows)
 	}
+}
+
+// SetScrollback sets the history cap, in lines, for tabs opened after it.
+func (m *Manager) SetScrollback(lines int) {
+	m.mu.Lock()
+	m.sbLines = lines
+	m.mu.Unlock()
 }

@@ -291,3 +291,28 @@ func TestStartErrorAddsNoTab(t *testing.T) {
 		t.Fatal("expected error again")
 	}
 }
+
+func TestSetScrollbackCapsNewTabsHistory(t *testing.T) {
+	m, st := newManager(t)
+	m.SetScrollback(3)
+	tab := mustNew(t, m)
+	var b strings.Builder
+	for i := 0; i < 40; i++ {
+		b.WriteString("line\r\n")
+	}
+	b.WriteString("end")
+	go st.fakes[0].outW.Write([]byte(b.String()))
+	s := tab.Session
+	waitFor(t, "output applied", func() bool {
+		s.Lock()
+		defer s.Unlock()
+		col, _ := s.Screen().Cursor()
+		return col == 3
+	})
+	s.Lock()
+	n := s.Screen().ScrollbackLen()
+	s.Unlock()
+	if n != 3 {
+		t.Fatalf("history holds %d lines, want the configured 3", n)
+	}
+}
