@@ -25,6 +25,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 
+	"github.com/patrick-gogo/kaze/internal/bench"
 	"github.com/patrick-gogo/kaze/internal/config"
 	"github.com/patrick-gogo/kaze/internal/input"
 	"github.com/patrick-gogo/kaze/internal/ptyx"
@@ -37,9 +38,10 @@ import (
 // Options are what main resolved at startup.
 type Options struct {
 	Config   config.Config
-	Warnings []string // shown in the first tab
-	Shell    []string // argv, already resolved to the platform default when the config has none
-	Dir      string   // working directory for new shells
+	Warnings []string        // shown in the first tab
+	Shell    []string        // argv, already resolved to the platform default when the config has none
+	Dir      string          // working directory for new shells
+	Bench    *bench.Recorder // nil unless KAZE_BENCH is set
 }
 
 const (
@@ -92,6 +94,9 @@ type window struct {
 	scrolledAt time.Time
 
 	toClipboard func(string) // replaces the Gio clipboard write in tests
+
+	bench *bench.Recorder // nil unless KAZE_BENCH is set; every hook checks it first
+	bf    benchFrame
 }
 
 // Run drives the window until it closes. It returns after every shell is closed.
@@ -107,7 +112,8 @@ func Run(w *app.Window, opt Options) error {
 		barTag:   new(int),
 		defTitle: shellName(opt.Shell),
 		focused:  true, wantFocus: true,
-		sels: map[tabs.TabID]*tabSel{},
+		sels:  map[tabs.TabID]*tabSel{},
+		bench: opt.Bench,
 	}
 	return win.loop()
 }
@@ -125,6 +131,10 @@ func (win *window) loop() error {
 	for {
 		switch e := win.w.Event().(type) {
 		case app.DestroyEvent:
+			if win.bench != nil {
+				win.benchScreen()
+				win.bench.Close(privateMB())
+			}
 			if win.mgr != nil {
 				win.mgr.CloseAll()
 			}
@@ -132,11 +142,19 @@ func (win *window) loop() error {
 		case app.ConfigEvent:
 			win.setFocused(e.Config.Focused)
 		case app.FrameEvent:
+			start := time.Now()
 			gtx := app.NewContext(&ops, e)
 			if err := win.frame(gtx); err != nil {
 				return err
 			}
 			e.Frame(gtx.Ops)
+			if win.bench != nil {
+				win.bench.FrameDone(start, time.Now(), win.bf.frame)
+				win.bf = benchFrame{}
+				if win.bench.ShouldQuit() {
+					win.w.Perform(system.ActionClose)
+				}
+			}
 			if win.mgr != nil && win.mgr.Empty() {
 				win.w.Perform(system.ActionClose)
 			}
@@ -205,7 +223,11 @@ func (win *window) frame(gtx layout.Context) error {
 
 	if win.mgr == nil {
 		// The first shell starts at the real window size, not a guess.
-		win.mgr = tabs.NewManager(win.start, cols, rows, win.w.Invalidate)
+		notify := win.w.Invalidate
+		if win.bench != nil {
+			notify = func() { win.bench.Output(time.Now()); win.w.Invalidate() }
+		}
+		win.mgr = tabs.NewManager(win.start, cols, rows, notify)
 		win.mgr.SetScrollback(win.opt.Config.ScrollbackLines)
 		var def []string
 		if len(win.opt.Config.Shell) > 0 {
@@ -213,6 +235,12 @@ func (win *window) frame(gtx layout.Context) error {
 		}
 		if _, _, err := openFirst(win.mgr, &win.opt.Shell, def, win.opt.Warnings); err != nil {
 			return fmt.Errorf("start %q: %w", win.opt.Shell, err)
+		}
+		if win.bench != nil {
+			for range win.bench.ExtraTabs() {
+				win.newTab()
+			}
+			win.bench.Start(win.w.Invalidate, privateMB)
 		}
 	}
 	win.mgr.ResizeAll(cols, rows)
@@ -251,7 +279,13 @@ func (win *window) frame(gtx layout.Context) error {
 	off := op.Offset(grid.Min).Push(ops)
 	tg := gtx
 	tg.Constraints = layout.Exact(grid.Size())
+	if win.bench != nil {
+		win.benchBeforeDraw(active)
+	}
 	win.rend.Layout(tg, active.Session, &sel)
+	if win.bench != nil {
+		win.benchAfterDraw(active)
+	}
 	off.Pop()
 	g.Pop()
 
@@ -302,15 +336,19 @@ func (win *window) updateTitle(t *tabs.Tab) {
 	}
 }
 
+// privateMB is the process's private memory, or the Go runtime's own count where the OS number is unavailable.
+func privateMB() float64 {
+	if mb, ok := processMB(); ok {
+		return mb
+	}
+	var ms runtime.MemStats
+	runtime.ReadMemStats(&ms)
+	return float64(ms.Sys-ms.HeapReleased) / (1 << 20)
+}
+
 func (win *window) statusText(n int) string {
 	if now := time.Now(); now.Sub(win.memRead) > memEvery {
-		mb, ok := processMB()
-		if !ok {
-			var ms runtime.MemStats
-			runtime.ReadMemStats(&ms)
-			mb = float64(ms.Sys-ms.HeapReleased) / (1 << 20)
-		}
-		win.memMB = mb
+		win.memMB = privateMB()
 		win.memRead = now
 	}
 	unit := "tabs"
@@ -331,7 +369,7 @@ func (win *window) barEvents(gtx layout.Context) {
 			return
 		}
 		e, ok := ev.(pointer.Event)
-		if !ok || e.Kind != pointer.Press {
+		if !ok || e.Kind != pointer.Press || win.bench.IgnoreInput() {
 			continue
 		}
 		win.wantFocus = true
@@ -369,6 +407,12 @@ func (win *window) termEvents(gtx layout.Context, t *tabs.Tab, cw, ch int) {
 		}
 		batch = append(batch, ev)
 	}
+	if win.bench != nil {
+		if win.bench.IgnoreInput() {
+			batch = batch[:0]
+		}
+		batch = win.benchInput(gtx, t, batch, ch)
+	}
 	win.route(gtx, batch, cw, ch)
 }
 
@@ -397,6 +441,7 @@ func (win *window) route(gtx layout.Context, batch []event.Event, cw, ch int) {
 		case key.EditEvent:
 			edited = true
 			if win.gate.allow() && editCommits(batch, i, win.composing) && e.Text != "" {
+				win.benchKey(t)
 				t.Session.Write(input.EncodeText(e.Text))
 				win.snapToBottom(t.Session)
 			}
@@ -435,6 +480,7 @@ func (win *window) onKey(gtx layout.Context, t *tabs.Tab, e key.Event, m term.Mo
 		win.copySel(gtx, t)
 	default:
 		if out.data != nil {
+			win.benchKey(t)
 			t.Session.Write(out.data)
 			win.snapToBottom(t.Session)
 		}

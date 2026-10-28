@@ -8,6 +8,7 @@ import (
 	"gioui.org/app"
 	"gioui.org/unit"
 
+	"github.com/patrick-gogo/kaze/internal/bench"
 	"github.com/patrick-gogo/kaze/internal/config"
 	"github.com/patrick-gogo/kaze/internal/ptyx"
 	"github.com/patrick-gogo/kaze/internal/ui"
@@ -19,6 +20,7 @@ var r string
 
 func main() {
 	_ = r
+	rec := bench.FromEnv(os.Getenv) // nil, and free, unless KAZE_BENCH is set
 	cfg, warns := loadConfig()
 	shell := cfg.Shell
 	if len(shell) == 0 {
@@ -32,7 +34,7 @@ func main() {
 	go func() {
 		w := new(app.Window)
 		w.Option(app.Title("kaze"), app.Size(unit.Dp(1100), unit.Dp(720)))
-		if err := ui.Run(w, ui.Options{Config: cfg, Warnings: warns, Shell: shell, Dir: home}); err != nil {
+		if err := ui.Run(w, ui.Options{Config: cfg, Warnings: warns, Shell: shell, Dir: home, Bench: rec}); err != nil {
 			log.Printf("kaze: %v", err)
 			os.Exit(1)
 		}
