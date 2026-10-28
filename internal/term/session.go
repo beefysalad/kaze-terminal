@@ -1,0 +1,186 @@
+package term
+
+import (
+	"fmt"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"github.com/patrick-gogo/kaze/internal/ptyx"
+	"github.com/patrick-gogo/kaze/internal/screen"
+	"github.com/patrick-gogo/kaze/internal/vt"
+)
+
+const (
+	readBufSize = 64 * 1024
+	// writeQueueLen bounds queued input chunks; past it, input is dropped rather than blocking the UI.
+	writeQueueLen = 1024
+	maxSize       = 65535
+)
+
+// drainGrace is how long to wait for remaining output after the process exits.
+// ConPTY keeps the output pipe open until it is closed, so the reader may never see EOF on its own.
+var drainGrace = 250 * time.Millisecond
+
+// Session is one tab: a shell in a PTY whose output a reader goroutine applies to a screen.
+type Session struct {
+	mu     sync.Mutex // guards scr, app and parser
+	scr    *screen.Screen
+	app    *Applier
+	parser *vt.Parser
+
+	pty      ptyx.Session
+	onChange func()
+
+	writes    chan []byte
+	done      chan struct{} // closed by Close
+	closeOnce sync.Once
+	closed    atomic.Bool
+
+	resizeMu sync.Mutex // keeps the PTY's last size equal to the screen's
+
+	exited   atomic.Bool
+	exitCode atomic.Int64
+}
+
+// NewSession starts the reader and writer goroutines for p. onChange is called from
+// the reader goroutine, without the lock held, after each batch of output is applied.
+func NewSession(p ptyx.Session, cols, rows int, onChange func()) *Session {
+	if onChange == nil {
+		onChange = func() {}
+	}
+	s := &Session{
+		scr:      screen.New(cols, rows),
+		pty:      p,
+		onChange: onChange,
+		writes:   make(chan []byte, writeQueueLen),
+		done:     make(chan struct{}),
+	}
+	// Replies are produced under the lock; queueing them keeps a slow PTY from stalling the reader.
+	s.app = NewApplier(s.scr, replyWriter{s})
+	s.parser = vt.NewParser(s.app)
+
+	readDone := make(chan struct{})
+	go s.readLoop(readDone)
+	go s.writeLoop()
+	go s.waitLoop(readDone)
+	return s
+}
+
+func (s *Session) Lock()   { s.mu.Lock() }
+func (s *Session) Unlock() { s.mu.Unlock() }
+
+// Screen is only safe to use while the session is locked.
+func (s *Session) Screen() *screen.Screen { return s.scr }
+
+// Applier is only safe to use while the session is locked.
+func (s *Session) Applier() *Applier { return s.app }
+
+// Write queues input for the shell and never blocks. It is a no-op once the process has exited or the session is closed.
+func (s *Session) Write(p []byte) {
+	if s.exited.Load() || s.closed.Load() || len(p) == 0 {
+		return
+	}
+	s.enqueue(p)
+}
+
+func (s *Session) enqueue(p []byte) {
+	b := append([]byte(nil), p...) // callers reuse their buffers
+	select {
+	case s.writes <- b:
+	default:
+	}
+}
+
+type replyWriter struct{ s *Session }
+
+func (w replyWriter) Write(p []byte) (int, error) {
+	w.s.enqueue(p)
+	return len(p), nil
+}
+
+// Resize clamps to 1..65535 in each direction, resizes the screen, then the PTY.
+func (s *Session) Resize(cols, rows int) {
+	cols, rows = min(max(cols, 1), maxSize), min(max(rows, 1), maxSize)
+	s.resizeMu.Lock()
+	defer s.resizeMu.Unlock()
+	s.mu.Lock()
+	s.scr.Resize(cols, rows)
+	s.mu.Unlock()
+	_ = s.pty.Resize(cols, rows) // fails only once the PTY is gone, when the size no longer matters
+}
+
+// Exited reports whether the process has exited and its exit code. It does not take the lock.
+func (s *Session) Exited() (bool, int) {
+	if !s.exited.Load() {
+		return false, 0
+	}
+	return true, int(s.exitCode.Load())
+}
+
+// Close kills the process and releases the PTY. It is safe to call more than once.
+func (s *Session) Close() {
+	s.closeOnce.Do(func() {
+		s.closed.Store(true)
+		close(s.done)
+		_ = s.pty.Close()
+	})
+}
+
+func (s *Session) readLoop(readDone chan struct{}) {
+	defer close(readDone)
+	buf := make([]byte, readBufSize)
+	for {
+		n, err := s.pty.Read(buf)
+		if n > 0 {
+			s.mu.Lock()
+			s.parser.Feed(buf[:n])
+			s.mu.Unlock()
+			s.notify()
+		}
+		if err != nil {
+			return
+		}
+	}
+}
+
+func (s *Session) writeLoop() {
+	for {
+		select {
+		case <-s.done:
+			return
+		case b := <-s.writes:
+			_, _ = s.pty.Write(b) // a dead PTY is reported through Wait, not here
+		}
+	}
+}
+
+// waitLoop shows the exit marker once the process is gone and its output has drained.
+func (s *Session) waitLoop(readDone chan struct{}) {
+	code, err := s.pty.Wait()
+	if err != nil {
+		code = -1
+	}
+	select {
+	case <-readDone:
+	case <-time.After(drainGrace):
+		_ = s.pty.Close() // unblocks a reader that will never see EOF
+		select {
+		case <-readDone:
+		case <-time.After(drainGrace):
+		}
+	}
+	s.mu.Lock()
+	s.exitCode.Store(int64(code))
+	s.exited.Store(true)
+	s.parser.Feed([]byte(fmt.Sprintf("\x1b[0m\r\n[process exited %d]", code))) // default pen, whatever the shell left set
+	s.mu.Unlock()
+	s.notify()
+}
+
+// notify skips onChange after Close, so a closed tab does not ask for frames.
+func (s *Session) notify() {
+	if !s.closed.Load() {
+		s.onChange()
+	}
+}
