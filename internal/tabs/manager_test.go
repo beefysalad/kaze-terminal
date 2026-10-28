@@ -316,3 +316,33 @@ func TestSetScrollbackCapsNewTabsHistory(t *testing.T) {
 		t.Fatalf("history holds %d lines, want the configured 3", n)
 	}
 }
+
+// slowClose takes a while to release its PTY, as ConPTY can.
+type slowClose struct {
+	*fakePTY
+	released atomic.Bool
+}
+
+func (s *slowClose) Close() error {
+	time.Sleep(300 * time.Millisecond)
+	s.released.Store(true)
+	return s.fakePTY.Close()
+}
+
+func TestCloseAllWaitsForACloseInProgress(t *testing.T) {
+	var slow *slowClose
+	m := tabs.NewManager(func([]string) (ptyx.Session, error) {
+		slow = &slowClose{fakePTY: newFake()}
+		return slow, nil
+	}, 80, 24, nil)
+	tab := mustNew(t, m)
+	m.Close(tab.ID) // closes in the background
+	start := time.Now()
+	m.CloseAll()
+	if !slow.released.Load() {
+		t.Fatal("CloseAll returned while a tab's shell was still being closed")
+	}
+	if d := time.Since(start); d > 3*time.Second {
+		t.Fatalf("CloseAll took %v; its wait must be bounded", d)
+	}
+}

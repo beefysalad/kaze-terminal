@@ -142,3 +142,15 @@ func (s *session) Close() error {
 	})
 	return err
 }
+
+// Resolve looks a bare program name up on PATH once, so later starts skip the search.
+func Resolve(argv []string) []string {
+	if len(argv) == 0 || filepath.Base(argv[0]) != argv[0] {
+		return argv
+	}
+	lp, err := exec.LookPath(argv[0])
+	if err != nil {
+		return argv // Start reports the missing program
+	}
+	return append([]string{lp}, argv[1:]...)
+}

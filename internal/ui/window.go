@@ -9,6 +9,7 @@ import (
 	"log"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -47,6 +48,8 @@ const (
 	maxPaste = 64 << 20
 	// memEvery limits how often the status bar reads memory stats (ReadMemStats stops the world).
 	memEvery = 2 * time.Second
+	// noticeFor is how long an error stays in the status bar.
+	noticeFor = 15 * time.Second
 )
 
 type window struct {
@@ -74,6 +77,9 @@ type window struct {
 
 	memMB   float64
 	memRead time.Time
+
+	notice      string // a recent error for the status bar
+	noticeUntil time.Time
 
 	sels       map[tabs.TabID]*tabSel
 	clicks     clicks
@@ -169,6 +175,10 @@ func (win *window) start(env []string) (ptyx.Session, error) {
 func (win *window) newTab() {
 	if _, err := win.mgr.New(); err != nil {
 		log.Printf("kaze: new tab: %v", err)
+		// A windowsgui build has no console, so the status bar is where this can be seen.
+		win.notice = "new tab failed: " + err.Error()
+		win.noticeUntil = time.Now().Add(noticeFor)
+		win.w.Invalidate()
 	}
 }
 
@@ -192,11 +202,13 @@ func (win *window) frame(gtx layout.Context) error {
 		// The first shell starts at the real window size, not a guess.
 		win.mgr = tabs.NewManager(win.start, cols, rows, win.w.Invalidate)
 		win.mgr.SetScrollback(win.opt.Config.ScrollbackLines)
-		t, err := win.mgr.New()
-		if err != nil {
+		var def []string
+		if len(win.opt.Config.Shell) > 0 {
+			def = ptyx.Resolve(ptyx.DefaultShell())
+		}
+		if _, _, err := openFirst(win.mgr, &win.opt.Shell, def, win.opt.Warnings); err != nil {
 			return fmt.Errorf("start %q: %w", win.opt.Shell, err)
 		}
-		injectWarnings(t.Session, win.opt.Warnings)
 	}
 	win.mgr.ResizeAll(cols, rows)
 
@@ -294,7 +306,11 @@ func (win *window) statusText(n int) string {
 	if n == 1 {
 		unit = "tab"
 	}
-	return fmt.Sprintf("kaze %.0fMB · %d %s", win.memMB, n, unit)
+	s := fmt.Sprintf("kaze %.0fMB · %d %s", win.memMB, n, unit)
+	if win.notice != "" && time.Now().Before(win.noticeUntil) {
+		s += " · " + win.notice
+	}
+	return s
 }
 
 func (win *window) barEvents(gtx layout.Context) {
@@ -342,13 +358,27 @@ func (win *window) termEvents(gtx layout.Context, t *tabs.Tab, cw, ch int) {
 		}
 		batch = append(batch, ev)
 	}
+	win.route(gtx, batch, cw, ch)
+}
+
+// route delivers one frame's terminal input to the active tab.
+func (win *window) route(gtx layout.Context, batch []event.Event, cw, ch int) {
+	t := win.mgr.Active()
+	if t == nil {
+		return
+	}
+	m := modes(t.Session)
 	edited := false
 	for i, ev := range batch {
 		switch e := ev.(type) {
 		case key.Event:
 			win.onKey(gtx, t, e, m)
-			if win.mgr.Active() != t { // the key switched or closed tabs; drop the rest of this frame's input
-				return
+			if a := win.mgr.Active(); a != t {
+				// The key opened, closed or switched tabs; the rest of the frame's input goes to the new one.
+				if a == nil {
+					return
+				}
+				t, m = a, modes(a.Session)
 			}
 		case key.CompositionEvent:
 			win.composing = compositionActive(e)
@@ -610,4 +640,21 @@ func (win *window) copySel(gtx layout.Context, t *tabs.Tab) {
 		return
 	}
 	gtx.Execute(clipboard.WriteCmd{Type: "application/text", Data: io.NopCloser(strings.NewReader(text))})
+}
+
+// openFirst opens the first tab with the warnings written in before the shell
+// starts. When the configured shell fails and def is set, it retries with def
+// and adds a warning that says so.
+func openFirst(m *tabs.Manager, shell *[]string, def, warns []string) (*tabs.Tab, string, error) {
+	prefeed := func(w []string) func(*term.Session) {
+		return func(s *term.Session) { injectWarnings(s, w) }
+	}
+	t, err := m.NewWith(prefeed(warns))
+	if err == nil || len(def) == 0 || slices.Equal(*shell, def) {
+		return t, "", err
+	}
+	warn := fmt.Sprintf("shell %q failed: %v; using the default shell", strings.Join(*shell, " "), err)
+	*shell = def
+	t, err = m.NewWith(prefeed(append(slices.Clip(warns), warn)))
+	return t, warn, err
 }

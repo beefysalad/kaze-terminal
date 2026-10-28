@@ -24,6 +24,7 @@ func main() {
 	if len(shell) == 0 {
 		shell = ptyx.DefaultShell()
 	}
+	shell = ptyx.Resolve(shell) // once, so opening a tab never searches PATH
 	home, err := os.UserHomeDir()
 	if err != nil {
 		home = ""

@@ -3,6 +3,7 @@ package ui
 import (
 	"io"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -10,19 +11,24 @@ import (
 )
 
 type pipePTY struct {
-	r *io.PipeReader
-	w *io.PipeWriter
+	r    *io.PipeReader
+	w    *io.PipeWriter
+	done chan struct{}
+	once sync.Once
 }
 
 func newPipePTY() *pipePTY {
 	r, w := io.Pipe()
-	return &pipePTY{r, w}
+	return &pipePTY{r: r, w: w, done: make(chan struct{})}
 }
 func (p *pipePTY) Read(b []byte) (int, error)  { return p.r.Read(b) }
 func (p *pipePTY) Write(b []byte) (int, error) { return len(b), nil }
 func (p *pipePTY) Resize(int, int) error       { return nil }
-func (p *pipePTY) Close() error                { p.w.Close(); return nil }
-func (p *pipePTY) Wait() (int, error)          { select {} }
+func (p *pipePTY) Close() error {
+	p.once.Do(func() { p.w.Close(); close(p.done) })
+	return nil
+}
+func (p *pipePTY) Wait() (int, error) { <-p.done; return 0, nil } // Close ends it, so no goroutine leaks
 
 func visibleRow(s *term.Session, row int) string {
 	s.Lock()

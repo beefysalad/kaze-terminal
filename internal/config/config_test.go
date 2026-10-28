@@ -185,3 +185,14 @@ func TestCopyOnSelect(t *testing.T) {
 		t.Fatalf("copy_on_select = \"yes\": cfg %v, warns %v, err %v", cfg.CopyOnSelect, warns, err)
 	}
 }
+
+func TestFontSizeHasAMinimum(t *testing.T) {
+	cfg, warns, err := Load(write(t, "font_size = 1\n"))
+	if err != nil || cfg.FontSize != 4 || len(warns) != 1 {
+		t.Fatalf("font_size = 1: size %v, warns %v, err %v; want 4 with a warning", cfg.FontSize, warns, err)
+	}
+	cfg, warns, _ = Load(write(t, "font_size = 4\n"))
+	if cfg.FontSize != 4 || len(warns) != 0 {
+		t.Fatalf("font_size = 4: size %v, warns %v", cfg.FontSize, warns)
+	}
+}

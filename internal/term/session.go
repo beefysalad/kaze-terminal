@@ -60,18 +60,25 @@ type Session struct {
 // only from the notifier goroutine, without the lock held, after output is applied or the
 // process exits; bursts may coalesce into one call.
 func NewSession(p ptyx.Session, cols, rows int, onChange func()) *Session {
-	return NewSessionWithScrollback(p, cols, rows, -1, onChange)
+	return NewSessionOpts(p, cols, rows, Opts{}, onChange)
 }
 
-// NewSessionWithScrollback is NewSession with a history cap in lines; a negative cap keeps the default.
-func NewSessionWithScrollback(p ptyx.Session, cols, rows, scrollback int, onChange func()) *Session {
+// Opts are a new session's optional settings.
+type Opts struct {
+	Scrollback int // history cap in lines; 0 keeps the screen's default
+	// Prefeed runs before the PTY is read, so what it writes always lands before the shell's output.
+	Prefeed func(*Session)
+}
+
+// NewSessionOpts is NewSession with options.
+func NewSessionOpts(p ptyx.Session, cols, rows int, o Opts, onChange func()) *Session {
 	if onChange == nil {
 		onChange = func() {}
 	}
 	cols, rows = clampSize(cols, rows)
 	scr := screen.New(cols, rows)
-	if scrollback >= 0 {
-		scr = screen.NewWithScrollback(cols, rows, scrollback)
+	if o.Scrollback > 0 {
+		scr = screen.NewWithScrollback(cols, rows, o.Scrollback)
 	}
 	s := &Session{
 		scr:      scr,
@@ -85,6 +92,9 @@ func NewSessionWithScrollback(p ptyx.Session, cols, rows, scrollback int, onChan
 	s.app = NewApplier(s.scr, replyWriter{s})
 	s.parser = vt.NewParser(s.app)
 
+	if o.Prefeed != nil {
+		o.Prefeed(s) // nothing reads the PTY yet, so the shell's output lands after this
+	}
 	readDone := make(chan struct{})
 	_ = p.Resize(cols, rows) // a fresh PTY may start at some other size; ignore a dead one
 	go s.readLoop(readDone)

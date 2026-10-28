@@ -16,6 +16,7 @@ import (
 
 const (
 	defaultFontSize   = 14
+	minFontSize       = 4
 	maxFontSize       = 72
 	defaultScrollback = 10000
 	maxScrollback     = 100000
@@ -95,6 +96,9 @@ func Load(path string) (Config, []string, error) {
 			switch {
 			case !ok || math.IsNaN(f) || math.IsInf(f, 0) || f <= 0:
 				warn("font_size must be a positive number, got %v; using %d", v, defaultFontSize)
+			case f < minFontSize:
+				warn("font_size %v is too small; raised to %d", v, minFontSize)
+				cfg.FontSize = minFontSize
 			case f > maxFontSize:
 				warn("font_size %v is too large; capped at %d", v, maxFontSize)
 				cfg.FontSize = maxFontSize

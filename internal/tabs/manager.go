@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/patrick-gogo/kaze/internal/ptyx"
 	"github.com/patrick-gogo/kaze/internal/term"
@@ -42,12 +43,14 @@ type Manager struct {
 	onChange func()
 	baseEnv  []string
 
+	closing sync.WaitGroup // shells Close is still releasing in the background
+
 	mu      sync.Mutex
 	entries []*entry
 	nextID  TabID
 	cols    int
 	rows    int
-	sbLines int // history cap for new tabs; negative keeps the screen default
+	sbLines int // history cap for new tabs; 0 keeps the screen default
 
 	active atomic.Int64 // TabID of the active tab, 0 when there is none
 }
@@ -58,7 +61,7 @@ func NewManager(start func(env []string) (ptyx.Session, error), cols, rows int, 
 	if onChange == nil {
 		onChange = func() {}
 	}
-	return &Manager{start: start, onChange: onChange, baseEnv: baseEnv(os.Environ()), cols: cols, rows: rows, sbLines: -1}
+	return &Manager{start: start, onChange: onChange, baseEnv: baseEnv(os.Environ()), cols: cols, rows: rows}
 }
 
 // baseEnv drops an inherited KAZE_TAB_ID so a kaze started inside a kaze tab gets clean IDs.
@@ -74,7 +77,10 @@ func baseEnv(env []string) []string {
 }
 
 // New starts a shell in a new tab at the end and makes it active.
-func (m *Manager) New() (*Tab, error) {
+func (m *Manager) New() (*Tab, error) { return m.NewWith(nil) }
+
+// NewWith is New with a hook that writes into the tab before its shell's output is read.
+func (m *Manager) NewWith(prefeed func(*term.Session)) (*Tab, error) {
 	m.mu.Lock()
 	m.nextID++
 	id := m.nextID
@@ -87,7 +93,7 @@ func (m *Manager) New() (*Tab, error) {
 		return nil, err
 	}
 	e := &entry{tab: &Tab{ID: id}}
-	s := term.NewSessionWithScrollback(p, cols, rows, sb, func() { m.notify(e) })
+	s := term.NewSessionOpts(p, cols, rows, term.Opts{Scrollback: sb, Prefeed: prefeed}, func() { m.notify(e) })
 	e.sess.Store(s)
 	e.tab.Session = s
 
@@ -212,10 +218,15 @@ func (m *Manager) Close(id TabID) {
 		}
 	}
 	m.mu.Unlock()
-	go e.tab.Session.Close()
+	m.closing.Add(1)
+	go func() { defer m.closing.Done(); e.tab.Session.Close() }()
 }
 
-// CloseAll closes every tab and waits for the shells to be released.
+// closeWait bounds how long CloseAll waits for shells to be released.
+const closeWait = 2 * time.Second
+
+// CloseAll closes every tab and waits, up to closeWait, for every shell to be
+// released, including ones Close is still releasing.
 func (m *Manager) CloseAll() {
 	m.mu.Lock()
 	es := m.entries
@@ -228,7 +239,12 @@ func (m *Manager) CloseAll() {
 		wg.Add(1)
 		go func() { defer wg.Done(); e.tab.Session.Close() }()
 	}
-	wg.Wait()
+	done := make(chan struct{})
+	go func() { wg.Wait(); m.closing.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(closeWait): // a hung PTY must not keep the app from quitting
+	}
 }
 
 // Empty reports that the last tab was closed; the window quits then.

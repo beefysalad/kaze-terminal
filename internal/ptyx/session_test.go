@@ -3,6 +3,7 @@ package ptyx_test
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -216,4 +217,24 @@ func TestBareProgramNameWithWorkingDir(t *testing.T) {
 	}
 	defer s.Close()
 	readUntil(t, s, "kaze-dir", 5*time.Second)
+}
+
+func TestResolveFindsTheProgramOnPath(t *testing.T) {
+	exe, err := os.Executable()
+	if err != nil {
+		t.Skip(err)
+	}
+	dir, base := filepath.Split(exe)
+	t.Setenv("PATH", dir)
+	name := strings.TrimSuffix(base, filepath.Ext(base))
+	got := ptyx.Resolve([]string{name, "-x"})
+	if !strings.EqualFold(filepath.Clean(got[0]), filepath.Clean(exe)) || got[1] != "-x" {
+		t.Fatalf("Resolve(%q) = %v, want %s", name, got, exe)
+	}
+	if got := ptyx.Resolve([]string{"kaze-no-such-program"}); got[0] != "kaze-no-such-program" {
+		t.Fatalf("a missing program changed to %v; Start must report it", got)
+	}
+	if got := ptyx.Resolve(nil); len(got) != 0 {
+		t.Fatalf("Resolve(nil) = %v", got)
+	}
 }
