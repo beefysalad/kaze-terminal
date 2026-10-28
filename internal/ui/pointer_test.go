@@ -161,3 +161,71 @@ func TestMouseModeDragGoesToTheAppAndShiftDragSelects(t *testing.T) {
 		t.Fatalf("Shift+drag was reported to the app: %q", got)
 	}
 }
+
+// A tab switch while the button is held must end the drag: otherwise autoScroll
+// keeps waking the window every 40ms once the old tab is shown again.
+func TestTabSwitchMidDragEndsTheDrag(t *testing.T) {
+	st := &recStarter{}
+	win := testWindow(t, st)
+	tab1, _ := shellTab(t, win, st, "hello", func() bool {
+		a := win.mgr.Active()
+		return a != nil && textShown(a, 4, 'o')()
+	})
+	win.switchedTo(tab1)
+	r := &pointerRun{t: t, win: win, tab: tab1}
+	P := pointer.ButtonPrimary
+	r.send(pointer.Press, P, 0, 0, 0)
+	r.send(pointer.Drag, P, 0, 2, 30) // below the 24-row grid
+	if !win.autoScroll(layout.Context{}, tab1, testCW, testCH) {
+		t.Fatal("test setup: a drag below the grid did not auto-scroll")
+	}
+
+	newTab := key.Event{Name: "T", Modifiers: key.ModCtrl | key.ModShift, State: key.Press}
+	win.route(layout.Context{}, []event.Event{newTab}, testCW, testCH)
+	tab2 := win.mgr.Active()
+	win.switchedTo(tab2)
+	r.tab = tab2
+	r.send(pointer.Release, 0, 0, 2, 30) // the release arrives while tab 2 is shown
+
+	win.mgr.SetActive(tab1.ID)
+	win.switchedTo(tab1)
+	if win.sels[tab1.ID].dragging {
+		t.Fatal("the first tab is still dragging after the button was released on another tab")
+	}
+	if win.autoScroll(layout.Context{}, tab1, testCW, testCH) {
+		t.Fatal("auto-scroll still asks for frames after the drag ended")
+	}
+	if win.held != 0 || win.toApp {
+		t.Fatalf("gesture state survived the switch: held %v toApp %v", win.held, win.toApp)
+	}
+}
+
+// An app that saw the press gets its release, even when the tab changed in between.
+func TestTabSwitchMidAppDragReleasesInTheOwnerTab(t *testing.T) {
+	st := &recStarter{}
+	win := testWindow(t, st)
+	tab1, p1 := shellTab(t, win, st, "\x1b[?1002h\x1b[?1006hx", func() bool {
+		a := win.mgr.Active()
+		return a != nil && textShown(a, 0, 'x')()
+	})
+	win.switchedTo(tab1)
+	r := &pointerRun{t: t, win: win, tab: tab1}
+	r.send(pointer.Press, pointer.ButtonPrimary, 0, 1, 0)
+	waitSent(t, p1, "\x1b[<0;2;1M")
+
+	newTab := key.Event{Name: "T", Modifiers: key.ModCtrl | key.ModShift, State: key.Press}
+	win.route(layout.Context{}, []event.Event{newTab}, testCW, testCH)
+	tab2 := win.mgr.Active()
+	win.switchedTo(tab2)
+	r.tab = tab2
+	r.send(pointer.Release, 0, 0, 5, 0)
+
+	waitSent(t, p1, "\x1b[<0;2;1M\x1b[<0;2;1m")
+	st.mu.Lock()
+	p2 := st.ptys[1]
+	st.mu.Unlock()
+	time.Sleep(50 * time.Millisecond)
+	if got := p2.sent(); got != "" {
+		t.Fatalf("the new tab got mouse reports %q for a gesture it never saw", got)
+	}
+}

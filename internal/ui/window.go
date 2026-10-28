@@ -85,7 +85,10 @@ type window struct {
 	clicks     clicks
 	held       pointer.Buttons // buttons down, to tell which one a press or release changed
 	toApp      bool            // the current mouse gesture is reported to the app, not selecting
-	dragPos    image.Point     // last drag position relative to the grid, for auto-scroll
+	gestureTab *tabs.Tab       // the tab the held gesture started in
+	gestureCol int             // last cell reported to the app, for a release sent by endGesture
+	gestureRow int
+	dragPos    image.Point // last drag position relative to the grid, for auto-scroll
 	scrolledAt time.Time
 
 	toClipboard func(string) // replaces the Gio clipboard write in tests
@@ -257,6 +260,9 @@ func (win *window) frame(gtx layout.Context) error {
 	sg := gtx
 	sg.Constraints = layout.Exact(image.Pt(size.X, statusH))
 	win.ui.layoutStatus(sg, win.statusText(len(list)), statusH)
+	if at, ok := win.noticeWake(time.Now()); ok {
+		gtx.Execute(op.InvalidateCmd{At: at}) // so the notice goes away on an idle window
+	}
 	st.Pop()
 
 	if win.wantFocus {
@@ -279,9 +285,12 @@ func (win *window) switchedTo(t *tabs.Tab) {
 		sendFocus(t, true)
 	}
 	win.lastTab = t
+	win.endGesture()
 	// One renderer serves every tab: dropping its strips frees the hidden tab's
 	// buffers and makes the shown tab draw in full.
-	win.rend.Release()
+	if win.rend != nil {
+		win.rend.Release()
+	}
 	win.updateTitle(t)
 }
 
@@ -309,7 +318,7 @@ func (win *window) statusText(n int) string {
 		unit = "tab"
 	}
 	s := fmt.Sprintf("kaze %.0fMB · %d %s", win.memMB, n, unit)
-	if win.notice != "" && time.Now().Before(win.noticeUntil) {
+	if _, ok := win.noticeWake(time.Now()); ok {
 		s += " · " + win.notice
 	}
 	return s
@@ -377,6 +386,7 @@ func (win *window) route(gtx layout.Context, batch []event.Event, cw, ch int) {
 			win.onKey(gtx, t, e, m)
 			if a := win.mgr.Active(); a != t {
 				// The key opened, closed or switched tabs; the rest of the frame's input goes to the new one.
+				win.endGesture()
 				if a == nil {
 					return
 				}
@@ -458,7 +468,9 @@ func (win *window) onPointer(gtx layout.Context, t *tabs.Tab, e pointer.Event, m
 		if first {
 			// Shift lets the user select even when the app has the mouse.
 			win.toApp = mouseOn(m) && e.Modifiers&key.ModShift == 0
+			win.gestureTab = t
 		}
+		win.gestureCol, win.gestureRow = col, row
 		if win.toApp {
 			t.Session.Write(input.EncodeMouse(btn, true, e.Modifiers, col, row, false, m))
 			return
@@ -469,6 +481,9 @@ func (win *window) onPointer(gtx layout.Context, t *tabs.Tab, e pointer.Event, m
 	case pointer.Release:
 		btn := releasedButton(win.held, e.Buttons)
 		win.held = e.Buttons
+		if win.held == 0 {
+			win.gestureTab = nil
+		}
 		if win.toApp {
 			if mouseOn(m) {
 				t.Session.Write(input.EncodeMouse(btn, false, e.Modifiers, col, row, false, m))
@@ -479,12 +494,13 @@ func (win *window) onPointer(gtx layout.Context, t *tabs.Tab, e pointer.Event, m
 			win.selectRelease(gtx, t)
 		}
 	case pointer.Cancel:
-		win.held, win.toApp = 0, false
+		win.held, win.toApp, win.gestureTab = 0, false, nil
 		if ts := win.sels[t.ID]; ts != nil {
 			ts.end()
 		}
 	case pointer.Drag, pointer.Move:
 		if win.toApp || e.Kind == pointer.Move {
+			win.gestureCol, win.gestureRow = col, row
 			if mouseOn(m) {
 				t.Session.Write(input.EncodeMouse(xtermButton(e.Buttons), true, e.Modifiers, col, row, true, m))
 			}
@@ -592,16 +608,17 @@ func (win *window) selectRelease(gtx layout.Context, t *tabs.Tab) {
 	}
 }
 
-// autoScroll scrolls the view while a selection drag is held above or below the grid.
-func (win *window) autoScroll(gtx layout.Context, t *tabs.Tab, cw, ch int) {
+// autoScroll scrolls the view while a selection drag is held above or below the
+// grid. It reports whether it asked for another frame.
+func (win *window) autoScroll(gtx layout.Context, t *tabs.Tab, cw, ch int) bool {
 	ts := win.sels[t.ID]
 	if ts == nil || !ts.dragging || win.toApp || ch <= 0 {
-		return
+		return false
 	}
 	_, rows := win.mgr.Size()
 	dir := edgeDir(win.dragPos.Y, rows*ch)
 	if dir == 0 {
-		return
+		return false
 	}
 	if gtx.Now.Sub(win.scrolledAt) >= autoScrollEvery {
 		win.scrolledAt = gtx.Now
@@ -615,6 +632,7 @@ func (win *window) autoScroll(gtx layout.Context, t *tabs.Tab, cw, ch int) {
 		s.Unlock()
 	}
 	gtx.Execute(op.InvalidateCmd{At: win.scrolledAt.Add(autoScrollEvery)})
+	return true
 }
 
 // checkSel drops or shifts the active tab's selection when the screen moved
@@ -662,5 +680,36 @@ func openFirst(m *tabs.Manager, shell *[]string, def, warns []string) (*tabs.Tab
 	warn := fmt.Sprintf("shell %q failed: %v; using the default shell", strings.Join(*shell, " "), err)
 	*shell = def
 	t, err = m.NewWith(prefeed(append(slices.Clip(warns), warn)))
+	if err != nil {
+		err = fmt.Errorf("%s; the default shell failed too: %w", warn, err)
+	}
 	return t, warn, err
+}
+
+// noticeWake is when the status-bar notice expires, if one is showing; an expired one is dropped.
+func (win *window) noticeWake(now time.Time) (time.Time, bool) {
+	if win.notice != "" && !now.Before(win.noticeUntil) {
+		win.notice = ""
+	}
+	return win.noticeUntil, win.notice != ""
+}
+
+// endGesture ends a held mouse gesture when the tab changes under it: an app
+// that saw the press gets its release, and a selection drag stops, so the
+// release landing on another tab can't leave either one stuck.
+func (win *window) endGesture() {
+	if g := win.gestureTab; g != nil {
+		if win.toApp {
+			m := modes(g.Session)
+			for _, b := range []pointer.Buttons{pointer.ButtonPrimary, pointer.ButtonTertiary, pointer.ButtonSecondary} {
+				if win.held.Contain(b) {
+					g.Session.Write(input.EncodeMouse(xtermButton(b), false, 0, win.gestureCol, win.gestureRow, false, m))
+				}
+			}
+		}
+		if ts := win.sels[g.ID]; ts != nil {
+			ts.end()
+		}
+	}
+	win.held, win.toApp, win.gestureTab = 0, false, nil
 }

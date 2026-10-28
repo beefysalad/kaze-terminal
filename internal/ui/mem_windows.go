@@ -23,7 +23,9 @@ type processMemoryCounters struct {
 	peakPagefileUsage          uintptr
 }
 
-// processMB is the working set, which includes the GPU driver and fonts that Go's own stats miss.
+// processMB is private bytes (PagefileUsage, the commit charge), which counts what the
+// process owns, GPU driver and fonts included, whether or not it is paged in. That is the
+// number that must not grow; the working set moves with paging instead.
 func processMB() (float64, bool) {
 	h, err := syscall.GetCurrentProcess()
 	if err != nil {
@@ -34,5 +36,5 @@ func processMB() (float64, bool) {
 	if r, _, _ := procGetProcessMemoryInfo.Call(uintptr(h), uintptr(unsafe.Pointer(&c)), uintptr(c.cb)); r == 0 {
 		return 0, false
 	}
-	return float64(c.workingSetSize) / (1 << 20), true
+	return float64(c.pagefileUsage) / (1 << 20), true
 }

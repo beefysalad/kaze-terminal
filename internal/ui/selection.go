@@ -271,7 +271,8 @@ func (ts *tabSel) hash(scr *screen.Screen) uint64 {
 			buf[0], buf[1], buf[2], buf[3], buf[4] = byte(r), byte(r>>8), byte(r>>16), byte(r>>24), byte(cell.Width)
 			h.Write(buf[:])
 		}
-		h.Write([]byte{'\n'})
+		buf[0] = '\n'
+		h.Write(buf[:1])
 	}
 	return h.Sum64()
 }
