@@ -15,12 +15,24 @@ const (
 	readBufSize = 64 * 1024
 	// writeQueueLen bounds queued input chunks; past it, input is dropped rather than blocking the UI.
 	writeQueueLen = 1024
-	maxSize       = 65535
+	// maxSize caps each dimension so a bad UI measurement can't allocate billions of cells.
+	maxSize = 4096
+	// maxCells caps the whole grid; 4096x4096 alone would be 16M cells.
+	maxCells = 1 << 22
 )
 
 // drainGrace is how long to wait for remaining output after the process exits.
 // ConPTY keeps the output pipe open until it is closed, so the reader may never see EOF on its own.
 var drainGrace = 250 * time.Millisecond
+
+// clampSize limits each dimension to 1..maxSize, then shrinks rows until the grid fits maxCells.
+func clampSize(cols, rows int) (int, int) {
+	cols, rows = min(max(cols, 1), maxSize), min(max(rows, 1), maxSize)
+	if cols*rows > maxCells {
+		rows = maxCells / cols
+	}
+	return cols, rows
+}
 
 // Session is one tab: a shell in a PTY whose output a reader goroutine applies to a screen.
 type Session struct {
@@ -31,6 +43,7 @@ type Session struct {
 
 	pty      ptyx.Session
 	onChange func()
+	notifyCh chan struct{} // wakes the one goroutine allowed to call onChange
 
 	writes    chan []byte
 	done      chan struct{} // closed by Close
@@ -43,16 +56,19 @@ type Session struct {
 	exitCode atomic.Int64
 }
 
-// NewSession starts the reader and writer goroutines for p. onChange is called from
-// the reader goroutine, without the lock held, after each batch of output is applied.
+// NewSession starts the reader, writer and notifier goroutines for p. onChange is called
+// only from the notifier goroutine, without the lock held, after output is applied or the
+// process exits; bursts may coalesce into one call.
 func NewSession(p ptyx.Session, cols, rows int, onChange func()) *Session {
 	if onChange == nil {
 		onChange = func() {}
 	}
+	cols, rows = clampSize(cols, rows)
 	s := &Session{
 		scr:      screen.New(cols, rows),
 		pty:      p,
 		onChange: onChange,
+		notifyCh: make(chan struct{}, 1),
 		writes:   make(chan []byte, writeQueueLen),
 		done:     make(chan struct{}),
 	}
@@ -61,8 +77,10 @@ func NewSession(p ptyx.Session, cols, rows int, onChange func()) *Session {
 	s.parser = vt.NewParser(s.app)
 
 	readDone := make(chan struct{})
+	_ = p.Resize(cols, rows) // a fresh PTY may start at some other size; ignore a dead one
 	go s.readLoop(readDone)
 	go s.writeLoop()
+	go s.notifyLoop()
 	go s.waitLoop(readDone)
 	return s
 }
@@ -99,9 +117,9 @@ func (w replyWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-// Resize clamps to 1..65535 in each direction, resizes the screen, then the PTY.
+// Resize clamps with clampSize, resizes the screen, then the PTY.
 func (s *Session) Resize(cols, rows int) {
-	cols, rows = min(max(cols, 1), maxSize), min(max(rows, 1), maxSize)
+	cols, rows = clampSize(cols, rows)
 	s.resizeMu.Lock()
 	defer s.resizeMu.Unlock()
 	s.mu.Lock()
@@ -178,9 +196,25 @@ func (s *Session) waitLoop(readDone chan struct{}) {
 	s.notify()
 }
 
-// notify skips onChange after Close, so a closed tab does not ask for frames.
+// notify asks the notifier to call onChange; a pending request already covers this one.
 func (s *Session) notify() {
-	if !s.closed.Load() {
-		s.onChange()
+	select {
+	case s.notifyCh <- struct{}{}:
+	default:
+	}
+}
+
+// notifyLoop is the only caller of onChange, so it never overlaps itself.
+// It skips onChange after Close, so a closed tab does not ask for frames.
+func (s *Session) notifyLoop() {
+	for {
+		select {
+		case <-s.done:
+			return
+		case <-s.notifyCh:
+			if !s.closed.Load() {
+				s.onChange()
+			}
+		}
 	}
 }

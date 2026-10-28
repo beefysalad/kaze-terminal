@@ -296,3 +296,65 @@ func TestCloseIsIdempotentAndStopsWrites(t *testing.T) {
 	s.Write([]byte("x")) // must not panic
 	s.Resize(10, 10)     // must not panic
 }
+
+func TestOnChangeNeverRunsConcurrentlyAcrossExit(t *testing.T) {
+	f := newFake()
+	var inflight, maxInflight, calls atomic.Int32
+	s := term.NewSession(f, 20, 5, func() {
+		n := inflight.Add(1)
+		for {
+			m := maxInflight.Load()
+			if n <= m || maxInflight.CompareAndSwap(m, n) {
+				break
+			}
+		}
+		if calls.Add(1) == 1 {
+			time.Sleep(700 * time.Millisecond) // outlasts the exit drain, so the exit notify would overlap
+		}
+		inflight.Add(-1)
+	})
+	defer s.Close()
+	f.outW.Write([]byte("hi"))
+	f.exit(0)
+	waitFor(t, "exit marker", func() bool { e, _ := s.Exited(); return e })
+	waitFor(t, "second onChange", func() bool { return calls.Load() >= 2 })
+	waitFor(t, "onChange idle", func() bool { return inflight.Load() == 0 })
+	if m := maxInflight.Load(); m != 1 {
+		t.Fatalf("max concurrent onChange = %d, want 1", m)
+	}
+}
+
+// Only bounded sizes here: a broken clamp must not be able to allocate a huge grid.
+func TestSessionClampsOversizedDimensions(t *testing.T) {
+	for _, sz := range [][2]int{{4097, 1}, {1, 4097}} {
+		f := newFake()
+		s := term.NewSession(f, sz[0], sz[1], func() {})
+		s.Lock()
+		cols, rows := s.Screen().Size()
+		s.Unlock()
+		if cols > 4096 || rows > 4096 {
+			t.Fatalf("NewSession(%v) size %dx%d, want <= 4096", sz, cols, rows)
+		}
+		s.Resize(2, 2)
+		s.Resize(sz[0], sz[1])
+		s.Lock()
+		cols, rows = s.Screen().Size()
+		s.Unlock()
+		if cols > 4096 || rows > 4096 {
+			t.Fatalf("Resize(%v) size %dx%d, want <= 4096", sz, cols, rows)
+		}
+		if last, _ := f.lastSize(); last[0] > 4096 || last[1] > 4096 {
+			t.Fatalf("PTY resized to %v", last)
+		}
+		s.Close()
+	}
+}
+
+func TestNewSessionSizesThePTY(t *testing.T) {
+	f := newFake()
+	s := term.NewSession(f, 4097, 1, func() {})
+	defer s.Close()
+	if last, n := f.lastSize(); n != 1 || last != [2]int{4096, 1} {
+		t.Fatalf("PTY sizes = %v (%d calls), want one call with 4096x1", last, n)
+	}
+}

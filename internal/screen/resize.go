@@ -17,16 +17,15 @@ func (s *Screen) Resize(cols, rows int) {
 		s.otherCells = resizeGrid(s.otherCells, s.cols, s.rows, cols, rows, 0)
 	}
 	if s.cols != cols {
-		s.wrapPending = false // the pending wrap belonged to the old right edge
+		s.wrapPending = false                        // the pending wrap belonged to the old right edge
+		s.saved.wrap, s.altSaved.wrap = false, false // so did the one DECSC/1049 stored
 	}
 	s.cols, s.rows = cols, rows
 	s.dirty = make([]bool, rows)
 	s.curCol = clamp(s.curCol, 0, cols-1)
 	s.curRow = clamp(s.curRow-drop, 0, rows-1)
 	s.saved.col = clamp(s.saved.col, 0, cols-1)
-	if !s.alt {
-		s.saved.row -= drop
-	}
+	s.saved.row -= drop // the DECSC slot belongs to whichever screen is showing, and the grid shifted
 	s.saved.row = clamp(s.saved.row, 0, rows-1)
 	s.altSaved.col = clamp(s.altSaved.col, 0, cols-1) // the main cursor, which drop never shifts while on alt
 	s.altSaved.row = clamp(s.altSaved.row, 0, rows-1)
