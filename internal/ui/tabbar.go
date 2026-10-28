@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"gioui.org/f32"
 	"gioui.org/font"
@@ -32,6 +33,8 @@ var (
 	colBorder   = rgb(0x1d2230)
 	colAccent   = rgb(0x8b7bff)
 	colStatusFG = rgb(0x7d8394)
+	colFolder   = rgb(0xc9cdd8)
+	colBranch   = rgb(0x62d39a)
 )
 
 func rgb(v uint32) color.NRGBA {
@@ -316,14 +319,43 @@ func captionGlyph(gtx layout.Context, btn captionButton, r image.Rectangle, maxi
 	return clip.Stroke{Path: p.End(), Width: sw}.Op()
 }
 
-// layoutStatus draws the status bar with its text on the right.
-func (c *chrome) layoutStatus(gtx layout.Context, s string, height int) {
+// layoutStatus draws the status bar: folder and branch on the left, the rest on the right.
+func (c *chrome) layoutStatus(gtx layout.Context, p statusParts, height int) {
 	ops := gtx.Ops
 	width := gtx.Constraints.Max.X
+	pad := gtx.Dp(14)
 	paint.FillShape(ops, colChrome, clip.Rect{Max: image.Pt(width, height)}.Op())
 	paint.FillShape(ops, colBorder, clip.Rect{Max: image.Pt(width, 1)}.Op())
-	call, size := c.label(gtx, s, 11, colStatusFG)
-	place(ops, call, image.Pt(width-size.X-gtx.Dp(14), (height-size.Y)/2))
+	call, size := c.label(gtx, p.Right, 11, colStatusFG)
+	place(ops, call, image.Pt(width-size.X-pad, (height-size.Y)/2))
+
+	avail := width - size.X - 3*pad // room left of the right text, with a gap
+	x := pad
+	var bcall op.CallOp
+	var bsize image.Point
+	gap := gtx.Dp(12)
+	if p.Branch != "" {
+		bcall, bsize = c.label(gtx, "⎇ "+p.Branch, 11, colBranch)
+		avail -= bsize.X + gap
+	}
+	if p.Folder != "" && avail > 0 {
+		folder := p.Folder
+		fcall, fsize := c.label(gtx, folder, 11, colFolder)
+		// Shorten from the left until it fits; bounded so a bad measure cannot spin.
+		for i := 0; i < 8 && fsize.X > avail && folder != "…"; i++ {
+			n := utf8.RuneCountInString(folder) * avail / fsize.X
+			if n >= utf8.RuneCountInString(folder) {
+				n = utf8.RuneCountInString(folder) - 1
+			}
+			folder = truncateLeft(folder, n)
+			fcall, fsize = c.label(gtx, folder, 11, colFolder)
+		}
+		place(ops, fcall, image.Pt(x, (height-fsize.Y)/2))
+		x += fsize.X + gap
+	}
+	if p.Branch != "" && x+bsize.X <= width-size.X-pad {
+		place(ops, bcall, image.Pt(x, (height-bsize.Y)/2))
+	}
 }
 
 // tabLabelFit is tabLabel with the title cleaned for the tab bar's fonts before it is shortened.

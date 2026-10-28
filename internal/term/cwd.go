@@ -15,8 +15,12 @@ const maxCwd = 4096
 // RIS (ESC c) deliberately keeps it: the shell is still in that folder.
 func (a *Applier) Cwd() string { return a.cwd }
 
+// CwdSeq counts accepted OSC 7 reports. It moves even when the folder is the
+// same, so the prompt re-reporting after `git switch` can refresh the branch.
+func (a *Applier) CwdSeq() uint64 { return a.cwdSeq }
+
 // parseOSC7 turns "7;file://host/path" into an OS-native path. The host is
-// deliberately ignored, so UNC paths (\server\share) are not supported.
+// deliberately ignored, so UNC paths are not supported.
 func parseOSC7(data []byte, goos string) (string, bool) {
 	rest, ok := bytes.CutPrefix(data, []byte("7;file://"))
 	if !ok || len(rest) > maxCwd*3 {

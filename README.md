@@ -160,6 +160,28 @@ if ($Host.Name -eq 'ConsoleHost' -and -not [Console]::IsOutputRedirected) {
 
 The guard keeps it quiet in scripts and other non-interactive sessions.
 
+## Folder and branch in the status bar
+
+kaze shows the active tab's folder and git branch (`~\src\kaze  ⎇ main`) on the left of the
+status bar. The shell has to tell kaze where it is with an OSC 7 sequence from its prompt.
+The branch is read from `.git/HEAD` whenever the prompt reports, so no git process runs.
+
+PowerShell, in your profile:
+
+```powershell
+$__kazePrompt = $function:prompt
+function prompt { $p = (Get-Location).ProviderPath -replace '\','/'; [Console]::Write("`e]7;file://$env:COMPUTERNAME/$p`a"); & $__kazePrompt }
+```
+
+zsh, in `~/.zshrc`:
+
+```zsh
+_kaze_osc7() { printf '\e]7;file://%s%s\a' "$HOST" "${PWD// /%20}" }
+autoload -Uz add-zsh-hook; add-zsh-hook precmd _kaze_osc7
+```
+
+Without this the folder and branch stay hidden. UNC paths (`\server\share`) are not shown.
+
 ## Benchmarks
 
 Numbers for the first milestone on Windows (key latency, Claude Code streaming, launch,

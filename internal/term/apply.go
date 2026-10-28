@@ -19,6 +19,7 @@ type Applier struct {
 	syncSince time.Time
 	title     string
 	cwd       string
+	cwdSeq    uint64
 	goos      string           // replaceable so tests can check both path styles
 	now       func() time.Time // replaceable so tests can drive the sync timeout
 }
@@ -170,6 +171,7 @@ func (a *Applier) OSC(data []byte) {
 	if ok && string(cmd) == "7" {
 		if p, good := parseOSC7(data, a.goos); good { // string conversion copies
 			a.cwd = p
+			a.cwdSeq++
 		}
 	}
 }

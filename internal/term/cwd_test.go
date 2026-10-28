@@ -96,3 +96,18 @@ func TestOSC7RejectsControlCharsAndBadUTF8(t *testing.T) {
 		}
 	}
 }
+
+func TestCwdSeqCountsEveryAcceptedReport(t *testing.T) {
+	a := NewApplier(screen.New(10, 3), io.Discard)
+	a.goos = "linux"
+	p := vt.NewParser(a)
+	p.Feed([]byte("\x1b]7;file://h/tmp\x07"))
+	p.Feed([]byte("\x1b]7;file://h/tmp\x07"))
+	if a.CwdSeq() != 2 {
+		t.Fatalf("seq %d after two reports of one folder", a.CwdSeq())
+	}
+	p.Feed([]byte("\x1b]7;http://x/y\x07"))
+	if a.CwdSeq() != 2 {
+		t.Fatalf("a rejected report moved seq to %d", a.CwdSeq())
+	}
+}

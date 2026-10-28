@@ -77,6 +77,10 @@ type window struct {
 	composing bool
 	gridMin   image.Point // top-left of the grid in window pixels
 
+	home     string                  // for "~" in the status bar
+	branchFn func(dir string) string // gitinfo.Branch unless a test replaces it
+	locs     map[tabs.TabID]locEntry
+
 	memMB   float64
 	memRead time.Time
 
@@ -120,6 +124,7 @@ func Run(w *app.Window, opt Options) error {
 		barTag:   new(int),
 		defTitle: shellName(opt.Shell),
 		focused:  true, wantFocus: true,
+		home:   userHome(),
 		sels:   map[tabs.TabID]*tabSel{},
 		bench:  opt.Bench,
 		custom: customTitleBar,
@@ -284,6 +289,7 @@ func (win *window) frame(gtx layout.Context) error {
 	win.switchedTo(active)
 	list := win.mgr.Tabs()
 	win.pruneSels(list)
+	win.pruneLocs(list)
 	win.autoScroll(gtx, active, cw, ch)
 	sel := win.checkSel(active)
 
@@ -331,7 +337,7 @@ func (win *window) frame(gtx layout.Context) error {
 	st := op.Offset(image.Pt(0, size.Y-statusH)).Push(ops)
 	sg := gtx
 	sg.Constraints = layout.Exact(image.Pt(size.X, statusH))
-	win.ui.layoutStatus(sg, win.statusText(len(list)), statusH)
+	win.ui.layoutStatus(sg, win.statusParts(), statusH)
 	if at, ok := win.noticeWake(time.Now()); ok {
 		gtx.Execute(op.InvalidateCmd{At: at}) // so the notice goes away on an idle window
 	}
