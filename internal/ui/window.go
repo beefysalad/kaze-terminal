@@ -264,6 +264,10 @@ func (win *window) setFocused(f bool) {
 	}
 	win.focused = f
 	win.snapFocused.Store(f)
+	if !f {
+		// Windows may never send Leave once another window takes the pointer.
+		win.caption.hover = capNone
+	}
 	if win.rend != nil {
 		win.rend.SetFocused(f)
 	}
@@ -378,9 +382,12 @@ func (win *window) frame(gtx layout.Context) error {
 	area := clip.Rect(win.bar.Tabs).Push(ops)
 	event.Op(ops, win.barTag)
 	area.Pop()
-	if !win.bar.Drag.Empty() {
+	for _, r := range []image.Rectangle{win.bar.Drag, win.bar.Band} {
+		if r.Empty() {
+			continue
+		}
 		// Windows answers hit tests here with HTCAPTION: drag, double-click and snap are native.
-		area = clip.Rect(win.bar.Drag).Push(ops)
+		area = clip.Rect(r).Push(ops)
 		system.ActionInputOp(system.ActionMove).Add(ops)
 		area.Pop()
 	}
@@ -494,13 +501,13 @@ func (win *window) statusText(n int) string {
 }
 
 // drawBar lays out and draws the top bar: the tab strip gets the room left of the
-// caption buttons, and whatever it doesn't use becomes the drag area.
+// caption buttons less a minimum drag area, and whatever it doesn't use is added to it.
 func (win *window) drawBar(gtx layout.Context, list []*tabs.Tab, active tabs.TabID, barH int) {
 	size := image.Pt(gtx.Constraints.Max.X, barH)
-	btnW := gtx.Dp(46)
-	room := layoutBar(size, size.X, btnW, win.custom).Tabs.Max.X
+	d := barDims{buttonW: gtx.Dp(46), minDrag: gtx.Dp(48), band: gtx.Dp(tabTop)}
+	room := layoutBar(size, size.X, d, win.custom).Tabs.Max.X
 	used := win.ui.layoutTabBar(gtx, list, active, win.alerts.markOf, win.defTitle, barH, room)
-	win.bar = layoutBar(size, used, btnW, win.custom)
+	win.bar = layoutBar(size, used, d, win.custom)
 	if win.custom {
 		win.ui.layoutCaptions(gtx, win.bar, win.caption, win.maximized)
 	}

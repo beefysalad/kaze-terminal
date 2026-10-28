@@ -180,6 +180,9 @@ func place(ops *op.Ops, call op.CallOp, at image.Point) {
 	t.Pop()
 }
 
+// tabTop is the gap above the tabs, in dp; on Windows it also moves the window.
+const tabTop = 7
+
 // layoutTabBar fills the bar's background, draws the tabs and the + button left of limit,
 // records where each one is for clicks, and returns where the strip ends.
 // marks gives each tab's alert mark; nil means none.
@@ -188,7 +191,7 @@ func (c *chrome) layoutTabBar(gtx layout.Context, list []*tabs.Tab, active tabs.
 	width := gtx.Constraints.Max.X
 	paint.FillShape(ops, colChrome, clip.Rect{Max: image.Pt(width, height)}.Op())
 
-	top := gtx.Dp(7)
+	top := gtx.Dp(tabTop)
 	padX, gap, dot, radius := gtx.Dp(12), gtx.Dp(7), gtx.Dp(7), gtx.Dp(9)
 	x := gtx.Dp(8)
 	c.hits = barHits{tabs: c.hits.tabs[:0]}

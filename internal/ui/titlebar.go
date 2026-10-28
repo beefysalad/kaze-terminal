@@ -24,29 +24,39 @@ const (
 type barLayout struct {
 	Tabs    image.Rectangle    // where the tab strip may draw (ends before Drag)
 	Drag    image.Rectangle    // empty space that moves the window; may be empty
+	Band    image.Rectangle    // the strip above the tabs, also a move area; may be empty
 	Buttons [3]image.Rectangle // indexed capMinimize-1, capMaximize-1, capClose-1
+}
+
+// barDims are the bar's fixed sizes in pixels.
+type barDims struct {
+	buttonW int // one caption button
+	minDrag int // move area always kept between the tabs and the buttons
+	band    int // height of the move strip above the tabs (the tabs' top margin)
 }
 
 // layoutBar splits a bar of the given size. Without custom buttons (macOS,
 // decorated) the tabs take the whole bar and there is no drag area.
-func layoutBar(size image.Point, tabsWidth, buttonW int, custom bool) barLayout {
+func layoutBar(size image.Point, tabsWidth int, d barDims, custom bool) barLayout {
 	var b barLayout
 	if !custom {
 		b.Tabs = image.Rect(0, 0, size.X, size.Y)
 		return b
 	}
 	bar := image.Rect(0, 0, size.X, size.Y)
-	left := max(size.X-3*buttonW, 0)
+	left := max(size.X-3*d.buttonW, 0)
 	for i := range b.Buttons {
-		x := left + i*buttonW
+		x := left + i*d.buttonW
 		// A bar narrower than three buttons cuts them off rather than overhang it.
-		b.Buttons[i] = image.Rect(x, 0, x+buttonW, size.Y).Intersect(bar)
+		b.Buttons[i] = image.Rect(x, 0, x+d.buttonW, size.Y).Intersect(bar)
 	}
-	tabsEnd := max(tabsWidth, 0)
-	if tabsEnd > left {
-		tabsEnd = left
+	// Many tabs must still leave something to grab the window by.
+	tabsEnd := min(max(tabsWidth, 0), max(left-d.minDrag, 0))
+	band := min(max(d.band, 0), size.Y)
+	b.Tabs = image.Rect(0, band, tabsEnd, size.Y)
+	if band > 0 && tabsEnd > 0 {
+		b.Band = image.Rect(0, 0, tabsEnd, band)
 	}
-	b.Tabs = image.Rect(0, 0, tabsEnd, size.Y)
 	if tabsEnd < left {
 		b.Drag = image.Rect(tabsEnd, 0, left, size.Y)
 	}
