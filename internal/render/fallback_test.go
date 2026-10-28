@@ -1,10 +1,13 @@
 package render
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
+
+	"golang.org/x/image/font/sfnt"
 )
 
 func segoeSymbol(t *testing.T) string {
@@ -67,5 +70,62 @@ func TestSystemFontParsedOnlyOnMiss(t *testing.T) {
 	c.get(0x10FFFD, false, false)
 	if sys.parses != 1 {
 		t.Fatalf("parsed %d system fonts, want exactly 1 (the absent file is skipped)", sys.parses)
+	}
+}
+
+func TestFallbackLookupIsMemoized(t *testing.T) {
+	path := segoeSymbol(t)
+	sys := &sysFonts{paths: []string{path}}
+	fs := newFontSet(13)
+	fs.sys = sys
+	c := &glyphCache{fs: fs, m: make(map[glyphKey]*glyph)}
+	for _, r := range []rune{'⏺', '✻', 0x10FFFD, '日'} {
+		c.get(r, false, false)
+		calls, lookups := sys.calls, fs.lookups
+		for i := 0; i < 3; i++ {
+			c.get(r, false, false)
+			c.get(r, true, false)
+		}
+		if sys.calls != calls || fs.lookups != lookups {
+			t.Errorf("%U redrawn: %d more sys.font calls, %d more cmap lookups, want 0",
+				r, sys.calls-calls, fs.lookups-lookups)
+		}
+	}
+}
+
+func TestBadSystemFontIsSkipped(t *testing.T) {
+	path := segoeSymbol(t)
+	dir := t.TempDir()
+	garbage := filepath.Join(dir, "garbage.ttf")
+	if err := os.WriteFile(garbage, []byte("true\x00\x10not a font at all"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	good, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	truncated := filepath.Join(dir, "truncated.ttf")
+	if err := os.WriteFile(truncated, good[:min(len(good), 4096)], 0o644); err != nil {
+		t.Fatal(err)
+	}
+	panicky := filepath.Join(dir, "panicky.ttf")
+	if err := os.WriteFile(panicky, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	sys := &sysFonts{paths: []string{garbage, truncated, panicky, path}}
+	sys.parse = func(r io.ReaderAt) (*sfnt.Collection, error) {
+		if f, ok := r.(*os.File); ok && filepath.Base(f.Name()) == "panicky.ttf" {
+			panic("parser bug")
+		}
+		return sfnt.ParseCollectionReaderAt(r)
+	}
+	fs := newFontSet(13)
+	fs.sys = sys
+	c := &glyphCache{fs: fs, m: make(map[glyphKey]*glyph)}
+	if g := c.get('⏺', false, false); g.face == faceMissing || g.empty {
+		t.Fatalf("⏺ not drawn from the good font after bad ones: face %d", g.face)
+	}
+	if g := c.get(0x10FFFD, false, false); g.face != faceMissing {
+		t.Fatalf("missing rune got face %d", g.face)
 	}
 }

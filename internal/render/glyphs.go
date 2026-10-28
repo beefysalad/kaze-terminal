@@ -34,8 +34,9 @@ type glyph struct {
 // glyphCache is shared by every renderer of one pixel size; renderers use it from
 // the UI goroutine only.
 type glyphCache struct {
-	fs *fontSet
-	m  map[glyphKey]*glyph
+	fs    *fontSet
+	m     map[glyphKey]*glyph
+	faces map[rune]faceID // faceFor answers (bold-agnostic), so a redraw skips the cmap walk
 }
 
 var shared struct {
@@ -74,7 +75,10 @@ func (c *glyphCache) get(r rune, bold, wide bool) *glyph {
 			id = faceMonoBold
 		}
 	default:
-		id = fs.faceFor(r, bold)
+		id = c.faceOf(r)
+		if id == faceMono && bold {
+			id = faceMonoBold
+		}
 	}
 	if id != faceMono && id != faceMonoBold {
 		bold = false // only the mono font has a bold face
@@ -88,6 +92,7 @@ func (c *glyphCache) get(r rune, bold, wide bool) *glyph {
 	}
 	if len(c.m) >= glyphCap {
 		clear(c.m)
+		clear(c.faces)
 	}
 
 	cells := 1
@@ -99,7 +104,7 @@ func (c *glyphCache) get(r rune, bold, wide bool) *glyph {
 	if id == faceBox {
 		mask = drawBox(r, w, fs.cellH, fs.cellW)
 	} else if id >= faceSystem {
-		mask = fs.drawFallback(fs.sys.font(int(id-faceSystem)), r, w)
+		mask = fs.drawFallback(int(id-faceSystem), r, w)
 	} else {
 		mask = image.NewAlpha(image.Rect(0, 0, w, fs.cellH))
 		face, draw := fs.faces[faceMono], r
@@ -127,4 +132,17 @@ func (c *glyphCache) get(r rune, bold, wide bool) *glyph {
 	}
 	c.m[k] = g
 	return g
+}
+
+// faceOf is faceFor memoized per rune; it never grows past glyphCap.
+func (c *glyphCache) faceOf(r rune) faceID {
+	if id, ok := c.faces[r]; ok {
+		return id
+	}
+	if c.faces == nil || len(c.faces) >= glyphCap {
+		c.faces = make(map[rune]faceID)
+	}
+	id := c.fs.faceFor(r, false)
+	c.faces[r] = id
+	return id
 }

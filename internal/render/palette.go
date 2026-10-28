@@ -151,6 +151,9 @@ func readable(fg, bg color.NRGBA) color.NRGBA {
 
 // readableCached is readable memoized per (fg, bg), so the float math runs once per pair.
 func (r *Renderer) readableCached(fg, bg color.NRGBA) color.NRGBA {
+	if fg == r.pal.FG && bg == r.pal.BG {
+		return r.defFG
+	}
 	k := uint64(fg.R)<<40 | uint64(fg.G)<<32 | uint64(fg.B)<<24 | uint64(bg.R)<<16 | uint64(bg.G)<<8 | uint64(bg.B)
 	if v, ok := r.fixed[k]; ok {
 		return v
