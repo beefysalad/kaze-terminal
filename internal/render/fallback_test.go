@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"golang.org/x/image/font/sfnt"
@@ -146,5 +147,37 @@ func TestSystemFontForReportsCoveringFile(t *testing.T) {
 	}
 	if SystemFontFor(0x10FFFF) != "" {
 		t.Fatal("a noncharacter should have no font")
+	}
+}
+
+// Kanji outside the bundled cp932 subset must come from a system Japanese font, not draw as a box.
+func TestRareKanjiFallsBackToSystemJapaneseFont(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("the rare-kanji test uses the Windows font list")
+	}
+	p := filepath.Join(os.Getenv("WINDIR"), "Fonts", "YuGothM.ttc")
+	if _, err := os.Stat(p); err != nil {
+		t.Skip("Yu Gothic Medium is not installed")
+	}
+	c := NewRenderer(15, DefaultPalette()).glyphs
+	for _, r := range []rune{0x20B9F, 0x4FF1} { // 𠮟 and 俱: JIS X 0213, not in cp932
+		if BundledCovers(r) {
+			t.Errorf("%U is in the bundled fonts; pick a rarer kanji", r)
+			continue
+		}
+		g := c.get(r, false, true)
+		if g.face < faceSystem {
+			t.Errorf("%U came from face %d, want a system font", r, g.face)
+			continue
+		}
+		if g.empty {
+			t.Errorf("%U drew no ink", r)
+		}
+		if got := filepath.Base(systemFonts.path(int(g.face - faceSystem))); !strings.EqualFold(got, "YuGothM.ttc") {
+			t.Errorf("%U came from %s, want YuGothM.ttc", r, got)
+		}
+		if b := g.mask.Bounds(); b.Dx() != 2*c.fs.cellW {
+			t.Errorf("%U mask is %d wide, want two cells (%d)", r, b.Dx(), 2*c.fs.cellW)
+		}
 	}
 }
