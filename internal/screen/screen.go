@@ -12,6 +12,9 @@ type Screen struct {
 	pen         Cell // FG/BG/Attrs template for printed cells; Rune and Width are ignored
 	autoWrap    bool
 	wrapPending bool // cursor sits past the last column; the wrap happens on the next printable rune
+
+	sb         scrollback
+	viewOffset int // lines scrolled back from the bottom
 }
 
 // New returns a blank screen with every row dirty, so the first frame paints fully.
@@ -30,6 +33,7 @@ func New(cols, rows int) *Screen {
 		pen:   blankCell,
 
 		autoWrap: true,
+		sb:       scrollback{max: defaultScrollback},
 	}
 	for i := range s.cells {
 		s.cells[i] = blankCell

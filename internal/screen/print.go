@@ -40,6 +40,8 @@ func (s *Screen) scrollUp(n int) {
 	if n > s.rows {
 		n = s.rows
 	}
+	// Task 5/7: only record when the scroll region is the full screen and the main screen is active.
+	s.recordScrolled(n)
 	copy(s.cells, s.cells[n*s.cols:])
 	for i := (s.rows - n) * s.cols; i < len(s.cells); i++ {
 		s.cells[i] = blankCell
