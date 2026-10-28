@@ -21,7 +21,13 @@ const (
 // runNotify is `kaze notify <done|needs>`, run by Claude Code hooks. It always
 // returns 0 and prints nothing: an alert is a nicety and must never fail or
 // slow the hook.
-func runNotify(args []string, stdin io.Reader, env func(string) string) int {
+func runNotify(args []string, stdin io.Reader, env func(string) string) (code int) {
+	// Exit 2 from a hook is a blocking error for Claude Code, so a panic must still exit 0.
+	defer func() {
+		if recover() != nil {
+			code = 0
+		}
+	}()
 	start := time.Now()
 	if len(args) != 1 {
 		return 0
@@ -32,7 +38,7 @@ func runNotify(args []string, stdin io.Reader, env func(string) string) int {
 	}
 	addr, token := env("KAZE_NOTIFY"), env("KAZE_NOTIFY_TOKEN")
 	tab, err := strconv.Atoi(env("KAZE_TAB_ID"))
-	if addr == "" || token == "" || err != nil {
+	if addr == "" || token == "" || err != nil || tab <= 0 {
 		return 0 // not run from a kaze tab
 	}
 	msg := notify.Msg{Tab: tab, Kind: kind}

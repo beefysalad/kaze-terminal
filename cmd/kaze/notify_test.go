@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"io"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -120,5 +121,54 @@ func TestReadStdinCapsAt64KB(t *testing.T) {
 	b := readStdinLimited(bytes.NewReader(make([]byte, 200<<10)), time.Second)
 	if len(b) != 64<<10 {
 		t.Fatalf("read %d bytes", len(b))
+	}
+}
+
+func TestNotifyPanicStillExitsZero(t *testing.T) {
+	boom := func(string) string { panic("boom") }
+	if code := runNotify([]string{"done"}, strings.NewReader(""), boom); code != 0 {
+		t.Fatalf("exit %d, want 0 (exit 2 would block Claude Code)", code)
+	}
+}
+
+func TestNotifyRejectsNonPositiveTab(t *testing.T) {
+	srv, got := startServer(t)
+	for _, tab := range []string{"0", "-1"} {
+		if code := runNotify([]string{"done"}, strings.NewReader(""), envOf(srv, tab)); code != 0 {
+			t.Errorf("tab %s: exit %d", tab, code)
+		}
+	}
+	select {
+	case m := <-got:
+		t.Fatalf("unexpected message %+v", m)
+	case <-time.After(200 * time.Millisecond):
+	}
+}
+
+func TestNotifyGarbageJSONStillSendsWithoutReason(t *testing.T) {
+	srv, got := startServer(t)
+	runNotify([]string{"needs"}, strings.NewReader("not json {{{"), envOf(srv, "5"))
+	m := wait(t, got)
+	if m.Tab != 5 || m.Kind != notify.KindNeeds || m.Reason != "" {
+		t.Fatalf("got %+v", m)
+	}
+}
+
+func TestNotifyWritesNothingToStdout(t *testing.T) {
+	srv, _ := startServer(t)
+	dead := envOf(srv, "1")
+	srv.Close()
+	f, err := os.CreateTemp(t.TempDir(), "stdout")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	old := os.Stdout
+	os.Stdout = f
+	defer func() { os.Stdout = old }()
+	runNotify([]string{"done"}, strings.NewReader("{}"), dead)
+	runNotify([]string{"bogus"}, nil, dead)
+	if fi, _ := f.Stat(); fi.Size() != 0 {
+		t.Fatalf("wrote %d bytes to stdout", fi.Size())
 	}
 }
