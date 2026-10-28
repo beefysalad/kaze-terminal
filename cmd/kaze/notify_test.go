@@ -172,3 +172,36 @@ func TestNotifyWritesNothingToStdout(t *testing.T) {
 		t.Fatalf("wrote %d bytes to stdout", fi.Size())
 	}
 }
+
+func TestNotifyNeedsByNotificationType(t *testing.T) {
+	cases := []struct {
+		name, json string
+		send       bool
+	}{
+		{"permission prompt", `{"message":"m","notification_type":"permission_prompt"}`, true},
+		{"elicitation dialog", `{"message":"m","notification_type":"elicitation_dialog"}`, true},
+		{"missing type (older Claude Code)", `{"message":"m"}`, true},
+		{"unknown type", `{"message":"m","notification_type":"something_new"}`, true},
+		{"idle prompt", `{"message":"m","notification_type":"idle_prompt"}`, false},
+		{"auth success", `{"message":"m","notification_type":"auth_success"}`, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			srv, got := startServer(t)
+			if code := runNotify([]string{"needs"}, strings.NewReader(c.json), envOf(srv, "4")); code != 0 {
+				t.Fatalf("exit %d", code)
+			}
+			if c.send {
+				if m := wait(t, got); m.Kind != notify.KindNeeds || m.Tab != 4 {
+					t.Fatalf("got %+v", m)
+				}
+				return
+			}
+			select {
+			case m := <-got:
+				t.Fatalf("sent %+v, want nothing", m)
+			case <-time.After(300 * time.Millisecond):
+			}
+		})
+	}
+}

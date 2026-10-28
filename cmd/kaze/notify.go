@@ -18,6 +18,11 @@ const (
 	reasonMaxRunes = 120
 )
 
+// quietNotification are Claude Code notification types that don't need the
+// owner: "idle for a minute" and a finished login. Any other type, or none
+// (older Claude Code), is an alert.
+var quietNotification = map[string]bool{"idle_prompt": true, "auth_success": true}
+
 // runNotify is `kaze notify <done|needs>`, run by Claude Code hooks. It always
 // returns 0 and prints nothing: an alert is a nicety and must never fail or
 // slow the hook.
@@ -45,8 +50,12 @@ func runNotify(args []string, stdin io.Reader, env func(string) string) (code in
 	if stdin != nil {
 		var hook struct {
 			Message string `json:"message"`
+			Type    string `json:"notification_type"`
 		}
 		if json.Unmarshal(readStdinLimited(stdin, stdinWait), &hook) == nil {
+			if kind == notify.KindNeeds && quietNotification[hook.Type] {
+				return 0
+			}
 			msg.Reason = trimRunes(hook.Message, reasonMaxRunes)
 		}
 	}
