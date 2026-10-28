@@ -4,3 +4,5 @@
 *.test
 *.prof
 spike-gio.exe
+*.exe
+capture.bin
