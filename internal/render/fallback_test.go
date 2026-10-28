@@ -129,3 +129,22 @@ func TestBadSystemFontIsSkipped(t *testing.T) {
 		t.Fatalf("missing rune got face %d", g.face)
 	}
 }
+
+func TestSystemFontForReportsCoveringFile(t *testing.T) {
+	if !BundledCovers('a') || !BundledCovers('日') {
+		t.Fatal("bundled fonts should cover Latin and Japanese")
+	}
+	if BundledCovers('✳') {
+		t.Skip("bundled font covers the symbol")
+	}
+	p := SystemFontFor('✳')
+	if p == "" {
+		t.Skip("no system font with the symbol on this machine")
+	}
+	if _, err := os.Stat(p); err != nil {
+		t.Fatalf("returned path does not exist: %v", err)
+	}
+	if SystemFontFor(0x10FFFF) != "" {
+		t.Fatal("a noncharacter should have no font")
+	}
+}

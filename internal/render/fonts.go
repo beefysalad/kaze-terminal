@@ -31,8 +31,9 @@ type sysFonts struct {
 	paths  []string
 	next   int // paths[next:] are not opened yet
 	fonts  []*sfnt.Font
-	parses int // files parsed, read by tests
-	calls  int // font() calls, read by tests
+	srcs   []string // srcs[i] is the file fonts[i] came from
+	parses int      // files parsed, read by tests
+	calls  int      // font() calls, read by tests
 
 	// parse reads one file; nil means sfnt.ParseCollectionReaderAt. Tests swap it.
 	parse func(io.ReaderAt) (*sfnt.Collection, error)
@@ -70,6 +71,7 @@ func (s *sysFonts) load(path string) {
 	defer func() {
 		if recover() != nil {
 			s.fonts = s.fonts[:before]
+			s.srcs = s.srcs[:before]
 		}
 		if len(s.fonts) == before {
 			f.Close()
@@ -87,6 +89,7 @@ func (s *sysFonts) load(path string) {
 	for j := 0; j < c.NumFonts() && len(s.fonts) < maxSystemFonts; j++ {
 		if ft, ferr := c.Font(j); ferr == nil {
 			s.fonts = append(s.fonts, ft)
+			s.srcs = append(s.srcs, path)
 		}
 	}
 }
@@ -247,4 +250,42 @@ func (fs *fontSet) drawFallback(i int, r rune, w int) (mask *image.Alpha) {
 	d := xfont.Drawer{Dst: mask, Src: image.Opaque, Face: face, Dot: fixed.P(x.Round(), y.Round())}
 	d.DrawString(string(r))
 	return mask
+}
+
+// path returns the file of fallback font i, "" when it does not exist.
+func (s *sysFonts) path(i int) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if i >= 0 && i < len(s.srcs) {
+		return s.srcs[i]
+	}
+	return ""
+}
+
+var (
+	bundledOnce sync.Once
+	bundledMono *sfnt.Font
+	bundledCJK  *sfnt.Font
+)
+
+// BundledCovers reports whether the bundled mono or CJK font has a glyph for r.
+func BundledCovers(r rune) bool {
+	bundledOnce.Do(func() { bundledMono, bundledCJK = mustParse(fonts.MonoRegular), mustParse(fonts.CJK) })
+	var b sfnt.Buffer
+	return hasRune(bundledMono, &b, r) || hasRune(bundledCJK, &b, r)
+}
+
+// SystemFontFor returns the file of the first system fallback font that has r, or ""
+// if none does. It shares the terminal grid's lazy font list, so each file is parsed once.
+func SystemFontFor(r rune) string {
+	var b sfnt.Buffer
+	for i := 0; ; i++ {
+		f := systemFonts.font(i)
+		if f == nil {
+			return ""
+		}
+		if hasRune(f, &b, r) {
+			return systemFonts.path(i)
+		}
+	}
 }

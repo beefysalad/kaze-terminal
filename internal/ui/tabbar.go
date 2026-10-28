@@ -3,6 +3,9 @@ package ui
 import (
 	"image"
 	"image/color"
+	"os"
+	"strings"
+	"unicode"
 
 	"gioui.org/font"
 	"gioui.org/font/opentype"
@@ -15,6 +18,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/patrick-gogo/kaze/assets/fonts"
+	"github.com/patrick-gogo/kaze/internal/render"
 	"github.com/patrick-gogo/kaze/internal/tabs"
 )
 
@@ -39,6 +43,10 @@ const chromeFace = "JetBrains Mono"
 type chrome struct {
 	shaper *text.Shaper
 	hits   barHits
+
+	faces   []font.FontFace
+	covered map[rune]bool   // rune -> some face has it
+	loaded  map[string]bool // system font files already added
 }
 
 func newChrome() *chrome {
@@ -53,11 +61,67 @@ func newChrome() *chrome {
 		}
 		faces = append(faces, font.FontFace{Font: font.Font{Typeface: font.Typeface(src.name)}, Face: f})
 	}
-	return &chrome{shaper: text.NewShaper(text.NoSystemFonts(), text.WithCollection(faces))}
+	return &chrome{
+		shaper:  text.NewShaper(text.NoSystemFonts(), text.WithCollection(faces)),
+		faces:   faces,
+		covered: map[rune]bool{},
+		loaded:  map[string]bool{},
+	}
+}
+
+// fit makes s drawable: for each rune the bundled fonts lack, it adds the system font
+// the terminal grid would use (once, only now), and drops runes no font has so a title never shows a box.
+func (c *chrome) fit(s string) string {
+	added := false
+	var out strings.Builder
+	for _, r := range s {
+		ok, seen := c.covered[r]
+		if !seen {
+			ok = !unicode.IsControl(r) && render.BundledCovers(r)
+			if !ok && !unicode.IsControl(r) {
+				if p := render.SystemFontFor(r); p != "" {
+					ok = c.addFont(p)
+					added = added || ok
+				}
+			}
+			c.covered[r] = ok
+		}
+		if ok {
+			out.WriteRune(r)
+		}
+	}
+	if added {
+		c.shaper = text.NewShaper(text.NoSystemFonts(), text.WithCollection(c.faces))
+	}
+	return out.String()
+}
+
+// addFont parses a system font file into the collection; a bad file adds nothing.
+func (c *chrome) addFont(path string) (ok bool) {
+	if done, seen := c.loaded[path]; seen {
+		return done // a file that failed once is not retried
+	}
+	defer func() {
+		if recover() != nil {
+			ok = false
+		}
+		c.loaded[path] = ok
+	}()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	ff, err := opentype.ParseCollection(data)
+	if err != nil || len(ff) == 0 {
+		return false
+	}
+	c.faces = append(c.faces, ff...)
+	return true
 }
 
 // label records one line of text so its size is known before it is placed.
 func (c *chrome) label(gtx layout.Context, s string, size unit.Sp, col color.NRGBA) (op.CallOp, image.Point) {
+	s = c.fit(s)
 	m := op.Record(gtx.Ops)
 	mat := op.Record(gtx.Ops)
 	paint.ColorOp{Color: col}.Add(gtx.Ops)
