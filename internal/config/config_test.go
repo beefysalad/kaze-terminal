@@ -211,3 +211,52 @@ func TestFontFamilyWarnsNotSupported(t *testing.T) {
 		t.Fatalf("FontFamily = %q, want the value kept", cfg.FontFamily)
 	}
 }
+
+func TestChimeDefaults(t *testing.T) {
+	cfg, warns, err := Load(filepath.Join(t.TempDir(), "nope.toml"))
+	if err != nil || len(warns) != 0 {
+		t.Fatalf("err=%v warns=%v", err, warns)
+	}
+	if !cfg.ChimeNeeds || cfg.ChimeDone || cfg.ChimeFile != "" {
+		t.Fatalf("chime defaults wrong: %+v", cfg)
+	}
+}
+
+func TestChimeKeysLoad(t *testing.T) {
+	f := filepath.Join(t.TempDir(), "my.wav")
+	if err := os.WriteFile(f, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	body := "chime_needs = false\nchime_done = true\nchime_file = '" + f + "'\n"
+	cfg, warns, err := Load(write(t, body))
+	if err != nil || len(warns) != 0 {
+		t.Fatalf("err=%v warns=%v", err, warns)
+	}
+	if cfg.ChimeNeeds || !cfg.ChimeDone || cfg.ChimeFile != f {
+		t.Fatalf("cfg = %+v", cfg)
+	}
+}
+
+func TestChimeInvalidTypesWarn(t *testing.T) {
+	cfg, warns, err := Load(write(t, "chime_needs = \"yes\"\nchime_done = 3\nchime_file = 7\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(warns) != 3 {
+		t.Fatalf("warnings = %v, want 3", warns)
+	}
+	if !cfg.ChimeNeeds || cfg.ChimeDone || cfg.ChimeFile != "" {
+		t.Fatalf("did not fall back to defaults: %+v", cfg)
+	}
+}
+
+func TestChimeMissingFileWarnsAndFallsBack(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "gone.wav")
+	cfg, warns, err := Load(write(t, "chime_file = '"+missing+"'\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(warns) != 1 || cfg.ChimeFile != "" {
+		t.Fatalf("warns=%v file=%q", warns, cfg.ChimeFile)
+	}
+}

@@ -32,6 +32,9 @@ type Config struct {
 	Colors          map[string]string `toml:"colors"`           // "fg", "bg", "cursor", "selection", "color0".."color15": "#rrggbb"
 	Keys            map[string]string `toml:"keys"`             // action -> shortcut text; parsed by the caller
 	CopyOnSelect    bool              `toml:"copy_on_select"`   // copy a selection when the mouse is released
+	ChimeNeeds      bool              `toml:"chime_needs"`      // chime when Claude needs you; default true
+	ChimeDone       bool              `toml:"chime_done"`       // chime when Claude is done; default false
+	ChimeFile       string            `toml:"chime_file"`       // custom sound file; empty = bundled chime
 }
 
 // KnownActions are the action names accepted under [keys]; the window binds each one.
@@ -55,6 +58,7 @@ func Default() Config {
 	return Config{
 		FontSize:        defaultFontSize,
 		ScrollbackLines: defaultScrollback,
+		ChimeNeeds:      true,
 		Colors:          map[string]string{},
 		Keys:            map[string]string{},
 	}
@@ -140,6 +144,33 @@ func Load(path string) (Config, []string, error) {
 				continue
 			}
 			cfg.CopyOnSelect = b
+		case "chime_needs":
+			b, ok := v.(bool)
+			if !ok {
+				warn("chime_needs must be true or false, got %v; using true", v)
+				continue
+			}
+			cfg.ChimeNeeds = b
+		case "chime_done":
+			b, ok := v.(bool)
+			if !ok {
+				warn("chime_done must be true or false, got %v; using false", v)
+				continue
+			}
+			cfg.ChimeDone = b
+		case "chime_file":
+			s, ok := v.(string)
+			if !ok {
+				warn("chime_file must be a path string, got %v; using the bundled chime", v)
+				continue
+			}
+			if s != "" {
+				if st, err := os.Stat(s); err != nil || st.IsDir() {
+					warn("chime_file %q is not a readable file; using the bundled chime", s)
+					continue
+				}
+			}
+			cfg.ChimeFile = s
 		case "colors":
 			loadColors(v, &cfg, warn)
 		case "keys":
