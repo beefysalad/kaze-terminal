@@ -4,6 +4,7 @@ go 1.27.0
 
 require (
 	gioui.org v0.10.3
+	github.com/BurntSushi/toml v1.6.0
 	github.com/mattn/go-runewidth v0.0.31
 	golang.org/x/image v0.47.0
 )
