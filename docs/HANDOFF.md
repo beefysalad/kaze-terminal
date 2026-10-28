@@ -1,10 +1,19 @@
 # kaze handoff
 
-Last updated: 2026-10-28, after Plan 1 shipped. Read this first when you pick up kaze on another machine.
+Last updated: 2026-10-28, after Plan 3 was built (branch `feature/plan-3b`, PR to `main`). Read this first when you pick up kaze on another machine.
 
 ## Where things stand
 
 **Plan 1 (terminal core with tabs) is done**, reviewed task by task plus a whole-branch review, and on `main`.
+
+**Plan 3 (the window frame) is built**: Plan 3a (kaze's own title bar) and Plan 3b (alerts, chime, folder and branch), plans in `docs/superpowers/plans/`. What it added:
+
+- **Own title bar on Windows:** tabs at the top edge, kaze-drawn minimize / maximize-restore / close (close turns red on hover). The empty bar space moves the window (native drag, double-click maximize, edge snap, Win+Z), and at least 48dp of it always stays free however many tabs are open; the 7dp strip above the tabs also moves the window. **No Windows 11 snap-layout flyout** on hover over maximize: Gio has no way to answer `HTMAXBUTTON`. **macOS stays decorated** (the native title bar): an undecorated Gio window loses the traffic lights, so the inset look waits for the Mac milestone.
+- **Alerts from Claude Code hooks:** `kaze notify needs|done` sends the tab's id to kaze over **TCP on 127.0.0.1 with a per-run token** (`KAZE_NOTIFY`, `KAZE_NOTIFY_TOKEN`), not named pipes or sockets: no dependency, same code on both OSes. The tab gets a **static** dot (amber = needs you, green = done; no pulse, which would cost idle CPU) and a toast with "Go ›". `notify` always exits 0 within about 1s. It reads `notification_type` from the hook JSON: `idle_prompt` and `auth_success` are dropped, anything else (or no type) is "needs".
+- **Chime:** bundled soft chime on "needs you" (`chime_needs`, on), optional on "done" (`chime_done`, off), custom WAV via `chime_file`. No chime when that tab is already active and focused; bursts give one chime. Plays while minimized too.
+- **Taskbar flash on Windows only** (FlashWindowEx) when an alert arrives while kaze is minimized or unfocused. The macOS Dock bounce is deferred to the Mac milestone.
+- **Folder and branch in the status bar** from OSC 7 (pwsh and zsh snippets in the README) and `.git/HEAD` (worktrees handled, no git process). The branch is re-read on a new prompt report, on tab switch and on window focus gain.
+- **Installed on the owner's Windows laptop:** the Claude Code hooks in `~/.claude/settings.json` (Notification with matcher `permission_prompt|elicitation_dialog|elicitation_url_dialog|agent_needs_input` -> `kaze.exe notify needs`, Stop -> `kaze.exe notify done`, timeout 3) and the OSC 7 snippet in the pwsh profile. After each rebuild of `kaze-app\kaze.exe`, run `kaze.exe notify done` once so Smart App Control vets the new exe before a hook's 3s timeout.
 
 What works (tested on Windows):
 
@@ -31,10 +40,10 @@ Measured (Windows, `docs/benchmarks/2026-10-28-milestone-1.md`):
 
 ## Next
 
-1. **Mac milestone** (checklist below): build and use kaze on macOS for the first time.
-2. **Plan 3**: attention alerts + chime + kaze's own title bar + folder/branch in the status bar. Decisions are in spec section 6.8; mockup in `docs/design/titlebar-and-status.html`. Start with a short plan (`docs/superpowers/plans/`), then build.
-3. **Plan 2**: subagent child tabs (spec 6.3).
-4. **Plan 4**: Claude usage in the status bar (spec 6.5).
+1. **Merge Plan 3** (the owner merges the PR from `feature/plan-3b`), then rebuild `kaze-app\kaze.exe` from `main` and run `kaze.exe notify done` once.
+2. **Plan 2**: subagent child tabs (spec 6.3).
+3. **Plan 4**: Claude usage in the status bar (spec 6.5).
+4. **Mac milestone** (checklist below): build and use kaze on macOS for the first time.
 5. Speed task: tighten kaze's own keypress p99 and first-frame time.
 6. Later (spec 7 and owner ideas): browser button, notes-vault graph, smart Ctrl+C (copy when text is selected, else interrupt), kaze-native autocomplete.
 
@@ -54,7 +63,12 @@ kaze has **never been built on macOS**. Expect small fixes.
    - **Option key:** kaze treats Option as Alt unconditionally. On layouts that type `@ { | [ ]` with Option this breaks; add a config toggle.
    - Trackpad/mouse wheel: scroll speed may be off (unit not verified on macOS).
    - Status bar memory on macOS uses Go's runtime numbers, not process RSS; consider `task_info`.
-5. Benchmarks: `bench/run.sh` (it uses a history-free shell and kaze drops real input in bench mode, so it can't type into your sessions). Add a "macOS" column to the milestone doc.
+5. Plan 3 on macOS:
+   - **Hooks setup:** add the two Claude Code hooks from the README ("Alerts") to `~/.claude/settings.json` on the Mac, with the Mac path to `kaze` (`"/path/to/kaze" notify needs` / `notify done`, timeout 3). Check that a permission prompt in a kaze tab marks it and chimes (`afplay`).
+   - **zsh snippet:** add the OSC 7 snippet from the README to `~/.zshrc` and check folder and branch show, including a folder with spaces, `#`, `%` and Japanese. Unlike the pwsh one, the zsh snippet only escapes `%`, `#` and space and sends other characters as raw UTF-8 (kaze accepts that); it could not be run on Windows, so verify it here.
+   - **Dock bounce:** alerts while kaze is in the background should bounce the Dock icon (the Windows taskbar flash has no macOS twin yet; `flashTaskbar` is a no-op off Windows).
+   - **Title bar:** macOS still uses the native decorated title bar. The spec's inset traffic lights in kaze's tab bar need a way to keep them on an undecorated Gio window.
+6. Benchmarks: `bench/run.sh` (it uses a history-free shell and kaze drops real input in bench mode, so it can't type into your sessions). Add a "macOS" column to the milestone doc.
 
 ## Decisions so far (why the code looks the way it does)
 
@@ -64,7 +78,9 @@ kaze has **never been built on macOS**. Expect small fixes.
 - **Parser** treats `:` like `;` but records which params were colon-separated, so SGR `4:3` (curly underline) and `38:2::r:g:b` work.
 - **Sessions don't survive kaze closing** (same as Warp). Shells live in the kaze process behind `ptyx.Session`.
 - **Shell env:** each tab gets `KAZE_TAB_ID`, `TERM=xterm-256color`, `COLORTERM=truecolor`, `TERM_PROGRAM=kaze`; inherited `TERM_PROGRAM`/`WT_*` from the launching terminal are dropped.
-- **Title bar:** Plan 1 kept the native one; Plan 3 replaces it (spec 6.8).
+- **Title bar:** Plan 1 kept the native one; Plan 3 replaced it on Windows (spec 6.8). macOS keeps the native one for now.
+- **Alert transport:** TCP 127.0.0.1 + random token (spec 6.4 note), not named pipes.
+- **No pulsing dot, no idle reminders** (spec 6.8 note): a static dot keeps idle CPU at zero; `idle_prompt` and `auth_success` notifications are dropped.
 - **Copy is Ctrl+Shift+C** (Ctrl+C must stay "interrupt"). Smart Ctrl+C is a later idea, not wanted yet.
 - **Ctrl+Backspace** sends 0x08 (word delete in PSReadLine).
 - **Claude Code features left unanswered** (kitty keyboard protocol, XTVERSION, some OSCs): Claude falls back fine. Side effect: Shift+Enter submits; use Alt+Enter for a newline.

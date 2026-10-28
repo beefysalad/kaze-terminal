@@ -1,0 +1,326 @@
+package notify
+
+import (
+	"encoding/json"
+	"net"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+)
+
+func start(t *testing.T) (*Server, chan Msg) {
+	t.Helper()
+	ch := make(chan Msg, 8)
+	s, err := Listen(func(m Msg) { ch <- m })
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { s.Close() })
+	return s, ch
+}
+
+func expectNone(t *testing.T, ch chan Msg) {
+	t.Helper()
+	select {
+	case m := <-ch:
+		t.Fatalf("unexpected message: %+v", m)
+	case <-time.After(300 * time.Millisecond):
+	}
+}
+
+func TestRoundTrip(t *testing.T) {
+	s, ch := start(t)
+	err := Send(s.Addr(), s.Token(), Msg{Tab: 3, Kind: KindNeeds, Reason: "permission"}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case m := <-ch:
+		if m.Tab != 3 || m.Kind != KindNeeds || m.Reason != "permission" {
+			t.Fatalf("got %+v", m)
+		}
+		if m.Token != "" {
+			t.Fatalf("token leaked: %q", m.Token)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout")
+	}
+}
+
+func TestRejectsBadToken(t *testing.T) {
+	s, ch := start(t)
+	Send(s.Addr(), "deadbeef", Msg{Tab: 1, Kind: KindDone}, time.Second)
+	expectNone(t, ch)
+}
+
+func TestRejectsOversized(t *testing.T) {
+	s, ch := start(t)
+	Send(s.Addr(), s.Token(), Msg{Tab: 1, Kind: KindDone, Reason: strings.Repeat("x", 5*1024)}, time.Second)
+	expectNone(t, ch)
+}
+
+func TestRejectsUnknownKind(t *testing.T) {
+	s, ch := start(t)
+	Send(s.Addr(), s.Token(), Msg{Tab: 1, Kind: Kind("bogus")}, time.Second)
+	expectNone(t, ch)
+}
+
+func TestListensOnLoopbackOnly(t *testing.T) {
+	s, _ := start(t)
+	if !strings.HasPrefix(s.Addr(), "127.0.0.1:") {
+		t.Fatalf("addr %q", s.Addr())
+	}
+	if len(s.Token()) != 64 {
+		t.Fatalf("token len %d", len(s.Token()))
+	}
+}
+
+func TestSlowClientDoesNotBlockOthers(t *testing.T) {
+	s, ch := start(t)
+	c, err := net.DialTimeout("tcp", s.Addr(), time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	if err := Send(s.Addr(), s.Token(), Msg{Tab: 2, Kind: KindDone}, time.Second); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case m := <-ch:
+		if m.Tab != 2 {
+			t.Fatalf("got %+v", m)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("blocked by slow client")
+	}
+}
+
+// fakeLn returns one temporary error before delegating.
+type fakeLn struct {
+	net.Listener
+	once sync.Once
+	hit  chan struct{}
+}
+
+type tempErr struct{}
+
+func (tempErr) Error() string   { return "temporary" }
+func (tempErr) Timeout() bool   { return false }
+func (tempErr) Temporary() bool { return true }
+
+func (f *fakeLn) Accept() (net.Conn, error) {
+	var first bool
+	f.once.Do(func() { first = true })
+	if first {
+		close(f.hit)
+		return nil, tempErr{}
+	}
+	return f.Listener.Accept()
+}
+
+func TestAcceptSurvivesTemporaryError(t *testing.T) {
+	real, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ch := make(chan Msg, 1)
+	f := &fakeLn{Listener: real, hit: make(chan struct{})}
+	s := serve(f, func(m Msg) { ch <- m }, readDeadline)
+	defer s.Close()
+	select {
+	case <-f.hit:
+	case <-time.After(time.Second):
+		t.Fatal("fake error never served")
+	}
+	if err := Send(s.Addr(), s.Token(), Msg{Tab: 4, Kind: KindDone}, time.Second); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case m := <-ch:
+		if m.Tab != 4 {
+			t.Fatalf("got %+v", m)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("accept loop died after a temporary error")
+	}
+}
+
+func TestCloseIsFastWithSilentClient(t *testing.T) {
+	s, _ := start(t)
+	c, err := net.DialTimeout("tcp", s.Addr(), time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	time.Sleep(50 * time.Millisecond) // let the server register the conn
+	t0 := time.Now()
+	s.Close()
+	if d := time.Since(t0); d > 200*time.Millisecond {
+		t.Fatalf("Close took %v", d)
+	}
+}
+
+func TestCapsConnectionsAndDoesNotLeak(t *testing.T) {
+	ch := make(chan Msg, 4)
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := serve(ln, func(m Msg) { ch <- m }, 400*time.Millisecond)
+	var idle []net.Conn
+	for i := 0; i < 40; i++ {
+		c, err := net.DialTimeout("tcp", s.Addr(), time.Second)
+		if err != nil {
+			t.Fatal(err)
+		}
+		idle = append(idle, c)
+	}
+	defer func() {
+		for _, c := range idle {
+			c.Close()
+		}
+	}()
+	deadline := time.Now().Add(2500 * time.Millisecond)
+	got := false
+	for time.Now().Before(deadline) && !got {
+		time.Sleep(100 * time.Millisecond)
+		Send(s.Addr(), s.Token(), Msg{Tab: 9, Kind: KindDone}, 200*time.Millisecond)
+		select {
+		case <-ch:
+			got = true
+		case <-time.After(100 * time.Millisecond):
+		}
+	}
+	if !got {
+		t.Fatal("valid message never got through the idle flood")
+	}
+	s.Close()
+	s.mu.Lock()
+	n := len(s.conns)
+	s.mu.Unlock()
+	if n != 0 || len(s.sem) != 0 {
+		t.Fatalf("leak: conns=%d sem=%d", n, len(s.sem))
+	}
+}
+
+func TestSendHonorsOverallTimeout(t *testing.T) {
+	const to = 300 * time.Millisecond
+	t0 := time.Now()
+	Send("10.255.255.1:9", "x", Msg{Tab: 1, Kind: KindDone}, to)
+	if d := time.Since(t0); d > to+100*time.Millisecond {
+		t.Fatalf("Send took %v", d)
+	}
+}
+
+func TestDeliversWithoutHalfClose(t *testing.T) {
+	s, ch := start(t)
+	c, err := net.DialTimeout("tcp", s.Addr(), time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	b, _ := json.Marshal(Msg{Tab: 5, Kind: KindDone, Token: s.Token()})
+	c.Write(b) // no CloseWrite, connection stays open
+	select {
+	case m := <-ch:
+		if m.Tab != 5 {
+			t.Fatalf("got %+v", m)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("waited for EOF")
+	}
+}
+
+func rawSend(t *testing.T, addr string, b []byte) {
+	t.Helper()
+	c, err := net.DialTimeout("tcp", addr, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	c.Write(b)
+}
+
+func sized(t *testing.T, token string, n int) []byte {
+	t.Helper()
+	m := Msg{Tab: 1, Kind: KindDone, Token: token}
+	base, _ := json.Marshal(Msg{Tab: 1, Kind: KindDone, Reason: "a", Token: token})
+	m.Reason = strings.Repeat("a", n-len(base)+1)
+	b, _ := json.Marshal(m)
+	if len(b) != n {
+		t.Fatalf("built %d bytes, want %d", len(b), n)
+	}
+	return b
+}
+
+func TestBodyCapBoundary(t *testing.T) {
+	s, ch := start(t)
+	rawSend(t, s.Addr(), sized(t, s.Token(), 4096))
+	select {
+	case <-ch:
+	case <-time.After(time.Second):
+		t.Fatal("4096 bytes should be accepted")
+	}
+	rawSend(t, s.Addr(), sized(t, s.Token(), 4097))
+	expectNone(t, ch)
+}
+
+func TestOversizedSendReturnsPromptly(t *testing.T) {
+	s, ch := start(t)
+	t0 := time.Now()
+	err := Send(s.Addr(), s.Token(), Msg{Tab: 1, Kind: KindDone, Reason: strings.Repeat("x", 5*1024)}, time.Second)
+	if err != nil || time.Since(t0) > 500*time.Millisecond {
+		t.Fatalf("Send is fire and forget: err=%v after %v", err, time.Since(t0))
+	}
+	expectNone(t, ch)
+}
+
+func TestReadDeadlineDropsSlowMessage(t *testing.T) {
+	ln, _ := net.Listen("tcp", "127.0.0.1:0")
+	ch := make(chan Msg, 1)
+	s := serve(ln, func(m Msg) { ch <- m }, 150*time.Millisecond)
+	defer s.Close()
+	c, err := net.DialTimeout("tcp", s.Addr(), time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	b, _ := json.Marshal(Msg{Tab: 1, Kind: KindDone, Token: s.Token()})
+	c.Write(b[:len(b)/2])
+	time.Sleep(300 * time.Millisecond)
+	c.Write(b[len(b)/2:])
+	expectNone(t, ch)
+}
+
+func TestNilAndPanickingOnMsg(t *testing.T) {
+	s, err := Listen(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	if err := Send(s.Addr(), s.Token(), Msg{Tab: 1, Kind: KindDone}, time.Second); err != nil {
+		t.Fatal(err)
+	}
+	ch := make(chan Msg, 2)
+	n := 0
+	p, _ := Listen(func(m Msg) {
+		n++
+		if n == 1 {
+			panic("boom")
+		}
+		ch <- m
+	})
+	defer p.Close()
+	Send(p.Addr(), p.Token(), Msg{Tab: 1, Kind: KindDone}, time.Second)
+	time.Sleep(100 * time.Millisecond)
+	Send(p.Addr(), p.Token(), Msg{Tab: 2, Kind: KindDone}, time.Second)
+	select {
+	case m := <-ch:
+		if m.Tab != 2 {
+			t.Fatalf("got %+v", m)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("server died after onMsg panic")
+	}
+}
