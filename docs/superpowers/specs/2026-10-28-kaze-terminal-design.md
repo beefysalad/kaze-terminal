@@ -134,6 +134,23 @@ ANSI 0-15: `#1d2230 #f07178 #62d39a #f2b84b #8ab4ff #b9a6ff #6fd3e0 #d7dae3` / `
 
 Shapes: tabs have 9px top corners; child tabs are smaller (11px text) and sit right after their lead; alerts are a rounded (10px) pane bottom-right above the status bar; status bar meters are 46x5px rounded bars. Mockup: `docs/design/look-midnight.html`.
 
+### 6.8 Plan 3 decisions (Patrick, 2026-10-28; Plan 1 shipped first)
+
+Plan 3 is the next plan. It covers the frame of the window: alerts, sound, title bar and the status bar's location info. It supersedes Plan 1's "keep the native title bar" call.
+
+- **Attention alerts:** as in 6.4. The tab gets an amber pulsing dot; a toast bottom-right says "<tab> needs you · <reason>" with a "Go ›" that switches to it.
+- **Chime:** a short, soft sound bundled with kaze plays on **"needs you"** (permission prompt, question). **"Done" is silent.** Both are configurable (on/off per kind, sound file). No chime when that tab is already active and focused; several alerts at once give one chime. Windows plays it through winmm `PlaySound` (no cgo); macOS through `afplay`.
+- **kaze's own title bar:** no OS title bar. Tabs sit at the top edge.
+  - Windows: kaze draws minimize, maximize/restore and close on the right (close turns red on hover). Empty tab-bar space drags the window; double-click toggles maximize; all edges and corners resize. Check whether Gio allows the Windows 11 snap-layout hover menu on the maximize button; Win+Z and edge snapping must keep working.
+  - macOS: keep the native red/yellow/green buttons, inset into kaze's dark tab bar (like Safari and VS Code).
+  - Mockup: `docs/design/titlebar-and-status.html`.
+- **Status bar shows the current folder and git branch** of the active tab, left side, before the Claude usage: `~\Desktop\project  ⎇ feature/x`. Outside a repo the branch is hidden.
+  - Folder: the shell reports it with OSC 7 from its prompt. kaze documents a small snippet for pwsh (`$PROFILE`) and zsh (`~/.zshrc`); adding it to the owner's profile needs the owner's yes.
+  - Branch: kaze reads `.git/HEAD` (walking up from the folder; handles worktrees' `gitdir:` files) without running git; refresh on folder change and when HEAD changes.
+  - Each tab has its own folder and branch.
+
+Order after Plan 3: Plan 2 (subagent child tabs, 6.3), Plan 4 (Claude usage in the status bar, 6.5), the Mac milestone, then section 7.
+
 ## 7. Later features (in order, not in the first version)
 
 1. **Browser button.** A button that opens a **separate** Chromium window (not embedded), like a colleague's terminal. Launched with a DevTools debugging port so Playwright-driven agents can drive the window Patrick is watching. Windows: Edge or Chrome; macOS: Chrome. Whether agents can attach cleanly must be proven with a spike first.
