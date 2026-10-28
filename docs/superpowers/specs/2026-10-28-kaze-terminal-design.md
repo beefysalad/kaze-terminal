@@ -8,7 +8,7 @@ Status: approved by Patrick 2026-10-28
 
 kaze is a personal terminal emulator for Windows and macOS. Patrick uses it like a normal terminal, but it is built around how he works with Claude Code: several sessions open at once, lead agents spawning subagents, and needing to know when a session in another tab has finished or needs him.
 
-It is inspired by a teammate's (a teammate's) own terminal, which is small, fast and fitted to one person's workflow. kaze follows the same idea: it only carries what Patrick uses, so it can stay lighter and faster than a general-purpose terminal.
+It is inspired by a teammate's own terminal, which is small, fast and fitted to one person's workflow. kaze follows the same idea: it only carries what Patrick uses, so it can stay lighter and faster than a general-purpose terminal.
 
 Today Patrick uses **Warp** on both Windows and macOS. He uses it like a plain terminal. The one Warp feature he values is the alert when a Claude Code session in a tab is done or needs him.
 
@@ -61,7 +61,7 @@ A small benchmark harness that measures these is part of the work. Warp is measu
 - Japanese and other wide characters display at the correct width (two columns); font fallback so CJK glyphs render even when the main font lacks them.
 - Default shell: pwsh on Windows, zsh on macOS. Configurable.
 
-### 6.2 Rendering rules (decided, from a teammate's approach)
+### 6.2 Rendering rules (decided, from a colleague's terminal)
 
 - **Dirty tracking:** only cells/lines that changed since the last frame are redrawn. Typing one character redraws one cell.
 - **Glyph cache:** each glyph is rasterized once and reused.
@@ -136,8 +136,8 @@ Shapes: tabs have 9px top corners; child tabs are smaller (11px text) and sit ri
 
 ## 7. Later features (in order, not in the first version)
 
-1. **Browser button.** A button that opens a **separate** Chromium window (not embedded), like a teammate's terminal. Launched with a DevTools debugging port so Playwright-driven agents can drive the window Patrick is watching. Windows: Edge or Chrome; macOS: Chrome. Whether agents can attach cleanly must be proven with a spike first.
-2. **Brain graph.** A graph of notes vault notes (Patrick's knowledge vault), shown as clickable nodes; clicking a node opens the note for reading inside kaze. Shows only related notes, not the whole vault: start from the current ticket (from the git branch, e.g. `feature/TICKET-123` → TICKET-123), add notes the agents opened this session, plus their direct links (one hop). A toggle shows the full graph. Kept for after the terminal itself is solid.
+1. **Browser button.** A button that opens a **separate** Chromium window (not embedded), like a colleague's terminal. Launched with a DevTools debugging port so Playwright-driven agents can drive the window Patrick is watching. Windows: Edge or Chrome; macOS: Chrome. Whether agents can attach cleanly must be proven with a spike first.
+2. **Brain graph.** A graph of notes from a notes vault (Patrick's knowledge base), shown as clickable nodes; clicking a node opens the note for reading inside kaze. Shows only related notes, not the whole vault: start from the current ticket (from the git branch, e.g. `feature/TICKET-123` → TICKET-123), add notes the agents opened this session, plus their direct links (one hop). A toggle shows the full graph. Kept for after the terminal itself is solid.
 
 ## 8. How it gets made (decided)
 
@@ -145,7 +145,7 @@ Shapes: tabs have 9px top corners; child tabs are smaller (11px text) and sit ri
 - **UI: Gio** (cross-platform Go UI with its own text shaping). Chosen because it runs on Windows and macOS from one codebase, and the browser opens as a separate window so nothing needs embedding.
 - **Shell process:** ConPTY on Windows, Unix pty on macOS, behind one interface (a library such as `go-pty` covers both).
 - **Sessions do not survive kaze closing, crashing or restarting** (Patrick's decision, same as Warp). Shells run inside the kaze process; no background PTY host. The shell layer stays behind a clean interface so a survive-restart host could be added later without rewriting the UI.
-- **Repo:** `%USERPROFILE%\Desktop\kaze`, its own git repo, separate from any work repo.
+- **Repo:** `<repo>` (e.g. `%USERPROFILE%\Desktop\kaze`), its own git repo, separate from any work repo.
 
 ## 9. Left to the builder
 
@@ -162,7 +162,7 @@ Shapes: tabs have 9px top corners; child tabs are smaller (11px text) and sit ri
 3. **Benchmarks:** the section 5 goals are measured on Windows at each milestone (and on the MacBook when available). Keypress latency uses software screen-capture timing. Warp numbers are recorded for reference, not as a pass/fail bar.
 4. **Attention categories:** two, straight from the hooks: **done** (turn finished) and **needs you** (permission prompt or waiting for input). No guessing from transcript text.
 5. **Usage source:** if no reliable 5-hour/weekly source exists, the first version ships with per-session tokens and cost from the transcripts, and plan usage follows when a source is found. If Patrick already has a Claude Code status line, kaze's script wraps it instead of replacing it.
-6. **Which sessions count:** only Claude Code started in a kaze tab on the local machine. remote agent runner jobs, SSH, WSL and Docker sessions are out of scope for subagent views and alerts (remote agent runner has its own dashboard).
+6. **Which sessions count:** only Claude Code started in a kaze tab on the local machine. Jobs on a remote agent runner, SSH, WSL and Docker sessions are out of scope for subagent views and alerts (a remote runner has its own dashboard).
 
 ## 11. Open items to verify early
 

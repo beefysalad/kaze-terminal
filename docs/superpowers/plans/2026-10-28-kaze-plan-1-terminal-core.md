@@ -24,7 +24,7 @@
 - Default shell: `pwsh` on Windows (fall back to `powershell.exe` if `pwsh` is not on PATH), `$SHELL` or `/bin/zsh` on macOS.
 - Each tab's shell gets the environment variable `KAZE_TAB_ID=<id>` (Plan 3 depends on this name).
 - No settings UI. Config at `<os.UserConfigDir()>/kaze/config.toml`.
-- Commits: `type(scope): Verb ...` (e.g. `feat(screen): Add dirty line tracking`). Commit as `patrick-gogo <283561876+patrick-gogo@users.noreply.github.com>`. No AI attribution lines.
+- Commits: `type(scope): Verb ...` (e.g. `feat(screen): Add dirty line tracking`). Commits use the repo's configured git identity. No AI attribution lines.
 
 ## Review Focus
 

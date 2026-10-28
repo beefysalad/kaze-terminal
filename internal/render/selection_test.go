@@ -65,9 +65,9 @@ func TestWordAtStopsAtSpaces(t *testing.T) {
 
 func TestWordAtKeepsPathsWholeAndStopsAtQuotes(t *testing.T) {
 	s := screen.New(40, 1)
-	printAll(s, `cat "%USERPROFILE%\file.go:12" x`)
+	printAll(s, `cat "C:\Users\me\file.go:12" x`)
 	sel := WordAt(s, Point{10, 0})
-	if got := SelectedText(s, sel); got != `%USERPROFILE%\file.go:12` {
+	if got := SelectedText(s, sel); got != `C:\Users\me\file.go:12` {
 		t.Fatalf("got %q", got)
 	}
 }
