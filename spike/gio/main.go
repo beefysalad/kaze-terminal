@@ -47,7 +47,7 @@ const (
 )
 
 var (
-	modeFlag      = flag.String("mode", "text", "text|atlas|empty (empty = window baseline, no grid)")
+	modeFlag      = flag.String("mode", "text", "text|atlas|empty|bare (empty = fonts loaded, no grid; bare = no fonts, no grid)")
 	streamFlag    = flag.Bool("stream", false, "rewrite 5 random lines every 2ms")
 	autotypeFlag  = flag.Bool("autotype", false, "change one cell every 50ms")
 	durationFlag  = flag.Duration("duration", 0, "exit after this long and print frame stats (0 = run until closed)")
@@ -159,9 +159,11 @@ func (s *frameStats) report() {
 	fmt.Printf("mode=%s stream=%v autotype=%v\n", *modeFlag, *streamFlag, *autotypeFlag)
 	fmt.Println(summarize("frame(layout+submit)", s.total[skip:]))
 	fmt.Println(summarize("layout-only", s.layout[skip:]))
+	// Collect first so HeapAlloc and the heap profile show live memory, not garbage.
+	runtime.GC()
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
-	fmt.Printf("go heap: HeapAlloc=%.1fMB HeapSys=%.1fMB Sys=%.1fMB\n",
+	fmt.Printf("go heap after GC: HeapAlloc=%.1fMB HeapSys=%.1fMB Sys=%.1fMB\n",
 		float64(ms.HeapAlloc)/1e6, float64(ms.HeapSys)/1e6, float64(ms.Sys)/1e6)
 	if *memprofFlag != "" {
 		if f, err := os.Create(*memprofFlag); err == nil {
@@ -424,7 +426,11 @@ func main() {
 }
 
 func run(w *app.Window) error {
-	faces, monoSrc, cjkSrc := loadFaces()
+	var faces []font.FontFace
+	var monoSrc, cjkSrc []byte
+	if *modeFlag != "bare" {
+		faces, monoSrc, cjkSrc = loadFaces()
+	}
 	var r renderer
 	switch *modeFlag {
 	case "text":
@@ -436,6 +442,9 @@ func run(w *app.Window) error {
 		r = &atlasRenderer{monoSrc: monoSrc, cjkSrc: cjkSrc}
 	case "empty":
 		// Baseline: same window, background only, no grid drawn.
+		r = emptyRenderer{}
+	case "bare":
+		// Truly empty: no fonts parsed, background only. Memory and Present floor.
 		r = emptyRenderer{}
 	default:
 		return fmt.Errorf("unknown -mode %q", *modeFlag)
