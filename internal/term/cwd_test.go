@@ -60,3 +60,39 @@ func TestOSC7ViaParser(t *testing.T) {
 		t.Fatalf("bad OSC 7 changed cwd to %q", a.Cwd())
 	}
 }
+
+func TestOSC7WindowsDriveForms(t *testing.T) {
+	for in, want := range map[string]string{
+		"7;file://PC/c:/Users/p": `c:\Users\p`,
+		"7;file://PC/C:":         `C:\`,
+		"7;file://PC/C:/":        `C:\`,
+	} {
+		if got, ok := parseOSC7([]byte(in), "windows"); !ok || got != want {
+			t.Errorf("%q: got %q ok=%v, want %q", in, got, ok, want)
+		}
+	}
+}
+
+func TestOSC7WindowsNonLetterDriveIsNotADrive(t *testing.T) {
+	got, ok := parseOSC7([]byte("7;file://PC/1:/x"), "windows")
+	if !ok || got != `\1:\x` {
+		t.Fatalf("got %q ok=%v", got, ok)
+	}
+}
+
+func TestOSC7EmptyHostAndEncodedSlash(t *testing.T) {
+	if got, ok := parseOSC7([]byte("7;file:///"), "linux"); !ok || got != "/" {
+		t.Fatalf("file:///: got %q ok=%v", got, ok)
+	}
+	if got, ok := parseOSC7([]byte("7;file://h/a%2Fb"), "linux"); !ok || got != "/a/b" {
+		t.Fatalf("%%2F: got %q ok=%v", got, ok)
+	}
+}
+
+func TestOSC7RejectsControlCharsAndBadUTF8(t *testing.T) {
+	for _, in := range []string{"7;file://h/a%07b", "7;file://h/a%1bb", "7;file://h/a%7fb", "7;file://h/a%0ab", "7;file://h/a%ffb", "7;file://h/a%c3"} {
+		if got, ok := parseOSC7([]byte(in), "linux"); ok {
+			t.Errorf("%q accepted as %q", in, got)
+		}
+	}
+}

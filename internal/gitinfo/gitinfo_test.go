@@ -112,3 +112,26 @@ func TestUnreadableHead(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+func TestSymlinkedGitDir(t *testing.T) {
+	root := t.TempDir()
+	write(t, filepath.Join(root, "store", "HEAD"), "ref: refs/heads/linked\n")
+	repo := filepath.Join(root, "repo")
+	if err := os.MkdirAll(repo, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(root, "store"), filepath.Join(repo, ".git")); err != nil {
+		t.Skip("symlinks not permitted:", err)
+	}
+	if got := Branch(repo); got != "linked" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestBranchStripsControlChars(t *testing.T) {
+	root := t.TempDir()
+	write(t, filepath.Join(root, ".git", "HEAD"), "ref: refs/heads/a\x1b[31mb\x07c\x7f\n")
+	if got := Branch(root); got != "a[31mbc" {
+		t.Fatalf("got %q", got)
+	}
+}

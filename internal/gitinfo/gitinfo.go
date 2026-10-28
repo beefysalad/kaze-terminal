@@ -26,7 +26,7 @@ func Branch(dir string) string {
 	}
 	for i := 0; i < maxDepth; i++ {
 		git := filepath.Join(cur, ".git")
-		if fi, err := os.Lstat(git); err == nil {
+		if fi, err := os.Stat(git); err == nil {
 			if fi.IsDir() {
 				return readHead(git)
 			}
@@ -90,7 +90,7 @@ func readHead(gitdir string) string {
 		if !found {
 			return ""
 		}
-		return name
+		return clean(name)
 	}
 	if len(s) >= 40 && isHex(s[:40]) {
 		return s[:7]
@@ -106,4 +106,15 @@ func isHex(s string) bool {
 		}
 	}
 	return true
+}
+
+// clean drops control characters so a crafted branch name cannot inject
+// escape sequences into the UI.
+func clean(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f {
+			return -1
+		}
+		return r
+	}, s)
 }
