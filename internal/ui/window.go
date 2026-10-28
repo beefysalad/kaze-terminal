@@ -28,9 +28,11 @@ import (
 	"github.com/patrick-gogo/kaze-terminal/internal/bench"
 	"github.com/patrick-gogo/kaze-terminal/internal/config"
 	"github.com/patrick-gogo/kaze-terminal/internal/input"
+	"github.com/patrick-gogo/kaze-terminal/internal/notify"
 	"github.com/patrick-gogo/kaze-terminal/internal/ptyx"
 	"github.com/patrick-gogo/kaze-terminal/internal/render"
 	"github.com/patrick-gogo/kaze-terminal/internal/screen"
+	"github.com/patrick-gogo/kaze-terminal/internal/sound"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 	"github.com/patrick-gogo/kaze-terminal/internal/term"
 )
@@ -52,6 +54,8 @@ const (
 	memEvery = 2 * time.Second
 	// noticeFor is how long an error stays in the status bar.
 	noticeFor = 15 * time.Second
+	// shutdownWait bounds quitting, as tabs.CloseAll does for the shells.
+	shutdownWait = 2 * time.Second
 )
 
 type window struct {
@@ -109,6 +113,13 @@ type window struct {
 	capTag    *int
 	maximized bool                // from the last ConfigEvent, so the button shows the real state
 	performFn func(system.Action) // replaces win.w.Perform in tests
+
+	// Alerts from Claude Code hooks (kaze notify).
+	srv      *notify.Server  // nil when the listener could not start
+	alertCh  chan notify.Msg // notify goroutines -> UI goroutine
+	alerts   alerts          // UI goroutine only
+	chime    func(time.Time) // sound.Player.Play; nil when both chimes are off
+	toastTag *int
 }
 
 // Run drives the window until it closes. It returns after every shell is closed.
@@ -129,6 +140,21 @@ func Run(w *app.Window, opt Options) error {
 		bench:  opt.Bench,
 		custom: customTitleBar,
 		capTag: new(int),
+
+		alertCh:  make(chan notify.Msg, alertQueue),
+		toastTag: new(int),
+	}
+	if srv, err := notify.Listen(win.onNotify); err != nil {
+		win.opt.Warnings = append(win.opt.Warnings, "alerts are off: "+err.Error())
+	} else {
+		win.srv = srv
+	}
+	if c := opt.Config; c.ChimeNeeds || c.ChimeDone {
+		p, warn := sound.New(c.ChimeFile)
+		if warn != "" {
+			win.opt.Warnings = append(win.opt.Warnings, warn)
+		}
+		win.chime = p.Play
 	}
 	return win.loop()
 }
@@ -150,9 +176,7 @@ func (win *window) loop() error {
 				win.benchScreen()
 				win.bench.Close(privateMB())
 			}
-			if win.mgr != nil {
-				win.mgr.CloseAll()
-			}
+			win.shutdown()
 			return e.Err
 		case app.ConfigEvent:
 			win.onConfig(e)
@@ -173,6 +197,25 @@ func (win *window) loop() error {
 			if win.mgr != nil && win.mgr.Empty() {
 				win.w.Perform(system.ActionClose)
 			}
+		}
+	}
+}
+
+// shutdown closes the alert listener and every shell, together within shutdownWait.
+func (win *window) shutdown() {
+	start := time.Now()
+	var done chan struct{}
+	if win.srv != nil {
+		done = make(chan struct{})
+		go func() { win.srv.Close(); close(done) }()
+	}
+	if win.mgr != nil {
+		win.mgr.CloseAll()
+	}
+	if done != nil {
+		select {
+		case <-done:
+		case <-time.After(max(shutdownWait-time.Since(start), 0)):
 		}
 	}
 }
@@ -261,6 +304,9 @@ func (win *window) frame(gtx layout.Context) error {
 		}
 		win.mgr = tabs.NewManager(win.start, cols, rows, notify)
 		win.mgr.SetScrollback(win.opt.Config.ScrollbackLines)
+		if win.srv != nil {
+			win.mgr.SetNotify(win.srv.Addr(), win.srv.Token()) // before any tab, so every shell gets it
+		}
 		var def []string
 		if len(win.opt.Config.Shell) > 0 {
 			def = ptyx.Resolve(ptyx.DefaultShell())
@@ -278,6 +324,7 @@ func (win *window) frame(gtx layout.Context) error {
 	win.mgr.ResizeAll(cols, rows)
 
 	win.barEvents(gtx)
+	win.toastEvents(gtx)
 	active := win.mgr.Active()
 	if active != nil {
 		win.termEvents(gtx, active, cw, ch)
@@ -290,6 +337,11 @@ func (win *window) frame(gtx layout.Context) error {
 	list := win.mgr.Tabs()
 	win.pruneSels(list)
 	win.pruneLocs(list)
+	win.alerts.prune(func(id tabs.TabID) bool {
+		return slices.ContainsFunc(list, func(t *tabs.Tab) bool { return t.ID == id })
+	})
+	win.drainAlerts(gtx.Now)
+	win.visit(active)
 	win.autoScroll(gtx, active, cw, ch)
 	sel := win.checkSel(active)
 
@@ -342,6 +394,17 @@ func (win *window) frame(gtx layout.Context) error {
 		gtx.Execute(op.InvalidateCmd{At: at}) // so the notice goes away on an idle window
 	}
 	st.Pop()
+
+	// Toasts float over the terminal, above the status bar; drawn last so they take clicks first.
+	if next, _ := win.alerts.expire(gtx.Now); !next.IsZero() {
+		gtx.Execute(op.InvalidateCmd{At: next}) // one wake for the next done toast, no ticker
+	}
+	win.drawToasts(gtx, size.Y, statusH)
+	for _, h := range win.ui.toastHits {
+		area = clip.Rect(h.rect).Push(ops)
+		event.Op(ops, win.toastTag)
+		area.Pop()
+	}
 
 	if win.wantFocus {
 		gtx.Execute(key.FocusCmd{Tag: win.termTag})
@@ -412,7 +475,7 @@ func (win *window) drawBar(gtx layout.Context, list []*tabs.Tab, active tabs.Tab
 	size := image.Pt(gtx.Constraints.Max.X, barH)
 	btnW := gtx.Dp(46)
 	room := layoutBar(size, size.X, btnW, win.custom).Tabs.Max.X
-	used := win.ui.layoutTabBar(gtx, list, active, win.defTitle, barH, room)
+	used := win.ui.layoutTabBar(gtx, list, active, win.alerts.markOf, win.defTitle, barH, room)
 	win.bar = layoutBar(size, used, btnW, win.custom)
 	if win.custom {
 		win.ui.layoutCaptions(gtx, win.bar, win.caption, win.maximized)
@@ -469,7 +532,19 @@ func (win *window) barEvents(gtx layout.Context) {
 		case onClose && e.Buttons.Contain(pointer.ButtonPrimary), e.Buttons.Contain(pointer.ButtonTertiary):
 			win.mgr.Close(id)
 		case e.Buttons.Contain(pointer.ButtonPrimary):
-			win.mgr.SetActive(id)
+			win.selectTab(id)
+		}
+	}
+}
+
+func (win *window) toastEvents(gtx layout.Context) {
+	for {
+		ev, ok := gtx.Event(pointer.Filter{Target: win.toastTag, Kinds: pointer.Press})
+		if !ok {
+			return
+		}
+		if e, ok := ev.(pointer.Event); ok {
+			win.toastEvent(e)
 		}
 	}
 }

@@ -45,8 +45,9 @@ const chromeFace = "JetBrains Mono"
 
 // chrome draws the tab bar and status bar with Gio's shaper over the bundled fonts.
 type chrome struct {
-	shaper *text.Shaper
-	hits   barHits
+	shaper    *text.Shaper
+	hits      barHits
+	toastHits []toastHit
 
 	faces   []font.FontFace
 	covered map[rune]bool   // rune -> some face has it
@@ -181,7 +182,8 @@ func place(ops *op.Ops, call op.CallOp, at image.Point) {
 
 // layoutTabBar fills the bar's background, draws the tabs and the + button left of limit,
 // records where each one is for clicks, and returns where the strip ends.
-func (c *chrome) layoutTabBar(gtx layout.Context, list []*tabs.Tab, active tabs.TabID, def string, height, limit int) int {
+// marks gives each tab's alert mark; nil means none.
+func (c *chrome) layoutTabBar(gtx layout.Context, list []*tabs.Tab, active tabs.TabID, marks func(tabs.TabID) mark, def string, height, limit int) int {
 	ops := gtx.Ops
 	width := gtx.Constraints.Max.X
 	paint.FillShape(ops, colChrome, clip.Rect{Max: image.Pt(width, height)}.Op())
@@ -200,8 +202,13 @@ func (c *chrome) layoutTabBar(gtx layout.Context, list []*tabs.Tab, active tabs.
 			fg = colActiveFG
 		}
 		call, size := c.label(gtx, c.tabLabelFit(t, def), 12, fg)
+		var mk mark
+		if marks != nil {
+			mk = marks(t.ID)
+		}
+		dc, hasDot := dotColor(on, mk)
 		w := padX + size.X + gap + closeSize.X + padX
-		if on {
+		if hasDot {
 			w += dot + gap
 		}
 		if x+w > limit-plusSize.X-2*padX {
@@ -213,9 +220,9 @@ func (c *chrome) layoutTabBar(gtx layout.Context, list []*tabs.Tab, active tabs.
 		}
 		cx := x + padX
 		mid := top + (height-top)/2
-		if on {
+		if hasDot {
 			d := image.Rect(cx, mid-dot/2, cx+dot, mid-dot/2+dot)
-			paint.FillShape(ops, colAccent, clip.Ellipse(d).Op(ops))
+			paint.FillShape(ops, dc, clip.Ellipse(d).Op(ops))
 			cx += dot + gap
 		}
 		place(ops, call, image.Pt(cx, mid-size.Y/2))
@@ -335,7 +342,7 @@ func (c *chrome) layoutStatus(gtx layout.Context, p statusParts, height int) {
 	var bsize image.Point
 	gap := gtx.Dp(12)
 	if p.Branch != "" {
-		bcall, bsize = c.label(gtx, "⎇ "+p.Branch, 11, colBranch)
+		bcall, bsize = c.label(gtx, c.branchLabel(p.Branch), 11, colBranch)
 		avail -= bsize.X + gap
 	}
 	if p.Folder != "" && avail > 0 {
