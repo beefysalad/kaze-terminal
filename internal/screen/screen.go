@@ -13,6 +13,9 @@ type Screen struct {
 	autoWrap    bool
 	wrapPending bool // cursor sits past the last column; the wrap happens on the next printable rune
 
+	scrollTop, scrollBottom int // DECSTBM region, 0-based inclusive; the full screen by default
+	saved                   savedCursor
+
 	sb         scrollback
 	viewOffset int // lines scrolled back from the bottom
 }
@@ -32,8 +35,9 @@ func New(cols, rows int) *Screen {
 		dirty: make([]bool, rows),
 		pen:   blankCell,
 
-		autoWrap: true,
-		sb:       scrollback{max: defaultScrollback},
+		autoWrap:     true,
+		scrollBottom: rows - 1,
+		sb:           scrollback{max: defaultScrollback},
 	}
 	for i := range s.cells {
 		s.cells[i] = blankCell

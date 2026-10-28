@@ -22,31 +22,16 @@ func (s *Screen) CarriageReturn() {
 	s.wrapPending = false
 }
 
-// LineFeed moves down one row, scrolling the screen up at the bottom.
+// LineFeed moves down one row, scrolling the region up when the cursor is on its bottom row.
 func (s *Screen) LineFeed() {
 	s.wrapPending = false
-	if s.curRow == s.rows-1 {
+	if s.curRow == s.scrollBottom {
 		s.scrollUp(1)
 		return
 	}
-	s.curRow++
-}
-
-// scrollUp is the single place lines leave the top, so scrollback and scroll regions can hook in.
-func (s *Screen) scrollUp(n int) {
-	if n < 1 {
-		return
+	if s.curRow < s.rows-1 {
+		s.curRow++
 	}
-	if n > s.rows {
-		n = s.rows
-	}
-	// Task 5/7: only record when the scroll region is the full screen and the main screen is active.
-	s.recordScrolled(n)
-	copy(s.cells, s.cells[n*s.cols:])
-	for i := (s.rows - n) * s.cols; i < len(s.cells); i++ {
-		s.cells[i] = blankCell
-	}
-	s.MarkAllDirty()
 }
 
 // Print writes r at the cursor with the current pen and advances, wrapping as needed.
