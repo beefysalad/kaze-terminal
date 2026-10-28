@@ -103,7 +103,7 @@ func (c *chrome) fit(s string) string {
 const maxCovered = 4096
 
 // maxFontFile keeps big collections and emoji fonts out of memory; their runes are trimmed.
-const maxFontFile = 8 << 20
+var maxFontFile int64 = 8 << 20
 
 // usable reports whether r can be drawn, loading its system font on first need.
 func (c *chrome) usable(r rune, added *bool) bool {

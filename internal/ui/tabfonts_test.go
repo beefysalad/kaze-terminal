@@ -9,6 +9,7 @@ import (
 	"gioui.org/font"
 	"gioui.org/text"
 
+	"github.com/patrick-gogo/kaze/assets/fonts"
 	"github.com/patrick-gogo/kaze/internal/render"
 	"github.com/patrick-gogo/kaze/internal/tabs"
 )
@@ -84,13 +85,20 @@ func TestFitCoveredTextIsUnchangedWithoutAllocating(t *testing.T) {
 }
 
 func TestAddFontSkipsOversizedFile(t *testing.T) {
-	f := filepath.Join(t.TempDir(), "big.ttf")
-	if err := os.WriteFile(f, make([]byte, maxFontFile+1), 0o600); err != nil {
+	f := filepath.Join(t.TempDir(), "mono.ttf")
+	if err := os.WriteFile(f, fonts.MonoRegular, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	c := newChrome()
-	if ok, fresh := c.addFont(f); ok || fresh {
-		t.Fatal("oversized file was loaded")
+	old := maxFontFile
+	defer func() { maxFontFile = old }()
+
+	maxFontFile = int64(len(fonts.MonoRegular)) - 1
+	if ok, fresh := newChrome().addFont(f); ok || fresh {
+		t.Fatal("a valid font over the cap was loaded")
+	}
+	maxFontFile = int64(len(fonts.MonoRegular)) + 1
+	if ok, fresh := newChrome().addFont(f); !ok || !fresh {
+		t.Fatal("the same font under the cap was rejected")
 	}
 }
 
