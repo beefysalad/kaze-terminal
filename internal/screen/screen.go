@@ -8,6 +8,10 @@ type Screen struct {
 	dirty      []bool
 	curCol     int
 	curRow     int
+
+	pen         Cell // FG/BG/Attrs template for printed cells; Rune and Width are ignored
+	autoWrap    bool
+	wrapPending bool // cursor sits past the last column; the wrap happens on the next printable rune
 }
 
 // New returns a blank screen with every row dirty, so the first frame paints fully.
@@ -23,6 +27,9 @@ func New(cols, rows int) *Screen {
 		rows:  rows,
 		cells: make([]Cell, cols*rows),
 		dirty: make([]bool, rows),
+		pen:   blankCell,
+
+		autoWrap: true,
 	}
 	for i := range s.cells {
 		s.cells[i] = blankCell
@@ -64,6 +71,7 @@ func (s *Screen) Cursor() (col, row int) { return s.curCol, s.curRow }
 func (s *Screen) SetCursor(col, row int) {
 	s.curCol = clamp(col, 0, s.cols-1)
 	s.curRow = clamp(row, 0, s.rows-1)
+	s.wrapPending = false // any explicit cursor move cancels a pending wrap, as in xterm
 }
 
 // TakeDirty returns changed rows in ascending order and clears the flags.
