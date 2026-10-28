@@ -154,7 +154,10 @@ func (r *Renderer) snapshot(s *term.Session, sel *Selection) (held bool) {
 	defer s.Unlock()
 	a, scr := s.Applier(), s.Screen()
 	m := a.Modes()
-	if since := a.SyncSince(); m.Synchronized && !since.IsZero() && r.now().Sub(since) < syncHold {
+	// Hold only when something is already drawn; with no strips (first frame, or
+	// right after Release) holding would show just the background.
+	drawnAny := r.cols != 0 && len(r.strips) != 0
+	if since := a.SyncSince(); drawnAny && m.Synchronized && !since.IsZero() && r.now().Sub(since) < syncHold {
 		r.holdUntil = since.Add(syncHold)
 		return true
 	}
