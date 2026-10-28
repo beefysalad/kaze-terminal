@@ -1,0 +1,15 @@
+JetBrainsMono-Regular.ttf, JetBrainsMono-Bold.ttf
+  JetBrains Mono 2.304, unmodified, from
+  https://github.com/JetBrains/JetBrainsMono/releases/download/v2.304/JetBrainsMono-2.304.zip
+  License: SIL Open Font License 1.1 (OFL-JetBrainsMono.txt)
+
+NotoSansJP-Regular-subset.ttf
+  Modified from NotoSansJP[wght].ttf in https://github.com/google/fonts (ofl/notosansjp).
+  License: SIL Open Font License 1.1 (OFL-NotoSansJP.txt)
+  Made with fontTools (2026-10-28):
+    fonttools varLib.instancer NotoSansJP[wght].ttf wght=400 -o NotoSansJP-Regular-static.ttf
+    pyftsubset NotoSansJP-Regular-static.ttf --unicodes-file=unicodes.txt \
+      --layout-features='' --no-hinting --name-IDs='*' --name-legacy \
+      --output-file=NotoSansJP-Regular-subset.ttf
+  unicodes.txt = every code point U+0080..U+FFFF that Python's cp932 codec can encode,
+  plus U+3000..U+30FF, U+31F0..U+31FF and U+FF00..U+FFEF (9428 code points).
