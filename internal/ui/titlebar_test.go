@@ -91,3 +91,59 @@ func TestMaximizeTogglesWithRealState(t *testing.T) {
 		t.Fatal("min/close")
 	}
 }
+
+func TestNarrowBarKeepsButtonsInside(t *testing.T) {
+	bar := image.Rect(0, 0, 100, 38) // narrower than three 46px buttons
+	b := layoutBar(bar.Max, 300, 46, true)
+	for i, r := range b.Buttons {
+		if !r.In(bar) {
+			t.Fatalf("button %d %v outside bar %v", i, r, bar)
+		}
+	}
+	if b.Tabs.Max.X > b.Buttons[0].Min.X && !b.Buttons[0].Empty() {
+		t.Fatalf("tabs %v overlap %v", b.Tabs, b.Buttons[0])
+	}
+}
+
+func TestNegativeTabsWidthIsZero(t *testing.T) {
+	b := layoutBar(image.Pt(1000, 38), -50, 46, true)
+	if b.Tabs != image.Rect(0, 0, 0, 38) || b.Drag != image.Rect(0, 0, 862, 38) {
+		t.Fatalf("tabs %v drag %v", b.Tabs, b.Drag)
+	}
+}
+
+func TestPressOnOneButtonReleaseOnAnotherFiresNothing(t *testing.T) {
+	b := layoutBar(image.Pt(1000, 38), 300, 46, true)
+	var s captionState
+	s.pointer(pointer.Press, b.Buttons[0].Min.Add(image.Pt(5, 5)), b)
+	if got := s.pointer(pointer.Release, b.Buttons[2].Min.Add(image.Pt(5, 5)), b); got != capNone {
+		t.Fatalf("fired %v", got)
+	}
+}
+
+func TestCancelClearsState(t *testing.T) {
+	b := layoutBar(image.Pt(1000, 38), 300, 46, true)
+	var s captionState
+	p := b.Buttons[2].Min.Add(image.Pt(5, 5))
+	s.pointer(pointer.Press, p, b)
+	s.pointer(pointer.Cancel, p, b)
+	if s.hover != capNone || s.pressed != capNone {
+		t.Fatalf("%+v", s)
+	}
+	if s.pointer(pointer.Release, p, b) != capNone {
+		t.Fatal("fired after cancel")
+	}
+}
+
+func TestLeaveClearsHover(t *testing.T) {
+	b := layoutBar(image.Pt(1000, 38), 300, 46, true)
+	var s captionState
+	s.pointer(pointer.Move, b.Buttons[1].Min.Add(image.Pt(5, 5)), b)
+	if s.hover != capMaximize {
+		t.Fatalf("hover %v", s.hover)
+	}
+	s.pointer(pointer.Leave, image.Pt(-1, -1), b)
+	if s.hover != capNone {
+		t.Fatalf("hover %v after leave", s.hover)
+	}
+}

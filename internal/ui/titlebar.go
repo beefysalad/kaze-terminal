@@ -31,15 +31,14 @@ func layoutBar(size image.Point, tabsWidth, buttonW int, custom bool) barLayout 
 		b.Tabs = image.Rect(0, 0, size.X, size.Y)
 		return b
 	}
-	left := size.X - 3*buttonW
-	if left < 0 {
-		left = 0
-	}
+	bar := image.Rect(0, 0, size.X, size.Y)
+	left := max(size.X-3*buttonW, 0)
 	for i := range b.Buttons {
 		x := left + i*buttonW
-		b.Buttons[i] = image.Rect(x, 0, x+buttonW, size.Y)
+		// A bar narrower than three buttons cuts them off rather than overhang it.
+		b.Buttons[i] = image.Rect(x, 0, x+buttonW, size.Y).Intersect(bar)
 	}
-	tabsEnd := tabsWidth
+	tabsEnd := max(tabsWidth, 0)
 	if tabsEnd > left {
 		tabsEnd = left
 	}
@@ -89,6 +88,7 @@ func (s *captionState) pointer(kind pointer.Kind, p image.Point, b barLayout) ca
 }
 
 // actionFor maps a fired button to the window action, given the real maximized state.
+// It returns 0 (no action) for capNone; callers only Perform a fired, non-capNone button.
 func actionFor(c captionButton, maximized bool) system.Action {
 	switch c {
 	case capMinimize:
