@@ -87,6 +87,8 @@ type window struct {
 	toApp      bool            // the current mouse gesture is reported to the app, not selecting
 	dragPos    image.Point     // last drag position relative to the grid, for auto-scroll
 	scrolledAt time.Time
+
+	toClipboard func(string) // replaces the Gio clipboard write in tests
 }
 
 // Run drives the window until it closes. It returns after every shell is closed.
@@ -637,6 +639,10 @@ func (win *window) copySel(gtx layout.Context, t *tabs.Tab) {
 	text := render.SelectedText(t.Session.Screen(), ts.sel)
 	t.Session.Unlock()
 	if text == "" {
+		return
+	}
+	if win.toClipboard != nil {
+		win.toClipboard(text)
 		return
 	}
 	gtx.Execute(clipboard.WriteCmd{Type: "application/text", Data: io.NopCloser(strings.NewReader(text))})
