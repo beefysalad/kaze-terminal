@@ -181,3 +181,26 @@ func TestLineFeedKeepsColumn(t *testing.T) {
 		t.Fatalf("cursor %d,%d", c, r)
 	}
 }
+
+func TestWideCharAtEdgeDoesNotOrphanLead(t *testing.T) {
+	s := screen.New(4, 2)
+	s.SetCursor(2, 0)
+	s.Print('あ') // lead at col 2, continuation at col 3
+	s.SetCursor(3, 0)
+	s.Print('い') // does not fit at the last column
+	if s.Cell(2, 0).Width == 2 {
+		t.Fatal("lead half left orphaned next to a blanked continuation")
+	}
+}
+
+func TestDisablingAutoWrapClearsPendingWrap(t *testing.T) {
+	s := screen.New(2, 2)
+	s.Print('a')
+	s.Print('b') // wrap now pending
+	s.SetAutoWrap(false)
+	s.SetAutoWrap(true)
+	s.Print('c')
+	if _, row := s.Cursor(); row != 0 {
+		t.Fatal("stale pending wrap fired after toggling auto-wrap")
+	}
+}

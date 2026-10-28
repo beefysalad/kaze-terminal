@@ -9,7 +9,12 @@ var width = runewidth.Condition{EastAsianWidth: false}
 func (s *Screen) Pen() *Cell { return &s.pen }
 
 // SetAutoWrap controls whether printing past the last column wraps to the next line.
-func (s *Screen) SetAutoWrap(on bool) { s.autoWrap = on }
+func (s *Screen) SetAutoWrap(on bool) {
+	s.autoWrap = on
+	if !on {
+		s.wrapPending = false // a pending wrap must not survive to fire after wrap is re-enabled
+	}
+}
 
 // CarriageReturn moves the cursor to column 0.
 func (s *Screen) CarriageReturn() {
@@ -56,6 +61,7 @@ func (s *Screen) Print(r rune) {
 		if !s.autoWrap || w > s.cols {
 			return
 		}
+		s.clearWideHalves(s.curCol, 1) // blanking a continuation half must not orphan its lead
 		s.SetCell(s.curCol, s.curRow, blankCell)
 		s.CarriageReturn()
 		s.LineFeed()
