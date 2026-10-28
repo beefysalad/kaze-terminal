@@ -2,6 +2,7 @@ package render
 
 import (
 	"image/color"
+	"math"
 
 	"github.com/patrick-gogo/kaze/internal/screen"
 )
@@ -86,3 +87,93 @@ func cellColors(p Palette, c screen.Cell) (fg, bg color.NRGBA) {
 }
 
 func mid(a, b uint8) uint8 { return uint8((int(a) + int(b)) / 2) }
+
+// minContrast is the WCAG AA ratio for normal text.
+const minContrast = 4.5
+
+// fixCap bounds the per-renderer cache of fixed (fg, bg) pairs; a full cache is cleared.
+const fixCap = 512
+
+// linear maps an sRGB channel to linear light, so luminance needs no pow per cell.
+var linear = func() (t [256]float64) {
+	for i := range t {
+		c := float64(i) / 255
+		if c <= 0.04045 {
+			t[i] = c / 12.92
+		} else {
+			t[i] = math.Pow((c+0.055)/1.055, 2.4)
+		}
+	}
+	return t
+}()
+
+func luminance(c color.NRGBA) float64 {
+	return 0.2126*linear[c.R] + 0.7152*linear[c.G] + 0.0722*linear[c.B]
+}
+
+// contrast is the WCAG 2 contrast ratio of two opaque colors, 1 to 21.
+func contrast(a, b color.NRGBA) float64 {
+	la, lb := luminance(a), luminance(b)
+	if la < lb {
+		la, lb = lb, la
+	}
+	return (la + 0.05) / (lb + 0.05)
+}
+
+// blend moves a toward b by t/256.
+func blend(a, b color.NRGBA, t int) color.NRGBA {
+	m := func(x, y uint8) uint8 { return uint8(int(x) + (int(y)-int(x))*t/256) }
+	return color.NRGBA{R: m(a.R, b.R), G: m(a.G, b.G), B: m(a.B, b.B), A: 0xff}
+}
+
+// readable moves fg toward the Midnight background or white, whichever contrasts more
+// with bg, only as far as needed to reach minContrast, so dim and colored text keep
+// their tint. fg == bg is left alone: that is hidden text on purpose.
+func readable(fg, bg color.NRGBA) color.NRGBA {
+	if fg == bg || contrast(fg, bg) >= minContrast {
+		return fg
+	}
+	to := hex(0xffffff)
+	if dark := hex(0x0f1117); contrast(dark, bg) > contrast(to, bg) {
+		to = dark
+	}
+	lo, hi := 0, 256 // blend(fg, to, 256) is to itself, the best available
+	for lo+1 < hi {
+		mid := (lo + hi) / 2
+		if contrast(blend(fg, to, mid), bg) >= minContrast {
+			hi = mid
+		} else {
+			lo = mid
+		}
+	}
+	return blend(fg, to, hi)
+}
+
+// readableCached is readable memoized per (fg, bg), so the float math runs once per pair.
+func (r *Renderer) readableCached(fg, bg color.NRGBA) color.NRGBA {
+	if fg == r.pal.FG && bg == r.pal.BG {
+		return r.defFG
+	}
+	k := uint64(fg.R)<<40 | uint64(fg.G)<<32 | uint64(fg.B)<<24 | uint64(bg.R)<<16 | uint64(bg.G)<<8 | uint64(bg.B)
+	if v, ok := r.fixed[k]; ok {
+		return v
+	}
+	if r.fixed == nil || len(r.fixed) >= fixCap {
+		r.fixed = make(map[uint64]color.NRGBA, 64)
+	}
+	v := readable(fg, bg)
+	r.fixed[k] = v
+	return v
+}
+
+// colorsOf is cellColors with the text kept readable.
+func (r *Renderer) colorsOf(c screen.Cell) (fg, bg color.NRGBA) {
+	fg, bg = cellColors(r.pal, c)
+	return r.readableCached(fg, bg), bg
+}
+
+// selectedFG is a selected cell's text color, kept readable over the selection background.
+func (r *Renderer) selectedFG(c screen.Cell) color.NRGBA {
+	fg, _ := cellColors(r.pal, c)
+	return r.readableCached(fg, r.pal.Selection)
+}

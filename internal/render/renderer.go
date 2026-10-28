@@ -81,6 +81,9 @@ type Renderer struct {
 	edges     [4]image.Rectangle // outline cursor scratch, kept to avoid a per-frame allocation
 	holdUntil time.Time
 
+	fixed map[uint64]color.NRGBA // readable text colors by packed (fg, bg)
+	defFG color.NRGBA            // readable(pal.FG, pal.BG): most cells, skips the map
+
 	now   func() time.Time // replaceable so tests can drive the sync timeout
 	stats Stats
 }
@@ -97,6 +100,7 @@ func NewRenderer(fontSize float32, palette Palette) *Renderer {
 		cellH:   g.fs.cellH,
 		focused: true,
 		now:     time.Now,
+		defFG:   readable(palette.FG, palette.BG),
 	}
 	for i := range r.curImgs {
 		r.curImgs[i][0] = image.NewRGBA(image.Rect(0, 0, r.cellW, r.cellH))
@@ -284,8 +288,7 @@ func (r *Renderer) rasterizeDirty() {
 			}
 			var over *colors
 			if selNow[c] {
-				fg, _ := cellColors(r.pal, cell)
-				over = &colors{fg: fg, bg: r.pal.Selection}
+				over = &colors{fg: r.selectedFG(cell), bg: r.pal.Selection}
 			}
 			r.drawCell(st.img, c*r.cellW, y, cell, over)
 			changed = true
@@ -316,9 +319,11 @@ type colors struct{ fg, bg color.NRGBA }
 
 // drawCell composites one cell (two for a wide char) at x,y: background, glyph, then lines.
 func (r *Renderer) drawCell(img *image.RGBA, x, y int, cell screen.Cell, over *colors) {
-	fg, bg := cellColors(r.pal, cell)
+	var fg, bg color.NRGBA
 	if over != nil {
 		fg, bg = over.fg, over.bg
+	} else {
+		fg, bg = r.colorsOf(cell)
 	}
 	cells := 1
 	if cell.Width == 2 {
