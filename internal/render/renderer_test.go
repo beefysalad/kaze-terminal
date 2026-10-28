@@ -108,6 +108,7 @@ func TestOnlyDirtyStripsGetNewImage(t *testing.T) {
 
 func TestGlyphRasterizedOnce(t *testing.T) {
 	h := newHarness(t, 80, 24)
+	h.r = NewRenderer(14.25, DefaultPalette()) // a size no other test uses, so its shared cache starts empty
 	h.frame()
 	for i := 0; i < 10; i++ {
 		h.out(strings.Repeat("a", 100))

@@ -214,3 +214,11 @@ Winner: **image, one `ImageOp` for the whole grid.** Order by stream p99: image 
 3.51ms, image (8 strips) 4.68ms, atlas (sub) 32.22ms, atlas (clip) 46.93ms, text
 80.81ms. Text, atlas (clip) and atlas (sub) miss the stream goal; atlas (clip) and atlas
 (sub) also miss the one-cell goal.
+
+## What Task 10 uses: 8 strips (Ruling R8)
+
+The renderer uses the **8-strip** variant, not the single image picked above. Under
+stream the two are within noise (p99 4.68ms vs 3.51ms, both far under 16.7ms, single
+runs). On a one-cell change the strips are about 2x faster (p99 1.02ms vs 2.19ms),
+because only the changed strip is uploaded. That advantage grows with window size and
+DPI, while the single image uploads the whole grid on every change.

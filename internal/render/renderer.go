@@ -60,6 +60,8 @@ type Renderer struct {
 
 	cols, rows   int
 	full         bool          // next snapshot copies every row
+	viewOffset   int           // the view offset the strips show
+	needStrips   bool          // strips must be rebuilt for cols x rows, outside the lock
 	drawn        []screen.Cell // what the strips show, row-major
 	snap         []screen.Cell // rows copied out under the session lock
 	snapRows     []int
@@ -70,7 +72,10 @@ type Renderer struct {
 	cur       cursorState
 	curDrawn  cursorState
 	curOp     paint.ImageOp
-	curImg    *image.RGBA
+	curImg    *image.RGBA       // the image curOp shows
+	curImgs   [2][2]*image.RGBA // [narrow, wide] x two, alternated so the shown one is never redrawn
+	curFlip   int
+	edges     [4]image.Rectangle // outline cursor scratch, kept to avoid a per-frame allocation
 	holdUntil time.Time
 
 	now   func() time.Time // replaceable so tests can drive the sync timeout
@@ -78,17 +83,31 @@ type Renderer struct {
 }
 
 // NewRenderer builds a renderer for a font size in pixels (the caller applies DPI scale).
+// Renderers of the same size share fonts and glyphs.
 func NewRenderer(fontSize float32, palette Palette) *Renderer {
-	fs := newFontSet(float64(fontSize))
-	return &Renderer{
+	g := sharedGlyphs(fontSize)
+	r := &Renderer{
 		pal:     palette,
-		fs:      fs,
-		glyphs:  newGlyphCache(fs),
-		cellW:   fs.cellW,
-		cellH:   fs.cellH,
+		fs:      g.fs,
+		glyphs:  g,
+		cellW:   g.fs.cellW,
+		cellH:   g.fs.cellH,
 		focused: true,
 		now:     time.Now,
 	}
+	for i := range r.curImgs {
+		r.curImgs[i][0] = image.NewRGBA(image.Rect(0, 0, r.cellW, r.cellH))
+		r.curImgs[i][1] = image.NewRGBA(image.Rect(0, 0, 2*r.cellW, r.cellH))
+	}
+	return r
+}
+
+// Release drops the strip images and what they showed, for a tab that is not
+// visible; the next Layout rebuilds them.
+func (r *Renderer) Release() {
+	r.cols, r.rows = 0, 0
+	r.strips, r.drawn, r.snap, r.snapRows = nil, nil, nil, nil
+	r.curImg, r.curDrawn = nil, cursorState{}
 }
 
 // CellSize is one cell in pixels, for computing cols and rows from a window size.
@@ -106,7 +125,11 @@ func (r *Renderer) Stats() Stats {
 // Layout draws the session. sel is accepted for the selection overlay, which is not drawn yet.
 func (r *Renderer) Layout(gtx layout.Context, s *term.Session, sel *Selection) layout.Dimensions {
 	_ = sel
-	if r.snapshot(s) {
+	held := r.snapshot(s)
+	if r.needStrips {
+		r.buildStrips()
+	}
+	if held {
 		gtx.Execute(op.InvalidateCmd{At: r.holdUntil}) // draw anyway once the hold runs out
 	} else {
 		r.rasterizeDirty()
@@ -135,8 +158,11 @@ func (r *Renderer) snapshot(s *term.Session) (held bool) {
 	}
 	dirty := scr.TakeDirty()
 	r.snapRows = r.snapRows[:0]
+	if off := scr.ViewOffset(); off != r.viewOffset {
+		r.viewOffset, r.full = off, true
+	}
 	// A scrolled-back view shows history, which dirty flags don't track; the cell diff keeps a full copy cheap.
-	if r.full || scr.ViewOffset() > 0 {
+	if r.full || r.viewOffset > 0 {
 		r.full = false
 		for row := 0; row < rows; row++ {
 			r.snapRows = append(r.snapRows, row)
@@ -162,14 +188,21 @@ func (r *Renderer) snapshot(s *term.Session) (held bool) {
 	return false
 }
 
+// resize runs under the session lock, so it only sizes the cell copy; the strip
+// images, the large allocation, are made by buildStrips after the lock is released.
 func (r *Renderer) resize(cols, rows int) {
 	r.cols, r.rows = cols, rows
-	r.full = true
+	r.full, r.needStrips = true, true
+	r.snap = make([]screen.Cell, cols*rows)
+}
+
+func (r *Renderer) buildStrips() {
+	cols, rows := r.cols, r.rows
+	r.needStrips = false
 	r.drawn = make([]screen.Cell, cols*rows)
 	for i := range r.drawn {
 		r.drawn[i].Rune = -1 // matches no real cell, so every cell is drawn once
 	}
-	r.snap = make([]screen.Cell, cols*rows)
 	r.rowsPerStrip = (rows + stripCount - 1) / stripCount
 	r.strips = r.strips[:0]
 	for row0 := 0; row0 < rows; row0 += r.rowsPerStrip {
@@ -305,7 +338,8 @@ func (r *Renderer) updateCursor() {
 	if c.cell.Width == 2 {
 		cells = 2
 	}
-	r.curImg = image.NewRGBA(image.Rect(0, 0, cells*r.cellW, r.cellH))
+	r.curFlip ^= 1
+	r.curImg = r.curImgs[r.curFlip][cells-1]
 	r.drawCell(r.curImg, 0, 0, c.cell, &colors{fg: r.pal.BG, bg: r.pal.Cursor})
 	r.curOp = paint.NewImageOp(r.curImg)
 	r.curOp.Filter = paint.FilterNearest
@@ -342,12 +376,13 @@ func (r *Renderer) paint(gtx layout.Context) {
 		w *= 2
 	}
 	box := image.Rectangle{Min: p, Max: p.Add(image.Pt(w, r.cellH))}
-	for _, edge := range []image.Rectangle{
+	r.edges = [4]image.Rectangle{
 		{Min: box.Min, Max: image.Pt(box.Max.X, box.Min.Y+1)},
 		{Min: image.Pt(box.Min.X, box.Max.Y-1), Max: box.Max},
 		{Min: box.Min, Max: image.Pt(box.Min.X+1, box.Max.Y)},
 		{Min: image.Pt(box.Max.X-1, box.Min.Y), Max: box.Max},
-	} {
+	}
+	for _, edge := range r.edges {
 		paint.FillShape(ops, r.pal.Cursor, clip.Rect(edge).Op())
 	}
 }

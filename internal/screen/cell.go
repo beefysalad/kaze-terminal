@@ -39,3 +39,15 @@ type Cell struct {
 
 // blankCell is what an erased position looks like.
 var blankCell = Cell{Rune: ' ', Width: 1, FG: DefaultColor, BG: DefaultColor}
+
+// IsDefault reports whether c means "use the theme's color".
+func (c Color) IsDefault() bool { return c&DefaultColor != 0 }
+
+// IsRGB reports whether c is a truecolor value.
+func (c Color) IsRGB() bool { return c&DefaultColor == 0 && c&rgbFlag != 0 }
+
+// RGB returns a truecolor value's components; only meaningful when IsRGB.
+func (c Color) RGB() (r, g, b uint8) { return uint8(c >> 16), uint8(c >> 8), uint8(c) }
+
+// Index returns a palette color's index; only meaningful when neither IsDefault nor IsRGB.
+func (c Color) Index() uint8 { return uint8(c) }

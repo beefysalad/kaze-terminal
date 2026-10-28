@@ -15,6 +15,8 @@ const (
 	faceMono faceID = iota
 	faceMonoBold
 	faceCJK
+	faceMissing // in neither font: every such rune shares one .notdef mask
+	faceBox     // box drawing and block elements, drawn procedurally
 )
 
 // fontSet holds the parsed bundled fonts at one pixel size.
@@ -69,7 +71,7 @@ func newFontSet(px float64) *fontSet {
 	return fs
 }
 
-// faceFor picks the mono face when it has the rune, else the CJK face, else mono's .notdef.
+// faceFor picks the mono face when it has the rune, else the CJK face, else faceMissing.
 func (fs *fontSet) faceFor(r rune, bold bool) faceID {
 	mono := faceMono
 	if bold {
@@ -81,5 +83,5 @@ func (fs *fontSet) faceFor(r rune, bold bool) faceID {
 	if i, _ := fs.cjk.GlyphIndex(&fs.buf, r); i != 0 {
 		return faceCJK
 	}
-	return mono
+	return faceMissing
 }

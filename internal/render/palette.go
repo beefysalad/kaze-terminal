@@ -12,9 +12,6 @@ type Palette struct {
 	ANSI                      [16]color.NRGBA
 }
 
-// rgbFlag mirrors the truecolor bit that screen.RGB sets.
-const rgbFlag screen.Color = 1 << 30
-
 func hex(v uint32) color.NRGBA {
 	return color.NRGBA{R: uint8(v >> 16), G: uint8(v >> 8), B: uint8(v), A: 0xff}
 }
@@ -57,20 +54,21 @@ func indexed(p Palette, n uint8) color.NRGBA {
 
 func resolve(p Palette, c screen.Color, def color.NRGBA) color.NRGBA {
 	switch {
-	case c&screen.DefaultColor != 0:
+	case c.IsDefault():
 		return def
-	case c&rgbFlag != 0:
-		return color.NRGBA{R: uint8(c >> 16), G: uint8(c >> 8), B: uint8(c), A: 0xff}
+	case c.IsRGB():
+		r, g, b := c.RGB()
+		return color.NRGBA{R: r, G: g, B: b, A: 0xff}
 	default:
-		return indexed(p, uint8(c))
+		return indexed(p, c.Index())
 	}
 }
 
 // resolveFG applies bold-is-bright to the 8 basic colors, as xterm does.
 func resolveFG(p Palette, c screen.Cell) color.NRGBA {
 	fg := c.FG
-	if c.Attrs&screen.AttrBold != 0 && fg&(screen.DefaultColor|rgbFlag) == 0 && fg < 8 {
-		fg += 8
+	if c.Attrs&screen.AttrBold != 0 && !fg.IsDefault() && !fg.IsRGB() && fg.Index() < 8 {
+		fg = screen.Indexed(fg.Index() + 8)
 	}
 	return resolve(p, fg, p.FG)
 }
