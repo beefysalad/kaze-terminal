@@ -18,6 +18,9 @@ type Screen struct {
 
 	sb         scrollback
 	viewOffset int // lines scrolled back from the bottom
+
+	alt        bool
+	otherCells []Cell // the buffer that is not showing
 }
 
 // New returns a blank screen with every row dirty, so the first frame paints fully.

@@ -25,7 +25,7 @@ func (s *Screen) scrollUp(n int) {
 	if n < 1 {
 		return
 	}
-	if s.fullRegion() {
+	if s.fullRegion() && !s.alt {
 		s.recordScrolled(n)
 	}
 	s.shiftRows(s.scrollTop, s.scrollBottom, -n)

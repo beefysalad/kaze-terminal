@@ -1,0 +1,26 @@
+package screen
+
+// UseAltScreen switches between the main and alternate buffers. Entering gives a
+// blank alt buffer; leaving brings back the main content. Cursor save/restore
+// (mode 1049) is the caller's job, since modes 47 and 1047 don't do it.
+func (s *Screen) UseAltScreen(on bool) {
+	if on == s.alt {
+		return
+	}
+	s.alt = on
+	s.cells, s.otherCells = s.otherCells, s.cells
+	if on {
+		if s.cells == nil {
+			s.cells = make([]Cell, len(s.otherCells))
+		}
+		for i := range s.cells {
+			s.cells[i] = blankCell
+		}
+	}
+	s.viewOffset = 0
+	s.wrapPending = false
+	s.MarkAllDirty()
+}
+
+// OnAltScreen reports whether the alternate buffer is active.
+func (s *Screen) OnAltScreen() bool { return s.alt }

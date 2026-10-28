@@ -2,7 +2,9 @@
 package term
 
 import (
+	"bytes"
 	"io"
+	"time"
 
 	"github.com/patrick-gogo/kaze/internal/screen"
 )
@@ -10,11 +12,16 @@ import (
 // Applier is a vt.Handler that drives a Screen.
 type Applier struct {
 	s     *screen.Screen
-	reply io.Writer // terminal responses; written to by later tasks
+	reply io.Writer // terminal responses to status queries
+
+	modes     Modes
+	syncSince time.Time
+	title     string
+	now       func() time.Time // replaceable so tests can drive the sync timeout
 }
 
 func NewApplier(s *screen.Screen, reply io.Writer) *Applier {
-	return &Applier{s: s, reply: reply}
+	return &Applier{s: s, reply: reply, modes: Modes{CursorVisible: true}, now: time.Now}
 }
 
 func (a *Applier) Print(r rune) { a.s.Print(r) }
@@ -52,8 +59,12 @@ func selector(params []int) int {
 }
 
 func (a *Applier) CSI(params []int, intermediates []byte, private byte, final byte) {
+	if private == '?' {
+		a.privateCSI(params, intermediates, final)
+		return
+	}
 	if private != 0 || len(intermediates) != 0 {
-		return // modes and other extensions belong to later tasks
+		return
 	}
 	s := a.s
 	col, row := s.Cursor()
@@ -108,6 +119,12 @@ func (a *Applier) CSI(params []int, intermediates []byte, private byte, final by
 		s.RestoreCursor()
 	case 'm':
 		a.sgr(params)
+	case 'n':
+		a.deviceStatus(params)
+	case 'c':
+		if param(params, 0, 0) == 0 {
+			a.replyf("[?62;22c")
+		}
 	}
 }
 
@@ -133,4 +150,21 @@ func (a *Applier) ESC(intermediates []byte, final byte) {
 	}
 }
 
-func (a *Applier) OSC(data []byte) {}
+// OSC handles window titles (0 and 2); the rest are ignored.
+func (a *Applier) OSC(data []byte) {
+	cmd, text, ok := bytes.Cut(data, []byte{';'})
+	if ok && (string(cmd) == "0" || string(cmd) == "2") {
+		a.title = string(text) // copy: parser buffers are reused
+	}
+}
+
+func (a *Applier) privateCSI(params []int, intermediates []byte, final byte) {
+	switch {
+	case len(intermediates) == 0 && final == 'h':
+		a.setPrivateMode(params, true)
+	case len(intermediates) == 0 && final == 'l':
+		a.setPrivateMode(params, false)
+	case len(intermediates) == 1 && intermediates[0] == '$' && final == 'p':
+		a.queryPrivateMode(param(params, 0, 0))
+	}
+}
