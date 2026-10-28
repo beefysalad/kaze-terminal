@@ -28,6 +28,7 @@ const (
 // Parser is a Paul Williams style DEC parser with UTF-8 decoding in ground.
 type Parser struct {
 	h     Handler
+	sub   SubParamHandler // non-nil when h wants the colon mask
 	state state
 
 	// UTF-8 assembly across Feed calls.
@@ -37,6 +38,8 @@ type Parser struct {
 
 	params    [maxParams]int
 	nparams   int
+	colon     uint32 // bit i: params[i] followed a ':'
+	sepColon  bool   // the last separator was ':'
 	cur       int
 	hasDigits bool
 	inter     [maxInter]byte
@@ -47,7 +50,8 @@ type Parser struct {
 }
 
 func NewParser(h Handler) *Parser {
-	return &Parser{h: h, osc: make([]byte, 0, 256)}
+	sub, _ := h.(SubParamHandler)
+	return &Parser{h: h, sub: sub, osc: make([]byte, 0, 256)}
 }
 
 // Feed consumes bytes, calling the handler as sequences complete. State
@@ -209,6 +213,8 @@ func (p *Parser) collectInter(b byte) {
 
 func (p *Parser) clearCSI() {
 	p.nparams = 0
+	p.colon = 0
+	p.sepColon = false
 	p.cur = 0
 	p.hasDigits = false
 	p.ninter = 0
@@ -217,6 +223,9 @@ func (p *Parser) clearCSI() {
 
 func (p *Parser) pushParam() {
 	if p.nparams < maxParams {
+		if p.sepColon {
+			p.colon |= 1 << uint(p.nparams)
+		}
 		if p.hasDigits {
 			p.params[p.nparams] = p.cur
 		} else {
@@ -226,6 +235,7 @@ func (p *Parser) pushParam() {
 	}
 	p.cur = 0
 	p.hasDigits = false
+	p.sepColon = false
 }
 
 func (p *Parser) csi(b byte) {
@@ -250,7 +260,11 @@ func (p *Parser) csi(b byte) {
 	if b >= 0x40 {
 		if p.state != stCSIIgnore {
 			p.pushParam()
-			p.h.CSI(p.params[:p.nparams], p.inter[:p.ninter], p.private, b)
+			if p.sub != nil {
+				p.sub.CSISub(p.params[:p.nparams], p.colon, p.inter[:p.ninter], p.private, b)
+			} else {
+				p.h.CSI(p.params[:p.nparams], p.inter[:p.ninter], p.private, b)
+			}
 		}
 		p.state = stGround
 		return
@@ -266,8 +280,9 @@ func (p *Parser) csi(b byte) {
 			}
 			p.hasDigits = true
 			p.state = stCSIParam
-		case b == ';' || b == ':': // ':' is a sub-parameter separator, flattened
+		case b == ';' || b == ':': // ':' is flattened into params and marked in colon
 			p.pushParam()
+			p.sepColon = b == ':'
 			p.state = stCSIParam
 		case b >= 0x3c: // '<' '=' '>' '?'
 			if p.state == stCSIEntry {

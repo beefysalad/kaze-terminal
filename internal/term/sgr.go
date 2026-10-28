@@ -3,12 +3,23 @@ package term
 import "github.com/patrick-gogo/kaze/internal/screen"
 
 // sgr applies an SGR parameter list to the pen. Missing (-1) params mean 0.
-func (a *Applier) sgr(params []int) {
+// Bit i of colon marks params[i] as a ':' sub-parameter of the code before it.
+func (a *Applier) sgr(params []int, colon uint32) {
 	pen := a.s.Pen()
 	if len(params) == 0 {
 		params = []int{0}
 	}
 	for i := 0; i < len(params); i++ {
+		// A group is a code plus the colon-marked params that follow it.
+		end := i + 1
+		for end < len(params) && end < 32 && colon&(1<<uint(end)) != 0 {
+			end++
+		}
+		if end > i+1 {
+			a.sgrGroup(pen, params[i:end])
+			i = end - 1
+			continue
+		}
 		p := params[i]
 		switch {
 		case p <= 0:
@@ -67,8 +78,32 @@ func (a *Applier) sgr(params []int) {
 	}
 }
 
-// extendedColor parses the operands after 38/48/58 and returns the color,
-// how many params it consumed, and whether it was valid.
+// sgrGroup applies one colon group. Unknown groups, and 58 (underline
+// color, not rendered), are skipped whole.
+func (a *Applier) sgrGroup(pen *screen.Cell, g []int) {
+	switch g[0] {
+	case 4:
+		switch {
+		case g[1] == 0:
+			pen.Attrs &^= screen.AttrUnderline
+		case g[1] >= 1 && g[1] <= 5:
+			pen.Attrs |= screen.AttrUnderline // every style draws as plain underline
+		}
+	case 38, 48:
+		c, ok := colonColor(g[1:])
+		if !ok {
+			return
+		}
+		if g[0] == 38 {
+			pen.FG = c
+		} else {
+			pen.BG = c
+		}
+	}
+}
+
+// extendedColor parses the semicolon-form operands after 38/48/58 and returns
+// the color, how many params it consumed, and whether it was valid.
 func extendedColor(rest []int) (screen.Color, int, bool) {
 	if len(rest) == 0 {
 		return 0, 0, false
@@ -78,30 +113,43 @@ func extendedColor(rest []int) (screen.Color, int, bool) {
 		if len(rest) < 2 {
 			return 0, len(rest), false
 		}
-		if rest[1] < 0 || rest[1] > 255 {
-			return 0, 2, false
-		}
-		return screen.Indexed(uint8(rest[1])), 2, true
+		return indexedColor(rest[1]), 2, rest[1] >= 0 && rest[1] <= 255
 	case 2:
-		off := 1
-		// The colon form 38:2:<colorspace>:r:g:b has one extra slot that looks
-		// identical to the semicolon form once flattened. If at least 4 params
-		// follow the 2 and the first is empty (-1), treat it as the colorspace.
-		// A non-empty colorspace id is not detectable and is not supported.
-		if len(rest)-1 >= 4 && rest[1] == -1 {
-			off = 2
-		}
-		if len(rest) < off+3 {
+		if len(rest) < 4 {
 			return 0, len(rest), false
 		}
-		r, g, b := rest[off], rest[off+1], rest[off+2]
-		used := off + 3
-		for _, v := range []int{r, g, b} {
-			if v < 0 || v > 255 {
-				return 0, used, false
-			}
-		}
-		return screen.RGB(uint8(r), uint8(g), uint8(b)), used, true
+		c, ok := rgbColor(rest[1], rest[2], rest[3])
+		return c, 4, ok
 	}
 	return 0, 1, false
+}
+
+func indexedColor(n int) screen.Color {
+	if n < 0 || n > 255 {
+		return 0
+	}
+	return screen.Indexed(uint8(n))
+}
+
+func rgbColor(r, g, b int) (screen.Color, bool) {
+	for _, v := range [3]int{r, g, b} {
+		if v < 0 || v > 255 {
+			return 0, false
+		}
+	}
+	return screen.RGB(uint8(r), uint8(g), uint8(b)), true
+}
+
+// colonColor parses a colon group after 38/48: 5:n, 2:r:g:b or 2:cs:r:g:b.
+// The colorspace id is ignored.
+func colonColor(sub []int) (screen.Color, bool) {
+	switch {
+	case len(sub) == 2 && sub[0] == 5 && sub[1] >= 0 && sub[1] <= 255:
+		return screen.Indexed(uint8(sub[1])), true
+	case len(sub) == 4 && sub[0] == 2:
+		return rgbColor(sub[1], sub[2], sub[3])
+	case len(sub) == 5 && sub[0] == 2:
+		return rgbColor(sub[2], sub[3], sub[4])
+	}
+	return 0, false
 }
