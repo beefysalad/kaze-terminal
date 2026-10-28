@@ -1,0 +1,293 @@
+package tabs_test
+
+import (
+	"io"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"github.com/patrick-gogo/kaze/internal/ptyx"
+	"github.com/patrick-gogo/kaze/internal/tabs"
+)
+
+// fakePTY feeds output through a pipe and records env, writes and resizes.
+type fakePTY struct {
+	outR *io.PipeReader
+	outW *io.PipeWriter
+
+	mu     sync.Mutex
+	sizes  [][2]int
+	closed atomic.Bool
+	exited chan struct{}
+	once   sync.Once
+}
+
+func newFake() *fakePTY {
+	r, w := io.Pipe()
+	return &fakePTY{outR: r, outW: w, exited: make(chan struct{})}
+}
+
+func (f *fakePTY) Read(b []byte) (int, error)  { return f.outR.Read(b) }
+func (f *fakePTY) Write(b []byte) (int, error) { return len(b), nil }
+func (f *fakePTY) Resize(cols, rows int) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.sizes = append(f.sizes, [2]int{cols, rows})
+	return nil
+}
+func (f *fakePTY) Close() error {
+	f.closed.Store(true)
+	f.exit()
+	return nil
+}
+func (f *fakePTY) Wait() (int, error) { <-f.exited; return 0, nil }
+func (f *fakePTY) exit() {
+	f.once.Do(func() { f.outW.Close(); close(f.exited) })
+}
+func (f *fakePTY) lastSize() [2]int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if len(f.sizes) == 0 {
+		return [2]int{}
+	}
+	return f.sizes[len(f.sizes)-1]
+}
+
+// starter records every env it is given and every fake it hands out.
+type starter struct {
+	mu    sync.Mutex
+	envs  [][]string
+	fakes []*fakePTY
+}
+
+func (s *starter) start(env []string) (ptyx.Session, error) {
+	f := newFake()
+	s.mu.Lock()
+	s.envs = append(s.envs, env)
+	s.fakes = append(s.fakes, f)
+	s.mu.Unlock()
+	return f, nil
+}
+
+func (s *starter) closeAll() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, f := range s.fakes {
+		f.exit()
+	}
+}
+
+func waitFor(t *testing.T, what string, cond func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for !cond() {
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for %s", what)
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+func newManager(t *testing.T) (*tabs.Manager, *starter) {
+	st := &starter{}
+	m := tabs.NewManager(st.start, 80, 24, func() {})
+	t.Cleanup(st.closeAll)
+	return m, st
+}
+
+func mustNew(t *testing.T, m *tabs.Manager) *tabs.Tab {
+	t.Helper()
+	tab, err := m.New()
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	return tab
+}
+
+func ids(m *tabs.Manager) []tabs.TabID {
+	var out []tabs.TabID
+	for _, t := range m.Tabs() {
+		out = append(out, t.ID)
+	}
+	return out
+}
+
+func countPrefix(env []string, prefix string) (n int, last string) {
+	for _, e := range env {
+		if strings.HasPrefix(e, prefix) {
+			n++
+			last = e
+		}
+	}
+	return n, last
+}
+
+func TestNewTabSetsTabIDEnv(t *testing.T) {
+	t.Setenv("KAZE_TAB_ID", "99") // a kaze started from inside a kaze tab must not pass this on
+	m, st := newManager(t)
+	mustNew(t, m)
+	mustNew(t, m)
+	for i, want := range []string{"KAZE_TAB_ID=1", "KAZE_TAB_ID=2"} {
+		n, got := countPrefix(st.envs[i], "KAZE_TAB_ID=")
+		if n != 1 || got != want {
+			t.Errorf("tab %d env: %d KAZE_TAB_ID entries, last %q; want exactly %q", i+1, n, got, want)
+		}
+		if n, _ := countPrefix(st.envs[i], "PATH="); n == 0 {
+			if n2, _ := countPrefix(st.envs[i], "Path="); n2 == 0 {
+				t.Errorf("tab %d env lost the parent environment (no PATH)", i+1)
+			}
+		}
+	}
+}
+
+func TestClosingActiveTabActivatesNeighbor(t *testing.T) {
+	m, _ := newManager(t)
+	mustNew(t, m)
+	two := mustNew(t, m)
+	mustNew(t, m)
+	m.SetActive(two.ID)
+	if a := m.Active(); a == nil || a.ID != 2 {
+		t.Fatalf("active = %v, want 2", a)
+	}
+	m.Close(2)
+	if a := m.Active(); a == nil || a.ID != 3 {
+		t.Fatalf("after Close(2) active = %v, want 3", a)
+	}
+	m.Close(3)
+	if a := m.Active(); a == nil || a.ID != 1 {
+		t.Fatalf("after Close(3) active = %v, want 1", a)
+	}
+	if got := ids(m); len(got) != 1 || got[0] != 1 {
+		t.Fatalf("tabs = %v, want [1]", got)
+	}
+}
+
+func TestClosingInactiveTabKeepsActive(t *testing.T) {
+	m, _ := newManager(t)
+	mustNew(t, m)
+	mustNew(t, m)
+	mustNew(t, m) // New activates the new tab
+	m.Close(1)
+	if a := m.Active(); a == nil || a.ID != 3 {
+		t.Fatalf("active = %v, want 3", a)
+	}
+}
+
+func TestNextPrevWrap(t *testing.T) {
+	m, _ := newManager(t)
+	mustNew(t, m)
+	mustNew(t, m)
+	mustNew(t, m)
+	m.Next()
+	if m.Active().ID != 1 {
+		t.Fatalf("Next from last: active %d, want 1", m.Active().ID)
+	}
+	m.Prev()
+	if m.Active().ID != 3 {
+		t.Fatalf("Prev from first: active %d, want 3", m.Active().ID)
+	}
+}
+
+func TestTabIDsAreNeverReused(t *testing.T) {
+	m, _ := newManager(t)
+	one := mustNew(t, m)
+	m.Close(one.ID)
+	two := mustNew(t, m)
+	if two.ID != 2 {
+		t.Fatalf("second ID = %d, want 2", two.ID)
+	}
+}
+
+func TestTitleFollowsOSC(t *testing.T) {
+	m, st := newManager(t)
+	mustNew(t, m)
+	go st.fakes[0].outW.Write([]byte("\x1b]0;claude\x07"))
+	waitFor(t, "title", func() bool { return m.Tabs()[0].Title == "claude" })
+}
+
+func TestExitedFollowsProcess(t *testing.T) {
+	m, st := newManager(t)
+	mustNew(t, m)
+	st.fakes[0].exit()
+	waitFor(t, "exited", func() bool { return m.Tabs()[0].Exited })
+	if len(m.Tabs()) != 1 {
+		t.Fatal("an exited tab must stay open until closed")
+	}
+}
+
+func TestResizeAllResizesEveryPTY(t *testing.T) {
+	m, st := newManager(t)
+	mustNew(t, m)
+	mustNew(t, m)
+	m.ResizeAll(100, 30)
+	for i, f := range st.fakes {
+		if got := f.lastSize(); got != [2]int{100, 30} {
+			t.Errorf("pty %d size %v, want [100 30]", i, got)
+		}
+	}
+	if c, r := m.Size(); c != 100 || r != 30 {
+		t.Errorf("Size() = %d,%d, want 100,30", c, r)
+	}
+	// A tab opened later starts at the new size.
+	mustNew(t, m)
+	waitFor(t, "new tab size", func() bool { return st.fakes[2].lastSize() == [2]int{100, 30} })
+}
+
+func TestClosingLastTabClosesWindow(t *testing.T) {
+	m, st := newManager(t)
+	one := mustNew(t, m)
+	if m.Empty() {
+		t.Fatal("Empty with one tab")
+	}
+	m.Close(one.ID)
+	if !m.Empty() || m.Active() != nil || len(m.Tabs()) != 0 {
+		t.Fatalf("after closing the last tab: Empty=%v Active=%v Tabs=%d", m.Empty(), m.Active(), len(m.Tabs()))
+	}
+	waitFor(t, "pty closed", func() bool { return st.fakes[0].closed.Load() })
+}
+
+// Only the active tab asks for frames; a background tab asks only when its title or exit state changes.
+func TestBackgroundTabOutputRequestsNoFrame(t *testing.T) {
+	st := &starter{}
+	var frames atomic.Int64
+	m := tabs.NewManager(st.start, 80, 24, func() { frames.Add(1) })
+	t.Cleanup(st.closeAll)
+	mustNew(t, m)
+	mustNew(t, m) // active
+	bg := st.fakes[0]
+
+	// Output in the active tab asks for a frame.
+	st.fakes[1].outW.Write([]byte("x"))
+	waitFor(t, "active frame", func() bool { return frames.Load() > 0 })
+
+	before := frames.Load()
+	for i := 0; i < 20; i++ {
+		bg.outW.Write([]byte("hello\r\n"))
+	}
+	bg.outW.Write([]byte("\x1b]0;bgtitle\x07"))
+	waitFor(t, "background title", func() bool { return m.Tabs()[0].Title == "bgtitle" })
+	time.Sleep(20 * time.Millisecond) // let any stray notifications land
+	got := frames.Load() - before
+	if got > 1 {
+		t.Fatalf("background output requested %d frames, want at most 1 (the title change)", got)
+	}
+	if got != 1 {
+		t.Fatalf("background title change requested %d frames, want 1", got)
+	}
+}
+
+func TestStartErrorAddsNoTab(t *testing.T) {
+	m := tabs.NewManager(func([]string) (ptyx.Session, error) { return nil, io.ErrUnexpectedEOF }, 80, 24, nil)
+	if _, err := m.New(); err == nil {
+		t.Fatal("New returned no error")
+	}
+	if !m.Empty() {
+		t.Fatal("a failed start left a tab")
+	}
+	two, err := m.New()
+	if err == nil || two != nil {
+		t.Fatal("expected error again")
+	}
+}
