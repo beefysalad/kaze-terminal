@@ -7,6 +7,10 @@ import (
 	"gioui.org/io/system"
 )
 
+// CustomTitleBar reports whether kaze draws its own title bar here; main then
+// opens the window undecorated.
+const CustomTitleBar = customTitleBar
+
 type captionButton int
 
 const (

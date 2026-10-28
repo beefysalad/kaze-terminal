@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode"
 
+	"gioui.org/f32"
 	"gioui.org/font"
 	"gioui.org/font/opentype"
 	"gioui.org/layout"
@@ -175,8 +176,9 @@ func place(ops *op.Ops, call op.CallOp, at image.Point) {
 	t.Pop()
 }
 
-// layoutTabBar draws the tabs across a bar of the given height and records where each one is for clicks.
-func (c *chrome) layoutTabBar(gtx layout.Context, list []*tabs.Tab, active tabs.TabID, def string, height int) {
+// layoutTabBar fills the bar's background, draws the tabs and the + button left of limit,
+// records where each one is for clicks, and returns where the strip ends.
+func (c *chrome) layoutTabBar(gtx layout.Context, list []*tabs.Tab, active tabs.TabID, def string, height, limit int) int {
 	ops := gtx.Ops
 	width := gtx.Constraints.Max.X
 	paint.FillShape(ops, colChrome, clip.Rect{Max: image.Pt(width, height)}.Op())
@@ -199,7 +201,7 @@ func (c *chrome) layoutTabBar(gtx layout.Context, list []*tabs.Tab, active tabs.
 		if on {
 			w += dot + gap
 		}
-		if x+w > width-plusSize.X-2*padX {
+		if x+w > limit-plusSize.X-2*padX {
 			break // overflow: the rest stay reachable with next/prev tab
 		}
 		r := image.Rect(x, top, x+w, height)
@@ -222,8 +224,96 @@ func (c *chrome) layoutTabBar(gtx layout.Context, list []*tabs.Tab, active tabs.
 		x += w + gtx.Dp(4)
 	}
 	pr := image.Rect(x, top, x+plusSize.X+2*padX, height)
+	if pr.Max.X > limit {
+		return min(x, limit) // too narrow for +; the new-tab shortcut still works
+	}
 	place(ops, plusCall, image.Pt(x+padX, top+(height-top-plusSize.Y)/2))
 	c.hits.plus = pr
+	return pr.Max.X
+}
+
+// Caption button colors (design spec 6.7).
+var (
+	colCapGlyph   = rgb(0xa7adbd)
+	colCapHover   = rgb(0x1a1f2c)
+	colCapPress   = rgb(0x151925)
+	colCloseHover = rgb(0xe5484d)
+	colClosePress = rgb(0xc93c40)
+)
+
+// layoutCaptions draws the minimize, maximize/restore and close buttons.
+func (c *chrome) layoutCaptions(gtx layout.Context, b barLayout, st captionState, maximized bool) {
+	ops := gtx.Ops
+	for i, r := range b.Buttons {
+		if r.Empty() {
+			continue
+		}
+		btn := captionButton(i + 1)
+		fg := colCapGlyph
+		if bg, ok := captionBG(btn, st); ok {
+			paint.FillShape(ops, bg, clip.Rect(r).Op())
+			fg = colActiveFG
+		}
+		cl := clip.Rect(r).Push(ops)
+		paint.FillShape(ops, fg, captionGlyph(gtx, btn, r, maximized))
+		cl.Pop()
+	}
+}
+
+// captionBG is a button's background: pressed while held over it, hover when only hovered.
+func captionBG(btn captionButton, st captionState) (color.NRGBA, bool) {
+	hover, press := colCapHover, colCapPress
+	if btn == capClose {
+		hover, press = colCloseHover, colClosePress
+	}
+	switch {
+	case st.pressed == btn && st.hover == btn:
+		return press, true
+	case st.pressed == capNone && st.hover == btn:
+		return hover, true
+	}
+	return color.NRGBA{}, false
+}
+
+// captionGlyph is the 10dp line drawing for a button, centred in r. Lines sit half a
+// stroke inside their box so a 1px stroke lands on whole pixels.
+func captionGlyph(gtx layout.Context, btn captionButton, r image.Rectangle, maximized bool) clip.Op {
+	sw := float32(max(gtx.Dp(1), 1))
+	n := gtx.Dp(10)
+	x0 := float32(r.Min.X + (r.Dx()-n)/2)
+	y0 := float32(r.Min.Y + (r.Dy()-n)/2)
+	s, h, d := float32(n), sw/2, float32(gtx.Dp(2))
+	var p clip.Path
+	p.Begin(gtx.Ops)
+	box := func(x1, y1, x2, y2 float32) {
+		p.MoveTo(f32.Pt(x1+h, y1+h))
+		p.LineTo(f32.Pt(x2-h, y1+h))
+		p.LineTo(f32.Pt(x2-h, y2-h))
+		p.LineTo(f32.Pt(x1+h, y2-h))
+		p.Close()
+	}
+	switch {
+	case btn == capMinimize:
+		y := y0 + float32(n/2) + h
+		p.MoveTo(f32.Pt(x0, y))
+		p.LineTo(f32.Pt(x0+s, y))
+	case btn == capMaximize && !maximized:
+		box(x0, y0, x0+s, y0+s)
+	case btn == capMaximize:
+		box(x0, y0+d, x0+s-d, y0+s) // front window
+		// Back window: only its top and right edges show.
+		p.MoveTo(f32.Pt(x0+d+h, y0+d))
+		p.LineTo(f32.Pt(x0+d+h, y0+h))
+		p.LineTo(f32.Pt(x0+s-h, y0+h))
+		p.LineTo(f32.Pt(x0+s-h, y0+s-d-h))
+		p.LineTo(f32.Pt(x0+s-d, y0+s-d-h))
+	case btn == capClose:
+		p.MoveTo(f32.Pt(x0, y0))
+		p.LineTo(f32.Pt(x0+s, y0+s))
+		p.MoveTo(f32.Pt(x0+s, y0))
+		p.LineTo(f32.Pt(x0, y0+s))
+	}
+	return clip.Stroke{Path: p.End(), Width: sw}.Op()
 }
 
 // layoutStatus draws the status bar with its text on the right.

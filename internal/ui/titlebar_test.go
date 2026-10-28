@@ -4,8 +4,13 @@ import (
 	"image"
 	"testing"
 
+	"gioui.org/app"
+	"gioui.org/f32"
 	"gioui.org/io/pointer"
 	"gioui.org/io/system"
+	"gioui.org/layout"
+	"gioui.org/op"
+	"gioui.org/unit"
 )
 
 func TestButtonsAreRightAlignedInOrder(t *testing.T) {
@@ -145,5 +150,78 @@ func TestLeaveClearsHover(t *testing.T) {
 	s.pointer(pointer.Leave, image.Pt(-1, -1), b)
 	if s.hover != capNone {
 		t.Fatalf("hover %v after leave", s.hover)
+	}
+}
+
+// captionWindow is a test window with a custom title bar laid out at the given width,
+// whose window actions are recorded instead of performed.
+func captionWindow(t *testing.T, width int) (*window, *[]system.Action) {
+	t.Helper()
+	win := testWindow(t, &recStarter{})
+	win.custom = true
+	win.ui = newChrome()
+	var got []system.Action
+	win.performFn = func(a system.Action) { got = append(got, a) }
+	if _, err := win.mgr.New(); err != nil {
+		t.Fatal(err)
+	}
+	win.drawBar(barContext(width), win.mgr.Tabs(), win.mgr.Active().ID, 38)
+	return win, &got
+}
+
+func barContext(width int) layout.Context {
+	return layout.Context{
+		Ops:         new(op.Ops),
+		Metric:      unit.Metric{PxPerDp: 1, PxPerSp: 1},
+		Constraints: layout.Exact(image.Pt(width, 38)),
+	}
+}
+
+func click(win *window, r image.Rectangle) {
+	p := f32.Pt(float32(r.Min.X+5), float32(r.Min.Y+5))
+	win.captionEvent(pointer.Event{Kind: pointer.Press, Buttons: pointer.ButtonPrimary, Position: p})
+	win.captionEvent(pointer.Event{Kind: pointer.Release, Position: p})
+}
+
+func TestCaptionClickPerformsAction(t *testing.T) {
+	win, got := captionWindow(t, 1000)
+	click(win, win.bar.Buttons[capClose-1])
+	if len(*got) != 1 || (*got)[0] != system.ActionClose {
+		t.Fatalf("performed %v, want one ActionClose", *got)
+	}
+}
+
+func TestMaximizeButtonUsesConfigState(t *testing.T) {
+	win, got := captionWindow(t, 1000)
+	win.onConfig(app.ConfigEvent{Config: app.Config{Mode: app.Maximized}})
+	click(win, win.bar.Buttons[capMaximize-1])
+	win.onConfig(app.ConfigEvent{Config: app.Config{Mode: app.Windowed}})
+	click(win, win.bar.Buttons[capMaximize-1])
+	if len(*got) != 2 || (*got)[0] != system.ActionUnmaximize || (*got)[1] != system.ActionMaximize {
+		t.Fatalf("performed %v, want Unmaximize then Maximize", *got)
+	}
+}
+
+func TestTabStripStopsBeforeButtons(t *testing.T) {
+	for _, width := range []int{120, 300, 600} {
+		win, _ := captionWindow(t, width)
+		for range 12 {
+			if _, err := win.mgr.New(); err != nil {
+				t.Fatal(err)
+			}
+		}
+		win.drawBar(barContext(width), win.mgr.Tabs(), win.mgr.Active().ID, 38)
+		limit := win.bar.Buttons[0].Min.X
+		for _, h := range win.ui.hits.tabs {
+			if h.rect.Max.X > limit || h.close.Max.X > limit {
+				t.Fatalf("width %d: tab %v / close %v past buttons at %d", width, h.rect, h.close, limit)
+			}
+		}
+		if win.ui.hits.plus.Max.X > limit {
+			t.Fatalf("width %d: + %v past buttons at %d", width, win.ui.hits.plus, limit)
+		}
+		if win.bar.Drag.Overlaps(win.ui.hits.plus) {
+			t.Fatalf("width %d: drag %v covers + %v", width, win.bar.Drag, win.ui.hits.plus)
+		}
 	}
 }
