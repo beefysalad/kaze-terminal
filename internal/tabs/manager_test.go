@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze/internal/ptyx"
-	"github.com/patrick-gogo/kaze/internal/tabs"
+	"github.com/patrick-gogo/kaze-terminal/internal/ptyx"
+	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 )
 
 // fakePTY feeds output through a pipe and records env, writes and resizes.

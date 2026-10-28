@@ -6,7 +6,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/patrick-gogo/kaze/internal/screen"
+	"github.com/patrick-gogo/kaze-terminal/internal/screen"
 )
 
 // Applier is a vt.Handler that drives a Screen.

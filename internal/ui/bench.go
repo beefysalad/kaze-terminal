@@ -12,9 +12,9 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 
-	"github.com/patrick-gogo/kaze/internal/bench"
-	"github.com/patrick-gogo/kaze/internal/render"
-	"github.com/patrick-gogo/kaze/internal/tabs"
+	"github.com/patrick-gogo/kaze-terminal/internal/bench"
+	"github.com/patrick-gogo/kaze-terminal/internal/render"
+	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 )
 
 // benchFrame is what the bench recorder learns about the frame being built.

@@ -15,7 +15,7 @@
 ## Global Constraints
 
 - Platforms: Windows and macOS from one codebase. No Linux-specific work. Every task's tests must pass on Windows; platform-specific code uses `_windows.go` / `_darwin.go` / `_unix.go` build suffixes.
-- Module path: `github.com/patrick-gogo/kaze`. Binary: `kaze`.
+- Module path: `github.com/patrick-gogo/kaze-terminal`. Binary: `kaze`.
 - Performance goals (spec section 5, revised 2026-10-28): keypress to glyph under 10ms; Claude Code streaming frames under 16.7ms with no flicker or tearing; launch to ready prompt under 500ms; smooth scroll through 10,000 lines; idle CPU effectively zero; memory has no hard cap but is measured and must not grow with idle tabs. Go and Gio are fixed (Patrick's ruling); beating Warp is not a goal.
 - Rendering rules (spec 6.2): redraw only dirty lines; rasterize each glyph once and reuse; no frame when nothing changed; draw at most once per display refresh.
 - Sessions do not survive kaze closing or crashing. Shells live in the kaze process, behind the `ptyx.Session` interface.
@@ -44,7 +44,7 @@ The spec says Gio must prove it meets the targets before features are built on i
 - Create: `spike/gio/main.go`, `spike/gio/README.md`
 - Create: `docs/spike-results.md`
 
-- [ ] **Step 1: Install tooling.** `winget install GoLang.Go`, then confirm `go version` reports 1.23 or newer. `go mod init github.com/patrick-gogo/kaze` at the repo root.
+- [ ] **Step 1: Install tooling.** `winget install GoLang.Go`, then confirm `go version` reports 1.23 or newer. `go mod init github.com/patrick-gogo/kaze-terminal` at the repo root.
 - [ ] **Step 2: Build the spike.** A Gio window showing a 200x60 grid of mixed ASCII and Japanese text (`日本語テスト` repeated) in a monospace font with a CJK fallback font. Two modes picked by flag `-mode=text|atlas`:
   - `text`: Gio `widget.Label` / `text.Shaper` per line, caching shaped lines per line content.
   - `atlas`: rasterize each glyph once into an `image.RGBA` atlas, draw cells as `paint.ImageOp` sub-images.

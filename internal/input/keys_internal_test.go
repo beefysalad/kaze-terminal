@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"gioui.org/io/key"
-	"github.com/patrick-gogo/kaze/internal/term"
+	"github.com/patrick-gogo/kaze-terminal/internal/term"
 )
 
 func ek(t *testing.T, goos string, name key.Name, mods key.Modifiers, want string) {

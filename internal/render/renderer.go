@@ -15,8 +15,8 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 
-	"github.com/patrick-gogo/kaze/internal/screen"
-	"github.com/patrick-gogo/kaze/internal/term"
+	"github.com/patrick-gogo/kaze-terminal/internal/screen"
+	"github.com/patrick-gogo/kaze-terminal/internal/term"
 )
 
 const (

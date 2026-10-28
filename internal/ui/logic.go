@@ -12,10 +12,10 @@ import (
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 
-	"github.com/patrick-gogo/kaze/internal/input"
-	"github.com/patrick-gogo/kaze/internal/render"
-	"github.com/patrick-gogo/kaze/internal/tabs"
-	"github.com/patrick-gogo/kaze/internal/term"
+	"github.com/patrick-gogo/kaze-terminal/internal/input"
+	"github.com/patrick-gogo/kaze-terminal/internal/render"
+	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/patrick-gogo/kaze-terminal/internal/term"
 )
 
 // action is something kaze does itself instead of sending a key to the shell.

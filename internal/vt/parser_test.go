@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrick-gogo/kaze/internal/vt"
+	"github.com/patrick-gogo/kaze-terminal/internal/vt"
 )
 
 type recorder struct{ calls []string }

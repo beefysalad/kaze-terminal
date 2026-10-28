@@ -17,9 +17,9 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 
-	"github.com/patrick-gogo/kaze/assets/fonts"
-	"github.com/patrick-gogo/kaze/internal/render"
-	"github.com/patrick-gogo/kaze/internal/tabs"
+	"github.com/patrick-gogo/kaze-terminal/assets/fonts"
+	"github.com/patrick-gogo/kaze-terminal/internal/render"
+	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 )
 
 // Midnight chrome tokens (design spec 6.7).

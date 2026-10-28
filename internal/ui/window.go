@@ -25,14 +25,14 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 
-	"github.com/patrick-gogo/kaze/internal/bench"
-	"github.com/patrick-gogo/kaze/internal/config"
-	"github.com/patrick-gogo/kaze/internal/input"
-	"github.com/patrick-gogo/kaze/internal/ptyx"
-	"github.com/patrick-gogo/kaze/internal/render"
-	"github.com/patrick-gogo/kaze/internal/screen"
-	"github.com/patrick-gogo/kaze/internal/tabs"
-	"github.com/patrick-gogo/kaze/internal/term"
+	"github.com/patrick-gogo/kaze-terminal/internal/bench"
+	"github.com/patrick-gogo/kaze-terminal/internal/config"
+	"github.com/patrick-gogo/kaze-terminal/internal/input"
+	"github.com/patrick-gogo/kaze-terminal/internal/ptyx"
+	"github.com/patrick-gogo/kaze-terminal/internal/render"
+	"github.com/patrick-gogo/kaze-terminal/internal/screen"
+	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/patrick-gogo/kaze-terminal/internal/term"
 )
 
 // Options are what main resolved at startup.

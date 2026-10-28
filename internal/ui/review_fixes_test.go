@@ -13,8 +13,8 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 
-	"github.com/patrick-gogo/kaze/internal/ptyx"
-	"github.com/patrick-gogo/kaze/internal/tabs"
+	"github.com/patrick-gogo/kaze-terminal/internal/ptyx"
+	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 )
 
 // recPTY records what the shell is sent; Close ends Read and Wait.

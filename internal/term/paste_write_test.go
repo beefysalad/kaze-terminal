@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze/internal/term"
+	"github.com/patrick-gogo/kaze-terminal/internal/term"
 )
 
 // A big paste into a shell that reads slowly must not stall the UI thread.

@@ -4,7 +4,7 @@ import (
 	"strconv"
 
 	"gioui.org/io/key"
-	"github.com/patrick-gogo/kaze/internal/term"
+	"github.com/patrick-gogo/kaze-terminal/internal/term"
 )
 
 func x10Only(m term.Modes) bool { return m.MouseX10 && !m.MouseButton && !m.MouseAny }

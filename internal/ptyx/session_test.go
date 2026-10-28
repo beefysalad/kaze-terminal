@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze/internal/ptyx"
+	"github.com/patrick-gogo/kaze-terminal/internal/ptyx"
 )
 
 // readUntil accumulates output until want appears or the timeout hits.

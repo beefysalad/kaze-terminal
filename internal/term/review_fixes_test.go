@@ -3,7 +3,7 @@ package term
 import (
 	"testing"
 
-	"github.com/patrick-gogo/kaze/internal/screen"
+	"github.com/patrick-gogo/kaze-terminal/internal/screen"
 )
 
 func TestDECRCRestoresPendingWrap(t *testing.T) {

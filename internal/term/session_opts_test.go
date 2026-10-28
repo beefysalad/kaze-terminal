@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze/internal/term"
+	"github.com/patrick-gogo/kaze-terminal/internal/term"
 )
 
 // Output already waiting on the PTY must not be applied before the pre-feed.

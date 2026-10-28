@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze/internal/term"
+	"github.com/patrick-gogo/kaze-terminal/internal/term"
 )
 
 // fakePTY feeds output through a pipe and records what is written to it and every Resize.

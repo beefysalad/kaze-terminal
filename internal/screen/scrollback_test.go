@@ -3,7 +3,7 @@ package screen_test
 import (
 	"testing"
 
-	"github.com/patrick-gogo/kaze/internal/screen"
+	"github.com/patrick-gogo/kaze-terminal/internal/screen"
 )
 
 func TestScrolledLinesGoToScrollback(t *testing.T) {

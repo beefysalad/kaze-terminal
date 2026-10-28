@@ -3,7 +3,7 @@ package input
 import (
 	"bytes"
 
-	"github.com/patrick-gogo/kaze/internal/term"
+	"github.com/patrick-gogo/kaze-terminal/internal/term"
 )
 
 var (

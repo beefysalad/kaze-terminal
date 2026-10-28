@@ -4,7 +4,7 @@ import (
 	"image/color"
 	"math"
 
-	"github.com/patrick-gogo/kaze/internal/screen"
+	"github.com/patrick-gogo/kaze-terminal/internal/screen"
 )
 
 // Palette is the theme: default colors plus the 16 ANSI colors.

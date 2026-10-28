@@ -10,8 +10,8 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 
-	"github.com/patrick-gogo/kaze/internal/render"
-	"github.com/patrick-gogo/kaze/internal/tabs"
+	"github.com/patrick-gogo/kaze-terminal/internal/render"
+	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 )
 
 const testCW, testCH = 8, 16

@@ -7,10 +7,10 @@ import (
 	"gioui.org/app"
 	"gioui.org/unit"
 
-	"github.com/patrick-gogo/kaze/internal/bench"
-	"github.com/patrick-gogo/kaze/internal/config"
-	"github.com/patrick-gogo/kaze/internal/ptyx"
-	"github.com/patrick-gogo/kaze/internal/ui"
+	"github.com/patrick-gogo/kaze-terminal/internal/bench"
+	"github.com/patrick-gogo/kaze-terminal/internal/config"
+	"github.com/patrick-gogo/kaze-terminal/internal/ptyx"
+	"github.com/patrick-gogo/kaze-terminal/internal/ui"
 )
 
 // r is set at link time (-X main.r=...) only to give a rebuild a new hash when

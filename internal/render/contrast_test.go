@@ -4,7 +4,7 @@ import (
 	"image/color"
 	"testing"
 
-	"github.com/patrick-gogo/kaze/internal/screen"
+	"github.com/patrick-gogo/kaze-terminal/internal/screen"
 )
 
 func TestBlueBoldBackgroundTextIsReadable(t *testing.T) {

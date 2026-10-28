@@ -1,6 +1,6 @@
 package term
 
-import "github.com/patrick-gogo/kaze/internal/screen"
+import "github.com/patrick-gogo/kaze-terminal/internal/screen"
 
 // sgr applies an SGR parameter list to the pen. Missing (-1) params mean 0.
 // Bit i of colon marks params[i] as a ':' sub-parameter of the code before it.

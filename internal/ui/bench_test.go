@@ -13,7 +13,7 @@ import (
 	"gioui.org/io/transfer"
 	"gioui.org/layout"
 
-	"github.com/patrick-gogo/kaze/internal/bench"
+	"github.com/patrick-gogo/kaze-terminal/internal/bench"
 )
 
 func TestBenchDropsRealInputButRoutesSyntheticKeys(t *testing.T) {

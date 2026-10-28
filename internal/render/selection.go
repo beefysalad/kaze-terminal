@@ -3,7 +3,7 @@ package render
 import (
 	"strings"
 
-	"github.com/patrick-gogo/kaze/internal/screen"
+	"github.com/patrick-gogo/kaze-terminal/internal/screen"
 )
 
 // Point is a grid position. Row counts from the oldest scrollback line, so a
