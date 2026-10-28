@@ -23,7 +23,26 @@ everything lives in one small config file.
 
 Windows needs nothing else; the Windows build uses no cgo.
 
-## Build and run
+## Install
+
+With Go installed, this puts a `kaze` binary in your Go bin folder (`go env GOPATH`, then `bin`):
+
+```
+go install github.com/patrick-gogo/kaze-terminal/cmd/kaze@latest
+```
+
+On Windows, add the GUI flag so no console window opens next to kaze:
+
+```
+go install -ldflags "-H=windowsgui" github.com/patrick-gogo/kaze-terminal/cmd/kaze@latest
+```
+
+## Build and run from a clone
+
+```
+git clone https://github.com/patrick-gogo/kaze-terminal.git
+cd kaze-terminal
+```
 
 Windows (`-H=windowsgui` stops a console window from opening next to kaze):
 
