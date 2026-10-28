@@ -1,0 +1,146 @@
+# kaze: design
+
+Date: 2026-10-28
+Owner: Patrick
+Status: approved by Patrick 2026-10-28
+
+## 1. What this is and why
+
+kaze is a personal terminal emulator for Windows and macOS. Patrick uses it like a normal terminal, but it is built around how he works with Claude Code: several sessions open at once, lead agents spawning subagents, and needing to know when a session in another tab has finished or needs him.
+
+It is inspired by a teammate's (a teammate's) own terminal, which is small, fast and fitted to one person's workflow. kaze follows the same idea: it only carries what Patrick uses, so it can stay lighter and faster than a general-purpose terminal.
+
+Today Patrick uses **Warp** on both Windows and macOS. He uses it like a plain terminal. The one Warp feature he values is the alert when a Claude Code session in a tab is done or needs him.
+
+## 2. Goals
+
+1. Feel instant. Never laggy. This beats every other goal.
+2. Run Claude Code all day without visual glitches.
+3. Show what agents are doing: subagents visible and readable live, attached to the lead that spawned them.
+4. Tell Patrick when a tab needs him (done, question, permission prompt).
+5. Show usage: Claude plan usage plus kaze's own resource use.
+6. Run on Windows (primary today) and macOS (Patrick's MacBook) from one codebase.
+
+## 3. Non-goals (first version)
+
+- Typing Japanese through an IME. Patrick does not type Japanese. Japanese must **display** correctly (from output and paste) but IME composition is out.
+- General split panes. The only split is the "related view" for a subagent beside its lead (section 6.3).
+- A settings screen. Configuration is a file.
+- Built-in AI chat, blocks, cloud sync, collaboration, themes marketplace: everything Warp has that Patrick does not use.
+- Linux support (not ruled out later, not designed for now).
+
+## 4. Anti-goals (failure even if it works)
+
+- **Laggy or heavy.** If kaze is slower or uses noticeably more memory than Warp on the benchmarks in section 5, it has failed and Patrick will go back to Warp.
+- Background CPU use when nothing is happening.
+- Features that cost performance when they are not visible (a hidden panel must cost nothing).
+
+## 5. Performance targets (hard requirements)
+
+Every feature is checked against these before it is merged. The same tests are run against Warp on the same machine; kaze must beat Warp on every row.
+
+| Measure | Target |
+|---|---|
+| Keypress to glyph on screen | under 10ms |
+| Launch to ready prompt | under 500ms |
+| kaze's own memory, idle, 4 tabs | under ~60MB (excluding shells and the processes in them) |
+| Claude Code redrawing / streaming | no flicker, no tearing |
+| Scrolling 10,000 lines of scrollback | smooth, no visible stutter |
+| Idle CPU | effectively zero |
+
+A small benchmark harness that measures these on both terminals is part of the work, not an afterthought.
+
+## 6. First version: what it does
+
+### 6.1 Terminal core
+
+- Correct VT/xterm behaviour sufficient for Claude Code, git, pwsh, zsh, vim-level full-screen apps: colors (256 and truecolor), cursor movement, alternate screen, bracketed paste, mouse reporting, scroll regions.
+- Synchronized output (begin/end update markers) supported so full-screen apps can update without flicker. Which markers Claude Code actually sends must be verified early.
+- Scrollback with a configurable hard cap, stored compactly.
+- Copy and paste (mouse selection, keyboard shortcuts per platform conventions).
+- Japanese and other wide characters display at the correct width (two columns); font fallback so CJK glyphs render even when the main font lacks them.
+- Default shell: pwsh on Windows, zsh on macOS. Configurable.
+
+### 6.2 Rendering rules (decided, from a teammate's approach)
+
+- **Dirty tracking:** only cells/lines that changed since the last frame are redrawn. Typing one character redraws one cell.
+- **Glyph cache:** each glyph is rasterized once and reused.
+- **No frame when nothing changed.** Idle means no drawing.
+- **Coalescing:** bursts of output are drawn at most once per display refresh.
+
+### 6.3 Tabs and subagent child tabs
+
+- Normal tabs for Patrick's 3 to 4 concurrent sessions. Patrick flips between them; he does not normally need them side by side.
+- When a Claude Code session in a tab spawns subagents, each subagent appears as a **child tab** attached right after its lead's tab (mockup option B, chosen by Patrick).
+- Clicking a child tab opens that subagent's transcript **split beside its lead**, updating live.
+- The transcript view is read-only and readable: messages and tool calls (for example "Bash git show ...", "Read file.py"), not raw JSON.
+- Status per child tab: running, or finished (✓).
+- Overflow: when a lead has many subagents, only the first few get their own child tab; the rest collapse into a `+N` chip that expands on click. *(Claude's call; the exact count is left to the builder.)*
+- Finished child tabs fade and close themselves after a while. *(Claude's call; Patrick can override.)*
+- Nested subagents (spawn depth > 1) are shown under their own parent. *(Claude's call; presentation left to the builder.)*
+
+**Data source (verified on Patrick's machine 2026-10-28):** Claude Code writes transcripts to disk; kaze only watches files and never hooks into Claude Code for this.
+
+```
+~/.claude/projects/<project>/<session-id>.jsonl                            lead / main session
+~/.claude/projects/<project>/<session-id>/subagents/agent-<id>.jsonl       each subagent
+~/.claude/projects/<project>/<session-id>/subagents/agent-<id>.meta.json   agentType, description, model, spawnDepth, finished, ...
+```
+
+Each tab must know which Claude session is running in it, so kaze can find the right folder. How to map tab to session is left to the builder; one option is the session-start hook in 6.4 reporting its session id with the tab id.
+
+### 6.4 Attention alerts
+
+When Claude Code in any tab finishes its turn or needs Patrick (a question, a permission prompt, a ruling), that tab is marked and a small pane/toast says which tab and what kind of attention it needs. This is the Warp feature Patrick wants kept.
+
+- Signal comes from **Claude Code hooks**, not screen scraping: the hook for "turn finished" and the hook for "needs input/notification".
+- Each tab sets an environment variable with its tab id (for example `KAZE_TAB_ID`) so the hook can say which tab it is.
+- The hook sends a small message to kaze over a local channel (named pipe on Windows, Unix socket on macOS, or equivalent: builder's choice).
+- kaze ships the hook command and documents how to add it to Claude Code settings.
+- Alert clears when Patrick switches to that tab.
+
+### 6.5 Status bar
+
+- **Left: Claude usage**, 5-hour and weekly plan usage. Source still to verify: the Claude Code status-line input may carry this; if so, a tiny status-line script writes it to a file kaze reads. Token and cost per session can also be summed from the transcript `.jsonl` files.
+- **Right: kaze's own memory and CPU**, plus the active tab's process tree (shell, Claude, node dev servers) so runaway processes are visible.
+- Refresh rate is low (about once per second or slower) and stops when the window is hidden.
+
+### 6.6 Config
+
+A single config file in a standard per-user location (font, font size, colors, default shell, scrollback cap, keybindings). Reloaded on change if cheap; otherwise on restart.
+
+## 7. Later features (in order, not in the first version)
+
+1. **Browser button.** A button that opens a **separate** Chromium window (not embedded), like a teammate's terminal. Launched with a DevTools debugging port so Playwright-driven agents can drive the window Patrick is watching. Windows: Edge or Chrome; macOS: Chrome. Whether agents can attach cleanly must be proven with a spike first.
+2. **Brain graph.** A graph of notes vault notes (Patrick's knowledge vault), shown as clickable nodes; clicking a node opens the note for reading inside kaze. Shows only related notes, not the whole vault: start from the current ticket (from the git branch, e.g. `feature/TICKET-123` → TICKET-123), add notes the agents opened this session, plus their direct links (one hop). A toggle shows the full graph. Kept for after the terminal itself is solid.
+
+## 8. How it gets made (decided)
+
+- **Language: Go.** Chosen over Swift (a teammate's choice, but Swift on Windows has no usable UI toolkit) and Rust (good fit, but slower to iterate). Claude's recommendation, accepted by Patrick.
+- **UI: Gio** (cross-platform Go UI with its own text shaping). Chosen because it runs on Windows and macOS from one codebase, and the browser opens as a separate window so nothing needs embedding.
+- **Shell process:** ConPTY on Windows, Unix pty on macOS, behind one interface (a library such as `go-pty` covers both).
+- **Sessions do not survive kaze closing, crashing or restarting** (Patrick's decision, same as Warp). Shells run inside the kaze process; no background PTY host. The shell layer stays behind a clean interface so a survive-restart host could be added later without rewriting the UI.
+- **Repo:** `%USERPROFILE%\Desktop\kaze`, its own git repo, separate from any work repo.
+
+## 9. Left to the builder
+
+- VT parser: an existing Go library or a custom one, as long as section 5 targets are met.
+- Internal architecture, package layout, the alert channel mechanism, tab-to-session mapping.
+- Exact keybindings (follow each platform's normal conventions).
+- Overflow count for child tabs and how long finished ones linger.
+- Default font (must have a CJK fallback).
+
+## 10. Calls made after the builder review (Claude's calls, Patrick can override)
+
+1. **If the Gio spike misses the targets:** keep Go and Gio's window/input, and replace its normal text path with a custom renderer that rasterizes glyphs into a cached atlas and draws them as images. Targets are not relaxed. Reopening the language is only on the table if that also fails, and that goes back to Patrick. The spike tests both text paths, so the plan is "spike with a pre-agreed fallback".
+2. **Alerts when kaze isn't focused:** first version is in-app (tab mark + pane) plus a taskbar flash on Windows and a Dock bounce/badge on macOS. These need no signing or packaging. Real OS toast notifications come later.
+3. **Benchmark gate:** the absolute targets in section 5 are the per-merge floor, run automatically on Windows (memory, launch, scroll, idle CPU). Keypress latency is measured with software screen-capture timing. The full "beat Warp on every row" comparison runs on both Windows and the MacBook at each milestone, not every merge.
+4. **Attention categories:** two, straight from the hooks: **done** (turn finished) and **needs you** (permission prompt or waiting for input). No guessing from transcript text.
+5. **Usage source:** if no reliable 5-hour/weekly source exists, the first version ships with per-session tokens and cost from the transcripts, and plan usage follows when a source is found. If Patrick already has a Claude Code status line, kaze's script wraps it instead of replacing it.
+6. **Which sessions count:** only Claude Code started in a kaze tab on the local machine. remote agent runner jobs, SSH, WSL and Docker sessions are out of scope for subagent views and alerts (remote agent runner has its own dashboard).
+
+## 11. Open items to verify early
+
+1. Which synchronized-output markers Claude Code emits, and that Gio can present a frame on demand without tearing.
+2. Where Claude 5-hour and weekly usage can be read reliably.
+3. That Gio meets the keypress-latency and memory targets on both platforms (a small spike before building features on top, testing both Gio's normal text path and the glyph-atlas fallback from section 10).

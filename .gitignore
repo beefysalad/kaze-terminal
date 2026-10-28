@@ -1,0 +1,5 @@
+.superpowers/
+/kaze
+/kaze.exe
+*.test
+*.prof
