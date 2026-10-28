@@ -194,6 +194,13 @@ func (m *Manager) indexLocked(id TabID) int {
 	return -1
 }
 
+// Has reports whether id is an open tab. Safe from any goroutine.
+func (m *Manager) Has(id TabID) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.indexLocked(id) >= 0
+}
+
 // SetActive switches to id; an unknown id is ignored.
 func (m *Manager) SetActive(id TabID) {
 	m.mu.Lock()

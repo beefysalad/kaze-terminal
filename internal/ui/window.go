@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"gioui.org/app"
@@ -115,11 +116,16 @@ type window struct {
 	performFn func(system.Action) // replaces win.w.Perform in tests
 
 	// Alerts from Claude Code hooks (kaze notify).
-	srv      *notify.Server  // nil when the listener could not start
-	alertCh  chan notify.Msg // notify goroutines -> UI goroutine
-	alerts   alerts          // UI goroutine only
-	chime    func(time.Time) // sound.Player.Play; nil when both chimes are off
-	toastTag *int
+	srv         *notify.Server  // nil when the listener could not start
+	inbox       inbox           // notify goroutines -> UI goroutine
+	alerts      alerts          // UI goroutine only
+	chime       func(time.Time) // sound.Player.Play; nil when both chimes are off
+	flash       func()          // flashes the taskbar button
+	toastTag    *int
+	liveMgr     atomic.Pointer[tabs.Manager] // win.mgr, for onNotify
+	snapActive  atomic.Int64                 // active TabID, mirrored for onNotify
+	snapFocused atomic.Bool
+	hwnd        atomic.Uintptr // native window handle, 0 until known
 }
 
 // Run drives the window until it closes. It returns after every shell is closed.
@@ -141,20 +147,22 @@ func Run(w *app.Window, opt Options) error {
 		custom: customTitleBar,
 		capTag: new(int),
 
-		alertCh:  make(chan notify.Msg, alertQueue),
 		toastTag: new(int),
 	}
-	if srv, err := notify.Listen(win.onNotify); err != nil {
-		win.opt.Warnings = append(win.opt.Warnings, "alerts are off: "+err.Error())
-	} else {
-		win.srv = srv
-	}
+	win.snapFocused.Store(true)
+	win.flash = func() { flashTaskbar(win.hwnd.Load()) }
 	if c := opt.Config; c.ChimeNeeds || c.ChimeDone {
 		p, warn := sound.New(c.ChimeFile)
 		if warn != "" {
 			win.opt.Warnings = append(win.opt.Warnings, warn)
 		}
 		win.chime = p.Play
+	}
+	// Last: onNotify may run as soon as this returns.
+	if srv, err := notify.Listen(win.onNotify); err != nil {
+		win.opt.Warnings = append(win.opt.Warnings, "alerts are off: "+err.Error())
+	} else {
+		win.srv = srv
 	}
 	return win.loop()
 }
@@ -183,7 +191,7 @@ func (win *window) loop() error {
 		case app.FrameEvent:
 			start := time.Now()
 			gtx := app.NewContext(&ops, e)
-			if err := win.frame(gtx); err != nil {
+			if err := win.frameOrShutdown(gtx); err != nil {
 				return err
 			}
 			e.Frame(gtx.Ops)
@@ -197,8 +205,21 @@ func (win *window) loop() error {
 			if win.mgr != nil && win.mgr.Empty() {
 				win.w.Perform(system.ActionClose)
 			}
+		default:
+			if h, ok := viewHandle(e); ok {
+				win.hwnd.Store(h)
+			}
 		}
 	}
+}
+
+// frameOrShutdown is frame, closing the listener and the shells when it fails.
+func (win *window) frameOrShutdown(gtx layout.Context) error {
+	err := win.frame(gtx)
+	if err != nil {
+		win.shutdown()
+	}
+	return err
 }
 
 // shutdown closes the alert listener and every shell, together within shutdownWait.
@@ -242,6 +263,7 @@ func (win *window) setFocused(f bool) {
 		return
 	}
 	win.focused = f
+	win.snapFocused.Store(f)
 	if win.rend != nil {
 		win.rend.SetFocused(f)
 	}
@@ -303,6 +325,7 @@ func (win *window) frame(gtx layout.Context) error {
 			notify = func() { win.bench.Output(time.Now()); win.w.Invalidate() }
 		}
 		win.mgr = tabs.NewManager(win.start, cols, rows, notify)
+		win.liveMgr.Store(win.mgr)
 		win.mgr.SetScrollback(win.opt.Config.ScrollbackLines)
 		if win.srv != nil {
 			win.mgr.SetNotify(win.srv.Addr(), win.srv.Token()) // before any tab, so every shell gets it
@@ -340,6 +363,7 @@ func (win *window) frame(gtx layout.Context) error {
 	win.alerts.prune(func(id tabs.TabID) bool {
 		return slices.ContainsFunc(list, func(t *tabs.Tab) bool { return t.ID == id })
 	})
+	win.publish(active, win.focused)
 	win.drainAlerts(gtx.Now)
 	win.visit(active)
 	win.autoScroll(gtx, active, cw, ch)
@@ -399,7 +423,7 @@ func (win *window) frame(gtx layout.Context) error {
 	if next, _ := win.alerts.expire(gtx.Now); !next.IsZero() {
 		gtx.Execute(op.InvalidateCmd{At: next}) // one wake for the next done toast, no ticker
 	}
-	win.drawToasts(gtx, size.Y, statusH)
+	win.drawToasts(gtx, size.Y, statusH, barH)
 	for _, h := range win.ui.toastHits {
 		area = clip.Rect(h.rect).Push(ops)
 		event.Op(ops, win.toastTag)

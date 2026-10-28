@@ -1,13 +1,17 @@
 package ui
 
 import (
+	"image"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 	"unicode/utf8"
 
+	"gioui.org/app"
 	"gioui.org/f32"
 	"gioui.org/io/pointer"
+	"gioui.org/layout"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/notify"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
@@ -192,7 +196,7 @@ func TestGoSwitchesTab(t *testing.T) {
 	win, _ := alertWindow(t, 3)
 	target := win.mgr.Tabs()[2].ID
 	win.alerts.apply(notify.Msg{Tab: int(target), Kind: notify.KindNeeds}, win.mgr.Active().ID, true, only(3), t0)
-	win.drawToasts(barContext(1000), 600, 24)
+	win.drawToasts(barContext(1000), 600, 24, 38)
 	if len(win.ui.toastHits) != 1 {
 		t.Fatalf("%d toast hit areas, want 1", len(win.ui.toastHits))
 	}
@@ -222,7 +226,7 @@ func TestToastCloseDismisses(t *testing.T) {
 	first := win.mgr.Active().ID
 	target := win.mgr.Tabs()[1].ID
 	win.alerts.apply(notify.Msg{Tab: int(target), Kind: notify.KindNeeds}, first, true, only(2), t0)
-	win.drawToasts(barContext(1000), 600, 24)
+	win.drawToasts(barContext(1000), 600, 24, 38)
 	c := win.ui.toastHits[0].closeRect
 	win.toastEvent(pointer.Event{Kind: pointer.Press, Buttons: pointer.ButtonPrimary, Position: f32.Pt(float32(c.Min.X+2), float32(c.Min.Y+2))})
 	if win.mgr.Active().ID != first || len(win.alerts.list()) != 0 || win.alerts.markOf(target) != markNeeds {
@@ -247,62 +251,151 @@ func TestVisitNeedsFocus(t *testing.T) {
 	}
 }
 
-func TestDeliverChimesPerConfig(t *testing.T) {
-	win, played := alertWindow(t, 3)
+// liveWindow is alertWindow with what onNotify reads off the UI goroutine
+// published, and a recorded taskbar flash.
+func liveWindow(t *testing.T, n int) (*window, *[]time.Time, *int) {
+	t.Helper()
+	win, played := alertWindow(t, n)
+	win.liveMgr.Store(win.mgr)
+	win.publish(win.mgr.Active(), true)
+	flashes := 0
+	win.flash = func() { flashes++ }
+	return win, played, &flashes
+}
+
+func TestOnNotifyChimesWhileMinimizedWithoutAFrame(t *testing.T) {
+	win, played, flashes := liveWindow(t, 2)
 	ids := win.mgr.Tabs()
+	// Minimized: focus is lost and Gio sends no frames, so nothing drains the queue.
+	win.publish(win.mgr.Active(), false)
+	win.onNotify(notify.Msg{Tab: int(ids[0].ID), Kind: notify.KindNeeds})
+	if len(*played) != 1 || *flashes != 1 {
+		t.Fatalf("needs on the active tab of an unfocused window: %d chimes %d flashes, want 1 and 1", len(*played), *flashes)
+	}
+	if win.inbox.size() != 1 {
+		t.Fatal("the mark/toast update was not queued for the UI goroutine")
+	}
+}
+
+func TestOnNotifyQuietForActiveFocusedTab(t *testing.T) {
+	win, played, flashes := liveWindow(t, 2)
+	win.onNotify(notify.Msg{Tab: int(win.mgr.Active().ID), Kind: notify.KindNeeds})
+	if len(*played) != 0 || *flashes != 0 {
+		t.Fatalf("active focused tab: %d chimes %d flashes", len(*played), *flashes)
+	}
+}
+
+func TestOnNotifyChimesPerConfigAndFlashesOnlyUnfocusedNeeds(t *testing.T) {
+	win, played, flashes := liveWindow(t, 3)
+	ids := win.mgr.Tabs()
+	other := int(ids[1].ID)
 	win.opt.Config.ChimeNeeds, win.opt.Config.ChimeDone = true, false
-	win.deliver(notify.Msg{Tab: int(ids[1].ID), Kind: notify.KindDone}, t0)
+	win.onNotify(notify.Msg{Tab: other, Kind: notify.KindDone})
 	if len(*played) != 0 {
 		t.Fatal("done chimed with chime_done off")
 	}
-	win.deliver(notify.Msg{Tab: int(ids[1].ID), Kind: notify.KindNeeds}, t0)
-	if len(*played) != 1 {
-		t.Fatalf("needs played %d times, want 1", len(*played))
-	}
-	win.deliver(notify.Msg{Tab: int(ids[0].ID), Kind: notify.KindNeeds}, t0)
-	if len(*played) != 1 {
-		t.Fatal("the active tab of a focused window chimed")
+	win.onNotify(notify.Msg{Tab: other, Kind: notify.KindNeeds})
+	if len(*played) != 1 || *flashes != 0 {
+		t.Fatalf("needs on another tab, focused: %d chimes %d flashes; want 1, 0 (no flash while focused)", len(*played), *flashes)
 	}
 	win.opt.Config.ChimeNeeds = false
-	win.deliver(notify.Msg{Tab: int(ids[2].ID), Kind: notify.KindNeeds}, t0)
+	win.onNotify(notify.Msg{Tab: other, Kind: notify.KindNeeds})
 	if len(*played) != 1 {
 		t.Fatal("needs chimed with chime_needs off")
 	}
 	win.opt.Config.ChimeDone = true
-	win.deliver(notify.Msg{Tab: int(ids[2].ID), Kind: notify.KindDone}, t0)
+	win.onNotify(notify.Msg{Tab: other, Kind: notify.KindDone})
 	if len(*played) != 2 {
 		t.Fatal("done stayed silent with chime_done on")
 	}
+	win.publish(win.mgr.Active(), false)
+	win.onNotify(notify.Msg{Tab: other, Kind: notify.KindDone})
+	if *flashes != 0 {
+		t.Fatal("a done alert flashed the taskbar")
+	}
 }
 
-func TestOnNotifyNeverBlocks(t *testing.T) {
-	win, _ := alertWindow(t, 1)
-	win.alertCh = make(chan notify.Msg, 2)
-	done := make(chan struct{})
-	go func() {
-		for range 50 {
-			win.onNotify(notify.Msg{Tab: 1, Kind: notify.KindNeeds})
-		}
-		close(done)
-	}()
-	select {
-	case <-done:
-	case <-time.After(2 * time.Second):
-		t.Fatal("onNotify blocked on a full channel")
+func TestOnNotifyIgnoresClosedTabs(t *testing.T) {
+	win, played, flashes := liveWindow(t, 2)
+	gone := win.mgr.Tabs()[1].ID
+	win.mgr.Close(gone)
+	win.publish(win.mgr.Active(), false)
+	for _, id := range []int{int(gone), 0, 999} {
+		win.onNotify(notify.Msg{Tab: id, Kind: notify.KindNeeds})
 	}
-	if len(win.alertCh) != 2 {
-		t.Fatalf("channel holds %d, want 2 (the rest dropped)", len(win.alertCh))
+	if len(*played) != 0 || *flashes != 0 {
+		t.Fatalf("closed/unknown tabs: %d chimes %d flashes", len(*played), *flashes)
+	}
+}
+
+func TestDeliverNeverChimes(t *testing.T) {
+	win, played, _ := liveWindow(t, 2)
+	win.deliver(notify.Msg{Tab: int(win.mgr.Tabs()[1].ID), Kind: notify.KindNeeds}, t0)
+	if len(*played) != 0 {
+		t.Fatal("the UI side chimed too; the chime belongs to onNotify")
+	}
+}
+
+func TestBurstWhileMinimizedIsKept(t *testing.T) {
+	win, _, _ := liveWindow(t, 3)
+	ids := win.mgr.Tabs()
+	win.publish(win.mgr.Active(), false)
+	// Many alerts with no frame in between; the last word for each tab must survive.
+	for i := range 200 {
+		k := notify.KindDone
+		if i%2 == 1 {
+			k = notify.KindNeeds
+		}
+		win.onNotify(notify.Msg{Tab: int(ids[1+i%2].ID), Kind: k})
+	}
+	win.onNotify(notify.Msg{Tab: int(ids[0].ID), Kind: notify.KindNeeds})
+	win.publish(win.mgr.Active(), true)
+	win.focused = false // restored but not yet focused: marks must not be cleared
+	win.drainAlerts(t0)
+	if win.alerts.markOf(ids[0].ID) != markNeeds || win.alerts.markOf(ids[2].ID) != markNeeds || win.alerts.markOf(ids[1].ID) != markDone {
+		t.Fatalf("after the burst: marks %v %v %v", win.alerts.markOf(ids[0].ID), win.alerts.markOf(ids[1].ID), win.alerts.markOf(ids[2].ID))
+	}
+}
+
+func TestOnNotifyNeverBlocksAndStaysBounded(t *testing.T) {
+	win, _, _ := liveWindow(t, 2)
+	ids := win.mgr.Tabs()
+	win.publish(win.mgr.Active(), false)
+	done := make(chan struct{})
+	for g := range 8 {
+		go func() {
+			defer func() { done <- struct{}{} }()
+			for i := range 2000 {
+				win.onNotify(notify.Msg{Tab: int(ids[(g+i)%2].ID) + (i%3)*100, Kind: notify.KindNeeds})
+			}
+		}()
+	}
+	deadline := time.After(5 * time.Second)
+	for range 8 {
+		select {
+		case <-done:
+		case <-deadline:
+			t.Fatal("onNotify blocked")
+		}
+	}
+	if n := win.inbox.size(); n > 2*len(ids) {
+		t.Fatalf("inbox holds %d entries for %d tabs; unknown tabs must not grow it", n, len(ids))
 	}
 }
 
 func TestDrainAppliesQueuedAlerts(t *testing.T) {
-	win, _ := alertWindow(t, 2)
-	target := win.mgr.Tabs()[1].ID
-	win.alertCh = make(chan notify.Msg, 4)
-	win.onNotify(notify.Msg{Tab: int(target), Kind: notify.KindNeeds})
+	win, _, _ := liveWindow(t, 3)
+	ids := win.mgr.Tabs()
+	win.onNotify(notify.Msg{Tab: int(ids[1].ID), Kind: notify.KindNeeds, Reason: "first"})
+	win.onNotify(notify.Msg{Tab: int(ids[2].ID), Kind: notify.KindDone})
+	win.onNotify(notify.Msg{Tab: int(ids[1].ID), Kind: notify.KindDone})
 	win.drainAlerts(t0)
-	if win.alerts.markOf(target) != markNeeds || len(win.alertCh) != 0 {
-		t.Fatalf("after drain: mark %v queued %d", win.alerts.markOf(target), len(win.alertCh))
+	if win.alerts.markOf(ids[1].ID) != markNeeds || win.alerts.markOf(ids[2].ID) != markDone || win.inbox.size() != 0 {
+		t.Fatalf("after drain: marks %v %v queued %d", win.alerts.markOf(ids[1].ID), win.alerts.markOf(ids[2].ID), win.inbox.size())
+	}
+	l := win.alerts.list()
+	if len(l) != 2 || l[0].Tab != ids[1].ID || l[0].Kind != notify.KindDone || l[1].Tab != ids[2].ID {
+		t.Fatalf("toasts %+v, want tab %d's latest (done) on top, then tab %d", l, ids[1].ID, ids[2].ID)
 	}
 }
 
@@ -312,7 +405,7 @@ func TestToastsSitAboveStatusBarBottomRight(t *testing.T) {
 		win.alerts.apply(notify.Msg{Tab: int(tb.ID), Kind: notify.KindNeeds, Reason: strings.Repeat("long reason ", 20)}, win.mgr.Active().ID, true, only(4), t0)
 	}
 	const w, h, statusH = 400, 600, 24
-	win.drawToasts(barContext(w), h, statusH)
+	win.drawToasts(barContext(w), h, statusH, 38)
 	hits := win.ui.toastHits
 	if len(hits) != 3 {
 		t.Fatalf("%d toasts drawn, want 3", len(hits))
@@ -356,5 +449,67 @@ func TestTabDotsFollowMarks(t *testing.T) {
 	}
 	if _, ok := dotColor(false, markNone); ok {
 		t.Fatal("an unmarked inactive tab has a dot")
+	}
+}
+
+func TestNarrowWindowKeepsTextOffTheButtons(t *testing.T) {
+	win, _ := alertWindow(t, 2)
+	target := win.mgr.Tabs()[1]
+	target.Session.Lock()
+	target.Session.Applier().OSC([]byte("0;" + strings.Repeat("W", 40)))
+	target.Session.Unlock()
+	win.alerts.apply(notify.Msg{Tab: int(target.ID), Kind: notify.KindNeeds, Reason: "why"}, win.mgr.Active().ID, true, only(2), t0)
+	for _, w := range []int{0, 10, 60, 120, 200, 320} {
+		win.drawToasts(barContext(w), 600, 24, 38)
+		for _, h := range win.ui.toastHits {
+			if h.rect.Min.X < 0 || h.rect.Max.X > w {
+				t.Fatalf("width %d: toast %v outside the window", w, h.rect)
+			}
+			if h.text.Max.X > h.goRect.Min.X || h.text.Min.X < h.rect.Min.X {
+				t.Fatalf("width %d: text %v runs under Go %v", w, h.text, h.goRect)
+			}
+		}
+	}
+}
+
+func TestShortWindowDropsCardsAboveTheBar(t *testing.T) {
+	win, _ := alertWindow(t, 4)
+	for _, tb := range win.mgr.Tabs()[1:] {
+		win.alerts.apply(notify.Msg{Tab: int(tb.ID), Kind: notify.KindNeeds}, win.mgr.Active().ID, true, only(4), t0)
+	}
+	newest := win.mgr.Tabs()[3].ID
+	for _, h := range []int{40, 62, 110, 150} {
+		win.drawToasts(barContext(800), h, 24, 38)
+		for i, th := range win.ui.toastHits {
+			if th.rect.Min.Y < 38 || th.rect.Max.Y > h-24 {
+				t.Fatalf("height %d: toast %d at %v leaves the room between bar and status", h, i, th.rect)
+			}
+		}
+		if hits := win.ui.toastHits; len(hits) > 0 && hits[0].id != newest {
+			t.Fatalf("height %d: kept tab %d on top, want the newest %d", h, hits[0].id, newest)
+		}
+	}
+	win.drawToasts(barContext(800), 600, 24, 38)
+	if len(win.ui.toastHits) != 3 {
+		t.Fatal("a tall window lost toasts")
+	}
+}
+
+func TestFrameErrorShutsTheListener(t *testing.T) {
+	win := &window{w: new(app.Window), ui: newChrome(), focused: true, sels: map[tabs.TabID]*tabSel{}}
+	win.opt.Config.FontSize = 14
+	win.opt.Shell = []string{filepath.Join(t.TempDir(), "no-such-shell.exe")}
+	srv, err := notify.Listen(func(notify.Msg) {})
+	if err != nil {
+		t.Fatal(err)
+	}
+	win.srv = srv
+	gtx := barContext(800)
+	gtx.Constraints = layout.Exact(image.Pt(800, 600))
+	if err := win.frameOrShutdown(gtx); err == nil {
+		t.Fatal("a shell that cannot start gave no error")
+	}
+	if err := notify.Send(srv.Addr(), srv.Token(), notify.Msg{Tab: 1, Kind: notify.KindDone}, 500*time.Millisecond); err == nil {
+		t.Fatal("the listener still accepts after the frame failed")
 	}
 }

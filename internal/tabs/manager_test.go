@@ -401,3 +401,13 @@ func TestNewTabEnvHasNotifyVars(t *testing.T) {
 		}
 	}
 }
+
+func TestHasReportsOpenTabsOnly(t *testing.T) {
+	m, _ := newManager(t)
+	a := mustNew(t, m)
+	b := mustNew(t, m)
+	m.Close(a.ID)
+	if m.Has(a.ID) || !m.Has(b.ID) || m.Has(0) || m.Has(99) {
+		t.Fatalf("Has: closed %v open %v zero %v unknown %v", m.Has(a.ID), m.Has(b.ID), m.Has(0), m.Has(99))
+	}
+}
