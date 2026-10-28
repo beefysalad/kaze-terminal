@@ -84,7 +84,7 @@ func (a *Applier) sgrGroup(pen *screen.Cell, g []int) {
 	switch g[0] {
 	case 4:
 		switch {
-		case g[1] == 0:
+		case g[1] <= 0: // 4: with an empty sub-param (-1) means 4:0
 			pen.Attrs &^= screen.AttrUnderline
 		case g[1] >= 1 && g[1] <= 5:
 			pen.Attrs |= screen.AttrUnderline // every style draws as plain underline

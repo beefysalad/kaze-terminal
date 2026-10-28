@@ -157,3 +157,37 @@ func TestResizeOldScrollbackStillReadable(t *testing.T) {
 		t.Fatalf("narrow history line should pad, got %+v", got)
 	}
 }
+
+func TestResizeWiderClearsSavedWrapPending(t *testing.T) {
+	for name, restore := range map[string]func(*screen.Screen){
+		"decsc":   func(s *screen.Screen) { s.RestoreCursor() },
+		"alt1049": func(s *screen.Screen) { s.RestoreAltCursor() },
+	} {
+		s := screen.New(4, 2)
+		printAt(s, 0, 0, "abcd") // wrap pending at the right edge
+		s.SaveCursor()
+		s.SaveAltCursor()
+		s.Resize(8, 2)
+		restore(s)
+		s.Print('X')
+		if c := s.Cell(3, 0); c.Rune != 'X' {
+			t.Fatalf("%s: cell(3,0) = %q, want X at the restored position", name, c.Rune)
+		}
+		if col, row := s.Cursor(); row != 0 || col != 4 {
+			t.Fatalf("%s: cursor (%d,%d), want (4,0)", name, col, row)
+		}
+	}
+}
+
+func TestResizeShiftsSavedRowOnAltScreen(t *testing.T) {
+	s := screen.New(4, 4)
+	s.UseAltScreen(true)
+	s.SetCursor(0, 2)
+	s.SaveCursor()
+	s.SetCursor(0, 3)
+	s.Resize(4, 2) // drops 2 rows
+	s.RestoreCursor()
+	if _, row := s.Cursor(); row != 0 {
+		t.Fatalf("restored row = %d, want 0", row)
+	}
+}

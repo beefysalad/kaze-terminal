@@ -296,3 +296,52 @@ func TestCloseIsIdempotentAndStopsWrites(t *testing.T) {
 	s.Write([]byte("x")) // must not panic
 	s.Resize(10, 10)     // must not panic
 }
+
+func TestOnChangeNeverRunsConcurrentlyAcrossExit(t *testing.T) {
+	f := newFake()
+	var inflight, maxInflight, calls atomic.Int32
+	s := term.NewSession(f, 20, 5, func() {
+		n := inflight.Add(1)
+		for {
+			m := maxInflight.Load()
+			if n <= m || maxInflight.CompareAndSwap(m, n) {
+				break
+			}
+		}
+		if calls.Add(1) == 1 {
+			time.Sleep(700 * time.Millisecond) // outlasts the exit drain, so the exit notify would overlap
+		}
+		inflight.Add(-1)
+	})
+	defer s.Close()
+	f.outW.Write([]byte("hi"))
+	f.exit(0)
+	waitFor(t, "exit marker", func() bool { e, _ := s.Exited(); return e })
+	waitFor(t, "second onChange", func() bool { return calls.Load() >= 2 })
+	waitFor(t, "onChange idle", func() bool { return inflight.Load() == 0 })
+	if m := maxInflight.Load(); m != 1 {
+		t.Fatalf("max concurrent onChange = %d, want 1", m)
+	}
+}
+
+func TestSessionClampsHugeSizes(t *testing.T) {
+	f := newFake()
+	s := term.NewSession(f, 65535, 65535, func() {})
+	defer s.Close()
+	s.Lock()
+	cols, rows := s.Screen().Size()
+	s.Unlock()
+	if cols > 4096 || rows > 4096 {
+		t.Fatalf("NewSession size %dx%d, want <= 4096", cols, rows)
+	}
+	s.Resize(65535, 65535)
+	s.Lock()
+	cols, rows = s.Screen().Size()
+	s.Unlock()
+	if cols > 4096 || rows > 4096 {
+		t.Fatalf("Resize size %dx%d, want <= 4096", cols, rows)
+	}
+	if sz, _ := f.lastSize(); sz[0] > 4096 || sz[1] > 4096 {
+		t.Fatalf("PTY resized to %v", sz)
+	}
+}

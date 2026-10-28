@@ -122,3 +122,10 @@ func TestSemicolonFormsUnchanged(t *testing.T) {
 		t.Fatal("256")
 	}
 }
+
+func TestUnderlineEmptySubparamTurnsOff(t *testing.T) {
+	c := run(10, 1, "\x1b[4m\x1b[4:ma").Cell(0, 0)
+	if c.Attrs&screen.AttrUnderline != 0 {
+		t.Fatalf("%+v", c)
+	}
+}
