@@ -97,6 +97,14 @@ type window struct {
 
 	bench *bench.Recorder // nil unless KAZE_BENCH is set; every hook checks it first
 	bf    benchFrame
+
+	// Title bar: kaze draws its own caption buttons where custom is set (Windows).
+	custom    bool
+	bar       barLayout // where the last frame put the tabs, drag area and buttons
+	caption   captionState
+	capTag    *int
+	maximized bool                // from the last ConfigEvent, so the button shows the real state
+	performFn func(system.Action) // replaces win.w.Perform in tests
 }
 
 // Run drives the window until it closes. It returns after every shell is closed.
@@ -112,8 +120,10 @@ func Run(w *app.Window, opt Options) error {
 		barTag:   new(int),
 		defTitle: shellName(opt.Shell),
 		focused:  true, wantFocus: true,
-		sels:  map[tabs.TabID]*tabSel{},
-		bench: opt.Bench,
+		sels:   map[tabs.TabID]*tabSel{},
+		bench:  opt.Bench,
+		custom: customTitleBar,
+		capTag: new(int),
 	}
 	return win.loop()
 }
@@ -140,7 +150,7 @@ func (win *window) loop() error {
 			}
 			return e.Err
 		case app.ConfigEvent:
-			win.setFocused(e.Config.Focused)
+			win.onConfig(e)
 		case app.FrameEvent:
 			start := time.Now()
 			gtx := app.NewContext(&ops, e)
@@ -160,6 +170,23 @@ func (win *window) loop() error {
 			}
 		}
 	}
+}
+
+func (win *window) onConfig(e app.ConfigEvent) {
+	win.setFocused(e.Config.Focused)
+	if m := e.Config.Mode == app.Maximized; m != win.maximized {
+		win.maximized = m
+		win.w.Invalidate() // the maximize button swaps to restore
+	}
+}
+
+// perform asks the window for a system action (minimize, maximize, close...).
+func (win *window) perform(a system.Action) {
+	if win.performFn != nil {
+		win.performFn(a)
+		return
+	}
+	win.w.Perform(a)
 }
 
 func (win *window) setFocused(f bool) {
@@ -262,13 +289,24 @@ func (win *window) frame(gtx layout.Context) error {
 
 	ops := gtx.Ops
 
-	// Tab bar.
+	// Tab bar, plus the caption buttons and the empty space that moves the window.
 	bar := gtx
 	bar.Constraints = layout.Exact(image.Pt(size.X, barH))
-	win.ui.layoutTabBar(bar, list, active.ID, win.defTitle, barH)
-	area := clip.Rect{Max: image.Pt(size.X, barH)}.Push(ops)
+	win.drawBar(bar, list, active.ID, barH)
+	area := clip.Rect(win.bar.Tabs).Push(ops)
 	event.Op(ops, win.barTag)
 	area.Pop()
+	if !win.bar.Drag.Empty() {
+		// Windows answers hit tests here with HTCAPTION: drag, double-click and snap are native.
+		area = clip.Rect(win.bar.Drag).Push(ops)
+		system.ActionInputOp(system.ActionMove).Add(ops)
+		area.Pop()
+	}
+	if win.custom {
+		area = clip.Rect(win.bar.Buttons[0].Union(win.bar.Buttons[2])).Push(ops)
+		event.Op(ops, win.capTag)
+		area.Pop()
+	}
 
 	// Terminal: only the active tab is drawn.
 	paint.FillShape(ops, win.pal.BG, clip.Rect(termRect).Op())
@@ -362,7 +400,51 @@ func (win *window) statusText(n int) string {
 	return s
 }
 
+// drawBar lays out and draws the top bar: the tab strip gets the room left of the
+// caption buttons, and whatever it doesn't use becomes the drag area.
+func (win *window) drawBar(gtx layout.Context, list []*tabs.Tab, active tabs.TabID, barH int) {
+	size := image.Pt(gtx.Constraints.Max.X, barH)
+	btnW := gtx.Dp(46)
+	room := layoutBar(size, size.X, btnW, win.custom).Tabs.Max.X
+	used := win.ui.layoutTabBar(gtx, list, active, win.defTitle, barH, room)
+	win.bar = layoutBar(size, used, btnW, win.custom)
+	if win.custom {
+		win.ui.layoutCaptions(gtx, win.bar, win.caption, win.maximized)
+	}
+}
+
+// captionEvent feeds one pointer event on the caption buttons and performs a completed click.
+func (win *window) captionEvent(e pointer.Event) {
+	if win.bench.IgnoreInput() {
+		return
+	}
+	// Only the primary button clicks a caption button.
+	if e.Kind == pointer.Press && !e.Buttons.Contain(pointer.ButtonPrimary) ||
+		e.Kind == pointer.Release && e.Buttons.Contain(pointer.ButtonPrimary) {
+		return
+	}
+	before := win.caption
+	if c := win.caption.pointer(e.Kind, e.Position.Round(), win.bar); c != capNone {
+		win.perform(actionFor(c, win.maximized))
+	}
+	if win.caption != before {
+		win.w.Invalidate() // one frame for the hover or press color, never a loop
+	}
+}
+
 func (win *window) barEvents(gtx layout.Context) {
+	if win.custom {
+		kinds := pointer.Press | pointer.Release | pointer.Move | pointer.Drag | pointer.Enter | pointer.Leave | pointer.Cancel
+		for {
+			ev, ok := gtx.Event(pointer.Filter{Target: win.capTag, Kinds: kinds})
+			if !ok {
+				break
+			}
+			if e, ok := ev.(pointer.Event); ok {
+				win.captionEvent(e)
+			}
+		}
+	}
 	for {
 		ev, ok := gtx.Event(pointer.Filter{Target: win.barTag, Kinds: pointer.Press})
 		if !ok {
