@@ -10,6 +10,7 @@ type Modes struct {
 	AppCursorKeys, BracketedPaste, CursorVisible bool
 	MouseX10, MouseButton, MouseAny, MouseSGR    bool
 	Synchronized, AltScreen                      bool
+	FocusEvents                                  bool
 }
 
 func (a *Applier) Modes() Modes { return a.modes }
