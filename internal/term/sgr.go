@@ -81,6 +81,9 @@ func (a *Applier) sgr(params []int, colon uint32) {
 // sgrGroup applies one colon group. Unknown groups, and 58 (underline
 // color, not rendered), are skipped whole.
 func (a *Applier) sgrGroup(pen *screen.Cell, g []int) {
+	if len(g) < 2 {
+		return
+	}
 	switch g[0] {
 	case 4:
 		switch {

@@ -324,24 +324,37 @@ func TestOnChangeNeverRunsConcurrentlyAcrossExit(t *testing.T) {
 	}
 }
 
-func TestSessionClampsHugeSizes(t *testing.T) {
+// Only bounded sizes here: a broken clamp must not be able to allocate a huge grid.
+func TestSessionClampsOversizedDimensions(t *testing.T) {
+	for _, sz := range [][2]int{{4097, 1}, {1, 4097}} {
+		f := newFake()
+		s := term.NewSession(f, sz[0], sz[1], func() {})
+		s.Lock()
+		cols, rows := s.Screen().Size()
+		s.Unlock()
+		if cols > 4096 || rows > 4096 {
+			t.Fatalf("NewSession(%v) size %dx%d, want <= 4096", sz, cols, rows)
+		}
+		s.Resize(2, 2)
+		s.Resize(sz[0], sz[1])
+		s.Lock()
+		cols, rows = s.Screen().Size()
+		s.Unlock()
+		if cols > 4096 || rows > 4096 {
+			t.Fatalf("Resize(%v) size %dx%d, want <= 4096", sz, cols, rows)
+		}
+		if last, _ := f.lastSize(); last[0] > 4096 || last[1] > 4096 {
+			t.Fatalf("PTY resized to %v", last)
+		}
+		s.Close()
+	}
+}
+
+func TestNewSessionSizesThePTY(t *testing.T) {
 	f := newFake()
-	s := term.NewSession(f, 65535, 65535, func() {})
+	s := term.NewSession(f, 4097, 1, func() {})
 	defer s.Close()
-	s.Lock()
-	cols, rows := s.Screen().Size()
-	s.Unlock()
-	if cols > 4096 || rows > 4096 {
-		t.Fatalf("NewSession size %dx%d, want <= 4096", cols, rows)
-	}
-	s.Resize(65535, 65535)
-	s.Lock()
-	cols, rows = s.Screen().Size()
-	s.Unlock()
-	if cols > 4096 || rows > 4096 {
-		t.Fatalf("Resize size %dx%d, want <= 4096", cols, rows)
-	}
-	if sz, _ := f.lastSize(); sz[0] > 4096 || sz[1] > 4096 {
-		t.Fatalf("PTY resized to %v", sz)
+	if last, n := f.lastSize(); n != 1 || last != [2]int{4096, 1} {
+		t.Fatalf("PTY sizes = %v (%d calls), want one call with 4096x1", last, n)
 	}
 }

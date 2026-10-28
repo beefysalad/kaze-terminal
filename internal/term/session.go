@@ -17,11 +17,22 @@ const (
 	writeQueueLen = 1024
 	// maxSize caps each dimension so a bad UI measurement can't allocate billions of cells.
 	maxSize = 4096
+	// maxCells caps the whole grid; 4096x4096 alone would be 16M cells.
+	maxCells = 1 << 22
 )
 
 // drainGrace is how long to wait for remaining output after the process exits.
 // ConPTY keeps the output pipe open until it is closed, so the reader may never see EOF on its own.
 var drainGrace = 250 * time.Millisecond
+
+// clampSize limits each dimension to 1..maxSize, then shrinks rows until the grid fits maxCells.
+func clampSize(cols, rows int) (int, int) {
+	cols, rows = min(max(cols, 1), maxSize), min(max(rows, 1), maxSize)
+	if cols*rows > maxCells {
+		rows = maxCells / cols
+	}
+	return cols, rows
+}
 
 // Session is one tab: a shell in a PTY whose output a reader goroutine applies to a screen.
 type Session struct {
@@ -52,8 +63,9 @@ func NewSession(p ptyx.Session, cols, rows int, onChange func()) *Session {
 	if onChange == nil {
 		onChange = func() {}
 	}
+	cols, rows = clampSize(cols, rows)
 	s := &Session{
-		scr:      screen.New(min(max(cols, 1), maxSize), min(max(rows, 1), maxSize)),
+		scr:      screen.New(cols, rows),
 		pty:      p,
 		onChange: onChange,
 		notifyCh: make(chan struct{}, 1),
@@ -65,6 +77,7 @@ func NewSession(p ptyx.Session, cols, rows int, onChange func()) *Session {
 	s.parser = vt.NewParser(s.app)
 
 	readDone := make(chan struct{})
+	_ = p.Resize(cols, rows) // a fresh PTY may start at some other size; ignore a dead one
 	go s.readLoop(readDone)
 	go s.writeLoop()
 	go s.notifyLoop()
@@ -104,9 +117,9 @@ func (w replyWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-// Resize clamps to 1..maxSize in each direction, resizes the screen, then the PTY.
+// Resize clamps with clampSize, resizes the screen, then the PTY.
 func (s *Session) Resize(cols, rows int) {
-	cols, rows = min(max(cols, 1), maxSize), min(max(rows, 1), maxSize)
+	cols, rows = clampSize(cols, rows)
 	s.resizeMu.Lock()
 	defer s.resizeMu.Unlock()
 	s.mu.Lock()
