@@ -61,17 +61,21 @@ func (a *Applier) CSI(params []int, intermediates []byte, private byte, final by
 	n := param(params, 0, 1)
 	switch final {
 	case 'A':
-		s.SetCursor(col, row-n)
+		s.CursorUp(n)
 	case 'B':
-		s.SetCursor(col, row+n)
+		s.CursorDown(n)
 	case 'C':
 		s.SetCursor(col+n, row)
 	case 'D':
 		s.SetCursor(col-n, row)
 	case 'E':
-		s.SetCursor(0, row+n)
+		s.CursorDown(n)
+		_, r := s.Cursor()
+		s.SetCursor(0, r)
 	case 'F':
-		s.SetCursor(0, row-n)
+		s.CursorUp(n)
+		_, r := s.Cursor()
+		s.SetCursor(0, r)
 	case 'G':
 		s.SetCursor(n-1, row)
 	case 'd':

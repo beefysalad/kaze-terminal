@@ -5,6 +5,7 @@ type savedCursor struct {
 	col, row int
 	pen      Cell
 	valid    bool
+	wrap     bool // pending-wrap state, restored by DECRC
 }
 
 const tabWidth = 8
@@ -69,7 +70,8 @@ func (s *Screen) ScrollDown(n int) { s.scrollDownIn(s.scrollTop, s.scrollBottom,
 
 // SetScrollRegion sets DECSTBM (0-based, inclusive) and homes the cursor. An empty or out-of-range region is ignored.
 func (s *Screen) SetScrollRegion(top, bottom int) {
-	if top < 0 || bottom >= s.rows || top >= bottom {
+	bottom = min(bottom, s.rows-1)
+	if top < 0 || top >= bottom {
 		return
 	}
 	s.scrollTop, s.scrollBottom = top, bottom
@@ -147,7 +149,7 @@ func (s *Screen) EraseInLine(mode int) {
 	}
 }
 
-// EraseInDisplay implements ED: 0 cursor to end, 1 start to cursor, 2 all, 3 all plus scrollback.
+// EraseInDisplay implements ED: 0 cursor to end, 1 start to cursor, 2 all, 3 scrollback only.
 func (s *Screen) EraseInDisplay(mode int) {
 	s.wrapPending = false
 	switch mode {
@@ -161,15 +163,14 @@ func (s *Screen) EraseInDisplay(mode int) {
 			s.eraseSpan(r, 0, s.cols)
 		}
 		s.eraseSpan(s.curRow, 0, s.curCol+1)
-	case 2, 3:
+	case 2:
 		for r := 0; r < s.rows; r++ {
 			s.eraseSpan(r, 0, s.cols)
 		}
-		if mode == 3 {
-			s.sb = scrollback{max: s.sb.max}
-			s.viewOffset = 0
-			s.MarkAllDirty()
-		}
+	case 3: // scrollback only; the visible screen stays
+		s.sb = scrollback{max: s.sb.max}
+		s.viewOffset = 0
+		s.MarkAllDirty()
 	}
 }
 
@@ -214,7 +215,7 @@ func (s *Screen) EraseChars(n int) {
 }
 
 // SaveCursor stores the cursor position and pen (DECSC).
-func (s *Screen) SaveCursor() { s.saved = savedCursor{s.curCol, s.curRow, s.pen, true} }
+func (s *Screen) SaveCursor() { s.saved = savedCursor{s.curCol, s.curRow, s.pen, true, s.wrapPending} }
 
 // RestoreCursor restores them (DECRC); with nothing saved it goes home with the default pen.
 func (s *Screen) RestoreCursor() {
@@ -225,12 +226,16 @@ func (s *Screen) RestoreCursor() {
 	}
 	s.SetCursor(s.saved.col, s.saved.row)
 	s.pen = s.saved.pen
+	s.wrapPending = s.saved.wrap
 }
 
 // TabForward moves to the nth next tab stop (every 8 columns), stopping at the last column.
 func (s *Screen) TabForward(n int) {
 	col := s.curCol
 	for ; n > 0; n-- {
+		if col >= s.cols-1 {
+			break
+		}
 		col = (col/tabWidth + 1) * tabWidth
 	}
 	s.SetCursor(col, s.curRow)
@@ -248,4 +253,22 @@ func (s *Screen) Reset() {
 		s.cells[i] = blankCell
 	}
 	s.MarkAllDirty()
+}
+
+// CursorUp moves up n rows (CUU). It stops at the top margin when the cursor starts at or below it.
+func (s *Screen) CursorUp(n int) {
+	limit := 0
+	if s.curRow >= s.scrollTop {
+		limit = s.scrollTop
+	}
+	s.SetCursor(s.curCol, max(s.curRow-n, limit))
+}
+
+// CursorDown moves down n rows (CUD). It stops at the bottom margin when the cursor starts at or above it.
+func (s *Screen) CursorDown(n int) {
+	limit := s.rows - 1
+	if s.curRow <= s.scrollBottom {
+		limit = s.scrollBottom
+	}
+	s.SetCursor(s.curCol, min(s.curRow+n, limit))
 }
