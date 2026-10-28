@@ -98,6 +98,8 @@ func (c *glyphCache) get(r rune, bold, wide bool) *glyph {
 	var mask *image.Alpha
 	if id == faceBox {
 		mask = drawBox(r, w, fs.cellH, fs.cellW)
+	} else if id >= faceSystem {
+		mask = fs.drawFallback(fs.sys.font(int(id-faceSystem)), r, w)
 	} else {
 		mask = image.NewAlpha(image.Rect(0, 0, w, fs.cellH))
 		face, draw := fs.faces[faceMono], r
