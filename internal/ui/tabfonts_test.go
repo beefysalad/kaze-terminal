@@ -1,12 +1,16 @@
 package ui
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"gioui.org/font"
 	"gioui.org/text"
 
 	"github.com/patrick-gogo/kaze/internal/render"
+	"github.com/patrick-gogo/kaze/internal/tabs"
 )
 
 // missingGlyphs counts glyphs the shaper drew as .notdef (ID 0) for s.
@@ -51,6 +55,74 @@ func TestFitDrawsSymbolWithoutMissingGlyph(t *testing.T) {
 func TestFitDropsRunesNoFontHas(t *testing.T) {
 	c := newChrome()
 	if got := c.fit("a\U0010FFFFb\x07c"); got != "abc" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestFitRebuildsShaperOnlyForNewFont(t *testing.T) {
+	// Two symbols; skip unless one system file covers both.
+	a, b := '✳', '✴'
+	pa, pb := render.SystemFontFor(a), render.SystemFontFor(b)
+	if render.BundledCovers(a) || render.BundledCovers(b) || pa == "" || pa != pb {
+		t.Skip("no single system font covers both symbols")
+	}
+	c := newChrome()
+	c.fit(string(a))
+	sh := c.shaper
+	c.fit(string(b))
+	if c.shaper != sh {
+		t.Fatal("shaper rebuilt although the font was already loaded")
+	}
+}
+
+func TestFitCoveredTextIsUnchangedWithoutAllocating(t *testing.T) {
+	c := newChrome()
+	c.fit("日本語 abc")
+	if n := testing.AllocsPerRun(50, func() { c.fit("日本語 abc") }); n != 0 {
+		t.Fatalf("%v allocs", n)
+	}
+}
+
+func TestAddFontSkipsOversizedFile(t *testing.T) {
+	f := filepath.Join(t.TempDir(), "big.ttf")
+	if err := os.WriteFile(f, make([]byte, maxFontFile+1), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	c := newChrome()
+	if ok, fresh := c.addFont(f); ok || fresh {
+		t.Fatal("oversized file was loaded")
+	}
+}
+
+func TestFitCoveredCacheIsBounded(t *testing.T) {
+	c := newChrome()
+	for r := rune(0x4e00); r < 0x4e00+maxCovered+50; r++ {
+		c.fit(string(r))
+	}
+	if len(c.covered) > maxCovered {
+		t.Fatalf("cache %d", len(c.covered))
+	}
+}
+
+func TestFitWhitespaceControlsBecomeSpaces(t *testing.T) {
+	c := newChrome()
+	if got := c.fit("a\tb\nc\rd"); got != "a b c d" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestFitDropsFormatAndLineSeparators(t *testing.T) {
+	c := newChrome()
+	in := "a\u202Eb\u2066c\u2069d\u200Be\u2028f\u2029g"
+	if got := c.fit(in); got != "abcdefg" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestTabLabelTruncatesAfterFit(t *testing.T) {
+	c := newChrome()
+	title := strings.Repeat("\u200B", 40) + "short"
+	if got := c.tabLabelFit(&tabs.Tab{Title: title}, "x"); got != "short" {
 		t.Fatalf("got %q", got)
 	}
 }

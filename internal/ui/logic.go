@@ -325,7 +325,12 @@ func looksLikePath(s string) bool {
 
 // tabLabel is the text on a tab: the app's title (or def), shortened, plus the exit marker.
 func tabLabel(t *tabs.Tab, def string) string {
-	title := strings.TrimSpace(t.Title)
+	return tabLabelWith(t, def, func(s string) string { return s })
+}
+
+// tabLabelWith cleans the title with clean before shortening, so dropped runes never eat the budget.
+func tabLabelWith(t *tabs.Tab, def string, clean func(string) string) string {
+	title := strings.TrimSpace(clean(t.Title))
 	if title == "" {
 		title = def
 	}
