@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	pty "github.com/aymanbagabas/go-pty"
@@ -22,15 +23,33 @@ type Session interface {
 
 // closeGrace bounds how long Close waits for the pty to release; ConPTY can
 // block on close while output is still pending.
-const closeGrace = time.Second
+var closeGrace = time.Second
+
+var (
+	// ErrCloseTimeout means the process was killed but the pty did not release in time.
+	ErrCloseTimeout = errors.New("ptyx: close timed out")
+	// ErrInvalidSize means cols or rows is outside 1..65535.
+	ErrInvalidSize = errors.New("ptyx: invalid size")
+	// ErrClosed means the session was already closed.
+	ErrClosed = errors.New("ptyx: session closed")
+)
+
+func validSize(cols, rows int) error {
+	if cols < 1 || cols > 65535 || rows < 1 || rows > 65535 {
+		return ErrInvalidSize
+	}
+	return nil
+}
 
 type session struct {
 	p   pty.Pty
 	cmd *pty.Cmd
 
-	exited chan struct{} // closed once the process has been reaped
-	code   int
+	exited  chan struct{} // closed once the process has been reaped
+	code    int
+	waitErr error
 
+	closed    atomic.Bool
 	closeOnce sync.Once
 }
 
@@ -38,6 +57,9 @@ type session struct {
 func Start(argv []string, cols, rows int, env []string, dir string) (Session, error) {
 	if len(argv) == 0 {
 		return nil, errors.New("ptyx: empty argv")
+	}
+	if err := validSize(cols, rows); err != nil {
+		return nil, err
 	}
 	p, err := pty.New()
 	if err != nil {
@@ -57,10 +79,12 @@ func Start(argv []string, cols, rows int, env []string, dir string) (Session, er
 	s := &session{p: p, cmd: cmd, exited: make(chan struct{})}
 	go func() {
 		// A non-zero exit is reported through the code, not as an error.
-		_ = cmd.Wait()
+		err := cmd.Wait()
 		s.code = -1
 		if cmd.ProcessState != nil {
 			s.code = cmd.ProcessState.ExitCode()
+		} else {
+			s.waitErr = err
 		}
 		close(s.exited)
 	}()
@@ -70,11 +94,19 @@ func Start(argv []string, cols, rows int, env []string, dir string) (Session, er
 func (s *session) Read(b []byte) (int, error)  { return s.p.Read(b) }
 func (s *session) Write(b []byte) (int, error) { return s.p.Write(b) }
 
-func (s *session) Resize(cols, rows int) error { return s.p.Resize(cols, rows) }
+func (s *session) Resize(cols, rows int) error {
+	if err := validSize(cols, rows); err != nil {
+		return err
+	}
+	if s.closed.Load() {
+		return ErrClosed
+	}
+	return s.p.Resize(cols, rows)
+}
 
 func (s *session) Wait() (int, error) {
 	<-s.exited
-	return s.code, nil
+	return s.code, s.waitErr
 }
 
 // Close kills the process if it is still running and releases the pty. It
@@ -82,6 +114,7 @@ func (s *session) Wait() (int, error) {
 func (s *session) Close() error {
 	var err error
 	s.closeOnce.Do(func() {
+		s.closed.Store(true)
 		select {
 		case <-s.exited:
 		default:
@@ -94,6 +127,7 @@ func (s *session) Close() error {
 		select {
 		case err = <-done:
 		case <-time.After(closeGrace):
+			err = ErrCloseTimeout
 		}
 	})
 	return err

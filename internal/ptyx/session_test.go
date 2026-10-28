@@ -1,6 +1,7 @@
 package ptyx_test
 
 import (
+	"errors"
 	"os"
 	"runtime"
 	"strings"
@@ -144,5 +145,60 @@ func TestResize(t *testing.T) {
 func TestDefaultShellIsNotEmpty(t *testing.T) {
 	if len(ptyx.DefaultShell()) == 0 {
 		t.Fatal("empty")
+	}
+}
+
+func sleeper() []string {
+	if runtime.GOOS == "windows" {
+		return []string{"cmd.exe", "/k"}
+	}
+	return []string{"sh", "-c", "sleep 30"}
+}
+
+func TestInvalidSizeRejected(t *testing.T) {
+	for _, sz := range [][2]int{{0, 24}, {80, 0}, {-1, 24}, {80, -5}, {65536, 24}, {80, 65536}} {
+		if s, err := ptyx.Start(sleeper(), sz[0], sz[1], os.Environ(), ""); err == nil {
+			s.Close()
+			t.Fatalf("Start(%v) accepted an invalid size", sz)
+		}
+	}
+	s, err := ptyx.Start(sleeper(), 80, 24, os.Environ(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	for _, sz := range [][2]int{{0, 24}, {80, 0}, {-1, 24}, {80, 65536}, {65536, 24}} {
+		if err := s.Resize(sz[0], sz[1]); !errors.Is(err, ptyx.ErrInvalidSize) {
+			t.Fatalf("Resize(%v) = %v, want ErrInvalidSize", sz, err)
+		}
+	}
+	if err := s.Resize(65535, 65535); err != nil && errors.Is(err, ptyx.ErrInvalidSize) {
+		t.Fatalf("max size rejected: %v", err)
+	}
+}
+
+func TestResizeAfterCloseFailsCleanly(t *testing.T) {
+	s, err := ptyx.Start(sleeper(), 80, 24, os.Environ(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+	if err := s.Resize(100, 30); !errors.Is(err, ptyx.ErrClosed) {
+		t.Fatalf("Resize after Close = %v, want ErrClosed", err)
+	}
+}
+
+func TestWaitAfterCloseReturnsPromptly(t *testing.T) {
+	s, err := ptyx.Start(sleeper(), 80, 24, os.Environ(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+	done := make(chan struct{})
+	go func() { s.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+		t.Fatal("Wait hung after Close")
 	}
 }
