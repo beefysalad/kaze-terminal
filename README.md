@@ -169,18 +169,22 @@ The branch is read from `.git/HEAD` whenever the prompt reports, so no git proce
 PowerShell, in your profile:
 
 ```powershell
-$__kazePrompt = $function:prompt
-function prompt { $p = (Get-Location).ProviderPath -replace '\','/'; [Console]::Write("`e]7;file://$env:COMPUTERNAME/$p`a"); & $__kazePrompt }
+if (-not $global:__kazePrompt) { $global:__kazePrompt = $function:prompt }
+function prompt {
+    $p = (Get-Location).ProviderPath.Replace('\','/').Replace('%','%25').Replace('#','%23').Replace(' ','%20')
+    [Console]::Write([char]27 + ']7;file://' + $env:COMPUTERNAME + '/' + $p + [char]7)
+    & $global:__kazePrompt
+}
 ```
 
 zsh, in `~/.zshrc`:
 
 ```zsh
-_kaze_osc7() { printf '\e]7;file://%s%s\a' "$HOST" "${PWD// /%20}" }
+_kaze_osc7() { printf '\e]7;file://%s%s\a' "$HOST" "${${${PWD//\%/%25}//\#/%23}// /%20}" }
 autoload -Uz add-zsh-hook; add-zsh-hook precmd _kaze_osc7
 ```
 
-Without this the folder and branch stay hidden. UNC paths (`\server\share`) are not shown.
+Without this the folder and branch stay hidden. UNC paths (`\\server\share`) are not shown.
 
 ## Benchmarks
 

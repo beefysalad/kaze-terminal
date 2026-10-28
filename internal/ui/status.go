@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -56,16 +57,11 @@ func (win *window) statusParts() statusParts {
 
 // pruneLocs forgets closed tabs.
 func (win *window) pruneLocs(list []*tabs.Tab) {
-	if len(win.locs) <= len(list) {
-		return
-	}
-	keep := make(map[tabs.TabID]locEntry, len(list))
-	for _, t := range list {
-		if e, ok := win.locs[t.ID]; ok {
-			keep[t.ID] = e
+	for id := range win.locs { // deleting during range is safe in Go
+		if !slices.ContainsFunc(list, func(t *tabs.Tab) bool { return t.ID == id }) {
+			delete(win.locs, id)
 		}
 	}
-	win.locs = keep
 }
 
 // userHome is the home folder, "" when unknown.
@@ -120,4 +116,10 @@ func truncateLeft(s string, max int) string {
 	}
 	r := []rune(s)
 	return "…" + string(r[len(r)-(max-1):])
+}
+
+// branchLabel is "⎇ branch"; when no font has the glyph, fit drops it and the
+// leftover space is trimmed so the name stays flush.
+func (c *chrome) branchLabel(branch string) string {
+	return strings.TrimLeft(c.fit("⎇ "+branch), " ")
 }

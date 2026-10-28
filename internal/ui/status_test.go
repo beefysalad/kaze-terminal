@@ -169,3 +169,27 @@ func TestStatusTextHasNoControlChars(t *testing.T) {
 
 // tmp is a temp dir with native separators (GOTMPDIR may use slashes).
 func tmp(t *testing.T) string { return filepath.Clean(t.TempDir()) }
+
+func TestPruneLocsDropsClosedTabsEvenWhenCountMatches(t *testing.T) {
+	win, tab, _ := statusWindow(t)
+	second, err := win.mgr.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	win.locs = map[tabs.TabID]locEntry{tab.ID: {cwd: "a"}, 9999: {cwd: "gone"}}
+	win.pruneLocs([]*tabs.Tab{tab, second})
+	if _, ok := win.locs[9999]; ok || len(win.locs) != 1 {
+		t.Fatalf("stale entry kept: %v", win.locs)
+	}
+}
+
+func TestBranchLabelHasNoLeadingSpaceWhenGlyphIsDropped(t *testing.T) {
+	c := &chrome{covered: map[rune]bool{'⎇': false}}
+	if got := c.branchLabel("main"); got != "main" {
+		t.Fatalf("got %q", got)
+	}
+	c = &chrome{covered: map[rune]bool{'⎇': true}}
+	if got := c.branchLabel("main"); got != "⎇ main" {
+		t.Fatalf("got %q", got)
+	}
+}
