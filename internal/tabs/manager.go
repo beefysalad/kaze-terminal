@@ -45,12 +45,13 @@ type Manager struct {
 
 	closing sync.WaitGroup // shells Close is still releasing in the background
 
-	mu      sync.Mutex
-	entries []*entry
-	nextID  TabID
-	cols    int
-	rows    int
-	sbLines int // history cap for new tabs; 0 keeps the screen default
+	mu        sync.Mutex
+	entries   []*entry
+	nextID    TabID
+	cols      int
+	rows      int
+	notifyEnv []string // KAZE_NOTIFY vars for new tabs, empty until SetNotify
+	sbLines   int      // history cap for new tabs; 0 keeps the screen default
 
 	active atomic.Int64 // TabID of the active tab, 0 when there is none
 }
@@ -67,7 +68,7 @@ func NewManager(start func(env []string) (ptyx.Session, error), cols, rows int, 
 // Inherited terminal identity is dropped (a kaze started from Windows Terminal or
 // VS Code must not claim to be them) and kaze's own is set. KAZE_TAB_ID is
 // dropped too so a kaze started inside a kaze tab gets clean IDs.
-var droppedEnv = []string{"KAZE_TAB_ID", "TERM", "COLORTERM", "TERM_PROGRAM", "TERM_PROGRAM_VERSION", "WT_SESSION", "WT_PROFILE_ID"}
+var droppedEnv = []string{"KAZE_TAB_ID", "KAZE_NOTIFY", "KAZE_NOTIFY_TOKEN", "TERM", "COLORTERM", "TERM_PROGRAM", "TERM_PROGRAM_VERSION", "WT_SESSION", "WT_PROFILE_ID"}
 
 var identityEnv = []string{"TERM=xterm-256color", "COLORTERM=truecolor", "TERM_PROGRAM=kaze"}
 
@@ -91,6 +92,14 @@ func isDropped(e string) bool {
 	return false
 }
 
+// SetNotify gives every tab opened from now on the alert address and token
+// that `kaze notify` reads.
+func (m *Manager) SetNotify(addr, token string) {
+	m.mu.Lock()
+	m.notifyEnv = []string{"KAZE_NOTIFY=" + addr, "KAZE_NOTIFY_TOKEN=" + token}
+	m.mu.Unlock()
+}
+
 // New starts a shell in a new tab at the end and makes it active.
 func (m *Manager) New() (*Tab, error) { return m.NewWith(nil) }
 
@@ -99,10 +108,11 @@ func (m *Manager) NewWith(prefeed func(*term.Session)) (*Tab, error) {
 	m.mu.Lock()
 	m.nextID++
 	id := m.nextID
-	cols, rows, sb := m.cols, m.rows, m.sbLines
+	cols, rows, sb, nenv := m.cols, m.rows, m.sbLines, m.notifyEnv
 	m.mu.Unlock()
 
-	env := append(slices.Clip(m.baseEnv), "KAZE_TAB_ID="+strconv.Itoa(int(id)))
+	env := append(slices.Clip(m.baseEnv), nenv...)
+	env = append(env, "KAZE_TAB_ID="+strconv.Itoa(int(id)))
 	p, err := m.start(env)
 	if err != nil {
 		return nil, err
