@@ -73,7 +73,11 @@ func xtermMod(mods key.Modifiers) int {
 // EncodeKey returns the bytes for a key press, or nil when kaze handles the
 // key itself or it has no encoding.
 func EncodeKey(name key.Name, mods key.Modifiers, m term.Modes) []byte {
-	if IsReserved(name, mods, runtime.GOOS) {
+	return encodeKey(runtime.GOOS, name, mods, m)
+}
+
+func encodeKey(goos string, name key.Name, mods key.Modifiers, m term.Modes) []byte {
+	if IsReserved(name, mods, goos) {
 		return nil
 	}
 	mod := xtermMod(mods)
@@ -106,11 +110,19 @@ func EncodeKey(name key.Name, mods key.Modifiers, m term.Modes) []byte {
 		b = []byte{'\r'}
 	case key.NameTab:
 		if mods&key.ModShift != 0 {
+			if mods&key.ModAlt != 0 {
+				return []byte("\x1b\x1b[Z")
+			}
 			return []byte("\x1b[Z")
 		}
 		b = []byte{'\t'}
 	case key.NameDeleteBackward:
-		b = []byte{0x7f}
+		// Ctrl+Backspace is 0x08 so PSReadLine and Windows Terminal word-delete works.
+		if mods&key.ModCtrl != 0 {
+			b = []byte{0x08}
+		} else {
+			b = []byte{0x7f}
+		}
 	case key.NameEscape:
 		b = []byte{0x1b}
 	case key.NameSpace:
@@ -125,7 +137,17 @@ func EncodeKey(name key.Name, mods key.Modifiers, m term.Modes) []byte {
 			return nil
 		}
 		c := r[0]
+		// Unreserved Cmd/Super combos belong to the OS, not the shell.
+		if mods&(key.ModCommand|key.ModSuper) != 0 {
+			return nil
+		}
 		switch {
+		case mods&key.ModCtrl != 0 && c == '/':
+			b = []byte{0x1f}
+		case mods&key.ModCtrl != 0 && (c == '@' || c == '2'):
+			b = []byte{0}
+		case mods&key.ModCtrl != 0 && c == '?':
+			b = []byte{0x7f}
 		case mods&key.ModCtrl != 0 && c >= 'A' && c <= 'Z':
 			b = []byte{byte(c - 'A' + 1)}
 		case mods&key.ModCtrl != 0 && c >= '[' && c <= '_':

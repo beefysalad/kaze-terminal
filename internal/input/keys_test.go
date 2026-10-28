@@ -74,7 +74,4 @@ func TestKazeShortcutsReturnNil(t *testing.T) {
 	if win("C", key.ModCtrl) || mac("C", key.ModCtrl) {
 		t.Fatal("plain Ctrl+C must reach the shell")
 	}
-	if mac("C", cs) && false {
-		t.Fatal("unreachable")
-	}
 }

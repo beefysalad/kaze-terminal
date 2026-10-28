@@ -7,10 +7,13 @@ import (
 	"github.com/patrick-gogo/kaze/internal/term"
 )
 
+func x10Only(m term.Modes) bool { return m.MouseX10 && !m.MouseButton && !m.MouseAny }
+
 func mouseOn(m term.Modes) bool { return m.MouseX10 || m.MouseButton || m.MouseAny }
 
-// EncodeWheel reports wheel steps (positive lines = up) as button 64/65
-// presses. nil means mouse reporting is off and the caller scrolls the view.
+// EncodeWheel reports wheel steps as button 64/65 presses. lines > 0 means
+// scroll up (away from the user), lines < 0 scroll down; callers map the
+// toolkit's sign to this. nil means mouse reporting is off and the caller scrolls the view.
 func EncodeWheel(lines int, col, row int, m term.Modes) []byte {
 	if !mouseOn(m) || lines == 0 {
 		return nil
@@ -32,12 +35,17 @@ func EncodeMouse(button int, press bool, mods key.Modifiers, col, row int, motio
 	if !mouseOn(m) {
 		return nil
 	}
+	if x10Only(m) {
+		// X10 knows presses only: no releases, motion or modifiers.
+		if !press || motion {
+			return nil
+		}
+		mods = 0
+	}
 	if motion {
 		if !m.MouseAny && !(m.MouseButton && button >= 0) {
 			return nil
 		}
-	} else if !press && !m.MouseButton && !m.MouseAny && !m.MouseSGR {
-		return nil // X10 reports presses only
 	}
 	if !motion && button < 0 {
 		return nil

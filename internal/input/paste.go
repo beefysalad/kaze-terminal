@@ -12,7 +12,7 @@ var (
 )
 
 // EncodePaste normalizes newlines to CR and, in bracketed-paste mode, wraps
-// the text. The end marker is stripped from the text so a paste cannot close
+// the text. Both bracket markers are stripped from the text so a paste cannot close
 // the bracket early and smuggle in commands. One buffer, one pass.
 func EncodePaste(s string, m term.Modes) []byte {
 	out := make([]byte, 0, len(s)+len(pasteStart)+len(pasteEnd))
@@ -20,27 +20,29 @@ func EncodePaste(s string, m term.Modes) []byte {
 		out = append(out, pasteStart...)
 	}
 	body := len(out)
+	// Filter while copying: after each byte, drop a marker that just completed.
+	// This also catches markers re-joined by an earlier strip, in O(n).
+	push := func(c byte) {
+		out = append(out, c)
+		if n := len(out); n-body >= 6 && c == '~' {
+			tail := out[n-6:]
+			if bytes.Equal(tail, pasteEnd) || bytes.Equal(tail, pasteStart) {
+				out = out[:n-6]
+			}
+		}
+	}
 	for i := 0; i < len(s); i++ {
 		switch c := s[i]; c {
 		case '\r':
-			out = append(out, '\r')
+			push('\r')
 			if i+1 < len(s) && s[i+1] == '\n' {
 				i++
 			}
 		case '\n':
-			out = append(out, '\r')
+			push('\r')
 		default:
-			out = append(out, c)
+			push(c)
 		}
-	}
-	// Removing a marker can join its neighbours into a new one; repeat.
-	for {
-		j := bytes.Index(out[body:], pasteEnd)
-		if j < 0 {
-			break
-		}
-		j += body
-		out = append(out[:j], out[j+len(pasteEnd):]...)
 	}
 	if m.BracketedPaste {
 		out = append(out, pasteEnd...)

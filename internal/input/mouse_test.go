@@ -48,3 +48,15 @@ func TestMouseLegacyEncodingWithoutSGR(t *testing.T) {
 		t.Fatal("legacy cannot encode col > 222")
 	}
 }
+
+func TestX10ReportsPressesOnlyWithoutModifiers(t *testing.T) {
+	m := term.Modes{MouseX10: true, MouseSGR: true}
+	if input.EncodeMouse(0, false, 0, 1, 1, false, m) != nil {
+		t.Fatal("X10 must not report releases even with SGR")
+	}
+	if input.EncodeMouse(0, true, 0, 1, 1, true, m) != nil {
+		t.Fatal("X10 must not report motion")
+	}
+	chk(t, input.EncodeMouse(0, true, key.ModCtrl|key.ModShift, 1, 1, false, m), "\x1b[<0;2;2M")
+	chk(t, input.EncodeMouse(0, true, key.ModCtrl, 0, 0, false, term.Modes{MouseX10: true}), "\x1b[M !!")
+}

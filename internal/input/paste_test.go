@@ -46,3 +46,23 @@ func TestEncodeFocus(t *testing.T) {
 		t.Fatal("expected nil")
 	}
 }
+
+func TestHostilePasteIsLinearAndMarkerFree(t *testing.T) {
+	m := term.Modes{BracketedPaste: true}
+	for _, unit := range []string{"\x1b[201~", "\x1b[20\x1b[201~1~", "\x1b[200~", "\x1b[20\x1b[200~0~"} {
+		s := strings.Repeat(unit, (1<<20)/len(unit))
+		start := time.Now()
+		out := input.EncodePaste(s, m)
+		if d := time.Since(start); d > 50*time.Millisecond {
+			t.Fatalf("%q took %v", unit, d)
+		}
+		body := string(out[6 : len(out)-6])
+		if strings.Contains(body, "\x1b[201~") || strings.Contains(body, "\x1b[200~") {
+			t.Fatalf("%q: marker left in payload", unit)
+		}
+	}
+}
+
+func TestPasteStripsStartMarker(t *testing.T) {
+	chk(t, input.EncodePaste("a\x1b[200~b", term.Modes{BracketedPaste: true}), "\x1b[200~ab\x1b[201~")
+}
