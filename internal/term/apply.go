@@ -4,6 +4,7 @@ package term
 import (
 	"bytes"
 	"io"
+	"runtime"
 	"time"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/screen"
@@ -17,11 +18,14 @@ type Applier struct {
 	modes     Modes
 	syncSince time.Time
 	title     string
+	cwd       string
+	cwdSeq    uint64
+	goos      string           // replaceable so tests can check both path styles
 	now       func() time.Time // replaceable so tests can drive the sync timeout
 }
 
 func NewApplier(s *screen.Screen, reply io.Writer) *Applier {
-	return &Applier{s: s, reply: reply, modes: Modes{CursorVisible: true}, now: time.Now}
+	return &Applier{s: s, reply: reply, modes: Modes{CursorVisible: true}, now: time.Now, goos: runtime.GOOS}
 }
 
 func (a *Applier) Print(r rune) { a.s.Print(r) }
@@ -157,11 +161,18 @@ func (a *Applier) ESC(intermediates []byte, final byte) {
 	}
 }
 
-// OSC handles window titles (0 and 2); the rest are ignored.
+// OSC handles window titles (0 and 2) and the folder report (7); the rest are ignored.
 func (a *Applier) OSC(data []byte) {
 	cmd, text, ok := bytes.Cut(data, []byte{';'})
 	if ok && (string(cmd) == "0" || string(cmd) == "2") {
 		a.title = string(text) // copy: parser buffers are reused
+		return
+	}
+	if ok && string(cmd) == "7" {
+		if p, good := parseOSC7(data, a.goos); good { // string conversion copies
+			a.cwd = p
+			a.cwdSeq++
+		}
 	}
 }
 

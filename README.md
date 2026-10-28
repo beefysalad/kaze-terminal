@@ -119,6 +119,9 @@ shows up as a warning in the first tab; a TOML syntax error makes kaze use all d
 | `shell` | Program and arguments, e.g. `["pwsh", "-NoLogo"]` | PowerShell 7 / `$SHELL` |
 | `scrollback_lines` | Lines of history per tab, up to 100000 | `10000` |
 | `copy_on_select` | Copy a selection when the mouse button is released | `false` |
+| `chime_needs` | Chime when Claude Code needs you (see Alerts) | `true` |
+| `chime_done` | Chime when Claude Code finishes its turn | `false` |
+| `chime_file` | Your own chime, a WAV file up to 2MB; `~` means your home folder | the bundled chime |
 | `[colors]` | `fg`, `bg`, `cursor`, `selection`, `color0` to `color15`, as `"#rrggbb"` | the built-in Midnight palette |
 | `[keys]` | `new_tab`, `close_tab`, `next_tab`, `prev_tab`, `copy`, `paste` | the shortcuts above |
 | `font_family` | **Not supported yet.** Setting it only adds a warning; kaze always uses its bundled font. | |
@@ -135,6 +138,8 @@ font_size = 15
 shell = ["pwsh", "-NoLogo"]
 scrollback_lines = 20000
 copy_on_select = true
+chime_done = true
+chime_file = "~/sounds/ding.wav"
 
 [colors]
 bg = "#0f1117"
@@ -144,7 +149,9 @@ new_tab = "ctrl+t"
 ```
 
 kaze sets `TERM=xterm-256color`, `COLORTERM=truecolor` and `TERM_PROGRAM=kaze` for its shells,
-plus `KAZE_TAB_ID` with the tab's number.
+plus `KAZE_TAB_ID` with the tab's number, and `KAZE_NOTIFY` (the local address kaze listens on
+for alerts) with `KAZE_NOTIFY_TOKEN` (a random secret for that kaze run). Apps you launch from a
+kaze tab inherit these variables too, the same way they inherit `PATH`.
 
 ## Optional shell setup
 
@@ -160,6 +167,83 @@ if ($Host.Name -eq 'ConsoleHost' -and -not [Console]::IsOutputRedirected) {
 
 The guard keeps it quiet in scripts and other non-interactive sessions.
 
+## Folder and branch in the status bar
+
+kaze shows the active tab's folder and git branch (`~\src\kaze  ⎇ main`) on the left of the
+status bar. The shell has to tell kaze where it is with an OSC 7 sequence from its prompt.
+The branch is read from `.git/HEAD` (no git process runs) whenever the prompt reports, when you
+switch tabs, and when the kaze window comes back into focus, so a branch that Claude Code
+switched shows up too.
+
+PowerShell, in your profile:
+
+```powershell
+if (-not $global:__kazePrompt) { $global:__kazePrompt = $function:prompt }
+function prompt {
+    $segs = (Get-Location).ProviderPath.Split('\') | ForEach-Object {
+        if ($_ -match '^[A-Za-z]:$') { $_ } else { [uri]::EscapeDataString($_) }
+    }
+    [Console]::Write([char]27 + ']7;file://' + $env:COMPUTERNAME + '/' + ($segs -join '/') + [char]7)
+    & $global:__kazePrompt
+}
+```
+
+It percent-encodes each folder name, so names with spaces, `#`, `%` or Japanese come through
+whatever the console code page is. Loading it twice is safe. It works in PowerShell 7 and 5.1.
+
+zsh, in `~/.zshrc`:
+
+```zsh
+_kaze_osc7() { printf '\e]7;file://%s%s\a' "$HOST" "${${${PWD//\%/%25}//\#/%23}// /%20}" }
+autoload -Uz add-zsh-hook; add-zsh-hook precmd _kaze_osc7
+```
+
+Without this the folder and branch stay hidden. UNC paths (`\\server\share`) are not shown.
+
+## Alerts (Claude Code hooks)
+
+kaze marks a tab and shows a small toast when Claude Code in that tab needs you (a permission
+prompt or a question) or has finished its turn. Click "Go ›" on the toast to switch to the tab.
+"Needs you" plays a soft chime (unless you're already looking at that tab); "done" is silent
+unless you turn on `chime_done`. While kaze is minimized, its taskbar button flashes (Windows).
+
+kaze learns about this from Claude Code hooks that run `kaze notify`. Add them to your Claude
+Code settings (`~/.claude/settings.json`), with the full path to your kaze binary:
+
+```json
+{
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "permission_prompt|elicitation_dialog|elicitation_url_dialog|agent_needs_input",
+        "hooks": [
+          { "type": "command", "command": "\"C:\\Users\\you\\kaze\\kaze.exe\" notify needs", "timeout": 3 }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "\"C:\\Users\\you\\kaze\\kaze.exe\" notify done", "timeout": 3 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+If you already have hooks, add these entries next to them. On macOS the command is
+`"/path/to/kaze" notify needs` (and `notify done`).
+
+- The hooks do nothing outside kaze: `kaze notify` looks for the kaze variables, finds none
+  and exits quietly, so Claude Code in another terminal is unaffected.
+- `kaze notify` always exits 0 and prints nothing, so a hook can never block or slow Claude Code.
+- Even without the matcher, kaze ignores the "idle for a minute" and "login finished"
+  notifications.
+- **Windows with Smart App Control:** after each rebuild, run `kaze.exe notify done` once by hand.
+  That lets Smart App Control check the new exe right away, instead of during a hook, where the
+  check can take longer than the 3 second timeout.
+
 ## Benchmarks
 
 Numbers for the first milestone on Windows (key latency, Claude Code streaming, launch,
@@ -169,12 +253,16 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 ## Roadmap
 
+Done:
+
+- Plan 1: the terminal core with tabs.
+- Plan 3: alerts with a chime when Claude Code needs you, kaze's own title bar on Windows, and
+  the current folder and git branch in the status bar.
+
 Next:
 
-- Alerts with a chime when a tab needs attention, kaze's own title bar, and the current folder
-  and git branch in the status bar.
-- Child tabs for Claude Code subagents.
-- Claude Code usage in the status bar.
+- Plan 2: child tabs for Claude Code subagents.
+- Plan 4: Claude Code usage in the status bar.
 - The Mac milestone: run, fix and benchmark kaze on macOS.
 
 Later:
