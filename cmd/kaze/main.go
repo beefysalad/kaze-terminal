@@ -2,7 +2,6 @@
 package main
 
 import (
-	"log"
 	"os"
 
 	"gioui.org/app"
@@ -35,7 +34,7 @@ func main() {
 		w := new(app.Window)
 		w.Option(app.Title("kaze"), app.Size(unit.Dp(1100), unit.Dp(720)))
 		if err := ui.Run(w, ui.Options{Config: cfg, Warnings: warns, Shell: shell, Dir: home, Bench: rec}); err != nil {
-			log.Printf("kaze: %v", err)
+			reportFatal(err)
 			os.Exit(1)
 		}
 		os.Exit(0)
