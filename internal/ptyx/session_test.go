@@ -202,3 +202,18 @@ func TestWaitAfterCloseReturnsPromptly(t *testing.T) {
 		t.Fatal("Wait hung after Close")
 	}
 }
+
+// A bare program name is found on PATH even when the working directory is set;
+// go-pty would otherwise look for it inside dir.
+func TestBareProgramNameWithWorkingDir(t *testing.T) {
+	argv := []string{"sh", "-c", "echo kaze-dir"}
+	if runtime.GOOS == "windows" {
+		argv = []string{"cmd.exe", "/c", "echo kaze-dir"}
+	}
+	s, err := ptyx.Start(argv, 80, 24, os.Environ(), t.TempDir())
+	if err != nil {
+		t.Fatalf("Start with a working dir: %v", err)
+	}
+	defer s.Close()
+	readUntil(t, s, "kaze-dir", 5*time.Second)
+}

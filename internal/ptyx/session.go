@@ -5,6 +5,8 @@ package ptyx
 import (
 	"errors"
 	"io"
+	"os/exec"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -60,6 +62,14 @@ func Start(argv []string, cols, rows int, env []string, dir string) (Session, er
 	}
 	if err := validSize(cols, rows); err != nil {
 		return nil, err
+	}
+	// go-pty resolves a bare name against dir, not PATH, once dir is set.
+	if dir != "" && filepath.Base(argv[0]) == argv[0] {
+		lp, err := exec.LookPath(argv[0])
+		if err != nil {
+			return nil, err
+		}
+		argv = append([]string{lp}, argv[1:]...)
 	}
 	p, err := pty.New()
 	if err != nil {
