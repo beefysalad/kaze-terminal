@@ -37,6 +37,14 @@ func (win *window) benchKey(t *tabs.Tab) {
 	}
 }
 
+// benchBatch drops the frame's real input (unless the run allows it) and adds the scripted input.
+func (win *window) benchBatch(gtx layout.Context, t *tabs.Tab, batch []event.Event, ch int) []event.Event {
+	if win.bench.IgnoreInput() {
+		batch = batch[:0]
+	}
+	return win.benchInput(gtx, t, batch, ch)
+}
+
 // benchInput adds the bench run's scripted input to this frame's batch: the
 // command typed into every tab, a synthetic key, or a page of wheel scroll.
 // Keys and scroll go through route like real input.

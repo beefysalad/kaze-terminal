@@ -6,14 +6,28 @@
 # KAZE_BENCH mode (bench/README.md); memory and CPU are read from the kaze
 # process. Nothing sends keyboard or mouse input to any window, every run has a
 # deadline, and only processes this script started are stopped.
+#
+# Safety on the Mac: a bare binary can't be launched without activating it
+# (`open -g` needs an .app bundle), so the kaze window may take focus. kaze's
+# bench mode drops all real keyboard, mouse and paste input by default, so typing
+# into it reaches no shell, and this script unsets KAZE_BENCH_ALLOW_INPUT.
 set -eu
 repo=$(cd "$(dirname "$0")/.." && pwd)
 out=${1:-"$repo/bench/out"}
 capture=${2:-"$repo/bench/claude.bin"}
-mkdir -p "$out/config"
 kaze="$out/kaze-bench"
 flood="$out/flood"
 (cd "$repo" && go build -o "$kaze" ./cmd/kaze && go build -o "$flood" ./bench/flood)
+
+# kaze reads <config dir>/kaze/config.toml: $HOME/Library/Application Support on
+# macOS, $XDG_CONFIG_HOME elsewhere. Runs point both at $out, with a shell that
+# loads no rc files and saves no history, so bench commands stay out of yours.
+benchhome="$out/home"
+shell='shell = ["/bin/sh", "-c", "if command -v zsh >/dev/null; then HISTFILE=/dev/null exec zsh -f; else HISTFILE=/dev/null exec bash --noprofile --norc; fi"]'
+for d in "$benchhome/Library/Application Support/kaze" "$out/config/kaze"; do
+  mkdir -p "$d"
+  printf '%s\n' "$shell" > "$d/config.toml"
+done
 
 # private memory in MB: phys_footprint where footprint(1) exists, else RSS.
 mem_mb() {
@@ -32,8 +46,8 @@ cpu_ms() {
 run() {
   name=$1; secs=$2; shift 2
   log="$out/$name.log"; rm -f "$log"
-  KAZE_BENCH=1 KAZE_BENCH_LOG="$log" KAZE_BENCH_SECONDS=$secs XDG_CONFIG_HOME="$out/config" \
-    HOME_CONFIG_NOTE=bench "$kaze" &
+  env -u KAZE_BENCH_ALLOW_INPUT KAZE_BENCH=1 KAZE_BENCH_LOG="$log" KAZE_BENCH_SECONDS="$secs" \
+    HOME="$benchhome" XDG_CONFIG_HOME="$out/config" HISTFILE=/dev/null "$kaze" &
   pid=$!
   t=0
   for s in "$@"; do

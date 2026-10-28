@@ -31,23 +31,29 @@ check. With `KAZE_BENCH=1` it writes JSON lines to `KAZE_BENCH_LOG`
 | `KAZE_BENCH_TABS` | tabs to open at start | 1-16 |
 | `KAZE_BENCH_TYPE` | a command written once into every tab, 2s after the first prompt | 1 KB |
 | `KAZE_BENCH_SCROLL` | once history holds this many lines and has been still for 1.5s, scroll to the top a page per frame through the wheel path | 0-1,000,000 |
-| `KAZE_BENCH_IGNORE_INPUT` | `1` drops real keyboard, mouse and paste input (the harness sets it) | |
+| `KAZE_BENCH_ALLOW_INPUT` | real keyboard, mouse, paste and tab-bar input is dropped whenever `KAZE_BENCH` is set; `1` lets it through, for manual debugging only | |
 
 Log lines: `config`, `launch` (process creation to the first frame with text,
 plus the first frame and first shell output), `typed`, `scroll_start`,
 `screen` (the active tab's text at the end) and `summary` (frames drawn, late
 frames over 16.7ms, rows rasterized, frame time percentiles; key latency;
-scroll; private memory).
+scroll; private memory). `truncated` is true when a phase or the key list hit
+the 200,000-sample cap; counts keep going, percentiles cover the first 200,000.
 
 ### What the numbers mean
 
 - **Frame time** is from kaze receiving the frame event to `Frame` returning
-  (building the frame and handing it to the GPU). Gio presents with vsync, so a
-  frame time above 16.7ms means a refresh was missed.
+  (building the frame and handing it to the GPU). A frame time over 16.7ms means
+  kaze could not have made that refresh; frame times under it do not prove no
+  refresh was dropped later (in the GPU or compositor), and nothing here sees
+  those.
 - **Key latency** is from the key being routed to the shell to the end of the
   first drawn frame whose cursor moved. It includes the shell echoing the key
-  through ConPTY or the pty. `last_out_*` is the part kaze owns: from the last
-  shell output before that frame to the frame. `frames_between` counts frames
+  through ConPTY or the pty. `last_out_*` is from the last change signal kaze
+  had before that frame's event (output parsed from the active tab, or rarely a
+  background tab's title or exit) to the end of the frame: that output was
+  already in the screen when the frame copied it, so this is mostly kaze's own
+  share, waiting for the frame plus drawing it. `frames_between` counts frames
   drawn after the echo started arriving but before the cursor moved (the shell
   sent it in pieces).
 - **Not included:** OS input delivery (keyboard to the window's message queue)
@@ -58,12 +64,19 @@ scroll; private memory).
 
 ## Safety
 
-- The harness starts kaze through WMI on Windows, so kaze isn't in the
-  foreground app's process tree and usually can't take focus. When it does, the
-  run notes `took_foreground` and `KAZE_BENCH_IGNORE_INPUT` keeps any typing out
-  of its shells.
-- Runs that type a command use pwsh with history saving off, so bench commands
-  don't land in your PowerShell history.
+- Bench mode drops all real input unless `KAZE_BENCH_ALLOW_INPUT=1`, so typing
+  into a bench window that took focus reaches no shell. Both harnesses make sure
+  that variable is off.
+- On Windows the harness starts kaze through WMI with `SW_SHOWNOACTIVATE`, so
+  kaze isn't in the foreground app's process tree and usually can't take focus;
+  when it does anyway, the run records `took_foreground`. On macOS a bare binary
+  can't be started without activating it, so the input drop is the safeguard.
+- Bench shells keep no history: pwsh with history saving off on Windows (the
+  Store pwsh ignores the APPDATA override), and `zsh -f` or `bash --norc` with
+  `HISTFILE=/dev/null` on macOS, set through a config file in the run's own
+  config dir.
+- `flood -claude` removes queries, input-mode switches and every OSC and DCS
+  string (titles, OSC 52 clipboard writes) from the capture before replaying it.
 - Every run has a deadline; the harness stops only the processes it started, by
   PID, including shells and flood left behind.
 - `flood` caps lines at 1,000,000, replays at most 300s and reads at most 16 MB

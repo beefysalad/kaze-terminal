@@ -315,20 +315,50 @@ func TestNilRecorderOutputIsNoOp(t *testing.T) {
 	r.Output(time.Now())
 }
 
-func TestIgnoreInputFromEnv(t *testing.T) {
+func TestRealInputDroppedByDefault(t *testing.T) {
 	var none *Recorder
 	if none.IgnoreInput() {
-		t.Fatal("nil recorder ignores input")
+		t.Fatal("nil recorder (bench off) drops input")
 	}
 	r, _ := newTest(t, nil)
 	defer r.Close(0)
-	if r.IgnoreInput() {
-		t.Fatal("input ignored without KAZE_BENCH_IGNORE_INPUT")
+	if !r.IgnoreInput() {
+		t.Fatal("bench mode should drop real input unless KAZE_BENCH_ALLOW_INPUT=1")
 	}
-	q, _ := newTest(t, map[string]string{"KAZE_BENCH_IGNORE_INPUT": "1"})
+	q, _ := newTest(t, map[string]string{"KAZE_BENCH_ALLOW_INPUT": "1"})
 	defer q.Close(0)
-	if !q.IgnoreInput() {
-		t.Fatal("KAZE_BENCH_IGNORE_INPUT=1 not honored")
+	if q.IgnoreInput() {
+		t.Fatal("KAZE_BENCH_ALLOW_INPUT=1 not honored")
+	}
+}
+
+func TestLastOutputCountsOnlyOutputBeforeTheFrame(t *testing.T) {
+	r, path := newTest(t, nil)
+	t0 := time.Now()
+	r.KeyArrived(t0, Cursor{Tab: 1, Col: 1})
+	r.Output(t0.Add(20 * time.Millisecond))
+	r.Output(t0.Add(21 * time.Millisecond))
+	r.Output(t0.Add(22500 * time.Microsecond)) // after the frame started: not in its rows for sure
+	r.FrameDone(t0.Add(22*time.Millisecond), t0.Add(23*time.Millisecond), Frame{Drawn: true, Cursor: Cursor{Tab: 1, Col: 2}})
+	r.Close(0)
+	lines := readLog(t, path)
+	keys := lines[len(lines)-1]["keys"].(map[string]any)
+	if keys["last_out_p50_ms"].(float64) != 2 {
+		t.Fatalf("last_out_p50_ms = %v, want 2", keys["last_out_p50_ms"])
+	}
+}
+
+func TestSummaryFlagsTruncatedSamples(t *testing.T) {
+	r, path := newTest(t, nil)
+	t0 := time.Now()
+	for range maxSamples + 1 {
+		r.FrameDone(t0, t0.Add(time.Millisecond), Frame{Drawn: true})
+	}
+	r.Close(0)
+	lines := readLog(t, path)
+	f := lines[len(lines)-1]["frames"].(map[string]any)
+	if f["truncated"] != true || f["frames"].(float64) != maxSamples+1 {
+		t.Fatalf("frames %v", f)
 	}
 }
 

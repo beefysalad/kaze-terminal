@@ -408,10 +408,7 @@ func (win *window) termEvents(gtx layout.Context, t *tabs.Tab, cw, ch int) {
 		batch = append(batch, ev)
 	}
 	if win.bench != nil {
-		if win.bench.IgnoreInput() {
-			batch = batch[:0]
-		}
-		batch = win.benchInput(gtx, t, batch, ch)
+		batch = win.benchBatch(gtx, t, batch, ch)
 	}
 	win.route(gtx, batch, cw, ch)
 }

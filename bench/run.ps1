@@ -5,18 +5,21 @@
 # from reading the kaze process's counters. The harness never sends keyboard or
 # mouse input to any window: synthetic keys are injected inside kaze.
 # It only stops processes it started, by PID, and every run has a deadline.
+# Defaults sit next to the checkout: <parent>\kaze-wt\bench for output and
+# <parent>\kaze-wt\captures\claude-7.bin for the capture (where Task 7 left it).
 param(
-  [string]$Out = "%USERPROFILE%\Desktop\kaze-wt\bench",
-  [string]$Capture = "%USERPROFILE%\Desktop\kaze-wt\captures\claude-7.bin",
+  [string]$Out = (Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'kaze-wt\bench'),
+  [string]$Capture = (Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'kaze-wt\captures\claude-7.bin'),
   [int]$LaunchRuns = 5,
-  [string]$GoTmp = "%USERPROFILE%/Desktop/kaze-wt/gotmp-main",
+  # A Go temp dir outside %TEMP% helps when Smart App Control blocks test binaries; empty keeps Go's default.
+  [string]$GoTmp = $env:GOTMPDIR,
   # Run only these scenarios: launch, keys, flood, claude, idle, full.
   [string[]]$Only = @()
 )
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
 $env:PATH = "$env:LOCALAPPDATA\Programs\go\bin;$env:PATH"
-$env:GOTMPDIR = $GoTmp
+if ($GoTmp) { $env:GOTMPDIR = $GoTmp }
 New-Item -ItemType Directory -Force $Out | Out-Null
 # kaze reads its config from %APPDATA%\kaze\config.toml, so each run points APPDATA at one of these.
 # default: no config, kaze as shipped (pwsh). quiet: pwsh with history saving off, for runs that
@@ -73,15 +76,16 @@ function Stop-Tree([int[]]$ids) {
 }
 
 # Start-Detached starts exe through WMI, so its parent is the WMI host and not this
-# shell. A process outside the foreground app's tree is not allowed to take the
-# foreground, so the kaze window can't grab the keyboard from whatever the owner
-# is typing into (Windows flashes its taskbar button instead).
+# shell, and shows it with SW_SHOWNOACTIVATE (4). Windows usually refuses the
+# foreground to a process outside the foreground app's tree, but not always (Gio
+# asks for it, and Windows allows it after a stretch with no input), so kaze's
+# bench mode also drops all real input by default.
 function Start-Detached([string]$exe, [hashtable]$vars) {
   $envs = @{}
   foreach ($e in [Environment]::GetEnvironmentVariables().GetEnumerator()) { $envs[$e.Key] = $e.Value }
   foreach ($k in $vars.Keys) { $envs[$k] = $vars[$k] }
   $list = [string[]]@($envs.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" })
-  $si = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ EnvironmentVariables = $list; ShowWindow = [uint16]1 }
+  $si = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ EnvironmentVariables = $list; ShowWindow = [uint16]4 }
   $r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{
     CommandLine = "`"$exe`""; CurrentDirectory = (Split-Path $exe); ProcessStartupInformation = $si }
   if ($r.ReturnValue -ne 0) { return $null }
@@ -93,8 +97,8 @@ function Start-Detached([string]$exe, [hashtable]$vars) {
 function Run-Kaze([string]$name, [hashtable]$vars, [int]$seconds, [int[]]$sampleAt = @(), [string]$config = 'quiet') {
   $log = Join-Path $Out "$name.log"
   Remove-Item $log -ErrorAction SilentlyContinue
-  # IGNORE_INPUT: if the window takes focus anyway, a person's typing can't reach its shells.
-  $all = @{ KAZE_BENCH = '1'; KAZE_BENCH_LOG = $log; KAZE_BENCH_SECONDS = "$seconds"; KAZE_BENCH_IGNORE_INPUT = '1'
+  # ALLOW_INPUT is forced empty so real input stays dropped even if this shell has it set.
+  $all = @{ KAZE_BENCH = '1'; KAZE_BENCH_LOG = $log; KAZE_BENCH_SECONDS = "$seconds"; KAZE_BENCH_ALLOW_INPUT = ''
     APPDATA = (Join-Path $Out "appdata-$config") } + $vars
   $p = $null
   for ($try = 1; $try -le 8 -and -not $p; $try++) {

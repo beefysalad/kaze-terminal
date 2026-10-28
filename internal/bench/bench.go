@@ -55,7 +55,8 @@ type Config struct {
 	Scroll  int           // page to the top once history holds this many lines; 0 is off
 	Seconds int           // the window closes itself after this long
 	// IgnoreInput drops real keyboard, mouse and paste input, so a person typing
-	// into a bench window that took focus can't run anything in its shells.
+	// into a bench window that took focus can't run anything in its shells. It is
+	// on by default; KAZE_BENCH_ALLOW_INPUT=1 turns it off for manual runs.
 	IgnoreInput bool
 }
 
@@ -82,8 +83,9 @@ type pending struct {
 	at  time.Time
 	cur Cursor
 	out time.Time // first shell output after the key: the echo reaching kaze
-	// last is the latest shell output before the echo frame; from it to the frame is kaze's own share
-	last time.Time
+	// outs are the output signals after out (bounded); the latest one before the echo frame
+	// started was parsed before that frame copied its rows, so from it to the frame is kaze's share.
+	outs []time.Time
 	// frames drawn after out that did not show the echo yet (the shell sent it in pieces)
 	between int
 }
@@ -113,9 +115,29 @@ func (p *phase) add(d time.Duration, f Frame) {
 	}
 }
 
+// appendCapped appends d unless s already holds maxSamples.
+func appendCapped(s []time.Duration, d time.Duration) []time.Duration {
+	if len(s) >= maxSamples {
+		return s
+	}
+	return append(s, d)
+}
+
+// lastBefore is the latest time in ts that is not after t.
+func lastBefore(ts []time.Time, t time.Time) (time.Time, bool) {
+	var best time.Time
+	for _, x := range ts {
+		if !x.After(t) && x.After(best) {
+			best = x
+		}
+	}
+	return best, !best.IsZero()
+}
+
 func (p *phase) summary() map[string]any {
 	return map[string]any{
-		"frames": p.Frames, "drawn": p.Drawn, "late": p.Late, "rows_rasterized": p.Rows,
+		"truncated": p.Frames > len(p.durs), // percentiles cover only the first maxSamples frames
+		"frames":    p.Frames, "drawn": p.Drawn, "late": p.Late, "rows_rasterized": p.Rows,
 		"p50_ms": ms(Percentile(p.durs, 50)), "p99_ms": ms(Percentile(p.durs, 99)), "max_ms": ms(p.Max),
 	}
 }
@@ -175,7 +197,7 @@ func FromEnv(getenv func(string) string) *Recorder {
 		Scroll:  intIn(getenv("KAZE_BENCH_SCROLL"), 0, 0, maxScroll),
 		Seconds: intIn(getenv("KAZE_BENCH_SECONDS"), 60, 1, maxSeconds),
 
-		IgnoreInput: getenv("KAZE_BENCH_IGNORE_INPUT") == "1",
+		IgnoreInput: getenv("KAZE_BENCH_ALLOW_INPUT") != "1",
 	}
 	if len(c.Type) > maxType {
 		c.Type = c.Type[:maxType]
@@ -316,7 +338,9 @@ func (r *Recorder) KeyArrived(now time.Time, c Cursor) {
 	r.pending = append(r.pending, pending{at: now, cur: c})
 }
 
-// Output records that the active tab's shell wrote something; it may be called from any goroutine.
+// Output records a tab's change signal: output from the active tab, or a background
+// tab's title or exit changing (the tab manager only signals those for hidden tabs).
+// It may be called from any goroutine.
 func (r *Recorder) Output(now time.Time) {
 	if r == nil {
 		return
@@ -330,7 +354,9 @@ func (r *Recorder) Output(now time.Time) {
 		if r.pending[i].out.IsZero() {
 			r.pending[i].out = now
 		}
-		r.pending[i].last = now
+		if len(r.pending[i].outs) < maxPending {
+			r.pending[i].outs = append(r.pending[i].outs, now)
+		}
 	}
 }
 
@@ -365,11 +391,13 @@ func (r *Recorder) FrameDone(start, end time.Time, f Frame) {
 	for _, p := range r.pending {
 		switch {
 		case p.cur != f.Cursor:
-			r.keys = append(r.keys, end.Sub(p.at))
+			r.keys = appendCapped(r.keys, end.Sub(p.at))
 			if !p.out.IsZero() {
-				r.draws = append(r.draws, end.Sub(p.out))
-				r.between = append(r.between, time.Duration(p.between))
-				r.lasts = append(r.lasts, end.Sub(p.last))
+				r.draws = appendCapped(r.draws, end.Sub(p.out))
+				r.between = appendCapped(r.between, time.Duration(p.between))
+				if last, ok := lastBefore(p.outs, start); ok {
+					r.lasts = appendCapped(r.lasts, end.Sub(last))
+				}
 			}
 		case end.Sub(p.at) > keyTimeout:
 			r.dropped++
@@ -475,7 +503,7 @@ func (r *Recorder) Close(privateMB float64) {
 	s := map[string]any{
 		"event": "summary", "private_mb": privateMB, "frames": r.all.summary(),
 		"keys": map[string]any{
-			"samples": len(r.keys), "dropped": r.dropped, "sent": r.sent,
+			"samples": len(r.keys), "dropped": r.dropped, "sent": r.sent, "truncated": len(r.keys) >= maxSamples,
 			"p50_ms": ms(Percentile(r.keys, 50)), "p99_ms": ms(Percentile(r.keys, 99)),
 			"min_ms": ms(Percentile(r.keys, 0)), "max_ms": ms(Percentile(r.keys, 100)),
 			"draw_samples": len(r.draws), "draw_p50_ms": ms(Percentile(r.draws, 50)),

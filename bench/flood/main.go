@@ -68,9 +68,10 @@ func flood(w io.Writer, n int) error {
 	return nil
 }
 
-// strip drops the capture's queries and input-mode switches: their replies would
-// land in the shell's input after the replay, and the modes would outlive it.
-var strip = regexp.MustCompile(`\x1b\[\?(9001|1004|2004|2031)[hl]|\x1b\[[<>]\d*u|\x1b\[\?u|\x1b\[>4;\d+m|\x1b\[>0q|\x1b\]7501;[^\x07]*\x07`)
+// strip drops the capture's queries and input-mode switches (their replies would
+// land in the shell's input after the replay, and the modes would outlive it), and
+// every OSC and DCS string: titles, OSC 52 clipboard writes and the like.
+var strip = regexp.MustCompile(`\x1b\[\?(9001|1004|2004|2031)[hl]|\x1b\[[<>]\d*u|\x1b\[\?u|\x1b\[>4;\d+m|\x1b\[>0q|\x1b\][^\x07\x1b]*(?:\x07|\x1b\x5c)|\x1bP[^\x1b]*\x1b\x5c`)
 
 // reset puts the terminal back the way a shell expects it.
 const reset = "\x1b[?2026l\x1b[0m\x1b[?25h\r\n"
