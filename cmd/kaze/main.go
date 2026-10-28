@@ -19,6 +19,9 @@ var r string
 
 func main() {
 	_ = r
+	if len(os.Args) > 1 && os.Args[1] == "notify" {
+		os.Exit(runNotify(os.Args[2:], stdinForNotify(), os.Getenv)) // before any window code
+	}
 	rec := bench.FromEnv(os.Getenv) // nil, and free, unless KAZE_BENCH is set
 	cfg, warns := loadConfig()
 	shell := cfg.Shell

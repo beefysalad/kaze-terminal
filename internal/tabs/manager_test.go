@@ -381,3 +381,23 @@ func TestNewTabSetsKazeTerminalIdentity(t *testing.T) {
 		}
 	}
 }
+
+func TestNewTabEnvHasNotifyVars(t *testing.T) {
+	t.Setenv("KAZE_NOTIFY", "stale")
+	t.Setenv("kaze_notify_token", "stale") // inherited copies must go, in any case
+	m, st := newManager(t)
+	m.SetNotify("127.0.0.1:5555", "abc123")
+	mustNew(t, m)
+	for _, want := range []string{"KAZE_NOTIFY=127.0.0.1:5555", "KAZE_NOTIFY_TOKEN=abc123"} {
+		name := want[:strings.Index(want, "=")+1]
+		n, got := countPrefix(st.envs[0], name)
+		if n != 1 || got != want {
+			t.Errorf("%d %s entries, last %q; want exactly %q", n, name, got, want)
+		}
+	}
+	for _, e := range st.envs[0] {
+		if strings.Contains(e, "stale") {
+			t.Errorf("inherited %q leaked into the tab env", e)
+		}
+	}
+}
