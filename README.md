@@ -6,10 +6,6 @@ all day, so it does a few things well (tabs, fast redraws, Japanese text, Claude
 symbols) and leaves out most of what a full terminal suite has. It has no settings screen;
 everything lives in one small config file.
 
-<!-- LICENSE: pending owner -->
-
-<!-- MODULE PATH: pending owner -->
-
 ## Status
 
 - **Windows:** works. This is what I use every day (Windows 11, PowerShell 7).
@@ -166,3 +162,10 @@ Later:
 
 - A browser button.
 - A graph view of my notes vault.
+
+## License
+
+kaze's code is under the [MIT License](LICENSE). The bundled fonts in `assets/fonts`
+(JetBrains Mono and a subset of Noto Sans JP) are not covered by it: each keeps its own
+SIL Open Font License 1.1, in `assets/fonts/OFL-JetBrainsMono.txt` and
+`assets/fonts/OFL-NotoSansJP.txt`, with sources in `assets/fonts/SOURCES.txt`.
