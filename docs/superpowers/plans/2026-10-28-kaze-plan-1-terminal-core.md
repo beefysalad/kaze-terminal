@@ -16,7 +16,7 @@
 
 - Platforms: Windows and macOS from one codebase. No Linux-specific work. Every task's tests must pass on Windows; platform-specific code uses `_windows.go` / `_darwin.go` / `_unix.go` build suffixes.
 - Module path: `github.com/patrick-gogo/kaze`. Binary: `kaze`.
-- Performance targets (spec section 5, hard): keypress to glyph under 10ms; launch to ready prompt under 500ms; kaze's own memory idle with 4 tabs under ~60MB (excluding shells and their children); no flicker or tearing during Claude Code streaming; smooth scroll through 10,000 lines; idle CPU effectively zero.
+- Performance goals (spec section 5, revised 2026-10-28): keypress to glyph under 10ms; Claude Code streaming frames under 16.7ms with no flicker or tearing; launch to ready prompt under 500ms; smooth scroll through 10,000 lines; idle CPU effectively zero; memory has no hard cap but is measured and must not grow with idle tabs. Go and Gio are fixed (Patrick's ruling); beating Warp is not a goal.
 - Rendering rules (spec 6.2): redraw only dirty lines; rasterize each glyph once and reuse; no frame when nothing changed; draw at most once per display refresh.
 - Sessions do not survive kaze closing or crashing. Shells live in the kaze process, behind the `ptyx.Session` interface.
 - Japanese: display and paste only. No IME composition.
@@ -58,6 +58,23 @@ git commit -m "chore(spike): Measure Gio text and atlas rendering paths"
 ```
 
 macOS numbers for the spike are taken at the first milestone run on the MacBook (spec 10.3), not here.
+
+**Outcome (2026-10-28):** neither mode passed (see `docs/spike-results.md`). Patrick ruled: keep Go and Gio, drop the memory cap and the Warp bar. Task 0b picks the drawing method instead of gating.
+
+---
+
+### Task 0b: Second spike: one CPU-drawn grid image, changed rows only
+
+Not a go/no-go gate. It picks the drawing method Task 10 uses.
+
+**Files:**
+- Modify: `spike/gio/main.go` (add `-mode=image`)
+- Modify: `docs/spike-results.md` (add a section for the new mode and the decision)
+
+- [ ] **Step 1: Add `-mode=image`.** Keep one `*image.RGBA` the size of the whole grid. Rasterize glyphs once into a glyph cache (reuse the atlas code), and on each change draw only the changed cells' glyphs into the grid image on the CPU. Hand Gio the whole grid as ONE `paint.ImageOp` per frame (a single paint op), so Gio has one texture to show instead of thousands of ops. If Gio re-uploads the full texture on every change, record that cost; also try splitting the grid into horizontal strips (e.g. 8 strips, one `ImageOp` each, only changed strips get a new image) and record both.
+- [ ] **Step 2: Measure on Windows** with the same commands as Task 0: one-cell frame time p50/p99 (`-autotype`), `-stream` frame time p50/p99 and late frames (over 16.7ms), private memory after 10s idle, idle CPU over 30s.
+- [ ] **Step 3: Decide.** Pick the fastest mode across `text`, `atlas`, `image` (and the strip variant) by: stream p99 first (goal under 16.7ms), then one-cell p99 (goal under 10ms). Record the winner and whether each goal was met. Goals not met are recorded, not blocking.
+- [ ] **Step 4: Commit** `chore(spike): Measure single-image grid rendering`
 
 ---
 
@@ -539,7 +556,7 @@ func TestOtherSessionsUnaffectedByOneExiting(t *testing.T) { /* two sessions; on
 - Test: `internal/render/renderer_test.go`
 
 **Interfaces:**
-- Consumes: `term.Session`, `screen.Screen`, `Modes`, `SyncSince`, Task 0's winning mode.
+- Consumes: `term.Session`, `screen.Screen`, `Modes`, `SyncSince`, the winning mode recorded in `docs/spike-results.md` by Task 0b.
 - Produces:
 
 ```go
@@ -570,7 +587,7 @@ func TestJapaneseUsesFallbackFont(t *testing.T) { /* glyph for '日' comes from 
 ```
 
 - [ ] **Step 2: Run** `go test ./internal/render/...`. Expected: FAIL.
-- [ ] **Step 3: Implement** using Task 0's winning text path. The renderer keeps a per-row cached op list (`op.CallOp` via `op.Record`) and re-records only dirty rows; clean rows replay their cached ops. Inverse, bold (bright on the 8 basic colors), underline, strike and dim are drawn here. Cursor: block when focused, outline when not, hidden when `CursorVisible` is false. Synchronized output: skip re-recording while `Synchronized` is set, up to 150ms after `SyncSince()`.
+- [ ] **Step 3: Implement** using Task 0b's winning drawing method; only dirty rows are redrawn (re-recorded ops for the op-based modes, re-rasterized rows for the image mode), clean rows reuse what was drawn before. Inverse, bold (bright on the 8 basic colors), underline, strike and dim are drawn here. Cursor: block when focused, outline when not, hidden when `CursorVisible` is false. Synchronized output: skip re-recording while `Synchronized` is set, up to 150ms after `SyncSince()`.
 - [ ] **Step 4: Run** `go test ./internal/render/...`. Expected: PASS.
 - [ ] **Step 5: Commit** `feat(render): Draw only changed rows with a glyph cache`
 
@@ -773,7 +790,7 @@ func TestPartialFileKeepsOtherDefaults(t *testing.T) {}
   - idle CPU: average over 30s with 4 idle tabs,
   - scroll: time to page through 10,000 lines of scrollback and dropped frames (`render.Stats`),
   - keypress latency: software screen-capture timing (send a key with `SendInput` on Windows, detect the glyph change by polling the window region), 200 samples, p50/p99.
-- [ ] **Step 3: Run on Windows** and write `docs/benchmarks/<date>-milestone-1.md` with a table: target, kaze, Warp, pass/fail per row (spec section 5 and 10.3). Each target missed is listed with what was measured.
+- [ ] **Step 3: Run on Windows** and write `docs/benchmarks/<date>-milestone-1.md` with a table: goal, kaze, met yes/no, and Warp for reference only (spec section 5 and 10.3). Each goal missed is listed with what was measured.
 - [ ] **Step 4: Commit** `chore(bench): Add benchmark harness and first milestone results`
 
 The macOS run of the same harness is done on Patrick's MacBook as part of the milestone (spec 10.3).

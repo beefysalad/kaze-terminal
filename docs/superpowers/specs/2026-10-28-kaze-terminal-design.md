@@ -31,24 +31,24 @@ Today Patrick uses **Warp** on both Windows and macOS. He uses it like a plain t
 
 ## 4. Anti-goals (failure even if it works)
 
-- **Laggy or heavy.** If kaze is slower or uses noticeably more memory than Warp on the benchmarks in section 5, it has failed and Patrick will go back to Warp.
+- **Laggy.** If typing or Claude Code's streaming output feels sluggish, kaze has failed. Fitting Patrick's workflow comes first; beating Warp is not a goal (Patrick, 2026-10-28, after the first Gio spike).
 - Background CPU use when nothing is happening.
 - Features that cost performance when they are not visible (a hidden panel must cost nothing).
 
-## 5. Performance targets (hard requirements)
+## 5. Performance goals
 
-Every feature is checked against these before it is merged. The same tests are run against Warp on the same machine; kaze must beat Warp on every row.
+Revised 2026-10-28 after the first Gio spike showed an empty Gio window alone uses ~160MB on Patrick's laptop (GPU driver baseline). Patrick's ruling: keep Go and Gio; the bar is "fast and not laggy", not beating Warp.
 
-| Measure | Target |
+| Measure | Goal |
 |---|---|
 | Keypress to glyph on screen | under 10ms |
+| Claude Code streaming | frames under 16.7ms (60fps), no flicker, no tearing |
 | Launch to ready prompt | under 500ms |
-| kaze's own memory, idle, 4 tabs | under ~60MB (excluding shells and the processes in them) |
-| Claude Code redrawing / streaming | no flicker, no tearing |
 | Scrolling 10,000 lines of scrollback | smooth, no visible stutter |
 | Idle CPU | effectively zero |
+| Memory | no hard cap; measured and reported, kept from growing with idle tabs |
 
-A small benchmark harness that measures these on both terminals is part of the work, not an afterthought.
+A small benchmark harness that measures these is part of the work. Warp is measured alongside for reference only.
 
 ## 6. First version: what it does
 
@@ -132,9 +132,9 @@ A single config file in a standard per-user location (font, font size, colors, d
 
 ## 10. Calls made after the builder review (Claude's calls, Patrick can override)
 
-1. **If the Gio spike misses the targets:** keep Go and Gio's window/input, and replace its normal text path with a custom renderer that rasterizes glyphs into a cached atlas and draws them as images. Targets are not relaxed. Reopening the language is only on the table if that also fails, and that goes back to Patrick. The spike tests both text paths, so the plan is "spike with a pre-agreed fallback".
+1. **If the Gio spike misses the targets:** *(superseded 2026-10-28 by Patrick: Go and Gio stay regardless; spikes pick the fastest drawing method, they are not go/no-go gates.)*
 2. **Alerts when kaze isn't focused:** first version is in-app (tab mark + pane) plus a taskbar flash on Windows and a Dock bounce/badge on macOS. These need no signing or packaging. Real OS toast notifications come later.
-3. **Benchmark gate:** the absolute targets in section 5 are the per-merge floor, run automatically on Windows (memory, launch, scroll, idle CPU). Keypress latency is measured with software screen-capture timing. The full "beat Warp on every row" comparison runs on both Windows and the MacBook at each milestone, not every merge.
+3. **Benchmarks:** the section 5 goals are measured on Windows at each milestone (and on the MacBook when available). Keypress latency uses software screen-capture timing. Warp numbers are recorded for reference, not as a pass/fail bar.
 4. **Attention categories:** two, straight from the hooks: **done** (turn finished) and **needs you** (permission prompt or waiting for input). No guessing from transcript text.
 5. **Usage source:** if no reliable 5-hour/weekly source exists, the first version ships with per-session tokens and cost from the transcripts, and plan usage follows when a source is found. If Patrick already has a Claude Code status line, kaze's script wraps it instead of replacing it.
 6. **Which sessions count:** only Claude Code started in a kaze tab on the local machine. remote agent runner jobs, SSH, WSL and Docker sessions are out of scope for subagent views and alerts (remote agent runner has its own dashboard).
