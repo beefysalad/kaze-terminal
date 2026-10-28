@@ -1,0 +1,118 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>kaze title bar and status bar mockup</title>
+<body style="background:#16181d;color:#d7dae3;font-family:system-ui;padding:24px">
+<style>
+  .wrap{display:flex;flex-direction:column;gap:30px;margin-top:16px}
+  .lbl{font-size:14px;opacity:.75;margin:0 0 10px}
+  .win{border-radius:10px;overflow:hidden;background:#0f1117;color:#d7dae3;font-family:"JetBrains Mono",Consolas,Menlo,monospace;font-size:12.5px;line-height:1.55;box-shadow:0 22px 60px rgba(0,0,0,.55);border:1px solid #1d2230;position:relative}
+  .bar{display:flex;align-items:stretch;background:#0b0d12;height:40px;user-select:none}
+  .tabs{display:flex;align-items:flex-end;gap:4px;padding:0 8px;flex:1;min-width:0}
+  .tab{display:flex;align-items:center;gap:7px;padding:0 12px;height:32px;border-radius:9px 9px 0 0;color:#8a90a2;font-size:12px;white-space:nowrap;cursor:default}
+  .tab:hover{color:#c9cdd8;background:#12151d}
+  .tab.on{background:#0f1117;color:#fff}
+  .tab .x{opacity:0;margin-left:4px;font-size:11px;color:#8a90a2}
+  .tab:hover .x,.tab.on .x{opacity:.8}
+  .child{font-size:11px;height:26px;padding:0 10px;background:#161a24;color:#b9a6ff;border-radius:7px 7px 0 0}
+  .plus{color:#8a90a2;padding:0 10px;height:32px;display:flex;align-items:center;font-size:15px}
+  .plus:hover{color:#fff}
+  .drag{flex:1;min-width:40px}
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+  .att{animation:pulse 1.6s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(242,184,75,.0)}50%{box-shadow:0 0 0 4px rgba(242,184,75,.25)}}
+  /* windows caption buttons */
+  .caps{display:flex;align-items:stretch}
+  .cap{width:46px;display:flex;align-items:center;justify-content:center;color:#a7adbd;cursor:default;transition:background .12s,color .12s}
+  .cap svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:1.2}
+  .cap:hover{background:#1a1f2c;color:#fff}
+  .cap.close:hover{background:#e5484d;color:#fff}
+  /* mac traffic lights */
+  .lights{display:flex;align-items:center;gap:8px;padding:0 14px 0 14px}
+  .l{width:12px;height:12px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;color:transparent;font-family:system-ui}
+  .lights:hover .l{color:rgba(0,0,0,.6)}
+  .l.r{background:#ff5f57}.l.y{background:#febc2e}.l.g{background:#28c840}
+  .body{display:flex;height:220px}
+  .pane{flex:1;padding:12px 14px;overflow:hidden}
+  .side{width:40%;padding:12px 14px;background:#12151d;border-left:1px solid #1d2230;overflow:hidden}
+  .dim{color:#5d6273}.tool{color:#8ab4ff}.ok{color:#62d39a}.acc{color:#b9a6ff}
+  .status{display:flex;justify-content:space-between;padding:6px 14px;font-size:11px;background:#0b0d12;color:#7d8394;border-top:1px solid #1d2230}
+  .toast{position:absolute;right:14px;bottom:40px;background:#1a1f2c;border:1px solid #2a3142;color:#e7e9f0;border-radius:10px;padding:10px 12px;font-size:12px;display:flex;gap:10px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+  .toast b{color:#fff}
+  .toast .go{margin-left:6px;color:#b9a6ff}
+  .edge{position:absolute;inset:0;pointer-events:none;border-radius:10px;box-shadow:inset 0 0 0 1px rgba(139,123,255,.0)}
+  .cwd{color:#c9cdd8}.br{color:#62d39a;margin-left:12px}.sep{margin:0 10px;color:#3a4050}
+  .note{font-size:13px;opacity:.7;margin-top:8px}
+</style>
+
+<h2>kaze's own title bar + status bar with folder and git branch</h2>
+<p>Hover the buttons and tabs, it's live. Tabs sit right in the title bar; empty bar space drags the window, double-click maximizes. The amber tab and the pane bottom-right are the Plan 3 attention alert.</p>
+
+<div class="wrap">
+
+<div>
+  <p class="lbl"><b>Windows</b>: kaze's own minimize, maximize/restore and close (close turns red on hover)</p>
+  <div class="win">
+    <div class="bar">
+      <div class="tabs">
+        <div class="tab on"><span class="dot" style="background:#8b7bff"></span>✳ TICKET-123 · claude<span class="x">✕</span></div>
+        <div class="tab child">↳ Re-review</div><div class="tab child">↳ Security</div>
+        <div class="tab"><span class="dot att" style="background:#f2b84b"></span>TICKET-124 · claude<span class="x">✕</span></div>
+        <div class="tab">dev servers<span class="x">✕</span></div>
+        <div class="plus">+</div>
+        <div class="drag"></div>
+      </div>
+      <div class="caps">
+        <div class="cap" title="Minimize"><svg viewBox="0 0 10 10"><line x1="0" y1="5" x2="10" y2="5"/></svg></div>
+        <div class="cap" title="Maximize / Restore"><svg viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" rx="1"/></svg></div>
+        <div class="cap close" title="Close"><svg viewBox="0 0 10 10"><line x1="0" y1="0" x2="10" y2="10"/><line x1="10" y1="0" x2="0" y2="10"/></svg></div>
+      </div>
+    </div>
+    <div class="body">
+      <div class="pane">
+        <div class="dim">❯ ship the remaining tasks</div>
+        <div><span class="acc">⏺</span> Dispatching 2 reviewers in parallel</div>
+        <div class="tool">  ⎿ Agent(Re-review Task 21 fix)</div>
+        <div class="tool">  ⎿ Agent(Security pass)</div>
+        <div class="dim">  ✻ waiting on 2 agents…</div>
+      </div>
+      <div class="side">
+        <div class="acc" style="margin-bottom:6px">↳ Re-review Task 21 fix · live</div>
+        <div class="tool">Bash  git show ff3a2c05b</div>
+        <div class="tool">Read  payment_retry.py</div>
+        <div>The re-authorize path now checks…</div>
+      </div>
+    </div>
+    <div class="toast"><span class="dot" style="background:#f2b84b"></span><span><b>TICKET-124</b> needs you · permission prompt</span><span class="go">Go ›</span></div>
+    <div class="status"><span><span class="cwd">~Desktopproject</span><span class="br">⎇ feature/TICKET-123</span><span class="sep">·</span>claude 5h 42% · week 18%</span><span>kaze 61MB · 4 tabs</span></div>
+  </div>
+</div>
+
+<div>
+  <p class="lbl"><b>macOS</b>: native red/yellow/green set into kaze's dark bar (hover them for ✕ – ⤢)</p>
+  <div class="win">
+    <div class="bar">
+      <div class="lights"><div class="l r">✕</div><div class="l y">–</div><div class="l g">⤢</div></div>
+      <div class="tabs" style="padding-left:2px">
+        <div class="tab on"><span class="dot" style="background:#8b7bff"></span>✳ TICKET-123 · claude<span class="x">✕</span></div>
+        <div class="tab child">↳ Re-review</div>
+        <div class="tab"><span class="dot att" style="background:#f2b84b"></span>TICKET-124 · claude<span class="x">✕</span></div>
+        <div class="tab">dev servers<span class="x">✕</span></div>
+        <div class="plus">+</div>
+        <div class="drag"></div>
+      </div>
+    </div>
+    <div class="body" style="height:140px">
+      <div class="pane">
+        <div class="dim">❯ git status</div>
+        <div>On branch <span class="ok">feature/TICKET-123</span></div>
+        <div class="dim">nothing to commit, working tree clean</div>
+      </div>
+    </div>
+    <div class="status"><span><span class="cwd">~/Projects/kaze</span><span class="br">⎇ main</span><span class="sep">·</span>claude 5h 42% · week 18%</span><span>kaze 58MB · 4 tabs</span></div>
+  </div>
+</div>
+
+</div>
+<p class="note">Status-bar usage numbers are Plan 4; shown here only so the bar looks complete. Window edges stay resizable on both.</p>
+
+</body>
