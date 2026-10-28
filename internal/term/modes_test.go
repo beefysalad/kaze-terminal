@@ -127,8 +127,12 @@ func TestOSCTitle(t *testing.T) {
 	if a.Title() != "claude" {
 		t.Fatalf("%q", a.Title())
 	}
-	vt.NewParser(a).Feed([]byte("\x1b]2;two\x1b\\x1b]1;icon\x07"))
+	vt.NewParser(a).Feed([]byte("\x1b]2;two\x1b\\\x1b]1;icon\x07"))
 	if a.Title() != "two" {
-		t.Fatalf("%q", a.Title())
+		t.Fatalf("OSC 1 changed the title: %q", a.Title())
+	}
+	vt.NewParser(a).Feed([]byte("\x1b]0\x07"))
+	if a.Title() != "two" {
+		t.Fatalf("malformed OSC 0 changed the title: %q", a.Title())
 	}
 }

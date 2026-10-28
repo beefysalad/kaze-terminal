@@ -123,7 +123,7 @@ func (a *Applier) CSI(params []int, intermediates []byte, private byte, final by
 		a.deviceStatus(params)
 	case 'c':
 		if param(params, 0, 0) == 0 {
-			a.replyf("[?62;22c")
+			a.replyf("\x1b[?62;22c")
 		}
 	}
 }
@@ -147,6 +147,8 @@ func (a *Applier) ESC(intermediates []byte, final byte) {
 		s.ReverseIndex()
 	case 'c':
 		s.Reset()
+		a.modes = Modes{CursorVisible: true}
+		a.syncSince = time.Time{}
 	}
 }
 

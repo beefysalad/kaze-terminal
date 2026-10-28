@@ -28,6 +28,8 @@ func (s *Screen) Resize(cols, rows int) {
 		s.saved.row -= drop
 	}
 	s.saved.row = clamp(s.saved.row, 0, rows-1)
+	s.altSaved.col = clamp(s.altSaved.col, 0, cols-1) // the main cursor, which drop never shifts while on alt
+	s.altSaved.row = clamp(s.altSaved.row, 0, rows-1)
 	s.scrollTop, s.scrollBottom = 0, rows-1
 	s.viewOffset = clamp(s.viewOffset, 0, s.sb.count)
 	s.MarkAllDirty()

@@ -10,6 +10,7 @@ type Modes struct {
 	AppCursorKeys, BracketedPaste, CursorVisible bool
 	MouseX10, MouseButton, MouseAny, MouseSGR    bool
 	Synchronized, AltScreen                      bool
+	FocusEvents                                  bool // DEC 1004: report focus in/out
 }
 
 func (a *Applier) Modes() Modes { return a.modes }
@@ -35,12 +36,12 @@ func (a *Applier) setPrivateMode(params []int, on bool) {
 				continue
 			}
 			if on {
-				a.s.SaveCursor()
+				a.s.SaveAltCursor()
 			}
 			a.s.UseAltScreen(on)
 			a.modes.AltScreen = on
 			if !on {
-				a.s.RestoreCursor()
+				a.s.RestoreAltCursor()
 			}
 		case 9:
 			a.modes.MouseX10 = on
@@ -50,6 +51,8 @@ func (a *Applier) setPrivateMode(params []int, on bool) {
 			a.modes.MouseAny = on
 		case 1006:
 			a.modes.MouseSGR = on
+		case 1004:
+			a.modes.FocusEvents = on
 		case 2004:
 			a.modes.BracketedPaste = on
 		case 2026:
@@ -80,6 +83,8 @@ func (a *Applier) queryPrivateMode(p int) {
 		v = a.modes.MouseAny
 	case 1006:
 		v = a.modes.MouseSGR
+	case 1004:
+		v = a.modes.FocusEvents
 	case 2004:
 		v = a.modes.BracketedPaste
 	case 2026:

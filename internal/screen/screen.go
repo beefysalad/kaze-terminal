@@ -15,6 +15,7 @@ type Screen struct {
 
 	scrollTop, scrollBottom int // DECSTBM region, 0-based inclusive; the full screen by default
 	saved                   savedCursor
+	altSaved                savedCursor // mode 1049's own slot, so an app's DECSC can't clobber it
 
 	sb         scrollback
 	viewOffset int // lines scrolled back from the bottom

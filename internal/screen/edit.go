@@ -218,15 +218,17 @@ func (s *Screen) EraseChars(n int) {
 func (s *Screen) SaveCursor() { s.saved = savedCursor{s.curCol, s.curRow, s.pen, true, s.wrapPending} }
 
 // RestoreCursor restores them (DECRC); with nothing saved it goes home with the default pen.
-func (s *Screen) RestoreCursor() {
-	if !s.saved.valid {
+func (s *Screen) RestoreCursor() { s.restore(s.saved) }
+
+func (s *Screen) restore(c savedCursor) {
+	if !c.valid {
 		s.SetCursor(0, 0)
 		s.pen = blankCell
 		return
 	}
-	s.SetCursor(s.saved.col, s.saved.row)
-	s.pen = s.saved.pen
-	s.wrapPending = s.saved.wrap
+	s.SetCursor(c.col, c.row)
+	s.pen = c.pen
+	s.wrapPending = c.wrap
 }
 
 // TabForward moves to the nth next tab stop (every 8 columns), stopping at the last column.
@@ -241,8 +243,10 @@ func (s *Screen) TabForward(n int) {
 	s.SetCursor(col, s.curRow)
 }
 
-// Reset is RIS: blank screen, home cursor, default pen and modes. Scrollback is kept.
+// Reset is RIS: main screen, blanked, home cursor, default pen and modes. Scrollback is kept.
 func (s *Screen) Reset() {
+	s.UseAltScreen(false)
+	s.altSaved = savedCursor{}
 	s.pen = blankCell
 	s.autoWrap = true
 	s.wrapPending = false
