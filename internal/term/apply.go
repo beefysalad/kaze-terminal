@@ -102,6 +102,8 @@ func (a *Applier) CSI(params []int, intermediates []byte, private byte, final by
 		s.SaveCursor()
 	case 'u':
 		s.RestoreCursor()
+	case 'm':
+		a.sgr(params)
 	}
 }
 
