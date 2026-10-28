@@ -260,3 +260,20 @@ func TestChimeMissingFileWarnsAndFallsBack(t *testing.T) {
 		t.Fatalf("warns=%v file=%q", warns, cfg.ChimeFile)
 	}
 }
+
+func TestChimeFileExpandsTilde(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	f := filepath.Join(home, "my.wav")
+	if err := os.WriteFile(f, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, warns, err := Load(write(t, "chime_file = '~/my.wav'"+string(rune(10))))
+	if err != nil || len(warns) != 0 {
+		t.Fatalf("err=%v warns=%v", err, warns)
+	}
+	if cfg.ChimeFile != f {
+		t.Fatalf("ChimeFile = %q, want %q", cfg.ChimeFile, f)
+	}
+}

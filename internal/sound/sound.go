@@ -2,7 +2,13 @@
 package sound
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -20,17 +26,52 @@ type Player struct {
 	last time.Time
 }
 
-// New returns a Player for file; empty, or unreadable, means the bundled chime.
-func New(file string) *Player { return newWith(file, platformPlay) }
+// maxFileBytes caps a custom chime so a wrong path can't load a huge file.
+const maxFileBytes = 2 << 20
 
-func newWith(file string, play func([]byte)) *Player {
-	data := sounds.Chime
+// New returns a Player for file; empty means the bundled chime. A file that
+// is unreadable, empty, too big or not a WAV falls back to the bundled chime
+// and the second result says why (empty when all is well).
+func New(file string) (*Player, string) { return newWith(file, platformPlay) }
+
+func newWith(file string, play func([]byte)) (*Player, string) {
+	data, warn := sounds.Chime, ""
 	if file != "" {
-		if b, err := os.ReadFile(file); err == nil && len(b) > 0 {
+		if b, err := readWav(file); err != nil {
+			warn = fmt.Sprintf("chime_file %q: %v; using the bundled chime", file, err)
+		} else {
 			data = b
 		}
 	}
-	return &Player{data: data, play: play}
+	return &Player{data: data, play: play}, warn
+}
+
+func readWav(file string) ([]byte, error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	b, err := io.ReadAll(io.LimitReader(f, maxFileBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case len(b) == 0:
+		return nil, errors.New("file is empty")
+	case len(b) > maxFileBytes:
+		return nil, errors.New("file is larger than 2MB")
+	case len(b) < 12 || string(b[0:4]) != "RIFF" || string(b[8:12]) != "WAVE":
+		return nil, errors.New("not a WAV file")
+	}
+	return b, nil
+}
+
+// cachePath is where macOS keeps the file for these bytes: one fixed file per
+// distinct sound, so nothing piles up across launches.
+func cachePath(dir string, b []byte) string {
+	sum := sha256.Sum256(b)
+	return filepath.Join(dir, "kaze", "chime-"+hex.EncodeToString(sum[:6])+".wav")
 }
 
 // Play starts the chime in the background and returns at once. Calls within

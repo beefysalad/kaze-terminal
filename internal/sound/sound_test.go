@@ -2,6 +2,9 @@ package sound
 
 import (
 	"encoding/binary"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -45,7 +48,7 @@ func TestBundledChimeIsValidWav(t *testing.T) {
 
 func TestPlayCoalescesWithinOneSecond(t *testing.T) {
 	var plays atomic.Int32
-	p := newWith("", func([]byte) { plays.Add(1) })
+	p, _ := newWith("", func([]byte) { plays.Add(1) })
 	t0 := time.Now()
 	p.Play(t0)
 	p.Play(t0.Add(100 * time.Millisecond))
@@ -60,7 +63,7 @@ func TestPlayCoalescesWithinOneSecond(t *testing.T) {
 }
 
 func TestPlayNeverBlocks(t *testing.T) {
-	p := newWith("", func([]byte) { time.Sleep(5 * time.Second) })
+	p, _ := newWith("", func([]byte) { time.Sleep(5 * time.Second) })
 	start := time.Now()
 	p.Play(time.Now())
 	if d := time.Since(start); d > 50*time.Millisecond {
@@ -71,7 +74,10 @@ func TestPlayNeverBlocks(t *testing.T) {
 func TestMissingCustomFileFallsBackToBundled(t *testing.T) {
 	var got []byte
 	done := make(chan struct{})
-	p := newWith("Z:/definitely/not/here.wav", func(b []byte) { got = b; close(done) })
+	p, warn := newWith("Z:/definitely/not/here.wav", func(b []byte) { got = b; close(done) })
+	if warn == "" {
+		t.Fatal("want a warning for a missing file")
+	}
 	p.Play(time.Now())
 	select {
 	case <-done:
@@ -92,4 +98,55 @@ func waitFor(t *testing.T, c *atomic.Int32, n int32) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	t.Fatalf("plays = %d, want %d", c.Load(), n)
+}
+
+func writeFile(t *testing.T, b []byte) string {
+	t.Helper()
+	p := filepath.Join(t.TempDir(), "c.wav")
+	if err := os.WriteFile(p, b, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+func TestBadChimeFilesFallBackWithWarning(t *testing.T) {
+	wavHead := append(append([]byte{}, wavMagic()...), make([]byte, 100)...)
+	cases := map[string][]byte{
+		"empty":    {},
+		"not wav":  []byte("this is definitely not a wav file at all"),
+		"oversize": append(append([]byte{}, wavHead[:12]...), make([]byte, maxFileBytes+1)...),
+		"short":    []byte("RIFF"),
+	}
+	for name, b := range cases {
+		p, warn := newWith(writeFile(t, b), func([]byte) {})
+		if warn == "" {
+			t.Errorf("%s: no warning", name)
+		}
+		if len(p.data) != len(sounds.Chime) {
+			t.Errorf("%s: did not fall back to bundled", name)
+		}
+	}
+}
+
+func TestValidCustomWavIsUsed(t *testing.T) {
+	b := append(append([]byte{}, wavMagic()...), make([]byte, 100)...)
+	p, warn := newWith(writeFile(t, b), func([]byte) {})
+	if warn != "" || len(p.data) != len(b) {
+		t.Fatalf("warn=%q len=%d", warn, len(p.data))
+	}
+}
+
+func TestCachePathIsPerContent(t *testing.T) {
+	a := cachePath("/c", []byte("one"))
+	b := cachePath("/c", []byte("two"))
+	if a == b || a != cachePath("/c", []byte("one")) {
+		t.Fatalf("a=%s b=%s", a, b)
+	}
+	if !strings.HasSuffix(a, ".wav") || !strings.Contains(filepath.ToSlash(a), "kaze/chime-") {
+		t.Fatalf("path = %s", a)
+	}
+}
+
+func wavMagic() []byte {
+	return []byte{'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'A', 'V', 'E'}
 }

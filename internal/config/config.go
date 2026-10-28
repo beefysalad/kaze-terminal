@@ -34,7 +34,7 @@ type Config struct {
 	CopyOnSelect    bool              `toml:"copy_on_select"`   // copy a selection when the mouse is released
 	ChimeNeeds      bool              `toml:"chime_needs"`      // chime when Claude needs you; default true
 	ChimeDone       bool              `toml:"chime_done"`       // chime when Claude is done; default false
-	ChimeFile       string            `toml:"chime_file"`       // custom sound file; empty = bundled chime
+	ChimeFile       string            `toml:"chime_file"`       // custom WAV; ~ expands to home, other relative paths use the working dir; empty = bundled chime
 }
 
 // KnownActions are the action names accepted under [keys]; the window binds each one.
@@ -164,6 +164,7 @@ func Load(path string) (Config, []string, error) {
 				warn("chime_file must be a path string, got %v; using the bundled chime", v)
 				continue
 			}
+			s = expandHome(s)
 			if s != "" {
 				if st, err := os.Stat(s); err != nil || st.IsDir() {
 					warn("chime_file %q is not a readable file; using the bundled chime", s)
@@ -218,6 +219,19 @@ func loadKeys(v any, cfg *Config, warn func(string, ...any)) {
 			cfg.Keys[k] = s
 		}
 	}
+}
+
+// expandHome turns a leading ~ into the home dir. Other relative paths are
+// left alone and resolve against the working directory.
+func expandHome(p string) string {
+	if p != "~" && !strings.HasPrefix(p, "~/") && !strings.HasPrefix(p, "~\\") {
+		return p
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return p
+	}
+	return filepath.Join(home, p[1:])
 }
 
 func toFloat(v any) (float64, bool) {
