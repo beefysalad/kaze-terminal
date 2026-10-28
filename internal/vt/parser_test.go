@@ -249,3 +249,34 @@ func BenchmarkFeedMixed(b *testing.B) {
 		p.Feed(in)
 	}
 }
+
+type subRecorder struct {
+	params []int
+	colon  uint32
+}
+
+func (r *subRecorder) Print(rune)                    {}
+func (r *subRecorder) Execute(byte)                  {}
+func (r *subRecorder) CSI([]int, []byte, byte, byte) {}
+func (r *subRecorder) ESC([]byte, byte)              {}
+func (r *subRecorder) OSC([]byte)                    {}
+func (r *subRecorder) CSISub(params []int, colon uint32, _ []byte, _ byte, _ byte) {
+	r.params = append([]int(nil), params...)
+	r.colon = colon
+}
+
+func TestColonMaskMarksSubParams(t *testing.T) {
+	r := &subRecorder{}
+	vt.NewParser(r).Feed([]byte("\x1b[1;4:3;38:2::10:20:30m"))
+	if want := []int{1, 4, 3, 38, 2, -1, 10, 20, 30}; !reflect.DeepEqual(r.params, want) {
+		t.Fatalf("params = %v", r.params)
+	}
+	want := uint32(1<<2 | 1<<4 | 1<<5 | 1<<6 | 1<<7 | 1<<8)
+	if r.colon != want {
+		t.Fatalf("colon = %b, want %b", r.colon, want)
+	}
+}
+
+func TestPlainHandlerStillGetsCSI(t *testing.T) {
+	expect(t, feed("\x1b[4:3m"), "csi [4 3] m")
+}

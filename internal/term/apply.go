@@ -59,6 +59,11 @@ func selector(params []int) int {
 }
 
 func (a *Applier) CSI(params []int, intermediates []byte, private byte, final byte) {
+	a.CSISub(params, 0, intermediates, private, final)
+}
+
+// CSISub is CSI plus the colon mask, which only SGR reads.
+func (a *Applier) CSISub(params []int, colon uint32, intermediates []byte, private byte, final byte) {
 	if private == '?' {
 		a.privateCSI(params, intermediates, final)
 		return
@@ -118,7 +123,7 @@ func (a *Applier) CSI(params []int, intermediates []byte, private byte, final by
 	case 'u':
 		s.RestoreCursor()
 	case 'm':
-		a.sgr(params)
+		a.sgr(params, colon)
 	case 'n':
 		a.deviceStatus(params)
 	case 'c':

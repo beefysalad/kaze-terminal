@@ -14,3 +14,10 @@ type Handler interface {
 	// OSC data excludes the leading "ESC ]" and the terminator.
 	OSC(data []byte)
 }
+
+// SubParamHandler is optionally implemented by a Handler. When it is,
+// the parser calls CSISub instead of CSI.
+// Bit i of colon is set when params[i] was preceded by ':' rather than ';'.
+type SubParamHandler interface {
+	CSISub(params []int, colon uint32, intermediates []byte, private byte, final byte)
+}

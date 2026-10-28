@@ -70,3 +70,55 @@ func TestSGRDefaultsAndOutOfRange(t *testing.T) {
 		t.Fatal("out of range applied")
 	}
 }
+
+func TestUnderlineStyleColonDoesNotItalicize(t *testing.T) {
+	c := run(10, 1, "\x1b[4:3ma").Cell(0, 0)
+	if c.Attrs&screen.AttrUnderline == 0 || c.Attrs&screen.AttrItalic != 0 {
+		t.Fatalf("%+v", c)
+	}
+}
+
+func TestUnderlineColonZeroTurnsOffOnlyUnderline(t *testing.T) {
+	c := run(10, 1, "\x1b[1;4m\x1b[4:0ma").Cell(0, 0)
+	if c.Attrs&screen.AttrBold == 0 || c.Attrs&screen.AttrUnderline != 0 {
+		t.Fatalf("%+v", c)
+	}
+}
+
+func TestMixedGroups(t *testing.T) {
+	c := run(10, 1, "\x1b[1;4:3;31ma").Cell(0, 0)
+	if c.Attrs&screen.AttrBold == 0 || c.Attrs&screen.AttrUnderline == 0 || c.FG != screen.Indexed(1) {
+		t.Fatalf("%+v", c)
+	}
+}
+
+func TestColonTruecolorWithAndWithoutColorspace(t *testing.T) {
+	if run(10, 1, "\x1b[38:2:0:1:2:3ma").Cell(0, 0).FG != screen.RGB(1, 2, 3) {
+		t.Fatal("with cs")
+	}
+	if run(10, 1, "\x1b[38:2::1:2:3ma").Cell(0, 0).FG != screen.RGB(1, 2, 3) {
+		t.Fatal("empty cs")
+	}
+	if run(10, 1, "\x1b[38:2:1:2:3ma").Cell(0, 0).FG != screen.RGB(1, 2, 3) {
+		t.Fatal("no cs")
+	}
+	if run(10, 1, "\x1b[48:5:208ma").Cell(0, 0).BG != screen.Indexed(208) {
+		t.Fatal("256 colon")
+	}
+}
+
+func TestUnderlineColorGroupSkippedWhole(t *testing.T) {
+	c := run(10, 1, "\x1b[58:2::1:2:3;1ma").Cell(0, 0)
+	if c.Attrs != screen.AttrBold || c.FG != screen.DefaultColor {
+		t.Fatalf("%+v", c)
+	}
+}
+
+func TestSemicolonFormsUnchanged(t *testing.T) {
+	if run(10, 1, "\x1b[38;2;1;2;3ma").Cell(0, 0).FG != screen.RGB(1, 2, 3) {
+		t.Fatal("rgb")
+	}
+	if run(10, 1, "\x1b[38;5;208ma").Cell(0, 0).FG != screen.Indexed(208) {
+		t.Fatal("256")
+	}
+}
