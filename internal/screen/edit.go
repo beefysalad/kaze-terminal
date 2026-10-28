@@ -168,7 +168,7 @@ func (s *Screen) EraseInDisplay(mode int) {
 			s.eraseSpan(r, 0, s.cols)
 		}
 	case 3: // scrollback only; the visible screen stays
-		s.sb = scrollback{max: s.sb.max}
+		s.sb = scrollback{max: s.sb.max, evicted: s.sb.evicted + uint64(s.sb.count)}
 		s.viewOffset = 0
 		s.MarkAllDirty()
 	}

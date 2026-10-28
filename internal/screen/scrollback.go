@@ -8,11 +8,14 @@ type scrollback struct {
 	start int // index of the oldest line
 	count int
 	max   int
+	// evicted counts lines dropped off the top; it never goes back, so callers can diff it.
+	evicted uint64
 }
 
 // push copies row in, reusing the evicted line's storage when the ring is full.
 func (b *scrollback) push(row []Cell) {
 	if b.max <= 0 {
+		b.evicted++
 		return
 	}
 	if b.count < b.max {
@@ -20,6 +23,7 @@ func (b *scrollback) push(row []Cell) {
 		b.count++
 		return
 	}
+	b.evicted++
 	old := b.lines[b.start]
 	if cap(old) >= len(row) {
 		old = old[:len(row)]
@@ -87,3 +91,7 @@ func (s *Screen) recordScrolled(n int) {
 		s.viewOffset = min(s.viewOffset+n, s.sb.count) // a full ring evicts one line per push, so count alone can't track it
 	}
 }
+
+// Evicted counts history lines dropped off the top since the screen was made:
+// ring overflow, a zero-size ring, and ED 3. Absolute rows shift down by its growth.
+func (s *Screen) Evicted() uint64 { return s.sb.evicted }

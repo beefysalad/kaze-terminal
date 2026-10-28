@@ -140,3 +140,38 @@ func TestViewStaysAnchoredWhenRingIsFull(t *testing.T) {
 		t.Fatal("once evicted, the view pins to the oldest line")
 	}
 }
+
+func TestEvictedCountsLinesDroppedFromTheRing(t *testing.T) {
+	s := screen.NewWithScrollback(1, 1, 3)
+	feed := func(n int) {
+		for i := 0; i < n; i++ {
+			s.Print('x')
+			s.LineFeed()
+			s.CarriageReturn()
+		}
+	}
+	feed(3) // fills the ring exactly
+	if got := s.Evicted(); got != 0 {
+		t.Fatalf("evicted %d before the ring was full, want 0", got)
+	}
+	feed(5)
+	if got := s.Evicted(); got != 5 {
+		t.Fatalf("evicted %d after 5 more lines, want 5", got)
+	}
+	s.EraseInDisplay(3) // clearing history drops every held line
+	if got := s.Evicted(); got != 8 {
+		t.Fatalf("evicted %d after ED 3, want 8", got)
+	}
+}
+
+func TestEvictedCountsLinesWithNoScrollback(t *testing.T) {
+	s := screen.NewWithScrollback(1, 1, 0)
+	for i := 0; i < 4; i++ {
+		s.Print('x')
+		s.LineFeed()
+		s.CarriageReturn()
+	}
+	if got := s.Evicted(); got != 4 {
+		t.Fatalf("evicted %d with no history, want 4", got)
+	}
+}
