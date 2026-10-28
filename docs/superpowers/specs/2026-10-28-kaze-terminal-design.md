@@ -109,6 +109,31 @@ When Claude Code in any tab finishes its turn or needs Patrick (a question, a pe
 
 A single config file in a standard per-user location (font, font size, colors, default shell, scrollback cap, keybindings). Reloaded on change if cheap; otherwise on restart.
 
+### 6.7 Look: "Midnight" (Patrick's pick, 2026-10-28)
+
+Soft dark chrome, rounded tabs, violet accent; calm and modern, close to Warp and current editors. Flat colors and rounded corners only (no window blur: Gio can't do it and it costs GPU).
+
+| Token | Value | Used for |
+|---|---|---|
+| chrome | `#0b0d12` | tab bar and status bar background |
+| bg | `#0f1117` | terminal background, active tab |
+| panel | `#12151d` | subagent side pane |
+| border | `#1d2230` | separators |
+| child | `#161a24` | child-tab background |
+| fg | `#d7dae3` | text |
+| muted | `#8a90a2` | inactive tab text |
+| dim | `#5d6273` | finished child tabs, hints |
+| accent | `#8b7bff` | active tab dot, meters |
+| accent-soft | `#b9a6ff` | child-tab text, cursor |
+| attention | `#f2b84b` | "needs you" dot and alert |
+| done | `#62d39a` | "done" marker |
+| toast | `#1a1f2c` on `#2a3142` border | alert pane |
+| selection | `#2e2a52` | selected text background |
+
+ANSI 0-15: `#1d2230 #f07178 #62d39a #f2b84b #8ab4ff #b9a6ff #6fd3e0 #d7dae3` / `#5d6273 #ff8b92 #8be3b4 #ffd27a #a9c7ff #cdbfff #95e6f0 #ffffff`.
+
+Shapes: tabs have 9px top corners; child tabs are smaller (11px text) and sit right after their lead; alerts are a rounded (10px) pane bottom-right above the status bar; status bar meters are 46x5px rounded bars. Mockup: `docs/design/look-midnight.html`.
+
 ## 7. Later features (in order, not in the first version)
 
 1. **Browser button.** A button that opens a **separate** Chromium window (not embedded), like a teammate's terminal. Launched with a DevTools debugging port so Playwright-driven agents can drive the window Patrick is watching. Windows: Edge or Chrome; macOS: Chrome. Whether agents can attach cleanly must be proven with a spike first.

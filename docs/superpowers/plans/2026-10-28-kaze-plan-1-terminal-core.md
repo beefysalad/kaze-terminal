@@ -20,6 +20,7 @@
 - Rendering rules (spec 6.2): redraw only dirty lines; rasterize each glyph once and reuse; no frame when nothing changed; draw at most once per display refresh.
 - Sessions do not survive kaze closing or crashing. Shells live in the kaze process, behind the `ptyx.Session` interface.
 - Japanese: display and paste only. No IME composition.
+- Look: "Midnight" (spec 6.7). `render.DefaultPalette()` and the tab bar / status bar colors use the spec 6.7 token values exactly; no other colors are hard-coded.
 - Default shell: `pwsh` on Windows (fall back to `powershell.exe` if `pwsh` is not on PATH), `$SHELL` or `/bin/zsh` on macOS.
 - Each tab's shell gets the environment variable `KAZE_TAB_ID=<id>` (Plan 3 depends on this name).
 - No settings UI. Config at `<os.UserConfigDir()>/kaze/config.toml`.

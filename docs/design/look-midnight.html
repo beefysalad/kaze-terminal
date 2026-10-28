@@ -1,0 +1,170 @@
+<style>
+  .dirs{display:flex;flex-direction:column;gap:28px;margin-top:18px}
+  .dir{border-radius:14px;padding:14px;cursor:pointer;border:2px solid transparent;transition:border-color .15s}
+  .dir.selected{border-color:#6c8cff}
+  .dir h3{margin:2px 0 4px}
+  .dir p.d{margin:0 0 12px;opacity:.75;font-size:14px}
+  .win{border-radius:12px;overflow:hidden;font-family:"JetBrains Mono",Consolas,Menlo,monospace;font-size:12.5px;line-height:1.55;position:relative}
+  .bar{display:flex;align-items:center;gap:6px;padding:8px 10px 0}
+  .tab{display:flex;align-items:center;gap:7px;padding:7px 12px;font-size:12px;white-space:nowrap}
+  .child{font-size:11px;padding:5px 10px}
+  .grow{flex:1}
+  .ctl{display:flex;gap:14px;padding:0 6px 6px;font-size:12px;opacity:.6}
+  .body{display:flex;height:230px}
+  .pane{flex:1;padding:12px 14px;overflow:hidden}
+  .side{width:40%;padding:12px 14px;overflow:hidden}
+  .status{display:flex;justify-content:space-between;padding:6px 14px;font-size:11px}
+  .toast{position:absolute;right:14px;bottom:38px;padding:8px 12px;border-radius:10px;font-size:12px;display:flex;gap:8px;align-items:center}
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+  .meter{display:inline-block;width:46px;height:5px;border-radius:3px;vertical-align:middle;margin:0 4px;overflow:hidden}
+  .meter i{display:block;height:100%}
+
+  /* A: Midnight */
+  .a .win{background:#0f1117;color:#d7dae3;box-shadow:0 18px 50px rgba(0,0,0,.45)}
+  .a .bar{background:#0b0d12}
+  .a .tab{border-radius:9px 9px 0 0;color:#8a90a2}
+  .a .tab.on{background:#0f1117;color:#fff}
+  .a .child{background:#161a24;color:#b9a6ff;border-radius:7px 7px 0 0}
+  .a .child.done{color:#5d6273}
+  .a .side{background:#12151d;border-left:1px solid #1d2230}
+  .a .status{background:#0b0d12;color:#7d8394}
+  .a .dim{color:#5d6273}.a .tool{color:#8ab4ff}.a .ok{color:#62d39a}.a .acc{color:#b9a6ff}
+  .a .toast{background:#1a1f2c;border:1px solid #2a3142;color:#e7e9f0}
+  .a .meter{background:#20263a}.a .meter i{background:#8b7bff}
+
+  /* B: Sumi */
+  .b .win{background:#111111;color:#e4e1da;border:1px solid #262626}
+  .b .bar{background:#111111;border-bottom:1px solid #222;padding-bottom:0}
+  .b .tab{color:#77736b;border-bottom:2px solid transparent;padding-bottom:6px}
+  .b .tab.on{color:#f3efe6;border-bottom-color:#e2553d}
+  .b .child{color:#c9a27a;border-bottom:2px solid transparent}
+  .b .child.done{color:#55524c}
+  .b .side{border-left:1px solid #222;background:#141414}
+  .b .status{border-top:1px solid #222;color:#77736b}
+  .b .dim{color:#5c5953}.b .tool{color:#d9c9a8}.b .ok{color:#9fbf8f}.b .acc{color:#e2553d}
+  .b .toast{background:#181818;border:1px solid #e2553d;color:#f3efe6}
+  .b .meter{background:#262626}.b .meter i{background:#e2553d}
+
+  /* C: Tide */
+  .c .win{background:linear-gradient(180deg,#0b1626,#0a1220);color:#cfe3ef;box-shadow:0 18px 50px rgba(0,30,60,.5)}
+  .c .bar{padding-bottom:8px}
+  .c .tab{border-radius:999px;color:#7fa3b8;background:rgba(255,255,255,.03)}
+  .c .tab.on{background:rgba(64,224,208,.12);color:#e9fbff;box-shadow:inset 0 0 0 1px rgba(64,224,208,.35)}
+  .c .child{border-radius:999px;color:#5fe0d0;background:rgba(64,224,208,.06)}
+  .c .child.done{color:#3f5b6b}
+  .c .side{background:rgba(255,255,255,.025);border-left:1px solid rgba(255,255,255,.06)}
+  .c .status{color:#6e8ea2;background:rgba(0,0,0,.18)}
+  .c .dim{color:#4f6b7c}.c .tool{color:#7cc8ff}.c .ok{color:#5fe0a8}.c .acc{color:#5fe0d0}
+  .c .toast{background:rgba(12,30,48,.92);border:1px solid rgba(64,224,208,.45);color:#e9fbff;box-shadow:0 0 18px rgba(64,224,208,.25)}
+  .c .meter{background:rgba(255,255,255,.08)}.c .meter i{background:#40e0d0}
+</style>
+
+<h2>Which look feels like your terminal?</h2>
+<p class="subtitle">Same layout in all three: tabs on top with subagent child tabs (your pick B), lead and subagent side by side, an alert when another tab needs you, usage in the status bar. Only the visual style changes. Click one.</p>
+
+<div class="dirs">
+
+<div class="dir a" data-choice="midnight" onclick="toggleSelect(this)">
+  <h3>A. Midnight</h3>
+  <p class="d">Soft dark chrome, rounded tabs, violet accent. Calm and familiar, close to Warp and modern editors.</p>
+  <div class="win">
+    <div class="bar">
+      <div class="tab on"><span class="dot" style="background:#8b7bff"></span>TICKET-123 · claude</div>
+      <div class="child">↳ Re-review</div><div class="child">↳ Security</div><div class="child done">↳ Blast ✓</div>
+      <div class="tab"><span class="dot" style="background:#f2b84b"></span>TICKET-124 · claude</div>
+      <div class="tab">dev servers</div><div class="tab">+</div>
+      <div class="grow"></div><div class="ctl"><span>–</span><span>□</span><span>✕</span></div>
+    </div>
+    <div class="body">
+      <div class="pane">
+        <div class="dim">❯ ship the remaining tasks</div>
+        <div><span class="acc">●</span> Dispatching 3 reviewers in parallel</div>
+        <div class="tool">  Agent(Re-review Task 21 fix)</div>
+        <div class="tool">  Agent(Security pass)</div>
+        <div class="tool">  Agent(Blast radius trace) <span class="ok">✓ 2m</span></div>
+        <div class="dim">  waiting on 2 agents…</div>
+      </div>
+      <div class="side">
+        <div class="acc" style="margin-bottom:6px">↳ Re-review Task 21 fix · sonnet · live</div>
+        <div class="tool">Bash  git show ff3a2c05b</div>
+        <div class="tool">Read  payment_retry.py</div>
+        <div>The re-authorize path now checks the</div>
+        <div>hold expiry before calling AUTH…</div>
+        <div class="dim">▍</div>
+      </div>
+    </div>
+    <div class="toast"><span class="dot" style="background:#f2b84b"></span><b>TICKET-124</b>&nbsp;needs you · permission prompt</div>
+    <div class="status"><span>claude 5h <span class="meter"><i style="width:42%"></i></span>42% &nbsp; week <span class="meter"><i style="width:18%"></i></span>18%</span><span>kaze 38MB · cpu 1% · 4 tabs</span></div>
+  </div>
+</div>
+
+<div class="dir b" data-choice="sumi" onclick="toggleSelect(this)">
+  <h3>B. Sumi (ink)</h3>
+  <p class="d">Flat near-black, hairline borders, one vermilion accent, underline tabs. Minimal and sharp, with a quiet nod to the kaze name.</p>
+  <div class="win">
+    <div class="bar">
+      <div class="tab on">TICKET-123 · claude</div>
+      <div class="child">↳ Re-review</div><div class="child">↳ Security</div><div class="child done">↳ Blast ✓</div>
+      <div class="tab"><span class="dot" style="background:#e2553d"></span>TICKET-124 · claude</div>
+      <div class="tab">dev servers</div><div class="tab">+</div>
+      <div class="grow"></div><div class="ctl"><span>–</span><span>□</span><span>✕</span></div>
+    </div>
+    <div class="body">
+      <div class="pane">
+        <div class="dim">❯ ship the remaining tasks</div>
+        <div><span class="acc">●</span> Dispatching 3 reviewers in parallel</div>
+        <div class="tool">  Agent(Re-review Task 21 fix)</div>
+        <div class="tool">  Agent(Security pass)</div>
+        <div class="tool">  Agent(Blast radius trace) <span class="ok">✓ 2m</span></div>
+        <div class="dim">  waiting on 2 agents…</div>
+      </div>
+      <div class="side">
+        <div class="acc" style="margin-bottom:6px">↳ Re-review Task 21 fix · sonnet · live</div>
+        <div class="tool">Bash  git show ff3a2c05b</div>
+        <div class="tool">Read  payment_retry.py</div>
+        <div>The re-authorize path now checks the</div>
+        <div>hold expiry before calling AUTH…</div>
+        <div class="dim">▍</div>
+      </div>
+    </div>
+    <div class="toast"><span class="dot" style="background:#e2553d"></span><b>TICKET-124</b>&nbsp;needs you · permission prompt</div>
+    <div class="status"><span>claude 5h <span class="meter"><i style="width:42%"></i></span>42% &nbsp; week <span class="meter"><i style="width:18%"></i></span>18%</span><span>kaze 38MB · cpu 1% · 4 tabs</span></div>
+  </div>
+</div>
+
+<div class="dir c" data-choice="tide" onclick="toggleSelect(this)">
+  <h3>C. Tide</h3>
+  <p class="d">Deep navy gradient, pill tabs, teal glow on what's active or needs you. The most "modern app" feeling of the three.</p>
+  <div class="win">
+    <div class="bar">
+      <div class="tab on"><span class="dot" style="background:#40e0d0"></span>TICKET-123 · claude</div>
+      <div class="child">↳ Re-review</div><div class="child">↳ Security</div><div class="child done">↳ Blast ✓</div>
+      <div class="tab"><span class="dot" style="background:#ffb86b"></span>TICKET-124 · claude</div>
+      <div class="tab">dev servers</div><div class="tab">+</div>
+      <div class="grow"></div><div class="ctl"><span>–</span><span>□</span><span>✕</span></div>
+    </div>
+    <div class="body">
+      <div class="pane">
+        <div class="dim">❯ ship the remaining tasks</div>
+        <div><span class="acc">●</span> Dispatching 3 reviewers in parallel</div>
+        <div class="tool">  Agent(Re-review Task 21 fix)</div>
+        <div class="tool">  Agent(Security pass)</div>
+        <div class="tool">  Agent(Blast radius trace) <span class="ok">✓ 2m</span></div>
+        <div class="dim">  waiting on 2 agents…</div>
+      </div>
+      <div class="side">
+        <div class="acc" style="margin-bottom:6px">↳ Re-review Task 21 fix · sonnet · live</div>
+        <div class="tool">Bash  git show ff3a2c05b</div>
+        <div class="tool">Read  payment_retry.py</div>
+        <div>The re-authorize path now checks the</div>
+        <div>hold expiry before calling AUTH…</div>
+        <div class="dim">▍</div>
+      </div>
+    </div>
+    <div class="toast"><span class="dot" style="background:#ffb86b"></span><b>TICKET-124</b>&nbsp;needs you · permission prompt</div>
+    <div class="status"><span>claude 5h <span class="meter"><i style="width:42%"></i></span>42% &nbsp; week <span class="meter"><i style="width:18%"></i></span>18%</span><span>kaze 38MB · cpu 1% · 4 tabs</span></div>
+  </div>
+</div>
+
+</div>
+<p class="subtitle" style="margin-top:18px">All three are cheap to draw in Gio (flat colors, rounded corners, one gradient). Real window blur, like Windows Mica or macOS vibrancy, is left out for now because Gio doesn't support it and it costs GPU.</p>
