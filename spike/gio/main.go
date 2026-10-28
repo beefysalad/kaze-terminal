@@ -1,5 +1,5 @@
-// Command gio is a throwaway speed spike: it measures whether Gio can draw a
-// 200x60 terminal grid fast enough, via Gio's text path or a glyph atlas.
+// Command gio is a throwaway speed spike: it measures how fast Gio can draw a
+// 200x60 terminal grid via Gio's text path, a glyph atlas, or one CPU-drawn image.
 package main
 
 import (
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"image/draw"
 	"log"
 	"math/rand"
 	"os"
@@ -47,12 +48,13 @@ const (
 )
 
 var (
-	modeFlag      = flag.String("mode", "text", "text|atlas|empty|bare (empty = fonts loaded, no grid; bare = no fonts, no grid)")
+	modeFlag      = flag.String("mode", "text", "text|atlas|image|empty|bare (empty = fonts loaded, no grid; bare = no fonts, no grid)")
 	streamFlag    = flag.Bool("stream", false, "rewrite 5 random lines every 2ms")
 	autotypeFlag  = flag.Bool("autotype", false, "change one cell every 50ms")
 	durationFlag  = flag.Duration("duration", 0, "exit after this long and print frame stats (0 = run until closed)")
 	logFlag       = flag.String("log", "", "write per-frame times (ms) to this file")
 	atlasDrawFlag = flag.String("atlasdraw", "clip", "atlas mode only: clip (one atlas texture, clipped per cell) | sub (one sub-image ImageOp per glyph)")
+	stripsFlag    = flag.Int("strips", 1, "image mode only: split the grid image into this many horizontal strips (1 = one ImageOp for the whole grid)")
 	memprofFlag   = flag.String("memprofile", "", "write a heap profile here on exit")
 	monoFlag      = flag.String("mono", `C:\Windows\Fonts\consola.ttf`, "monospace font file (falls back to Go Mono)")
 	cjkFlag       = flag.String("cjk", `C:\Windows\Fonts\msgothic.ttc`, "CJK fallback font file (.ttf or .ttc)")
@@ -159,6 +161,15 @@ func (s *frameStats) report() {
 	fmt.Printf("mode=%s stream=%v autotype=%v\n", *modeFlag, *streamFlag, *autotypeFlag)
 	fmt.Println(summarize("frame(layout+submit)", s.total[skip:]))
 	fmt.Println(summarize("layout-only", s.layout[skip:]))
+	submit := make([]float64, 0, len(s.total))
+	for i := skip; i < len(s.total); i++ {
+		submit = append(submit, s.total[i]-s.layout[i])
+	}
+	fmt.Println(summarize("submit-only", submit))
+	if *modeFlag == "image" {
+		fmt.Printf("image uploads: strips=%d frames-with-upload=%d strip-uploads=%d uploaded=%.1fMB\n",
+			*stripsFlag, imgUploadFrames, imgUploadCount, float64(imgUploadBytes)/1e6)
+	}
 	// Collect first so HeapAlloc and the heap profile show live memory, not garbage.
 	runtime.GC()
 	var ms runtime.MemStats
@@ -258,6 +269,7 @@ type atlasRenderer struct {
 	monoSrc, cjkSrc []byte
 	built           bool
 	atlas           paint.ImageOp
+	atlasImg        *image.RGBA
 	slots           map[rune]glyphSlot
 	cellW, cellH    int
 	lines           [rows]lineCache
@@ -307,6 +319,7 @@ func (a *atlasRenderer) build(px float64) {
 		a.slots[ch] = glyphSlot{pos: pos, size: sub.Rect.Size(), img: paint.NewImageOp(sub)}
 	}
 	a.atlas = paint.NewImageOp(img)
+	a.atlasImg = img
 	a.built = true
 }
 
@@ -367,6 +380,134 @@ func (a *atlasRenderer) layout(gtx layout.Context, g *grid) {
 		st.Pop()
 	}
 	g.mu.Unlock()
+}
+
+// ---- image mode: the whole grid is one CPU-drawn image -------------------
+
+// Upload counters for the image mode report (touched only on the frame goroutine).
+var imgUploadFrames, imgUploadCount, imgUploadBytes int
+
+type imageRenderer struct {
+	atlas  atlasRenderer
+	glyphs map[rune]*image.RGBA // glyph composited on the background, opaque, cell-sized
+	blank  *image.RGBA          // one background cell
+	img    *image.RGBA          // the whole grid
+	drawn  [rows][cols]rune     // what img currently shows
+	seen   [rows]uint64         // grid.version last copied into img
+	strips []imageStrip
+	rowsPS int // grid rows per strip
+}
+
+type imageStrip struct {
+	op    paint.ImageOp
+	y     int
+	dirty bool
+}
+
+func (m *imageRenderer) build(px float64) {
+	m.atlas.build(px)
+	cw, ch := m.atlas.cellW, m.atlas.cellH
+	bg := image.NewUniform(bgColor)
+	m.blank = image.NewRGBA(image.Rect(0, 0, cw, ch))
+	draw.Draw(m.blank, m.blank.Rect, bg, image.Point{}, draw.Src)
+	m.glyphs = make(map[rune]*image.RGBA, len(m.atlas.slots))
+	for r, slot := range m.atlas.slots {
+		gl := image.NewRGBA(image.Rectangle{Max: slot.size})
+		draw.Draw(gl, gl.Rect, bg, image.Point{}, draw.Src)
+		draw.Draw(gl, gl.Rect, m.atlas.atlasImg, slot.pos, draw.Over)
+		m.glyphs[r] = gl
+	}
+	m.img = image.NewRGBA(image.Rect(0, 0, cols*cw, rows*ch))
+	draw.Draw(m.img, m.img.Rect, bg, image.Point{}, draw.Src)
+	for r := range m.drawn {
+		for c := range m.drawn[r] {
+			m.drawn[r][c] = ' '
+		}
+	}
+	n := *stripsFlag
+	if n < 1 {
+		n = 1
+	}
+	if n > rows {
+		n = rows
+	}
+	m.rowsPS = (rows + n - 1) / n
+	for y := 0; y < rows; y += m.rowsPS {
+		m.strips = append(m.strips, imageStrip{y: y, dirty: true})
+	}
+}
+
+// drawCell copies one cell's glyph (two cells for a wide char) into the grid image.
+func (m *imageRenderer) drawCell(r, c int, ch rune) {
+	src := m.blank
+	if gl, ok := m.glyphs[ch]; ok {
+		src = gl
+	}
+	p := image.Pt(c*m.atlas.cellW, r*m.atlas.cellH)
+	draw.Draw(m.img, image.Rectangle{Min: p, Max: p.Add(src.Rect.Size())}.Intersect(m.img.Rect), src, image.Point{}, draw.Src)
+}
+
+func (m *imageRenderer) layout(gtx layout.Context, g *grid) {
+	if m.glyphs == nil {
+		m.build(float64(gtx.Sp(fontSizeSp)))
+	}
+	g.mu.Lock()
+	for r := 0; r < rows; r++ {
+		if m.seen[r] == g.version[r] {
+			continue
+		}
+		m.seen[r] = g.version[r]
+		changed := false
+		for c := 0; c < cols; c++ {
+			ch := g.cells[r][c]
+			if ch == m.drawn[r][c] {
+				continue
+			}
+			m.drawn[r][c] = ch
+			changed = true
+			if ch == 0 {
+				// Right half of a wide char: the left cell owns the pixels.
+				if c > 0 {
+					m.drawCell(r, c-1, g.cells[r][c-1])
+				}
+				continue
+			}
+			m.drawCell(r, c, ch)
+		}
+		if changed {
+			m.strips[r/m.rowsPS].dirty = true
+		}
+	}
+	g.mu.Unlock()
+
+	// Only a changed strip gets a new ImageOp: Gio keys GPU textures by the op's
+	// handle, so a new op means a new texture and a full upload of that strip.
+	uploaded := false
+	for i := range m.strips {
+		s := &m.strips[i]
+		if !s.dirty {
+			continue
+		}
+		y0 := s.y * m.atlas.cellH
+		y1 := min(s.y+m.rowsPS, rows) * m.atlas.cellH
+		sub := m.img.SubImage(image.Rect(0, y0, m.img.Rect.Dx(), y1)).(*image.RGBA)
+		s.op = paint.NewImageOp(sub)
+		s.op.Filter = paint.FilterNearest // pixel-exact, and no mipmap generation
+		s.dirty = false
+		uploaded = true
+		imgUploadCount++
+		imgUploadBytes += sub.Rect.Dx() * sub.Rect.Dy() * 4
+	}
+	if uploaded {
+		imgUploadFrames++
+	}
+	for i := range m.strips {
+		s := &m.strips[i]
+		st := op.Offset(image.Pt(0, s.y*m.atlas.cellH)).Push(gtx.Ops)
+		s.op.Add(gtx.Ops)
+		paint.PaintOp{}.Add(gtx.Ops)
+		st.Pop()
+	}
 }
 
 type emptyRenderer struct{}
@@ -440,6 +581,11 @@ func run(w *app.Window) error {
 			return fmt.Errorf("atlas mode needs -mono pointing at a font file")
 		}
 		r = &atlasRenderer{monoSrc: monoSrc, cjkSrc: cjkSrc}
+	case "image":
+		if monoSrc == nil {
+			return fmt.Errorf("image mode needs -mono pointing at a font file")
+		}
+		r = &imageRenderer{atlas: atlasRenderer{monoSrc: monoSrc, cjkSrc: cjkSrc}}
 	case "empty":
 		// Baseline: same window, background only, no grid drawn.
 		r = emptyRenderer{}

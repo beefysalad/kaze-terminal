@@ -132,3 +132,85 @@ Two review findings on the numbers above, fixed in the spike and re-measured on
    -stream`: frame p50 0.095ms, p99 0.255ms, max 2.7ms, 1158 frames in 20s (59.9fps). The
    floor is near zero, so stream frame times are not inflated by vsync, and the 16.7ms
    threshold measures real work.
+
+# Task 0b: one CPU-drawn grid image
+
+**Decision: `-mode=image` with one `ImageOp` for the whole grid is the fastest method and
+Task 10 uses it.** It meets both frame goals with a wide margin: stream p99 3.51ms (goal
+16.7ms), one-cell p99 2.19ms (goal 10ms), idle CPU 0. The 8-strip variant also meets
+both goals and is faster for one-cell changes (p99 1.02ms) but a little slower under
+stream (p99 4.68ms), so by the brief's order (stream p99 first) the single image wins.
+Memory is reported, not judged.
+
+## What `-mode=image` does
+
+- Glyphs are rasterized once with the atlas code, then composited onto the background
+  into opaque cell-sized images (two cells wide for CJK): the glyph cache.
+- One `image.RGBA` holds the whole grid (1400x960px, 5.4MB here). Each frame, rows whose
+  version changed are compared cell by cell with what the image shows, and only the
+  changed cells are copied in (`draw.Src`, a plain row copy).
+- Gio gets the grid as `paint.ImageOp`s with `FilterNearest`. Gio caches GPU textures by
+  the op's handle and has no partial-update API, so a changed image needs a new
+  `ImageOp`, which means a new texture and a **full upload** of that image.
+  - `-strips=1`: one op for the whole grid; every change uploads 5.4MB.
+  - `-strips=8`: 8 strips of 8 rows (the last has 4), one op each; only changed strips
+    get a new op. A one-cell change uploads one strip (about 0.7MB).
+- Checked visually that the grid renders correctly in both variants (screenshot during
+  `-stream`; not committed).
+
+## Results (2026-10-28, same machine and setup as Task 0, single runs)
+
+All modes were re-measured in this session so the numbers are comparable. Go heap is
+read after a forced GC. "fps" is frames per second achieved over the run; one-cell
+changes arrive every 50ms, so 20fps is the full rate there and 60fps under stream.
+
+| Measure | Goal | text | atlas (clip) | atlas (sub) | **image (1 op)** | image (8 strips) | bare window |
+|---|---|---|---|---|---|---|---|
+| One-cell frame p50 | | 4.50ms | 24.69ms | 21.90ms | 1.22ms | 0.49ms | |
+| One-cell frame p99 | < 10ms | 6.70ms PASS | 41.85ms FAIL | 27.43ms FAIL | **2.19ms PASS** | 1.02ms PASS | |
+| One-cell late frames (>16.7ms) | | 0 / 387 | 386 / 390 | 369 / 388 | 0 / 386 | 0 / 389 | |
+| One-cell layout-only p99 | | 1.10ms | 0.08ms | 0.05ms | 0.03ms | 0.04ms | |
+| Stream frame p50 | | 45.44ms | 26.42ms | 19.62ms | 2.66ms | 3.29ms | 0.10ms |
+| Stream frame p99 | < 16.7ms | 80.81ms FAIL | 46.93ms FAIL | 32.22ms FAIL | **3.51ms PASS** | 4.68ms PASS | 0.26ms |
+| Stream late frames (>16.7ms) | | 381 / 381 | 696 / 696 | 729 / 890 | 0 / 1167 | 0 / 1168 | 0 / 1158 |
+| Stream frames over 33.4ms | | 365 | 40 | 6 | 0 | 0 | 0 |
+| Stream fps achieved | 60 | 19.9 | 36.3 | 45.8 | 60.0 | 60.0 | 59.9 |
+| Stream layout-only p99 (incl. CPU drawing) | | 52.76ms | 1.90ms | 0.72ms | 1.10ms | 1.13ms | 0.03ms |
+| Stream submit-only p50 (Frame, incl. upload) | | 18.28ms | 25.60ms | 19.27ms | 1.88ms | 2.51ms | 0.09ms |
+| Uploaded under stream (20s) | | | | | 6290MB (1170 x 5.4MB) | 6261MB (9291 strips) | |
+| Private memory, 10s idle | reported | 347.2MB | 161.1MB | 230.6MB | 179.1MB | 180.3MB | 83.6MB |
+| Go HeapAlloc after GC | | 56.1MB | 16.1MB | 12.5MB | 15.9MB | 15.9MB | 0.9MB |
+| Idle CPU over 30s | ~0 | see note | 0.05s | 0.00s | 0.00s PASS | 0.00s PASS | 0.00s |
+| Visual tearing under `-stream` | none | to be checked by Patrick | same | same | same | same | |
+
+Notes:
+
+- The Present floor (bare window, nothing drawn, `-stream`) is 0.10ms p50: Gio waits for
+  vsync before delivering a frame, not inside `Frame`, so these frame times are work, not
+  vsync waiting (see the Task 0 review fixes above).
+- Under stream, nearly every frame changes rows in all 8 strips, so the strip variant
+  uploads about the same bytes as the single image but in 8 textures, which costs a little
+  more per frame. Strips only pay off when changes are local (one-cell).
+- Idle CPU: text mode received 198 frames during one idle run (4.1s CPU) and 2 frames
+  (0.89s CPU) on a re-run; image (1 op) had one idle run with 1.1s CPU over 30s and two
+  re-runs at 0.00s. These look like mouse or focus activity over the window, as in
+  Task 0, not steady-state cost. The image and bare numbers in the table are the 0.00s
+  re-runs.
+- Uploading a new 5.4MB texture per changed frame is the image mode's main cost (submit
+  p50 1.9ms). Larger windows or high-DPI screens scale it with pixel count; the strip
+  variant is the fallback if that becomes a problem.
+
+## Decision for Task 10
+
+| Goal | Met by image (1 op)? |
+|---|---|
+| Stream frame p99 < 16.7ms | Yes, 3.51ms |
+| One-cell frame p99 < 10ms | Yes, 2.19ms |
+| Idle CPU ~0 | Yes, 0.00s over 30s |
+| Memory | No cap; 179.1MB private (bare Gio window alone is 83.6MB) |
+| Visual tearing | To be checked by Patrick |
+
+Winner: **image, one `ImageOp` for the whole grid.** Order by stream p99: image (1 op)
+3.51ms, image (8 strips) 4.68ms, atlas (sub) 32.22ms, atlas (clip) 46.93ms, text
+80.81ms. Text, atlas (clip) and atlas (sub) miss the stream goal; atlas (clip) and atlas
+(sub) also miss the one-cell goal.
