@@ -51,3 +51,16 @@ func TestCtrlBackspaceAndPunctuation(t *testing.T) {
 func TestAltShiftTab(t *testing.T) {
 	ek(t, "windows", key.NameTab, key.ModAlt|key.ModShift, "\x1b\x1b[Z")
 }
+
+func TestSetReservedReplacesThePlatformTable(t *testing.T) {
+	saved := reservedKeys["windows"]
+	t.Cleanup(func() { reservedKeys["windows"] = saved })
+
+	SetReserved("windows", []Shortcut{{Name: "T", Mods: key.ModCtrl | key.ModAlt}})
+	ek(t, "windows", "T", key.ModCtrl|key.ModAlt, "<nil>")
+	// The old default is free again, so it reaches the shell.
+	ek(t, "windows", "T", key.ModCtrl|key.ModShift, "\x14")
+	if !IsReserved("T", key.ModCtrl|key.ModAlt, "windows") {
+		t.Fatal("IsReserved does not see the new table")
+	}
+}

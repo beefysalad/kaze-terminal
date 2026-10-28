@@ -11,14 +11,16 @@ import (
 	"github.com/patrick-gogo/kaze/internal/term"
 )
 
-type shortcut struct {
-	name key.Name
-	mods key.Modifiers
+// Shortcut is a key with an exact set of modifiers.
+type Shortcut struct {
+	Name key.Name
+	Mods key.Modifiers
 }
 
 // reservedKeys are the keys kaze keeps for itself (copy, paste, new/close/next
-// tab). One table so config keys can feed it later. Plain Ctrl+C is never here.
-var reservedKeys = map[string][]shortcut{
+// tab). Plain Ctrl+C is never here. The window replaces these with the user's
+// bindings at startup through SetReserved.
+var reservedKeys = map[string][]Shortcut{
 	"windows": {
 		{"C", key.ModCtrl | key.ModShift}, {"V", key.ModCtrl | key.ModShift},
 		{"T", key.ModCtrl | key.ModShift}, {"W", key.ModCtrl | key.ModShift},
@@ -30,10 +32,16 @@ var reservedKeys = map[string][]shortcut{
 	},
 }
 
+// SetReserved replaces goos's reserved keys. Call it once at startup, before
+// any key is encoded; the table is not locked.
+func SetReserved(goos string, keys []Shortcut) {
+	reservedKeys[goos] = append([]Shortcut(nil), keys...)
+}
+
 // IsReserved reports whether kaze handles the key itself on the given GOOS.
 func IsReserved(name key.Name, mods key.Modifiers, goos string) bool {
 	for _, s := range reservedKeys[goos] {
-		if s.name == name && s.mods == mods {
+		if s.Name == name && s.Mods == mods {
 			return true
 		}
 	}

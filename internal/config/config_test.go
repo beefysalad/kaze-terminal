@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -112,5 +113,61 @@ func TestPathEndsInKazeConfig(t *testing.T) {
 	p := filepath.ToSlash(Path())
 	if p != "" && !strings.HasSuffix(p, "kaze/config.toml") {
 		t.Fatalf("Path = %q", p)
+	}
+}
+
+func TestFontSizeRejectsNaNInfAndCapsHuge(t *testing.T) {
+	for _, tc := range []struct {
+		body string
+		want float32
+	}{
+		{"font_size = nan\n", 14},
+		{"font_size = inf\n", 14},
+		{"font_size = -inf\n", 14},
+		{"font_size = 1e30\n", 72},
+		{"font_size = 500\n", 72},
+		{"font_size = 72\n", 72},
+	} {
+		cfg, warns, err := Load(write(t, tc.body))
+		if err != nil {
+			t.Fatalf("%q: %v", tc.body, err)
+		}
+		if cfg.FontSize != tc.want {
+			t.Errorf("%q: FontSize = %v, want %v", tc.body, cfg.FontSize, tc.want)
+		}
+		wantWarns := 1
+		if tc.body == "font_size = 72\n" {
+			wantWarns = 0
+		}
+		if len(warns) != wantWarns {
+			t.Errorf("%q: warnings = %v, want %d", tc.body, warns, wantWarns)
+		}
+	}
+}
+
+func TestShellRejectsEmptyProgram(t *testing.T) {
+	for _, body := range []string{"shell = [\"\"]\n", "shell = [\"  \", \"-NoLogo\"]\n"} {
+		cfg, warns, err := Load(write(t, body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(cfg.Shell) != 0 {
+			t.Errorf("%q: Shell = %q, want empty (platform default)", body, cfg.Shell)
+		}
+		if len(warns) != 1 {
+			t.Errorf("%q: warnings = %v, want 1", body, warns)
+		}
+	}
+}
+
+func TestKnownActionsAreTheRealOnes(t *testing.T) {
+	want := []string{"close_tab", "copy", "new_tab", "next_tab", "paste", "prev_tab"}
+	var got []string
+	for k := range KnownActions {
+		got = append(got, k)
+	}
+	sort.Strings(got)
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("KnownActions = %v, want %v", got, want)
 	}
 }

@@ -4,16 +4,19 @@ package config
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 )
 
 const (
 	defaultFontSize   = 14
+	maxFontSize       = 72
 	defaultScrollback = 10000
 	maxScrollback     = 100000
 )
@@ -29,11 +32,10 @@ type Config struct {
 	Keys            map[string]string `toml:"keys"`             // action -> shortcut text; parsed by the caller
 }
 
-// KnownActions are the action names accepted under [keys].
+// KnownActions are the action names accepted under [keys]; the window binds each one.
 var KnownActions = map[string]bool{
 	"new_tab": true, "close_tab": true, "next_tab": true, "prev_tab": true,
 	"copy": true, "paste": true,
-	"zoom_in": true, "zoom_out": true, "zoom_reset": true,
 }
 
 var (
@@ -89,11 +91,15 @@ func Load(path string) (Config, []string, error) {
 		switch k {
 		case "font_size":
 			f, ok := toFloat(v)
-			if !ok || f <= 0 {
+			switch {
+			case !ok || math.IsNaN(f) || math.IsInf(f, 0) || f <= 0:
 				warn("font_size must be a positive number, got %v; using %d", v, defaultFontSize)
-				continue
+			case f > maxFontSize:
+				warn("font_size %v is too large; capped at %d", v, maxFontSize)
+				cfg.FontSize = maxFontSize
+			default:
+				cfg.FontSize = float32(f)
 			}
-			cfg.FontSize = float32(f)
 		case "font_family":
 			s, ok := v.(string)
 			if !ok {
@@ -102,10 +108,10 @@ func Load(path string) (Config, []string, error) {
 			}
 			cfg.FontFamily = s
 		case "shell":
-			if s, ok := toStrings(v); ok {
+			if s, ok := toStrings(v); ok && strings.TrimSpace(s[0]) != "" {
 				cfg.Shell = s
 			} else {
-				warn("shell must be a list of strings, got %v; using the default shell", v)
+				warn("shell must be a list of strings starting with a program, got %v; using the default shell", v)
 			}
 		case "scrollback_lines":
 			n, ok := v.(int64)
