@@ -196,3 +196,18 @@ func TestFontSizeHasAMinimum(t *testing.T) {
 		t.Fatalf("font_size = 4: size %v, warns %v", cfg.FontSize, warns)
 	}
 }
+
+// The bundled font is the only one wired up, so a set font_family must not pass silently.
+func TestFontFamilyWarnsNotSupported(t *testing.T) {
+	cfg, warns, err := Load(write(t, "font_family = \"Cascadia Mono\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "font_family is not supported yet; using the bundled font"
+	if len(warns) != 1 || warns[0] != want {
+		t.Fatalf("warnings = %q, want [%q]", warns, want)
+	}
+	if cfg.FontFamily != "Cascadia Mono" {
+		t.Fatalf("FontFamily = %q, want the value kept", cfg.FontFamily)
+	}
+}

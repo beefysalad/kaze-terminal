@@ -24,7 +24,7 @@ const (
 
 type Config struct {
 	FontSize   float32 `toml:"font_size"`   // default 14
-	FontFamily string  `toml:"font_family"` // "" = bundled font
+	FontFamily string  `toml:"font_family"` // not supported yet; a set value warns
 	// Shell empty means "use the platform default shell"; the caller
 	// resolves it at startup.
 	Shell           []string          `toml:"shell"`
@@ -112,6 +112,10 @@ func Load(path string) (Config, []string, error) {
 				continue
 			}
 			cfg.FontFamily = s
+			// Kept for when font loading lands; until then only the bundled font renders.
+			if s != "" {
+				warn("font_family is not supported yet; using the bundled font")
+			}
 		case "shell":
 			if s, ok := toStrings(v); ok && strings.TrimSpace(s[0]) != "" {
 				cfg.Shell = s
