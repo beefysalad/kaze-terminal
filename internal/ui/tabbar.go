@@ -22,6 +22,7 @@ import (
 	"github.com/patrick-gogo/kaze-terminal/assets/fonts"
 	"github.com/patrick-gogo/kaze-terminal/internal/render"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/patrick-gogo/kaze-terminal/internal/usage"
 )
 
 // Midnight chrome tokens (design spec 6.7).
@@ -338,8 +339,12 @@ func (c *chrome) layoutStatus(gtx layout.Context, p statusParts, height int) {
 	paint.FillShape(ops, colBorder, clip.Rect{Max: image.Pt(width, 1)}.Op())
 	call, size := c.label(gtx, p.Right, 11, colStatusFG)
 	place(ops, call, image.Pt(width-size.X-pad, (height-size.Y)/2))
+	right := width - size.X - pad // where the right-hand text starts
+	if ux := c.layoutUsage(gtx, p.Usage, right-gtx.Dp(16), height); ux >= 0 {
+		right = ux
+	}
 
-	avail := width - size.X - 3*pad // room left of the right text, with a gap
+	avail := right - 2*pad // room left of the right-hand text, with a gap
 	x := pad
 	var bcall op.CallOp
 	var bsize image.Point
@@ -363,9 +368,43 @@ func (c *chrome) layoutStatus(gtx layout.Context, p statusParts, height int) {
 		place(ops, fcall, image.Pt(x, (height-fsize.Y)/2))
 		x += fsize.X + gap
 	}
-	if p.Branch != "" && x+bsize.X <= width-size.X-pad {
+	if p.Branch != "" && x+bsize.X <= right-pad {
 		place(ops, bcall, image.Pt(x, (height-bsize.Y)/2))
 	}
+}
+
+// layoutUsage draws the usage segments ending at end and returns where they
+// start, or -1 when there are none or they do not fit.
+func (c *chrome) layoutUsage(gtx layout.Context, segs []usage.Segment, end, height int) int {
+	if len(segs) == 0 {
+		return -1
+	}
+	type piece struct {
+		call op.CallOp
+		size image.Point
+	}
+	var ps []piece
+	w := 0
+	for i, s := range segs {
+		if i > 0 {
+			call, size := c.label(gtx, "  ·  ", 11, colStatusFG)
+			ps = append(ps, piece{call, size})
+			w += size.X
+		}
+		call, size := c.label(gtx, s.Text, 11, usageColor(s.Level))
+		ps = append(ps, piece{call, size})
+		w += size.X
+	}
+	x := end - w
+	if x < gtx.Dp(14) {
+		return -1
+	}
+	start := x
+	for _, p := range ps {
+		place(gtx.Ops, p.call, image.Pt(x, (height-p.size.Y)/2))
+		x += p.size.X
+	}
+	return start
 }
 
 // tabLabelFit is tabLabel with the title cleaned for the tab bar's fonts before it is shortened.
