@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -50,7 +51,8 @@ func runStatusline(stdin io.Reader, stdout io.Writer, env func(string) string, n
 	}
 	start := time.Now()
 	var in statusInput
-	if json.Unmarshal(readStdinLimited(stdin, statuslineTotal), &in) != nil {
+	raw := bytes.TrimPrefix(readStdinLimited(stdin, statuslineTotal), []byte("\xef\xbb\xbf")) // PowerShell may add a BOM
+	if json.Unmarshal(raw, &in) != nil {
 		return 0
 	}
 	u := notify.Usage{FiveHour: in.Limits.FiveHour.window(), Week: in.Limits.Week.window(), Ctx: in.Context.Used}

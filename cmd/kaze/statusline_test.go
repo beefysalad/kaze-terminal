@@ -86,3 +86,12 @@ func TestStatuslineNilStdin(t *testing.T) {
 		t.Fatalf("exit %d out %q", code, out.String())
 	}
 }
+
+func TestStatuslineSkipsByteOrderMark(t *testing.T) {
+	// PowerShell can prefix piped text with a UTF-8 BOM.
+	var out bytes.Buffer
+	runStatusline(strings.NewReader("\ufeff"+`{"context_window":{"used_percentage":8}}`), &out, func(string) string { return "" }, slNow)
+	if got := out.String(); got != "ctx 8%\n" {
+		t.Fatalf("got %q", got)
+	}
+}
