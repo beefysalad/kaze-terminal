@@ -95,3 +95,16 @@ func TestStatuslineSkipsByteOrderMark(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+func TestStatuslineAcceptsFractionalResetTime(t *testing.T) {
+	srv, got := startServer(t)
+	var out bytes.Buffer
+	in := `{"rate_limits":{"five_hour":{"used_percentage":23.5,"resets_at":1738425600.0}}}`
+	runStatusline(strings.NewReader(in), &out, envOf(srv, "1"), slNow)
+	if m := wait(t, got); m.Usage == nil || m.Usage.FiveHour == nil || m.Usage.FiveHour.Resets != 1738425600 {
+		t.Fatalf("got %+v", m.Usage)
+	}
+	if out.String() != "5h 23%\n" {
+		t.Fatalf("printed %q", out.String())
+	}
+}

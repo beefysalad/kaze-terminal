@@ -12,8 +12,12 @@ import (
 )
 
 // statuslineTotal bounds a run: Claude Code reruns the command on every update
-// and cancels one still running, so it has to be quick.
-const statuslineTotal = 300 * time.Millisecond
+// and cancels one still running, so it has to be quick. Reading gets most of
+// it, but sending always keeps the rest.
+const (
+	statuslineTotal = 300 * time.Millisecond
+	statuslineRead  = 200 * time.Millisecond
+)
 
 type statusInput struct {
 	Context struct {
@@ -27,14 +31,14 @@ type statusInput struct {
 
 type limitWindow struct {
 	Used   *float64 `json:"used_percentage"`
-	Resets int64    `json:"resets_at"`
+	Resets float64  `json:"resets_at"` // seconds; float so a "1738425600.0" still parses
 }
 
 func (w *limitWindow) window() *notify.Window {
 	if w == nil || w.Used == nil {
 		return nil
 	}
-	return &notify.Window{Pct: *w.Used, Resets: w.Resets}
+	return &notify.Window{Pct: *w.Used, Resets: int64(w.Resets)}
 }
 
 // runStatusline is `kaze statusline`, Claude Code's status line command. It
@@ -51,7 +55,7 @@ func runStatusline(stdin io.Reader, stdout io.Writer, env func(string) string, n
 	}
 	start := time.Now()
 	var in statusInput
-	raw := bytes.TrimPrefix(readStdinLimited(stdin, statuslineTotal), []byte("\xef\xbb\xbf")) // PowerShell may add a BOM
+	raw := bytes.TrimPrefix(readStdinLimited(stdin, statuslineRead), []byte("\xef\xbb\xbf")) // PowerShell may add a BOM
 	if json.Unmarshal(raw, &in) != nil {
 		return 0
 	}

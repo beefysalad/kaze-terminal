@@ -24,19 +24,26 @@ type usageBox struct {
 }
 
 type usageReport struct {
-	tab tabs.TabID
-	u   notify.Usage
-	seq uint64
+	tab    tabs.TabID
+	u      notify.Usage
+	cwdSeq uint64 // the tab's folder-report count when the report arrived
+	seq    uint64
 }
 
-func (b *usageBox) put(tab tabs.TabID, u notify.Usage) {
+// put keeps the tab's newest report, but limits from an earlier, undrained
+// report survive one that has none.
+func (b *usageBox) put(tab tabs.TabID, u notify.Usage, cwdSeq uint64) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.seq++
 	if b.byTab == nil {
 		b.byTab = map[tabs.TabID]usageReport{}
 	}
-	b.byTab[tab] = usageReport{tab, u, b.seq}
+	if old, ok := b.byTab[tab]; ok {
+		u.FiveHour = usage.Merge(old.u.FiveHour, u.FiveHour)
+		u.Week = usage.Merge(old.u.Week, u.Week)
+	}
+	b.byTab[tab] = usageReport{tab, u, cwdSeq, b.seq}
 }
 
 // take empties the box, oldest report first.
@@ -61,14 +68,12 @@ type ctxEntry struct {
 }
 
 // drainUsage applies queued reports; UI goroutine only. Plan limits are
-// account-wide, so the newest report that has them wins whichever tab sent it.
+// account-wide, so any tab's report counts, merged by usage.Merge.
 func (win *window) drainUsage() {
 	for _, r := range win.usageIn.take() {
-		if r.u.FiveHour != nil || r.u.Week != nil {
-			win.acct = notify.Usage{FiveHour: r.u.FiveHour, Week: r.u.Week}
-		}
-		t := win.tabByID(r.tab)
-		if t == nil {
+		win.acct.FiveHour = usage.Merge(win.acct.FiveHour, r.u.FiveHour)
+		win.acct.Week = usage.Merge(win.acct.Week, r.u.Week)
+		if !win.mgr.Has(r.tab) {
 			continue
 		}
 		if r.u.Ctx == nil {
@@ -78,7 +83,7 @@ func (win *window) drainUsage() {
 		if win.ctx == nil {
 			win.ctx = map[tabs.TabID]ctxEntry{}
 		}
-		win.ctx[r.tab] = ctxEntry{pct: *r.u.Ctx, cwdSeq: cwdSeq(t)}
+		win.ctx[r.tab] = ctxEntry{pct: *r.u.Ctx, cwdSeq: r.cwdSeq}
 	}
 }
 
@@ -91,15 +96,6 @@ func (win *window) usageSegments(active *tabs.Tab, now time.Time) []usage.Segmen
 		}
 	}
 	return usage.Segments(u, now)
-}
-
-func (win *window) tabByID(id tabs.TabID) *tabs.Tab {
-	for _, t := range win.mgr.Tabs() {
-		if t.ID == id {
-			return t
-		}
-	}
-	return nil
 }
 
 func cwdSeq(t *tabs.Tab) uint64 {

@@ -201,6 +201,17 @@ func (m *Manager) Has(id TabID) bool {
 	return m.indexLocked(id) >= 0
 }
 
+// Lookup is the open tab with id, or nil. Unlike Tabs it changes nothing on
+// the tab, so it is safe from any goroutine.
+func (m *Manager) Lookup(id TabID) *Tab {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if i := m.indexLocked(id); i >= 0 {
+		return m.entries[i].tab
+	}
+	return nil
+}
+
 // SetActive switches to id; an unknown id is ignored.
 func (m *Manager) SetActive(id TabID) {
 	m.mu.Lock()

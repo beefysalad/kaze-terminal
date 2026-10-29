@@ -37,7 +37,7 @@ func Segments(u notify.Usage, now time.Time) []Segment {
 		p := clamp(w.win.Pct)
 		s := Segment{Text: fmt.Sprintf("%s %d%%", w.label, int(p)), Level: level(p)}
 		if s.Level != Normal && w.win.Resets > 0 {
-			s.Text += " · resets " + resetText(time.Unix(w.win.Resets, 0), now)
+			s.Text += " (resets " + resetText(time.Unix(w.win.Resets, 0), now) + ")"
 		}
 		out = append(out, s)
 	}
@@ -67,6 +67,23 @@ func NextReset(u notify.Usage, now time.Time) time.Time {
 		if t := time.Unix(w.Resets, 0); next.IsZero() || t.Before(next) {
 			next = t
 		}
+	}
+	return next
+}
+
+// Merge picks what to keep for one window. Every Claude session reports the
+// limits from its own last reply, so an idle tab can report older, lower
+// numbers: a later reset wins, and within one window use only goes up.
+func Merge(held, next *notify.Window) *notify.Window {
+	switch {
+	case next == nil:
+		return held
+	case held == nil, held.Resets == 0 || next.Resets == 0, next.Resets > held.Resets:
+		return next
+	case next.Resets < held.Resets:
+		return held
+	case next.Pct < held.Pct:
+		return held
 	}
 	return next
 }

@@ -57,7 +57,7 @@ Tests: prints the line from a full sample; no `rate_limits` prints only ctx; nul
 - `win.drainUsage()` (UI goroutine, next to `drainAlerts`): rate-limit windows from the newest message that carries them replace `win.acct`; a message's `Ctx` sets `win.ctx[tab] = ctxEntry{pct, cwdSeq}` with the tab's current `CwdSeq`; a message without `Ctx` deletes it.
 - `statusParts` gains `Usage []usage.Segment`: account windows plus the active tab's ctx, but ctx only while the tab's `CwdSeq` equals the stored one. Closed tabs pruned with `pruneLocs`.
 - The frame schedules `op.InvalidateCmd{At: usage.NextReset(...)}` when non-zero.
-- `layoutStatus` draws the segments right-aligned left of `Right`, joined by a dim ` · `, colors `colStatusFG` / `colNeeds` / new `colUsageHigh = rgb(0xff6b6b)`; folder room shrinks by their width.
+- `layoutStatus` draws the segments right-aligned left of `Right`, joined by a dim ` · `, colors `colFolder` / `colNeeds` / new `colUsageHigh = rgb(0xff6b6b)`; folder room shrinks by their width.
 
 Tests: usage after done keeps the done mark and toast; usage never chimes; acct from any tab, ctx only for the active tab; prompt after usage hides ctx; expired window hidden; closed tab pruned.
 

@@ -140,3 +140,42 @@ func TestUsageLayoutFitsOrStepsAside(t *testing.T) {
 		t.Fatalf("no segments: got %d, want -1", got)
 	}
 }
+
+func TestIdleTabCannotLowerPlanUsage(t *testing.T) {
+	win, _ := alertWindow(t, 2)
+	win.liveMgr.Store(win.mgr)
+	a, b := int(win.mgr.Tabs()[0].ID), int(win.mgr.Tabs()[1].ID)
+	reset := time.Now().Add(time.Hour).Unix()
+	report := func(tab int, p float64) notify.Msg {
+		return notify.Msg{Tab: tab, Kind: notify.KindUsage, Usage: &notify.Usage{FiveHour: &notify.Window{Pct: p, Resets: reset}}}
+	}
+	win.onNotify(report(a, 62))
+	win.drainUsage()
+	win.onNotify(report(b, 48)) // b's last reply was long ago
+	win.drainUsage()
+	sameTexts(t, win.statusParts().Usage, "5h 62%")
+}
+
+func TestLimitsSurviveAReportWithoutThemBeforeTheFrame(t *testing.T) {
+	win, _ := alertWindow(t, 1)
+	win.liveMgr.Store(win.mgr)
+	a := int(win.mgr.Tabs()[0].ID)
+	win.onNotify(usageMsg(a, 40, 20))
+	ctx := 21.0
+	win.onNotify(notify.Msg{Tab: a, Kind: notify.KindUsage, Usage: &notify.Usage{Ctx: &ctx}})
+	win.drainUsage()
+	sameTexts(t, win.statusParts().Usage, "5h 40%", "ctx 21%")
+}
+
+func TestContextReportedBeforeThePromptStaysHidden(t *testing.T) {
+	// A report that arrived while Claude ran but was drained after the prompt came back.
+	win, _ := alertWindow(t, 1)
+	win.liveMgr.Store(win.mgr)
+	win.branchFn = func(string) string { return "" }
+	tab := win.mgr.Tabs()[0]
+	report(t, tab, tmp(t))
+	win.onNotify(usageMsg(int(tab.ID), 40, 20))
+	report(t, tab, tmp(t)) // Claude exited before the next frame
+	win.drainUsage()
+	sameTexts(t, win.statusParts().Usage, "5h 40%")
+}

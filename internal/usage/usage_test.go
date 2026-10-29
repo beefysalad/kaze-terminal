@@ -73,7 +73,7 @@ func TestLevelsAndResetText(t *testing.T) {
 	later := time.Date(2026, 11, 2, 8, 5, 0, 0, time.Local) // a Monday
 	u := notify.Usage{FiveHour: win(80, soon), Week: win(95.2, later), Ctx: pct(97)}
 	got := Segments(u, now)
-	eq(t, texts(got), []string{"5h 80% · resets 3:40 PM", "wk 95% · resets Mon 8:05 AM", "ctx 97%"})
+	eq(t, texts(got), []string{"5h 80% (resets 3:40 PM)", "wk 95% (resets Mon 8:05 AM)", "ctx 97%"})
 	if got[0].Level != Warn || got[1].Level != High || got[2].Level != High {
 		t.Fatalf("levels %v %v %v", got[0].Level, got[1].Level, got[2].Level)
 	}
@@ -101,5 +101,28 @@ func TestNextReset(t *testing.T) {
 	past := notify.Usage{FiveHour: win(1, now.Add(-time.Hour)), Week: win(1, time.Time{})}
 	if got := NextReset(past, now); !got.IsZero() {
 		t.Fatalf("want zero, got %v", got)
+	}
+}
+
+func TestMergeKeepsTheNewestWindowAndItsHighestUse(t *testing.T) {
+	reset, next := now.Add(time.Hour), now.Add(6*time.Hour)
+	cases := []struct {
+		name     string
+		old, new *notify.Window
+		want     *notify.Window
+	}{
+		{"nothing held", nil, win(10, reset), win(10, reset)},
+		{"nothing new", win(10, reset), nil, win(10, reset)},
+		{"stale session reports less in the same window", win(62, reset), win(48, reset), win(62, reset)},
+		{"same window rises", win(48, reset), win(62, reset), win(62, reset)},
+		{"new window after a reset", win(90, reset), win(3, next), win(3, next)},
+		{"old window from a stale session", win(3, next), win(90, reset), win(3, next)},
+		{"no reset time: newest wins", win(50, time.Time{}), win(20, time.Time{}), win(20, time.Time{})},
+	}
+	for _, c := range cases {
+		got := Merge(c.old, c.new)
+		if (got == nil) != (c.want == nil) || got != nil && *got != *c.want {
+			t.Errorf("%s: got %+v, want %+v", c.name, got, c.want)
+		}
 	}
 }

@@ -120,8 +120,10 @@ func (win *window) onNotify(m notify.Msg) {
 		return // closed or unknown tab
 	}
 	if m.Kind == notify.KindUsage {
-		if m.Usage != nil {
-			win.usageIn.put(id, *m.Usage) // never an alert: no chime, flash or mark
+		// Never an alert: no chime, flash or mark. The prompt count is taken
+		// now, so a prompt that comes back before the next frame still hides ctx.
+		if t := mgr.Lookup(id); t != nil && m.Usage != nil {
+			win.usageIn.put(id, *m.Usage, cwdSeq(t))
 		}
 		if win.w != nil {
 			win.w.Invalidate()
