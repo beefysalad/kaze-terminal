@@ -19,6 +19,8 @@ type Kind string
 const (
 	KindDone  Kind = "done"
 	KindNeeds Kind = "needs"
+	// KindUsage carries Claude's plan usage from `kaze statusline`; it is not an alert.
+	KindUsage Kind = "usage"
 )
 
 const (
@@ -32,7 +34,21 @@ type Msg struct {
 	Tab    int    `json:"tab"`
 	Kind   Kind   `json:"kind"`
 	Reason string `json:"reason,omitempty"`
+	Usage  *Usage `json:"usage,omitempty"` // only for KindUsage
 	Token  string `json:"token"`
+}
+
+// Window is one rate-limit window: percent used and its reset time (Unix seconds, 0 = unknown).
+type Window struct {
+	Pct    float64 `json:"pct"`
+	Resets int64   `json:"resets,omitempty"`
+}
+
+// Usage is what Claude Code reported; nil fields were absent.
+type Usage struct {
+	FiveHour *Window  `json:"five_hour,omitempty"`
+	Week     *Window  `json:"week,omitempty"`
+	Ctx      *float64 `json:"ctx,omitempty"`
 }
 
 type Server struct {
@@ -153,7 +169,14 @@ func (s *Server) handle(c net.Conn) {
 	if subtle.ConstantTimeCompare([]byte(m.Token), []byte(s.token)) != 1 {
 		return
 	}
-	if m.Kind != KindDone && m.Kind != KindNeeds {
+	switch m.Kind {
+	case KindDone, KindNeeds:
+		m.Usage = nil
+	case KindUsage:
+		if m.Usage == nil {
+			return
+		}
+	default:
 		return
 	}
 	m.Token = ""
