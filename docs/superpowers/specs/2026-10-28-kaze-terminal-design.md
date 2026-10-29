@@ -105,6 +105,7 @@ When Claude Code in any tab finishes its turn or needs Patrick (a question, a pe
 - **Left: Claude usage**, 5-hour and weekly plan usage. Source still to verify: the Claude Code status-line input may carry this; if so, a tiny status-line script writes it to a file kaze reads. Token and cost per session can also be summed from the transcript `.jsonl` files.
 - **Right: kaze's own memory and CPU**, plus the active tab's process tree (shell, Claude, node dev servers) so runaway processes are visible.
 - Refresh rate is low (about once per second or slower) and stops when the window is hidden.
+- *Note 2026-10-29 (Plan 4):* the source is Claude Code's status line input (`rate_limits.five_hour` / `seven_day`, `context_window.used_percentage`), taken by `kaze statusline`, which also prints the line for Claude's own status row. The owner chose 5-hour, weekly and the tab's context only: no per-model (Fable) usage (not in the status line data), no cost, and the right side keeps kaze's memory and tab count (CPU and the process tree are not planned). The numbers sit at the right of the bar, since the left now holds the folder and branch.
 
 ### 6.6 Config
 

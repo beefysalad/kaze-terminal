@@ -1,6 +1,6 @@
 # kaze handoff
 
-Last updated: 2026-10-28, after Plan 3 was built (branch `feature/plan-3b`, PR to `main`). Read this first when you pick up kaze on another machine.
+Last updated: 2026-10-29, after Plan 4 was built (branch `feature/plan-4-usage`, PR to `main`). Read this first when you pick up kaze on another machine.
 
 ## Where things stand
 
@@ -14,6 +14,13 @@ Last updated: 2026-10-28, after Plan 3 was built (branch `feature/plan-3b`, PR t
 - **Taskbar flash on Windows only** (FlashWindowEx) when an alert arrives while kaze is minimized or unfocused. The macOS Dock bounce is deferred to the Mac milestone.
 - **Folder and branch in the status bar** from OSC 7 (pwsh and zsh snippets in the README) and `.git/HEAD` (worktrees handled, no git process). The branch is re-read on a new prompt report, on tab switch and on window focus gain.
 - **Installed on the owner's Windows laptop:** the Claude Code hooks in `~/.claude/settings.json` (Notification with matcher `permission_prompt|elicitation_dialog|elicitation_url_dialog|agent_needs_input` -> `kaze.exe notify needs`, Stop -> `kaze.exe notify done`, timeout 3) and the OSC 7 snippet in the pwsh profile. After each rebuild of `kaze-app\kaze.exe`, run `kaze.exe notify done` once so Smart App Control vets the new exe before a hook's 3s timeout.
+
+**Plan 4 (Claude usage) is built** on `feature/plan-4-usage`:
+
+- `kaze statusline` is Claude Code's status line command. It prints `5h 23%  ·  wk 41%  ·  ctx 34%` for Claude's own status row and, inside a kaze tab, sends the numbers to kaze as a `usage` message on the alert listener. Usage messages never chime, flash or mark a tab, and travel apart from the alert inbox so they cannot replace a pending alert.
+- The status bar shows them right-aligned before the memory text. Plan limits are account-wide (latest from any tab); context is per tab and hides once the tab's shell reports a new prompt (OSC 7), meaning Claude exited. Amber at 80%, red at 95%, with the reset time. A window past its reset disappears via one timed wake, no ticker.
+- **Owner's scope (2026-10-29):** 5-hour, weekly and context only. No per-model (Fable) number: Claude Code's status line data has none, and the only other source is an undocumented endpoint behind the login token, which he declined. Cost and the process tree are left out.
+- **Installed on the owner's laptop:** `statusLine` -> `kaze.exe statusline` in `~/.claude/settings.json`. The old orca status line and its 13 hooks were removed on 2026-10-29 (backups `settings.json.bak-20261029-*`).
 
 What works (tested on Windows):
 
@@ -40,9 +47,9 @@ Measured (Windows, `docs/benchmarks/2026-10-28-milestone-1.md`):
 
 ## Next
 
-1. **Merge Plan 3** (the owner merges the PR from `feature/plan-3b`), then rebuild `kaze-app\kaze.exe` from `main` and run `kaze.exe notify done` once.
+1. **Merge Plan 4** (the owner merges the PR from `feature/plan-4-usage`), then rebuild `kaze-app\kaze.exe` from `main` and run `kaze.exe notify done` once. Stacked PRs merge into their base branch, not `main`: open each PR against `main` or retarget before merging.
 2. **Plan 2**: subagent child tabs (spec 6.3).
-3. **Plan 4**: Claude usage in the status bar (spec 6.5).
+3. **Settings page** (owner idea 2026-10-28, reverses the "config file only" non-goal): workspaces / one-click launch, appearance, Claude alerts first. Not designed yet.
 4. **Mac milestone** (checklist below): build and use kaze on macOS for the first time.
 5. Speed task: tighten kaze's own keypress p99 and first-frame time.
 6. Later (spec 7 and owner ideas): browser button, notes-vault graph, smart Ctrl+C (copy when text is selected, else interrupt), kaze-native autocomplete.
@@ -94,7 +101,7 @@ kaze has **never been built on macOS**. Expect small fixes.
 - macOS: Option-as-Alt toggle, wheel units, RSS reading, Hiragino paths unverified.
 - Scrollback stores 20 bytes per cell; a full 10,000-line history costs ~30MB per tab ("stored compactly" from spec 6.1 not done yet).
 - Ctrl+Alt+letter is dropped on a US Windows layout.
-- Status bar lacks CPU and the per-tab process tree (spec 6.5, Plan 4).
+- Status bar lacks CPU and the per-tab process tree (spec 6.5; left out of Plan 4 by the owner).
 - `font_family` is accepted but not supported yet (kaze warns).
 - Glyph cache is safe only with one window / one UI goroutine (add a mutex before multi-window).
 - Closing a tab whose ConPTY close times out can keep that screen in memory until ConPTY lets go.

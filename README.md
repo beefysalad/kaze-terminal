@@ -244,6 +244,32 @@ If you already have hooks, add these entries next to them. On macOS the command 
   That lets Smart App Control check the new exe right away, instead of during a hook, where the
   check can take longer than the 3 second timeout.
 
+## Claude usage in the status bar
+
+kaze shows Claude's 5-hour and weekly plan usage and how full the current tab's context is, at the
+right of the status bar: `5h 23%  ·  wk 41%  ·  ctx 34%`. A number turns amber at 80% and red at
+95%, and then also says when that limit resets.
+
+The numbers come from Claude Code's status line. Point it at `kaze statusline` in
+`~/.claude/settings.json`:
+
+```json
+{
+  "statusLine": { "type": "command", "command": "\"C:\\Users\\you\\kaze\\kaze.exe\" statusline" }
+}
+```
+
+On macOS the command is `"/path/to/kaze" statusline`. Claude Code allows one status line, so this
+replaces any you have.
+
+- `kaze statusline` prints the same line under Claude's prompt, so it is useful in other terminals
+  too. Inside a kaze tab it also sends the numbers to kaze.
+- The 5-hour and weekly numbers are for the whole account, so kaze shows the latest from any tab.
+  Context is per session, so it shows only for the tab you are on, and goes away when Claude exits
+  back to the shell prompt (this needs the folder snippet above).
+- Plan usage appears only for Claude Pro and Max subscriptions, after the first reply in a session.
+- It always exits 0 and finishes within about 300ms.
+
 ## Benchmarks
 
 Numbers for the first milestone on Windows (key latency, Claude Code streaming, launch,
@@ -258,11 +284,11 @@ Done:
 - Plan 1: the terminal core with tabs.
 - Plan 3: alerts with a chime when Claude Code needs you, kaze's own title bar on Windows, and
   the current folder and git branch in the status bar.
+- Plan 4: Claude's 5-hour and weekly usage and the tab's context in the status bar.
 
 Next:
 
 - Plan 2: child tabs for Claude Code subagents.
-- Plan 4: Claude Code usage in the status bar.
 - The Mac milestone: run, fix and benchmark kaze on macOS.
 
 Later:
