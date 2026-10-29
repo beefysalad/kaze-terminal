@@ -3,6 +3,7 @@ package main
 
 import (
 	"os"
+	"time"
 
 	"gioui.org/app"
 	"gioui.org/unit"
@@ -21,6 +22,9 @@ func main() {
 	_ = r
 	if len(os.Args) > 1 && os.Args[1] == "notify" {
 		os.Exit(runNotify(os.Args[2:], stdinForNotify(), os.Getenv)) // before any window code
+	}
+	if len(os.Args) > 1 && os.Args[1] == "statusline" {
+		os.Exit(runStatusline(stdinForNotify(), os.Stdout, os.Getenv, time.Now()))
 	}
 	rec := bench.FromEnv(os.Getenv) // nil, and free, unless KAZE_BENCH is set
 	cfg, warns := loadConfig()

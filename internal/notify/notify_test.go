@@ -324,3 +324,40 @@ func TestNilAndPanickingOnMsg(t *testing.T) {
 		t.Fatal("server died after onMsg panic")
 	}
 }
+
+func TestUsageRoundTrip(t *testing.T) {
+	s, ch := start(t)
+	ctx := 34.5
+	u := &Usage{FiveHour: &Window{Pct: 23.5, Resets: 1738425600}, Week: &Window{Pct: 41.2}, Ctx: &ctx}
+	if err := Send(s.Addr(), s.Token(), Msg{Tab: 2, Kind: KindUsage, Usage: u}, time.Second); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case m := <-ch:
+		if m.Kind != KindUsage || m.Usage == nil || m.Usage.FiveHour.Pct != 23.5 || m.Usage.FiveHour.Resets != 1738425600 ||
+			m.Usage.Week.Pct != 41.2 || m.Usage.Ctx == nil || *m.Usage.Ctx != 34.5 {
+			t.Fatalf("got %+v", m)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout")
+	}
+}
+
+func TestUsageWithoutPayloadIsDropped(t *testing.T) {
+	s, ch := start(t)
+	Send(s.Addr(), s.Token(), Msg{Tab: 1, Kind: KindUsage}, time.Second)
+	expectNone(t, ch)
+}
+
+func TestAlertsCarryNoUsage(t *testing.T) {
+	s, ch := start(t)
+	Send(s.Addr(), s.Token(), Msg{Tab: 1, Kind: KindDone, Usage: &Usage{Week: &Window{Pct: 9}}}, time.Second)
+	select {
+	case m := <-ch:
+		if m.Kind != KindDone || m.Usage != nil {
+			t.Fatalf("got %+v", m)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout")
+	}
+}

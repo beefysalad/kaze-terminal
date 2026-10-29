@@ -6,15 +6,20 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/gitinfo"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/patrick-gogo/kaze-terminal/internal/usage"
 )
 
 // statusParts is what the status bar shows: the active tab's folder and branch
 // on the left, the memory/tab count (and any notice) on the right.
-type statusParts struct{ Folder, Branch, Right string }
+type statusParts struct {
+	Folder, Branch, Right string
+	Usage                 []usage.Segment // Claude usage, drawn right-aligned before Right
+}
 
 // locEntry is the branch found for one tab at one folder report.
 type locEntry struct {
@@ -26,6 +31,7 @@ type locEntry struct {
 func (win *window) statusParts() statusParts {
 	p := statusParts{Right: win.statusText(len(win.mgr.Tabs()))}
 	t := win.mgr.Active()
+	p.Usage = win.usageSegments(t, time.Now())
 	if t == nil {
 		return p
 	}
@@ -66,6 +72,11 @@ func (win *window) pruneLocs(list []*tabs.Tab) {
 	for id := range win.locs { // deleting during range is safe in Go
 		if !slices.ContainsFunc(list, func(t *tabs.Tab) bool { return t.ID == id }) {
 			delete(win.locs, id)
+		}
+	}
+	for id := range win.ctx {
+		if !slices.ContainsFunc(list, func(t *tabs.Tab) bool { return t.ID == id }) {
+			delete(win.ctx, id)
 		}
 	}
 }

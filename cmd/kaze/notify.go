@@ -41,9 +41,8 @@ func runNotify(args []string, stdin io.Reader, env func(string) string) (code in
 	if kind != notify.KindDone && kind != notify.KindNeeds {
 		return 0
 	}
-	addr, token := env("KAZE_NOTIFY"), env("KAZE_NOTIFY_TOKEN")
-	tab, err := strconv.Atoi(env("KAZE_TAB_ID"))
-	if addr == "" || token == "" || err != nil || tab <= 0 {
+	addr, token, tab, ok := kazeTab(env)
+	if !ok {
 		return 0 // not run from a kaze tab
 	}
 	msg := notify.Msg{Tab: tab, Kind: kind}
@@ -63,6 +62,13 @@ func runNotify(args []string, stdin io.Reader, env func(string) string) (code in
 		_ = notify.Send(addr, token, msg, left)
 	}
 	return 0
+}
+
+// kazeTab is where to send from this tab; ok is false outside a kaze tab.
+func kazeTab(env func(string) string) (addr, token string, tab int, ok bool) {
+	addr, token = env("KAZE_NOTIFY"), env("KAZE_NOTIFY_TOKEN")
+	tab, err := strconv.Atoi(env("KAZE_TAB_ID"))
+	return addr, token, tab, addr != "" && token != "" && err == nil && tab > 0
 }
 
 // readStdinLimited returns what arrived within wait, at most stdinCap bytes. The

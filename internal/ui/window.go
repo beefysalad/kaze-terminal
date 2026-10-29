@@ -36,6 +36,7 @@ import (
 	"github.com/patrick-gogo/kaze-terminal/internal/sound"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 	"github.com/patrick-gogo/kaze-terminal/internal/term"
+	"github.com/patrick-gogo/kaze-terminal/internal/usage"
 )
 
 // Options are what main resolved at startup.
@@ -126,6 +127,11 @@ type window struct {
 	snapActive  atomic.Int64                 // active TabID, mirrored for onNotify
 	snapFocused atomic.Bool
 	hwnd        atomic.Uintptr // native window handle, 0 until known
+
+	// Claude usage from `kaze statusline`.
+	usageIn usageBox                // notify goroutines -> UI goroutine
+	acct    notify.Usage            // plan limits (no Ctx); UI goroutine only
+	ctx     map[tabs.TabID]ctxEntry // per-tab context use; UI goroutine only
 }
 
 // Run drives the window until it closes. It returns after every shell is closed.
@@ -372,6 +378,7 @@ func (win *window) frame(gtx layout.Context) error {
 	})
 	win.publish(active, win.focused)
 	win.drainAlerts(gtx.Now)
+	win.drainUsage()
 	win.visit(active)
 	win.autoScroll(gtx, active, cw, ch)
 	sel := win.checkSel(active)
@@ -424,6 +431,9 @@ func (win *window) frame(gtx layout.Context) error {
 	sg := gtx
 	sg.Constraints = layout.Exact(image.Pt(size.X, statusH))
 	win.ui.layoutStatus(sg, win.statusParts(), statusH)
+	if at := usage.NextReset(win.acct, gtx.Now); !at.IsZero() {
+		gtx.Execute(op.InvalidateCmd{At: at}) // so a reset window leaves an idle bar
+	}
 	if at, ok := win.noticeWake(time.Now()); ok {
 		gtx.Execute(op.InvalidateCmd{At: at}) // so the notice goes away on an idle window
 	}

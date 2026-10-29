@@ -411,3 +411,15 @@ func TestHasReportsOpenTabsOnly(t *testing.T) {
 		t.Fatalf("Has: closed %v open %v zero %v unknown %v", m.Has(a.ID), m.Has(b.ID), m.Has(0), m.Has(99))
 	}
 }
+
+func TestLookupFindsOpenTabsOnly(t *testing.T) {
+	m, _ := newManager(t)
+	one := mustNew(t, m)
+	if got := m.Lookup(one.ID); got != one {
+		t.Fatalf("Lookup(%d) = %v", one.ID, got)
+	}
+	m.Close(one.ID)
+	if got := m.Lookup(one.ID); got != nil {
+		t.Fatalf("closed tab found: %v", got)
+	}
+}
