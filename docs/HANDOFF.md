@@ -1,11 +1,20 @@
 # kaze handoff
 
-Last updated: 2026-11-02, after PRs #97 and #98 merged and release 0.21 was prepared. Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-02, after sidebar PR #104 merged and release 0.22 was prepared. Read this first when you pick up kaze on another machine.
 
 ## Where things stand
 
-**Issue #101 is implemented locally on `feat/sidebar-rework`**, in the isolated
-checkout `../kaze-sidebar-rework`. Two-line rows use the approved title priority,
+**Release 0.22 ships the sidebar redesign (#101 / PR #104).** The owner explicitly
+requested merging #104 and publishing this release on 2026-11-02, overriding the
+implementation-stage no-release instruction for this work. The feature PR passed
+macOS and Windows CI and is merged. Version, Mac metadata, release notes, full
+changelog and lander are updated together on `release/0.22`. The sidebar's native
+product captures still need retaking after owner review; headless development
+renders are not used as product screenshots. Installed update/relaunch and native
+launcher/cleanup interactions with real agents remain owner checks.
+
+**Issue #101 merged in PR #104** from `feat/sidebar-rework`. Two-line rows use
+the approved title priority,
 agent logos and first-line statuses; group headers have no dots. Retained models,
 session order and drawing operations avoid sidebar allocations or row shaping on
 unchanged frames, including Workspaces and a retained filter. Editors stay live
@@ -17,8 +26,9 @@ Cleanup checks are event-driven and minute-limited per repo. A close can schedul
 one trailing check to satisfy that limit; Keep cancels it. The last window waits
 for cleanup and preserves refusal reasons until dismissed. No recurring polling.
 See `docs/audits/2026-11-02-sidebar-redesign.md` for measurements and verification.
-Native installed-app interactions and Windows runtime remain owner checks. No
-release, version bump, changelog or tag. Original checkout changes were preserved.
+Native installed-app interactions and Windows runtime remain owner checks.
+Implementation-stage release work was deferred; release 0.22 is now explicitly
+authorized above. Original checkout changes were preserved.
 
 
 **Release 0.21 combines the markdown reader (#97), live subagent messages and
