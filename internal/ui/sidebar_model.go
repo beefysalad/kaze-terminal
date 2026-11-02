@@ -1,9 +1,11 @@
 package ui
 
 import (
-	"sort"
+	"slices"
 	"strings"
+	"unicode"
 
+	"github.com/patrick-gogo/kaze-terminal/internal/branchsession"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 )
 
@@ -12,6 +14,7 @@ type sideRow struct {
 	Docs                  []sideDoc
 	ID                    tabs.TabID
 	Title, Folder, Branch string
+	Detail                string
 	Agent                 string // agent name while a hook-driven session is active
 	Command               string // the last command while an agent runs in the tab
 	Running               bool
@@ -26,6 +29,7 @@ type sideRow struct {
 // sideGroup is one repo's sessions. Rows is filtered; Count is not.
 type sideGroup struct {
 	Key, Name  string
+	Finished   int
 	Rows       []sideRow
 	Count      int  // all members, before the filter
 	Waiting    int  // members with markNeeds
@@ -137,6 +141,12 @@ func buildSide(in sideInput) sideModel {
 			Claude:  a.claude,
 			Mark:    in.Mark(t.ID),
 		}
+		row.Detail = row.Branch
+		if loc.repo == "" {
+			row.Detail = row.Folder
+		} else if loc.worktree != "" && !strings.HasSuffix(folderName(loc.worktree), branchsession.Slug(loc.branch)) {
+			row.Detail = "⑂ " + folderName(loc.worktree) + " · " + loc.branch
+		}
 		if in.Docs != nil {
 			row.Docs = in.Docs(t.ID)
 		}
@@ -214,20 +224,40 @@ func (win *window) curRuns() []sideRun {
 	if win.frameRuns != nil {
 		return *win.frameRuns
 	}
-	return win.sideRuns()
+	return win.reuseSideRuns()
 }
 
 // sideRuns lists the open workspace runs by id; a run with no member tab open is left out.
-func (win *window) sideRuns() []sideRun {
-	ids := make([]uint64, 0, len(win.runs))
+func (win *window) sideRuns() []sideRun { return win.buildSideRuns(nil, nil) }
+
+func (win *window) reuseSideRuns() []sideRun {
+	s := &win.side
+	s.runIDs = s.runIDs[:0]
 	for id := range win.runs {
-		ids = append(ids, id)
+		s.runIDs = append(s.runIDs, id)
 	}
-	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
-	var out []sideRun
+	s.runScratch = win.buildSideRuns(s.runScratch, s.runIDs)
+	return s.runScratch
+}
+
+func (win *window) buildSideRuns(out []sideRun, ids []uint64) []sideRun {
+	if len(win.runs) == 0 {
+		return nil
+	}
+	if ids == nil {
+		for id := range win.runs {
+			ids = append(ids, id)
+		}
+	}
+	slices.Sort(ids)
+	old := out
+	out = out[:0]
 	for _, id := range ids {
 		r := win.runs[id]
 		sr := sideRun{Run: r.id, Name: r.name}
+		if len(out) < len(old) {
+			sr.Members = old[len(out)].Members[:0]
+		}
 		open := false
 		for _, wm := range r.members {
 			var t *tabs.Tab
@@ -290,9 +320,8 @@ func (in sideInput) clean(s string) string {
 	return in.Clean(s)
 }
 
-// ruled is the title rule's pick before the tab's own title: the owner's name, the
-// last command's argument (kept after Claude leaves), then the folder's name. A
-// workspace tab keeps its fixed title.
+// ruled picks a name, command argument, active agent summary, distinct folder,
+// then program name. Workspace members keep their fixed title.
 func (in sideInput) ruled(t *tabs.Tab, loc locEntry, a agentState) string {
 	if t.FixedTitle != "" {
 		return ""
@@ -305,7 +334,25 @@ func (in sideInput) ruled(t *tabs.Tab, loc locEntry, a agentState) string {
 	if a.arg != "" {
 		return a.arg
 	}
-	return folderName(loc.cwd)
+	if a.agentName() != "" {
+		title := strings.TrimLeftFunc(t.Title, func(r rune) bool {
+			return unicode.IsSpace(r) || r == '✳' || r == '✻' || r == '✽' || r == '⏺' || (r >= 0x2800 && r <= 0x28ff)
+		})
+		if title != "" && !looksLikePath(title) {
+			return title
+		}
+	}
+	if folder := folderName(loc.cwd); folder != "" && folder != loc.repoName && loc.worktree == "" {
+		return folder
+	}
+	if a.agentName() != "" {
+		return a.agentName()
+	}
+	// With no cwd yet, keep the terminal title until the shell reports its folder.
+	if loc.cwd == "" && t.Title != "" {
+		return t.Title
+	}
+	return in.DefTitle
 }
 
 // folderName is dir's last part for either separator; "" for a root or no folder.
@@ -320,13 +367,15 @@ func folderName(dir string) string {
 	return dir
 }
 
-// stateWord is the word the row's third line ends with: needs you and done beat running.
+// stateWord is the first-line status; alerts take priority over subagent counts.
 func (r sideRow) stateWord() string {
 	switch {
 	case r.Mark == markNeeds:
 		return "needs you"
 	case r.Mark == markDone:
 		return "done"
+	case r.AgentCount > 0:
+		return agentChip(r.AgentCount)
 	case r.Running:
 		return "running"
 	}

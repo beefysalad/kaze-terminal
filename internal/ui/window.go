@@ -431,6 +431,9 @@ func (win *window) setFocused(f bool) {
 	}
 	win.focused = f
 	if f {
+		if win.mgr != nil {
+			win.requestWorktreeCheck(false)
+		}
 		if d := win.shownDoc(); d != nil {
 			win.docs.checked = time.Now()
 			win.refreshDoc(d, win.docs.checked)
@@ -622,31 +625,46 @@ func (win *window) frame(gtx layout.Context) error {
 	}
 	win.mgr.ResizeAll(cols, rows)
 
-	win.paletteEvents(gtx) // first: while open it takes every click
-	win.barEvents(gtx)
-	win.statusEvents(gtx)
-	win.sideEvents(gtx)
-	win.filterEvents(gtx)
-	win.renameEvents(gtx)
-	win.toastEvents(gtx)
-	win.bannerEvents(gtx)
-	active := win.mgr.Active()
-	if win.set.shown {
-		win.settingsEvents(gtx) // the terminal gets no input; its shell keeps running
-	} else if win.board.open {
-		win.boardEvents(gtx) // likewise
-	} else if win.docs.shown != 0 {
-		win.docEvents(gtx)
-	} else if active != nil {
-		win.paneEvents(gtx, cw, ch) // before the session: a pane sits over it
-		if win.fl.refocus {
-			win.fl.refocus, win.wantFocus = false, true // its filters are up now
-		}
-		if win.docs.shown == 0 {
-			win.termEvents(gtx, win.mainView(active), cw, ch)
+	var active *tabs.Tab
+	win.drainBranchWork()
+	if at, ok := win.worktreeTick(gtx.Now); ok {
+		gtx.Execute(op.InvalidateCmd{At: at})
+	}
+	dialogUp := win.worktreeDialogEvents(gtx)
+	if !dialogUp {
+		win.paletteEvents(gtx) // first: while open it takes every click
+		win.barEvents(gtx)
+		win.statusEvents(gtx)
+		win.sideEvents(gtx)
+		win.filterEvents(gtx)
+		win.renameEvents(gtx)
+		win.branchEvents(gtx)
+		win.toastEvents(gtx)
+		win.bannerEvents(gtx)
+		active = win.mgr.Active()
+		if win.set.shown {
+			win.settingsEvents(gtx) // the terminal gets no input; its shell keeps running
+		} else if win.board.open {
+			win.boardEvents(gtx) // likewise
+		} else if win.docs.shown != 0 {
+			win.docEvents(gtx)
+		} else if active != nil {
+			win.paneEvents(gtx, cw, ch) // before the session: a pane sits over it
+			if win.fl.refocus {
+				win.fl.refocus, win.wantFocus = false, true // its filters are up now
+			}
+			if win.docs.shown == 0 {
+				win.termEvents(gtx, win.mainView(active), cw, ch)
+			}
 		}
 	}
 	if win.mgr.Empty() {
+		paint.Fill(gtx.Ops, win.ui.th.Chrome)
+		win.drawWorktreeDialog(gtx, image.Rectangle{Max: size})
+		if win.wantFocus && win.worktreeDialogShown() {
+			gtx.Execute(key.FocusCmd{Tag: win.focusTarget()})
+			win.wantFocus = false
+		}
 		return nil
 	}
 	active = win.mgr.Active()
@@ -723,8 +741,11 @@ func (win *window) frame(gtx layout.Context) error {
 		area.Pop()
 	}
 
-	runs := win.sideRuns()
+	runs := win.reuseSideRuns()
 	win.frameRuns = &runs
+	if !win.side.launch.work.initialized && !sideRect.Empty() {
+		win.requestWorktreeCheck(false)
+	}
 	win.drawSide(gtx, sideRect)
 
 	if at, ok := win.docTick(gtx.Now); ok {
@@ -778,6 +799,7 @@ func (win *window) frame(gtx layout.Context) error {
 	win.drawUsageCard(gtx) // over the terminal and toasts; takes no input
 	win.drawResourceCard(gtx)
 	win.drawPalette(gtx, termRect) // last: it sits over everything, toasts included
+	win.drawWorktreeDialog(gtx, image.Rectangle{Max: size})
 
 	if win.wantFocus {
 		gtx.Execute(key.FocusCmd{Tag: win.focusTarget()})
@@ -953,8 +975,14 @@ func (win *window) barEvents(gtx layout.Context) {
 // focusTarget is who gets the keyboard: the sidebar's rename or filter field, a settings
 // text field, the settings page or the terminal.
 func (win *window) focusTarget() event.Tag {
+	if win.worktreeDialogShown() {
+		return &win.side.launch.work.tag
+	}
 	if win.palette.open {
 		return &win.palette.ed
+	}
+	if win.side.launch.open && !win.side.hidden {
+		return &win.side.launch.ed
 	}
 	if win.side.renaming != 0 && !win.side.hidden {
 		return &win.side.ren
@@ -1200,6 +1228,8 @@ func (win *window) onKey(gtx layout.Context, t *tabs.Tab, e key.Event, m term.Mo
 // both use it, so a shortcut does the same wherever the keyboard is.
 func (win *window) runShortcut(gtx layout.Context, a action) {
 	switch a {
+	case actNewBranchSession:
+		win.openBranchLauncher()
 	case actNewTab:
 		win.newTab()
 	case actCloseTab:

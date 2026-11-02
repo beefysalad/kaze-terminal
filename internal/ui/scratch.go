@@ -53,6 +53,11 @@ func (win *window) toggleScratch() {
 func (win *window) closeScratch(session tabs.TabID) {
 	for _, t := range win.mgr.Tabs() {
 		if t.Parent == session {
+			dir := win.locOf(t).cwd
+			if dir == "" {
+				dir = t.Dir
+			}
+			win.worktreeClosing(dir)
 			win.fl.remove(t.ID)
 			win.mgr.Close(t.ID)
 		}

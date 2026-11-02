@@ -161,7 +161,7 @@ func TestShellRejectsEmptyProgram(t *testing.T) {
 }
 
 func TestKnownActionsAreTheRealOnes(t *testing.T) {
-	want := []string{"agents_board", "close_tab", "copy", "new_tab", "next_tab", "next_waiting", "open_settings", "palette", "paste", "prev_tab", "scratch_shell", "toggle_sidebar"}
+	want := []string{"agents_board", "close_tab", "copy", "new_branch_session", "new_tab", "next_tab", "next_waiting", "open_settings", "palette", "paste", "prev_tab", "scratch_shell", "toggle_sidebar"}
 	var got []string
 	for k := range KnownActions {
 		got = append(got, k)
@@ -332,5 +332,15 @@ func TestRestoreSessionsDefaultAndOptOut(t *testing.T) {
 	c, w, err := Load(p)
 	if err != nil || len(w) != 0 || c.RestoreSessions {
 		t.Fatalf("%+v %v %v", c, w, err)
+	}
+}
+
+func TestSidebarLauncherConfig(t *testing.T) {
+	if !Default().SidebarLauncher || Default().SidebarLauncherAgent != "claude" {
+		t.Fatal("launcher defaults")
+	}
+	c, w, e := Load(write(t, "sidebar_launcher = false\nsidebar_launcher_agent = \"codex\"\n[keys]\nnew_branch_session = \"ctrl+shift+n\"\n"))
+	if e != nil || len(w) > 0 || c.SidebarLauncher || c.SidebarLauncherAgent != "codex" {
+		t.Fatalf("%+v %v %v", c, w, e)
 	}
 }

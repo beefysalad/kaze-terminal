@@ -362,12 +362,12 @@ func TestKeyboardSelectionScrollsIntoView(t *testing.T) {
 		t.Fatalf("prev from the first went to %d, want the last", win.mgr.Active().ID)
 	}
 	h := rowHit(t, win, ids[39])
-	if !h.rect.In(win.side.hits.list) || h.rect.Dy() != 60 {
+	if !h.rect.In(win.side.hits.list) || h.rect.Dy() != sideRowH {
 		t.Fatalf("row %v is not wholly inside the list %v", h.rect, win.side.hits.list)
 	}
 	win.runShortcut(layout.Context{}, actNextTab)
 	sideFrame(t, win, &r)
-	if h := rowHit(t, win, ids[0]); h.rect.Dy() != 60 {
+	if h := rowHit(t, win, ids[0]); h.rect.Dy() != sideRowH {
 		t.Fatalf("wrapping to the first row left it cut: %v", h.rect)
 	}
 }
@@ -739,35 +739,28 @@ func TestNextWaitingNoneShowsNotice(t *testing.T) {
 	}
 }
 
-func TestNextWaitingButton(t *testing.T) {
-	win, ids := needsWindow(t, 3, 2)
+func TestBranchLauncherReplacesNextWaitingButton(t *testing.T) {
+	win, _ := needsWindow(t, 3, 2)
 	var r input.Router
 	sideFrame(t, win, &r)
 	h := win.side.hits
-	if h.next.Empty() {
-		t.Fatal("no Next waiting button was drawn")
+	if h.launchButton.Empty() || h.launchButton.Overlaps(h.list) {
+		t.Fatalf("launcher %v list %v", h.launchButton, h.list)
 	}
-	if h.next.Overlaps(h.list) {
-		t.Fatalf("button %v overlaps the list %v", h.next, h.list)
-	}
-	sideClick(win, &r, h.next, pointer.ButtonPrimary)
+	sideClick(win, &r, h.launchButton, pointer.ButtonPrimary)
 	sideFrame(t, win, &r)
-	if got := win.mgr.Active().ID; got != ids[2] {
-		t.Fatalf("click showed %d, want %d", got, ids[2])
+	if !win.side.launch.open {
+		t.Fatal("button did not open branch picker")
 	}
 }
-
-func TestNextWaitingButtonSitsAboveWorkspaces(t *testing.T) {
+func TestBranchLauncherSitsAboveWorkspaces(t *testing.T) {
 	win, _ := needsWindow(t, 2, 1)
 	openMember(t, win, "api")
 	var r input.Router
 	sideFrame(t, win, &r)
 	h := win.side.hits
-	if h.next.Empty() || len(h.members) == 0 {
-		t.Fatalf("button %v members %d", h.next, len(h.members))
-	}
-	if h.next.Max.Y > h.members[0].rect.Min.Y {
-		t.Fatalf("button %v is not above the workspaces section (first member %v)", h.next, h.members[0].rect)
+	if h.launchButton.Empty() || len(h.members) == 0 || h.launchButton.Max.Y > h.members[0].rect.Min.Y {
+		t.Fatalf("launcher %v members %v", h.launchButton, h.members)
 	}
 }
 

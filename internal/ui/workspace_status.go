@@ -31,7 +31,11 @@ func (win *window) memberStatus(m *wsMember, t *tabs.Tab) (text string, needs, f
 	case r.Wait == workspaces.WaitDocker:
 		return "Waiting for Docker", false, false
 	case r.Wait == workspaces.WaitPort:
-		return fmt.Sprintf("Waiting for port %d", r.Port), false, false
+		if m.waitPortLabel == "" || m.waitPort != r.Port {
+			m.waitPort = r.Port
+			m.waitPortLabel = fmt.Sprintf("Waiting for port %d", r.Port)
+		}
+		return m.waitPortLabel, false, false
 	}
 	return "Starting", false, false
 }

@@ -27,6 +27,7 @@ type locEntry struct {
 	branch         string
 	repo           string // common git folder, "" outside a repo
 	repoName       string
+	worktree       string // linked checkout top, discovered in the background
 }
 
 // locOf returns the folder immediately and queues background Git discovery on

@@ -32,13 +32,15 @@ type wsRun struct {
 }
 
 type wsMember struct {
-	tab        tabs.TabID // 0 when the shell could not start
-	title      string
-	dir        string   // where its shell started, for the group menu
-	cmds       []string // its recipe commands, for the group menu
-	promptAt   uint64   // the shell's prompt reports when its line was typed; a later one means it finished
-	run        workspaces.TabRun
-	hideBanner bool // the owner dismissed a failure banner
+	waitPort      int
+	waitPortLabel string
+	tab           tabs.TabID // 0 when the shell could not start
+	title         string
+	dir           string   // where its shell started, for the group menu
+	cmds          []string // its recipe commands, for the group menu
+	promptAt      uint64   // the shell's prompt reports when its line was typed; a later one means it finished
+	run           workspaces.TabRun
+	hideBanner    bool // the owner dismissed a failure banner
 }
 
 // wsResult is one probe's answer for every member of a run waiting on dep.
@@ -70,7 +72,8 @@ func (win *window) wsNow() time.Time {
 // shouldClose is true once the last tab closed. The loop asks only after a
 // frame, and a run opens all its tabs within one, so it never sees a run half open.
 func (win *window) shouldClose() bool {
-	return win.mgr != nil && win.mgr.Empty()
+	w := &win.side.launch.work
+	return win.mgr != nil && win.mgr.Empty() && !w.busy && !win.worktreeDialogShown() && !win.side.launch.busy
 }
 
 func (win *window) wsNotice(msg string) {

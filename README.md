@@ -137,6 +137,7 @@ binaries; re-run `go test` with `-ldflags "-X main.r=<random>"`.
 | Action | Windows | macOS |
 |---|---|---|
 | New session | Ctrl+Shift+T | Cmd+T |
+| New session on a branch | Ctrl+Shift+N | Cmd+Shift+N |
 | Close session | Ctrl+Shift+W | Cmd+W |
 | Next session | Ctrl+Tab | Ctrl+Tab |
 | Previous session | Ctrl+Shift+Tab | Ctrl+Shift+Tab |
@@ -185,40 +186,48 @@ Sessions are listed down the left side, in place of a tab strip.
 - **Groups:** sessions in the same git repo sit under one header, and worktrees count as the
   same repo. Groups start open. Click a header to fold or unfold it. A folded header shows an
   amber "N waiting" when a session in it needs you.
-- **Rows:** each row shows the title, a shortened folder, the branch (without a `feature/` style
-  prefix) and the word `needs you` or `done` when Claude Code has something to say. Hover a row
-  to get a ×, or middle click it to close it. The `+` button opens a new session.
-  - **Agent:** a session running Claude Code shows the Claude logo and `claude` after the title;
-    one running Codex shows the OpenAI logo and `codex`. On macOS and Linux kaze sees the program
-    running in the tab, so they appear within about a second of starting, with no setup. Elsewhere
-    they come from the hooks: SessionStart (`kaze notify session`) or the first prompt. Interactive
-    Codex runs its hooks in a shared background server outside the tab, so its alerts need
-    `codex --no-daemon` for now.
-  - **Command:** when you start a prompt with a slash command, the row shows `/command` in
-    magenta after the agent. This needs the prompt hook (see Alerts below).
-  - **Running:** a still ring and the word `running` show that Claude is working on a prompt.
-    `needs you` and `done` take priority over it. The ring does not animate, so an idle kaze
-    still uses no CPU. A session counts as running from the prompt until Claude says it is done
-    or needs you. When the shell prompt comes back, Claude has left and the row is a plain shell
-    again. Esc to interrupt Claude fires no hook, so an interrupted row stays `running` until your
-    next message.
-  - **Title:** the title is your own name for the row if you set one, otherwise the slash
-    command's first argument, otherwise the folder name, otherwise the shell's title.
-  - **Rename:** double-click a title to edit it. Enter saves, Esc cancels, and a blank name goes
-    back to the rule above. Members of a running workspace can't be renamed.
-  - **Line counts:** inside a git repo, `+N -M` shows the lines added and removed against
-    `HEAD` (`git diff --shortstat HEAD`). kaze runs git only when something happens (a hook
-    message or the shell reporting its folder), never on a timer, with no console window and a
-    2 second limit. It never takes git's index lock, so it can't break Claude's own git
-    commands. Outside a repo nothing is shown.
+- **Rows:** two lines: state dot, agent logo and name with status on the right;
+  branch and `+N −M` below. Linked worktrees show their folder and branch unless
+  the folder already ends in the branch's slug. Outside a repo, the second line
+  shows the shortened folder. Hover for ×, or middle-click to close.
+  - **Agent:** Claude and Codex have their own logos. Hooks or foreground-program
+    detection identify the agent. Codex hooks need `codex --no-daemon` for now.
+  - **Status:** `needs you`, `done`, the active subagent count, then `running`, in
+    that order. The running ring stays still, so it costs no animation frames.
+  - **Name:** your Kaze rename, then the last slash command's first argument,
+    then the active agent's title without its leading spinner. Otherwise Kaze
+    uses a folder name that differs from the repo, or the program's name.
+    Linked worktree folder names appear only on the second line. Command arguments
+    keep their name after the agent exits; old agent titles do not.
+  - **Rename:** double-click the title. Enter saves, Esc cancels, and blank
+    returns to the name rule. Workspace members keep their fixed names.
+  - **Line counts:** `+N −M` compares the folder with `HEAD`, on prompt/hook
+    events, with a two-second background Git limit and no index refresh.
 - **Filter:** the "Filter sessions…" field at the top. Click it to type. Typing narrows the list
   by title, folder, branch and command, and folded groups open while you filter. Enter shows the first
   match (on an empty field it only gives the keyboard back). Esc clears the field and gives the
   keyboard back to the terminal. Switching or opening a session, opening Settings or hiding the
   sidebar also gives the keyboard back and keeps the text.
-- **Next waiting:** the button above the Workspaces section, with its key on the right, jumps
-  to the next session after the one you're on that needs you, in sidebar order, wrapping
-  around. When none is waiting, the status bar says "Nothing is waiting on you."
+- **New session on a branch:** the bottom launcher replaces the Next waiting
+  button. Click `NEW SESSION · hide/show` to tuck it away or bring it back.
+  Cmd+Shift+N on macOS or Ctrl+Shift+N on Windows opens it either way. Pick a
+  repo, enter a branch and choose Claude, Codex or Shell. Enter starts; Esc cancels.
+  Kaze reuses that branch's worktree or makes a sibling folder named
+  `<main-checkout>-<branch-slug>`. Existing local or remote branches keep their
+  history; new branches use the fetched remote default, local main/master, then
+  the main checkout's HEAD. Kaze never fetches and refuses folder collisions.
+  Agents start only when the new shell is ready: `claude` or `codex --no-daemon`.
+- **Worktree cleanup:** only worktrees Kaze creates are recorded in
+  `worktrees.json` beside the config. Closing the last terminal in a clean one
+  offers Remove / Keep. A recent check can defer this once, up to a minute;
+  Keep skips the pending check. The final window stays open until answered.
+  Merged worktrees with commits made since creation show a quiet cleanup line
+  under their repo. Removal always asks, uses plain `git worktree remove`,
+  preserves branches, and reports folders Git refused. Scratch shells and
+  workspace members count as open terminals. There is no recurring cleanup timer.
+- **Next waiting:** Cmd+J / Ctrl+Shift+J and its palette action still jump to the
+  next session that needs you, wrapping around. With none, the status bar says
+  "Nothing is waiting on you."
 - **Workspaces:** a section at the bottom lists each running workspace (see Workspaces below).
 - **Hiding it:** the sidebar toggle (Ctrl+Shift+B, Cmd+B on macOS) hides or shows it, and kaze
   remembers the choice as `sidebar` in the config. Below 560 dp of window width it also hides
@@ -655,7 +664,9 @@ error makes kaze use all defaults.
 | `startup_workspace` | The workspace to run when kaze starts (chosen in Settings > Workspaces, stored as its ID) | none, a normal tab |
 | `[colors]` | `fg`, `bg`, `cursor`, `selection`, `color0` to `color15`, as `"#rrggbb"` | the built-in Midnight palette |
 | `sidebar` | Show the session sidebar (the toggle saves it here) | `true` |
-| `[keys]` | `new_tab`, `close_tab`, `next_tab`, `prev_tab`, `copy`, `paste`, `toggle_sidebar`, `next_waiting`, `palette`, `scratch_shell`, `open_settings` | the shortcuts above |
+| `sidebar_launcher` | Expand the sidebar branch launcher | `true` |
+| `sidebar_launcher_agent` | Last launcher choice: `claude`, `codex`, `shell` | `"claude"` |
+| `[keys]` | `new_tab`, `new_branch_session`, `close_tab`, `next_tab`, `prev_tab`, `copy`, `paste`, `toggle_sidebar`, `next_waiting`, `palette`, `scratch_shell`, `open_settings` | the shortcuts above |
 | `font_family` | **Not supported yet.** Setting it only adds a warning; kaze always uses its bundled font. | |
 
 Shortcuts are written like `"ctrl+shift+t"`. Modifiers: `ctrl`, `shift`, `alt` (or `option`),
@@ -896,7 +907,8 @@ Done:
 - Plan 5a: the settings page (Appearance and Claude), five themes and the Claude Code setup check.
 - Plan 5b: Workspaces (launch a saved set of tabs in one click).
 - Plan 6a: the session sidebar, replacing the tab strip, with repo groups, a filter and the running workspaces.
-- Plan 6b: agent awareness on the rows (slash command, running mark, titles you can rename, `+N -M` line counts) and a Next waiting button and key.
+- Plan 6b: agent awareness, titles you can rename, line counts and the Next waiting shortcut.
+- Issue #101: two-line session rows, retained sidebar drawing, a branch/worktree launcher and confirmed cleanup of Kaze-created worktrees.
 - Subagents: each session's subagents in the sidebar, a live pane per subagent and the agents board (replaces Plan 2's child tabs).
 - 0.16: clickable links, Codex helpers alongside Claude Code subagents, and screenshot paste with Cmd+V.
 - 0.17: Claude and Codex logos on the sidebar rows as soon as an agent opens, and links drawn in blue.

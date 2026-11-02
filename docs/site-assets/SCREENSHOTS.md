@@ -1,5 +1,9 @@
 # Product captures
 
+Issue #101 changes the session rows, group headers and bottom launcher. All
+sidebar-visible product captures need retaking after native owner review. Headless
+Gio verification images are development evidence, not replacement product captures.
+
 
 Native macOS window captures (2200 × 1440 px, Retina) retaken November 1, 2026, from Kaze 0.15 with the redesigned title bar and status bar. Kaze draws its own title bar now, so the captures have no system title bar above it.
 

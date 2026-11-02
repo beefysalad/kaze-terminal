@@ -34,7 +34,7 @@ var shortcutGroups = []struct {
 	title   string
 	configs []string
 }{
-	{"Sessions", []string{"new_tab", "close_tab", "next_tab", "prev_tab", "next_waiting"}},
+	{"Sessions", []string{"new_tab", "new_branch_session", "close_tab", "next_tab", "prev_tab", "next_waiting"}},
 	{"Kaze", []string{"palette", "scratch_shell", "toggle_sidebar", "open_settings"}},
 	{"Editing and mouse", []string{"copy", "paste"}},
 }

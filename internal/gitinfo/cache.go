@@ -9,7 +9,7 @@ import (
 )
 
 // Info is one discovery of a checkout and its current HEAD.
-type Info struct{ Branch, Repo, Name string }
+type Info struct{ Branch, Repo, Name, Worktree string }
 
 type caseKey struct{ dir, part string }
 type caseEntry struct {
@@ -36,7 +36,11 @@ func (c *Cache) Lookup(dir string) Info {
 		return Info{}
 	}
 	key, name := repoAt(gd, top, c.trueCase)
-	return Info{Branch: readHead(gd), Repo: key, Name: name}
+	info := Info{Branch: readHead(gd), Repo: key, Name: name}
+	if common, ok := readSmall(filepath.Join(gd, "commondir")); ok && common != "" {
+		info.Worktree = top
+	}
+	return info
 }
 
 func (c *Cache) trueCase(p string) string {
