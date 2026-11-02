@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Running mark: dot in a ring (approved mockup)</title>
+<style>
+  @font-face { font-family:JB; src:url(../site-assets/JetBrainsMono-Regular.ttf) format('truetype'); }
+  @font-face { font-family:Manrope; src:url(../site-assets/Manrope.ttf) format('truetype'); font-weight:200 800; }
+  :root { --chrome:#0b0d12; --bg:#0f1117; --fg:#e7e9f0; --white:#fff; --stat:#7d8394; --line:#1d2230; --line2:#2a3142; --acc:#8b7bff; --acc2:#b9a6ff; --ok:#62d39a; --needs:#f2b84b; --folder:#c9cdd8; --idle:#5b6172; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#05060a; color:var(--fg); font:14px/1.6 Manrope,-apple-system,sans-serif; padding:32px 36px; width:1240px; }
+  h2 { margin:0 0 4px; font-size:24px; } .sub { color:#8a90a2; margin:0 0 26px; }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  .col h3 { margin:0 0 10px; font-size:15px; } .col h3 span { color:var(--stat); font-weight:400; }
+  .card { border:1px solid var(--line2); border-radius:12px; overflow:hidden; background:var(--chrome); }
+  .card.after { border-color:var(--acc); }
+  .states { display:flex; justify-content:space-around; padding:18px 10px 14px; border-bottom:1px solid var(--line); }
+  .states div { text-align:center; } .states .cap { color:var(--stat); font:11px JB,monospace; margin-top:6px; }
+  .side { padding:10px 10px 12px; font:12.5px/1.5 JB,monospace; }
+  .grp { display:flex; padding:6px 8px 4px; color:var(--fg); } .grp .n { margin-left:auto; color:var(--stat); font-size:11.5px; } .grp .n.needs { color:var(--needs); } .grp .car { color:var(--stat); font-size:9px; margin-right:8px; align-self:center; }
+  .row { padding:6px 8px 6px 10px; border-radius:7px; margin-bottom:2px; }
+  .row.on { background:#151821; box-shadow:inset 2px 0 0 #e8875f; }
+  .l1 { display:flex; align-items:center; gap:7px; white-space:nowrap; } .l1 .t { color:var(--white); flex:1; overflow:hidden; text-overflow:ellipsis; } .l1 .s { font-size:11.5px; color:var(--acc2); } .l1 .s.needs { color:var(--needs); } .l1 .s.done { color:var(--ok); }
+  .cl { color:#e8875f; } .cx { color:var(--fg); }
+  .l2 { margin-left:34px; display:flex; font-size:11.5px; } .l2 .br { color:var(--ok); } .l2 .pm { margin-left:auto; color:var(--ok); }
+  .ag { margin:1px 0 1px 18px; padding:4px 8px; font-size:12px; } .ag .r1 { display:flex; align-items:center; gap:7px; white-space:nowrap; } .ag .ty { color:#c08fe0; } .ag .tk { color:var(--folder); flex:1; overflow:hidden; text-overflow:ellipsis; } .ag .el { color:var(--stat); font-size:11px; }
+  .ag .r2 { color:var(--stat); font-size:11px; margin-left:21px; }
+  .mk { flex:none; display:inline-flex; width:14px; height:14px; }
+  .bar { display:flex; align-items:center; gap:10px; padding:9px 14px; border-top:1px solid var(--line); font:12px JB,monospace; color:var(--stat); }
+  .bar .crumb { display:flex; align-items:center; gap:8px; } .bar .w { color:var(--white); }
+  .pill { display:inline-flex; align-items:center; gap:6px; background:#2a2550; color:var(--acc2); padding:1px 9px; border-radius:7px; font:12px Manrope,sans-serif; margin-left:auto; }
+  .spec { margin-top:24px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .spec div { border:1px solid var(--line2); border-radius:10px; padding:12px 14px; background:#0a0c11; font-size:13px; color:#aab0c0; }
+  .spec b { color:var(--fg); display:block; margin-bottom:4px; }
+  code { font:12px JB,monospace; color:#d0c3df; background:#1a1622; border:1px solid #2e2838; border-radius:4px; padding:0 5px; }
+</style>
+</head>
+<body>
+<h2>Running mark: dot in a ring</h2>
+<p class="sub">Approved 2026-11-02 (issue #107). Replaces the open "spinner" ring with a closed ring and a bright core, drawn still. Zero frames while idle.</p>
+
+<div class="cols">
+  <div class="col"><h3>Now <span>· open ring, reads as a frozen spinner</span></h3><div class="card" id="before"></div></div>
+  <div class="col"><h3>After <span>· dot in a ring, reads as "live"</span></h3><div class="card after" id="after"></div></div>
+</div>
+
+<div class="spec">
+  <div><b>Shape (at 14 px)</b>Closed ring: radius 5.6, stroke 1.3, accent <code>#8b7bff</code> at 55%. Core: radius 2.6, filled <code>#b9a6ff</code>. Same box as the other state dots.</div>
+  <div><b>Where</b>Session rows, subagent lines, the title-bar breadcrumb and the status-bar agents pill. Anywhere the open ring is drawn today.</div>
+  <div><b>Other states, unchanged</b>Needs you: amber dot with halo. Done: green dot. Idle or plain shell: grey dot. Running is the only mark with a ring.</div>
+</div>
+
+<script>
+const ring = (s) => `<svg width="${s}" height="${s}" viewBox="0 0 14 14"><path d="M12.7 7 A5.7 5.7 0 1 1 9.9 2.06" fill="none" stroke="#8b7bff" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+const live = (s) => `<svg width="${s}" height="${s}" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.6" fill="none" stroke="#8b7bff" stroke-width="1.3" opacity=".55"/><circle cx="7" cy="7" r="2.6" fill="#b9a6ff"/></svg>`;
+const needs = (s) => `<svg width="${s}" height="${s}" viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" fill="#f2b84b" opacity=".2"/><circle cx="7" cy="7" r="3.4" fill="#f2b84b"/></svg>`;
+const dot = (c, s) => `<svg width="${s}" height="${s}" viewBox="0 0 14 14"><circle cx="7" cy="7" r="3.2" fill="${c}"/></svg>`;
+const mk = (svg) => `<span class="mk">${svg}</span>`;
+function card(run) {
+  return `
+  <div class="states">
+    <div>${run(56)}<div class="cap">running</div></div>
+    <div>${needs(56)}<div class="cap">needs you</div></div>
+    <div>${dot('#62d39a',56)}<div class="cap">done</div></div>
+    <div>${dot('#5b6172',56)}<div class="cap">idle</div></div>
+  </div>
+  <div class="side">
+    <div class="grp"><span class="car">▾</span>kaze-terminal<span class="n">2</span></div>
+    <div class="row on"><div class="l1">${mk(run(14))}<span class="cl">✳</span><span class="t">Spawn subagents to test kaze</span><span class="s">2 agents</span></div><div class="l2"><span class="br">main</span><span class="pm">+11</span></div></div>
+    <div class="ag"><div class="r1">${mk(run(14))}<span class="ty">Explore</span><span class="tk">Review sample split-panes spec</span><span class="el">&lt;1m</span></div><div class="r2">Read panes_input.go</div></div>
+    <div class="ag"><div class="r1">${mk(run(14))}<span class="ty">Explore</span><span class="tk">Check sample plan's keybindings</span><span class="el">&lt;1m</span></div><div class="r2">Grep close_tab in internal</div></div>
+    <div class="ag"><div class="r1">${mk(dot('#62d39a',14))}<span class="ty">Explore</span><span class="tk">Survey markdown reader tests</span><span class="el">took &lt;1m</span></div><div class="r2">13 behaviours covered, 11 not</div></div>
+    <div class="row"><div class="l1">${mk(dot('#5b6172',14))}<span class="cx">◎</span><span class="t">codex</span></div><div class="l2"><span class="br">main</span><span class="pm">+11</span></div></div>
+    <div class="grp"><span class="car">▾</span>todo-api<span class="n needs">1 waiting</span></div>
+    <div class="row"><div class="l1">${mk(needs(14))}<span class="cl">✳</span><span class="t">Add login rate limit</span><span class="s needs">needs you</span></div><div class="l2"><span class="br">feature/auth</span><span class="pm">+7</span></div></div>
+  </div>
+  <div class="bar"><span class="crumb">${mk(run(14))}<span>kaze-terminal</span>/<span class="w">Spawn subagents to test kaze</span></span><span class="pill">${mk(run(12))}2 agents</span></div>`;
+}
+document.getElementById('before').innerHTML = card(ring);
+document.getElementById('after').innerHTML = card(live);
+</script>
+</body>
+</html>
