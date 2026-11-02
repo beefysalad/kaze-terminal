@@ -57,3 +57,11 @@ are not replaced with generated UI; no screenshot was retouched for this release
 The subagent pane now shows the prompt, a one-line summary and the report instead of tool
 calls, so the Subagents capture is out of date. Settings > Workspaces > Startup gains the
 Start folder row. Retake those captures when needed; nothing was generated or retouched.
+
+## 0.21 markdown reader and live subagent messages
+
+Retake the Subagents capture to show live assistant messages and folded tool counts,
+and add a native capture of the markdown reader and outline. The CPU/RAM hover card
+also changed in #96. Existing captures remain historical; no generated or retouched
+screenshots were substituted for this release. Headless QA renders are validation
+artifacts, not lander product captures.

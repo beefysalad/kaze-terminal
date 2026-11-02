@@ -64,8 +64,14 @@
       <article>
         <svg class="feature-symbol" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/><rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4m-6 4v-4h12v4"/></svg>
         <h3>See every subagent.</h3>
-        <p>When Claude Code or Codex hands work to subagents, each one shows under its session with its task and current step. Click one to read the prompt it was given, a one-line summary of its work and its report, or press <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>A</kbd> for a board of every subagent: running, waiting on you and done.</p>
+        <p>When Claude Code or Codex hands work to subagents, each one shows under its session with its task and current step. Click one to read its prompt and report. Claude Code panes also show live messages with folded tool counts. Or press <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>A</kbd> for a board of every subagent: running, waiting on you and done.</p>
         <button type="button" class="show-shot" data-show="agents">See the subagents <svg class="inline-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M8 13V3M4 7l4-4 4 4"/></svg></button>
+      </article>
+      <article>
+        <svg class="feature-symbol" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 3h8l5 5v13H6zM14 3v5h5M9 13h7M9 17h7"/></svg>
+        <h3>Read the plan, right here.</h3>
+        <p>Cmd+click an .md path to read it in Kaze, with a heading outline and links. The doc sits under its session and reloads when the agent edits it. Click the session to return to your terminal.</p>
+        <a href="https://github.com/patrick-gogo/kaze-terminal#reading-docs">How the reader works <svg class="inline-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M4 12 12 4M4 4h8v8"/></svg></a>
       </article>
       <article>
         <svg class="feature-symbol" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
@@ -97,13 +103,26 @@
     <article><svg class="feature-symbol" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h0m4 0h0m4 0h0m4 0h0M6 13h0m4 0h0m4 0h0m4 0h0M8 16h8"/></svg><h3>Your keys, your way.</h3><p>Every shortcut can be changed in the config, and Settings lists the commands so far with their keys.</p><a href="https://github.com/patrick-gogo/kaze-terminal#shortcuts">See the shortcuts <svg class="inline-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M4 12 12 4M4 4h8v8"/></svg></a></article>
   </section>
 
-  <section class="engineering wrap" aria-labelledby="engineering-title"><div><h2 id="engineering-title">Quiet, down to the renderer.</h2><p>Kaze redraws the cells that changed and caches its glyphs. When nothing changes, there’s no frame to draw, floating panes included.</p></div><div class="engineering-facts"><span><b>Go + Gio</b>macOS and Windows</span><span><b>Open source</b>Small enough to make your own</span></div></section>
+  <section class="engineering wrap" aria-labelledby="engineering-title"><div><h2 id="engineering-title">Quiet, down to the renderer.</h2><p>Kaze redraws the cells that changed and caches its glyphs. Your terminal stays quiet while idle; open docs and Claude subagent panes stay up to date while you read.</p></div><div class="engineering-facts"><span><b>Go + Gio</b>macOS and Windows</span><span><b>Open source</b>Small enough to make your own</span></div></section>
 
   <section class="changelog wrap" id="changelog" aria-labelledby="changelog-title">
     <div class="section-intro"><h2 id="changelog-title">What’s new.<br><span>The latest releases.</span></h2><p>Kaze checks for new versions by itself and updates in place from Settings, Updates.</p></div>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.20</span><span class="badge">Latest</span><time datetime="2026-11-02">Nov 2, 2026</time></div>
+        <div class="release-meta"><span class="version">0.21</span><span class="badge">Latest</span><time datetime="2026-11-02">Nov 2, 2026</time></div>
+        <div class="release-body">
+          <h3>Read docs and follow subagent conversations</h3>
+          <ul>
+            <li><b>Markdown reader:</b> Cmd+click an .md path (Ctrl+click on Windows) to read it in Kaze, with an outline, links and automatic reloads. Each doc gets a temporary row under its session.</li>
+            <li><b>Live Claude subagent messages:</b> panes show assistant messages as they arrive, with tool calls folded into count summaries. Scroll up to keep your place, or follow new output at the bottom.</li>
+            <li><b>Fixed: empty reports:</b> subagent panes recover reports delivered through SubagentHandback. Copy report copies the recovered text; a missing report says “No report”. Pane links and markdown paths open with Cmd+click or Ctrl+click.</li>
+            <li><b>Cleaner resource card:</b> session names drop leading agent status symbols, and the CPU/RAM card has a short, single-line footer.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.20</span><time datetime="2026-11-02">Nov 2, 2026</time></div>
         <div class="release-body">
           <h3>Resource usage in the status bar</h3>
           <ul>
@@ -123,17 +142,6 @@
             <li><b>macOS session switching:</b> Ctrl+Tab and Ctrl+Shift+Tab now reach Kaze and switch sessions again, including while a scratch pane is focused. Custom bindings still work.</li>
             <li><b>Smoother subagent panes:</b> long prompts and reports wrap with much less work. Reopened helpers start a fresh turn, and panes show the latest report even when it is the same length as the previous one.</li>
             <li><b>Responsive sessions:</b> Git folder and branch lookups run in the background. Input queues have a byte limit and show a notice if a busy terminal cannot accept more input.</li>
-          </ul>
-        </div>
-      </li>
-
-      <li class="release">
-        <div class="release-meta"><span class="version">0.19</span><time datetime="2026-11-01">Nov 1, 2026</time></div>
-        <div class="release-body">
-          <h3>Subagent conversations and a start folder</h3>
-          <ul>
-            <li><b>Subagents read like a conversation:</b> click a subagent to see the prompt it was given, one line on what it has done so far ("Searched for 13 patterns, ran 15 shell commands") and, when it finishes, its report. Individual tool calls are no longer listed. Works for Claude Code subagents and Codex helpers.</li>
-            <li><b>Start folder:</b> choose where new tabs open in Settings, Workspaces, Startup (<b>Choose…</b> or <b>Use home</b>), or set <code>start_dir</code> in the config. Workspaces and restored sessions keep their own folders, and a folder that has gone missing falls back to home with a warning.</li>
           </ul>
         </div>
       </li>
