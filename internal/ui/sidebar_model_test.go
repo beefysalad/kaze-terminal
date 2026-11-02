@@ -336,7 +336,7 @@ func TestRowTitleRule(t *testing.T) {
 		return ""
 	}
 	m := buildSide(in)
-	want := map[tabs.TabID]string{1: "V3-3348", 2: "api work", 3: "gamma", 4: "t4", 5: "delta"}
+	want := map[tabs.TabID]string{1: "V3-3348", 2: "api work", 3: "gamma", 4: "t4", 5: "t5"}
 	for _, r := range m.Loose {
 		if r.Title != want[r.ID] {
 			t.Errorf("row %d title %q, want %q", r.ID, r.Title, want[r.ID])

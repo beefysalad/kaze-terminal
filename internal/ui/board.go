@@ -112,7 +112,7 @@ func (win *window) sessionName(id tabs.TabID) (title, repo string) {
 		return "", ""
 	}
 	loc := win.locOf(t)
-	title = win.sideIn().label(t, loc, win.agentOf(id)) // the sidebar's rule: a rename, the command's argument, the folder
+	title = win.sideIn().label(t, loc, win.rowAgent(id)) // use the sidebar's title priority and detected agent
 	if title == "" {
 		title = "session"
 	}

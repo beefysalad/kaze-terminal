@@ -228,13 +228,16 @@ func refresh(t *Tab) {
 }
 
 // Tabs returns the tabs in display order with Title and Exited refreshed.
-func (m *Manager) Tabs() []*Tab {
+func (m *Manager) Tabs() []*Tab { return m.TabsInto(nil) }
+
+// TabsInto refreshes the display order into caller-owned storage.
+func (m *Manager) TabsInto(out []*Tab) []*Tab {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	out := make([]*Tab, len(m.entries))
-	for i, e := range m.entries {
+	out = out[:0]
+	for _, e := range m.entries {
 		refresh(e.tab)
-		out[i] = e.tab
+		out = append(out, e.tab)
 	}
 	return out
 }

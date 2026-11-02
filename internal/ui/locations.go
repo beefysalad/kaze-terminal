@@ -93,6 +93,7 @@ func (win *window) drainLocations() {
 				continue
 			}
 			e.branch, e.repo, e.repoName, e.pending = r.info.Branch, r.info.Repo, r.info.Name, false
+			e.worktree = r.info.Worktree
 			win.locs[r.id] = e
 			// The first folder report may have arrived before repo discovery.
 			delete(win.lc.seen, r.id)

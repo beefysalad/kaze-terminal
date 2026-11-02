@@ -34,11 +34,12 @@ const (
 	actPalette
 	actScratch
 	actAgentsBoard
+	actNewBranchSession
 )
 
 // actionByName maps config [keys] names to actions; it must match config.KnownActions.
 var actionByName = map[string]action{
-	"new_tab": actNewTab, "close_tab": actCloseTab, "next_tab": actNextTab,
+	"new_branch_session": actNewBranchSession, "new_tab": actNewTab, "close_tab": actCloseTab, "next_tab": actNextTab,
 	"prev_tab": actPrevTab, "copy": actCopy, "paste": actPaste, "open_settings": actOpenSettings,
 	"toggle_sidebar": actToggleSidebar, "next_waiting": actNextWaiting, "palette": actPalette,
 	"scratch_shell": actScratch, "agents_board": actAgentsBoard,
@@ -80,24 +81,26 @@ func defaultBindings(goos string) map[string]input.Shortcut {
 			"new_tab": {Name: "T", Mods: key.ModCommand}, "close_tab": {Name: "W", Mods: key.ModCommand},
 			"next_tab": {Name: key.NameTab, Mods: key.ModCtrl}, "prev_tab": {Name: key.NameTab, Mods: cs},
 			"copy": {Name: "C", Mods: key.ModCommand}, "paste": {Name: "V", Mods: key.ModCommand},
-			"open_settings":  {Name: ",", Mods: key.ModCommand},
-			"toggle_sidebar": {Name: "B", Mods: key.ModCommand},
-			"next_waiting":   {Name: "J", Mods: key.ModCommand},
-			"palette":        {Name: "K", Mods: key.ModCommand},
-			"scratch_shell":  {Name: "`", Mods: key.ModCtrl},
-			"agents_board":   {Name: "A", Mods: key.ModCommand | key.ModShift},
+			"open_settings":      {Name: ",", Mods: key.ModCommand},
+			"toggle_sidebar":     {Name: "B", Mods: key.ModCommand},
+			"next_waiting":       {Name: "J", Mods: key.ModCommand},
+			"palette":            {Name: "K", Mods: key.ModCommand},
+			"scratch_shell":      {Name: "`", Mods: key.ModCtrl},
+			"agents_board":       {Name: "A", Mods: key.ModCommand | key.ModShift},
+			"new_branch_session": {Name: "N", Mods: key.ModCommand | key.ModShift},
 		}
 	}
 	return map[string]input.Shortcut{
 		"new_tab": {Name: "T", Mods: cs}, "close_tab": {Name: "W", Mods: cs},
 		"next_tab": {Name: key.NameTab, Mods: key.ModCtrl}, "prev_tab": {Name: key.NameTab, Mods: cs},
 		"copy": {Name: "C", Mods: cs}, "paste": {Name: "V", Mods: cs},
-		"open_settings":  {Name: ",", Mods: key.ModCtrl},
-		"toggle_sidebar": {Name: "B", Mods: cs},
-		"next_waiting":   {Name: "J", Mods: cs},
-		"palette":        {Name: "K", Mods: cs},
-		"scratch_shell":  {Name: "`", Mods: cs},
-		"agents_board":   {Name: "A", Mods: cs},
+		"open_settings":      {Name: ",", Mods: key.ModCtrl},
+		"toggle_sidebar":     {Name: "B", Mods: cs},
+		"next_waiting":       {Name: "J", Mods: cs},
+		"palette":            {Name: "K", Mods: cs},
+		"scratch_shell":      {Name: "`", Mods: cs},
+		"agents_board":       {Name: "A", Mods: cs},
+		"new_branch_session": {Name: "N", Mods: cs},
 	}
 }
 

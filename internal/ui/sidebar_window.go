@@ -13,6 +13,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
+	"gioui.org/op/paint"
 	"gioui.org/widget"
 
 	kinput "github.com/patrick-gogo/kaze-terminal/internal/input"
@@ -29,24 +30,31 @@ const (
 // sideUI is the window's sidebar: the state the drawing needs, the folds kept
 // while kaze runs and where the last frame put things. UI goroutine only.
 type sideUI struct {
-	st        sideState
-	folded    map[string]bool // repo groups the owner folded, by key
-	hidden    bool            // off in the settings, or the window is too narrow
-	w         int             // this frame's sidebar width in px, set once at the frame's start
-	hits      sideHits        // sidebar-local, like the pointer events on tag
-	at        image.Point     // the sidebar's top-left in the window
-	tag       int             // pointer events on the sidebar or the rail
-	reveal    bool            // scroll the shown row into view next frame
-	redraws   int             // frames the sidebar's pointer input asked for; tests count them
-	ed        widget.Editor   // the filter field
-	filtering bool            // the filter field has the keyboard
-	narrow    bool            // the window is too narrow for the sidebar
-	filters   []event.Filter  // the filter's own keys, built once
-	ren       widget.Editor   // the title of the row being renamed
-	renaming  tabs.TabID      // 0 when no row is being renamed
-	renFrom   string          // the text the rename started with
-	renKeys   []event.Filter  // the rename editor's own keys, built once
-	lastClick titleClick      // the last press on a row's title, for a double click
+	runIDs        []uint64
+	runScratch    []sideRun
+	filterCache   string
+	filterScratch []byte
+	launch        branchLauncher
+	cache         sideCache
+	tabs          []*tabs.Tab
+	st            sideState
+	folded        map[string]bool // repo groups the owner folded, by key
+	hidden        bool            // off in the settings, or the window is too narrow
+	w             int             // this frame's sidebar width in px, set once at the frame's start
+	hits          sideHits        // sidebar-local, like the pointer events on tag
+	at            image.Point     // the sidebar's top-left in the window
+	tag           int             // pointer events on the sidebar or the rail
+	reveal        bool            // scroll the shown row into view next frame
+	redraws       int             // frames the sidebar's pointer input asked for; tests count them
+	ed            widget.Editor   // the filter field
+	filtering     bool            // the filter field has the keyboard
+	narrow        bool            // the window is too narrow for the sidebar
+	filters       []event.Filter  // the filter's own keys, built once
+	ren           widget.Editor   // the title of the row being renamed
+	renaming      tabs.TabID      // 0 when no row is being renamed
+	renFrom       string          // the text the rename started with
+	renKeys       []event.Filter  // the rename editor's own keys, built once
+	lastClick     titleClick      // the last press on a row's title, for a double click
 }
 
 // titleClick is a press on a session row's title.
@@ -87,7 +95,8 @@ func (win *window) sideIn() sideInput {
 
 // sessionIDs is every session in sidebar order, folded groups included, members left out.
 func (win *window) sessionIDs() []tabs.TabID {
-	return sessionOrder(buildSide(win.sideIn()))
+	win.cachedSide(time.Now())
+	return win.side.cache.order
 }
 
 // selectSession shows a session picked by keyboard and scrolls its row into view.
@@ -101,6 +110,13 @@ func (win *window) selectSession(id tabs.TabID) {
 // order (else the one before) is shown first, so closing never lands on a member
 // while a session is left; with none left, the first open member is shown.
 func (win *window) closeTab(id tabs.TabID) {
+	if t := win.mgr.Lookup(id); t != nil {
+		dir := win.locOf(t).cwd
+		if dir == "" {
+			dir = t.Dir
+		}
+		win.worktreeClosing(dir)
+	}
 	win.closeSessionDocs(id)
 	win.closeScratch(id)
 	if a := win.mgr.Active(); a != nil && a.ID == id {
@@ -110,6 +126,7 @@ func (win *window) closeTab(id tabs.TabID) {
 		}
 	}
 	win.mgr.Close(id)
+	win.requestWorktreeCheck(true)
 	win.w.Invalidate()
 }
 
@@ -148,7 +165,7 @@ func (win *window) toggleSidebar() {
 // and sets hidden. A narrow window hides it without touching the setting.
 func (win *window) sideWidth(gtx layout.Context, width int) int {
 	win.side.narrow = width < gtx.Dp(minSideWindow)
-	on := win.opt.Config.Sidebar && !win.side.narrow
+	on := win.opt.Config.Sidebar && (!win.side.narrow || win.side.launch.open)
 	win.side.hidden = !on
 	if !on {
 		win.dropSideEdit() // an invisible field must not keep the keyboard
@@ -177,12 +194,15 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 		if s.renaming != 0 && win.mgr.Lookup(s.renaming) == nil {
 			win.endRename(false) // its tab closed
 		}
-		in := win.sideIn()
-		s.st.filter, s.st.ed = s.ed.Text(), &s.ed
+		m := win.cachedSide(gtx.Now)
+		s.st.filter, s.st.ed = s.filterText(), nil
+		s.st.launch = &s.launch
+		win.initBranchShortcut()
+		s.launch.shown = win.opt.Config.SidebarLauncher
+		if s.filtering {
+			s.st.ed = &s.ed
+		}
 		s.st.renaming, s.st.ren = s.renaming, &s.ren
-		in.Filter = s.st.filter
-		in.Runs = win.curRuns()
-		m := buildSide(in)
 		s.st.shown = 0
 		if a := win.mgr.Active(); a != nil {
 			s.st.shown = a.ID
@@ -195,22 +215,38 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 				s.st.floating = f.id
 			}
 		}
-		s.st.nextKey = win.nextWaitingKey()
-		rec := op.Record(ops)
-		h := win.ui.layoutSidebar(sg, m, s.st, r.Size())
-		call := rec.Stop()
-		if s.reveal {
-			s.reveal = false
-			if sc, ok := revealScroll(sg, m, s.st, h); ok && sc != s.st.scroll {
-				// Laid out again at the new scroll; only this recording is drawn.
-				s.st.scroll = sc
-				rec = op.Record(ops)
-				h = win.ui.layoutSidebar(sg, m, s.st, r.Size())
-				call = rec.Stop()
+		key := sideDrawKey{size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, floating: s.st.floating, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds, launchVersion: s.launch.version, launcher: s.launch.shown, renaming: s.renaming}
+		if !s.cache.drawValid || s.cache.drawKey != key || s.reveal {
+			s.cache.ops.Reset()
+			cg := sg
+			cg.Ops = &s.cache.ops
+			rec := op.Record(cg.Ops)
+			static := s.st
+			static.ed = nil
+			static.ren = nil
+			static.static = true
+			h := win.ui.layoutSidebar(cg, m, static, r.Size())
+			call := rec.Stop()
+			if s.reveal {
+				s.reveal = false
+				if sc, ok := revealScroll(cg, m, s.st, h); ok && sc != s.st.scroll {
+					s.st.scroll = sc
+					static.scroll = sc
+					rec = op.Record(cg.Ops)
+					h = win.ui.layoutSidebar(cg, m, static, r.Size())
+					call = rec.Stop()
+				}
 			}
+			s.cache.call = call
+			s.hits = h
+			key.scroll = s.st.scroll
+			s.cache.drawKey = key
+			s.cache.drawValid = true
+			s.cache.draws++
 		}
-		call.Add(ops)
-		s.hits = h
+		s.cache.call.Add(ops)
+		win.drawSideEditors(sg)
+		h := s.hits
 		if s.renaming != 0 && h.rename.Empty() {
 			// Gio drops focus from an editor it no longer lays out; give the keyboard back.
 			win.endRename(true)
@@ -245,6 +281,9 @@ func revealScroll(gtx layout.Context, m sideModel, st sideState, h sideHits) (in
 		y += gH
 		if !g.Folded {
 			rows(g.Rows)
+		}
+		if g.Finished > 0 {
+			y += gtx.Dp(sideMoreH)
 		}
 	}
 	rows(m.Loose)
@@ -430,6 +469,9 @@ func (win *window) dropSideEdit() {
 		win.side.filtering = false
 		win.wantFocus = true
 	}
+	if win.side.launch.open && !win.side.launch.busy {
+		win.closeBranchLauncher()
+	}
 	win.endRename(true)
 }
 
@@ -484,6 +526,12 @@ func (win *window) sidePointer(e pointer.Event) {
 			win.sideRedraw()
 		}
 	case pointer.Scroll:
+		if s.launch.repoOpen {
+			s.launch.repoScroll = max(0, s.launch.repoScroll+int(e.Scroll.Y))
+			s.launch.changed()
+			win.sideRedraw()
+			return
+		}
 		if !p.In(s.hits.list) {
 			return
 		}
@@ -523,12 +571,12 @@ func (win *window) sidePress(p image.Point, b pointer.Buttons, at time.Duration)
 			win.openSettings()
 		}
 		return
-	case p.In(h.next):
-		if primary {
-			win.nextWaiting()
-		}
+	case primary && win.branchPress(p):
 		return
 	case p.In(h.filter):
+		if win.side.launch.open && !win.side.launch.busy {
+			win.closeBranchLauncher()
+		}
 		return // the frame gives the field the keyboard
 	}
 	for _, d := range h.docs {
@@ -637,26 +685,45 @@ func (win *window) nextWaiting() {
 	win.w.Invalidate()
 }
 
-// nextWaitingKey is the bound shortcut's text for the button, "" when unbound.
-func (win *window) nextWaitingKey() string {
-	for sc, a := range win.km {
-		if a == actNextWaiting {
-			return shortcutText(sc)
+// Editors keep their input registrations, selections and caret timers live;
+// the surrounding rows replay without shaping while an editor has the focus.
+func (win *window) drawSideEditors(gtx layout.Context) {
+	s, c := &win.side, win.ui
+	editor := func(ed *widget.Editor, r image.Rectangle, placeholder string, pad int) {
+		if r.Empty() {
+			return
+		}
+		cl := clip.Rect(r.Inset(1)).Push(gtx.Ops)
+		paint.FillShape(gtx.Ops, c.th.Chrome, clip.Rect(r).Op())
+		c.lineEditor(gtx, ed, r, placeholder, c.th.Muted, pad)
+		cl.Pop()
+	}
+	if s.filtering {
+		editor(&s.ed, s.hits.filter, "Filter sessions…", gtx.Dp(8))
+	}
+	if s.renaming != 0 {
+		editor(&s.ren, s.hits.rename, "", gtx.Dp(4))
+	}
+	if s.launch.open {
+		editor(&s.launch.ed, s.hits.launchBranch, "fix/sidebar-rows", gtx.Dp(8))
+		if s.launch.repoOpen {
+			s.launch.repoCall.Add(gtx.Ops)
 		}
 	}
-	return ""
 }
 
-// shortcutText writes a shortcut the way the platform names it, like Ctrl+Shift+J or Cmd+J.
-func shortcutText(sc kinput.Shortcut) string {
-	var parts []string
-	for _, m := range []struct {
-		bit  key.Modifiers
-		name string
-	}{{key.ModCtrl, "Ctrl"}, {key.ModAlt, "Alt"}, {key.ModShift, "Shift"}, {key.ModCommand, "Cmd"}, {key.ModSuper, "Super"}} {
-		if sc.Mods&m.bit != 0 {
-			parts = append(parts, m.name)
-		}
+// Read the bounded field into retained storage: Editor.Text copies its buffer
+// into a new string, even when the filter has not changed.
+func (s *sideUI) filterText() string {
+	length, _ := s.ed.Seek(0, 2)
+	if int64(cap(s.filterScratch)) < length {
+		s.filterScratch = make([]byte, length)
 	}
-	return strings.Join(append(parts, string(sc.Name)), "+")
+	s.filterScratch = s.filterScratch[:length]
+	s.ed.Seek(0, 0)
+	n, _ := s.ed.Read(s.filterScratch)
+	if string(s.filterScratch[:n]) != s.filterCache {
+		s.filterCache = string(s.filterScratch[:n])
+	}
+	return s.filterCache
 }

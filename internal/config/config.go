@@ -24,10 +24,12 @@ const (
 )
 
 type Config struct {
-	StartDir        string  `toml:"start_dir"`        // cwd for new plain tabs; empty means home
-	RestoreSessions bool    `toml:"restore_sessions"` // restore folders and exact agent conversations; default true
-	FontSize        float32 `toml:"font_size"`        // default 14
-	FontFamily      string  `toml:"font_family"`      // not supported yet; a set value warns
+	SidebarLauncher      bool    `toml:"sidebar_launcher"`
+	SidebarLauncherAgent string  `toml:"sidebar_launcher_agent"`
+	StartDir             string  `toml:"start_dir"`        // cwd for new plain tabs; empty means home
+	RestoreSessions      bool    `toml:"restore_sessions"` // restore folders and exact agent conversations; default true
+	FontSize             float32 `toml:"font_size"`        // default 14
+	FontFamily           string  `toml:"font_family"`      // not supported yet; a set value warns
 	// Shell empty means "use the platform default shell"; the caller
 	// resolves it at startup.
 	Shell            []string          `toml:"shell"`
@@ -52,7 +54,7 @@ type Config struct {
 
 // KnownActions are the action names accepted under [keys]; the window binds each one.
 var KnownActions = map[string]bool{
-	"new_tab": true, "close_tab": true, "next_tab": true, "prev_tab": true,
+	"new_branch_session": true, "new_tab": true, "close_tab": true, "next_tab": true, "prev_tab": true,
 	"copy": true, "paste": true, "open_settings": true, "toggle_sidebar": true, "next_waiting": true,
 	"palette": true, "scratch_shell": true, "agents_board": true,
 }
@@ -70,20 +72,22 @@ var (
 
 func Default() Config {
 	return Config{
-		RestoreSessions: true,
-		FontSize:        defaultFontSize,
-		ScrollbackLines: defaultScrollback,
-		ChimeNeeds:      true,
-		Theme:           "midnight",
-		LineSpacing:     "normal",
-		CursorStyle:     "block",
-		TaskbarFlash:    true,
-		DoneToast:       "6s",
-		ShowUsage:       true,
-		CheckUpdates:    true,
-		Sidebar:         true,
-		Colors:          map[string]string{},
-		Keys:            map[string]string{},
+		RestoreSessions:      true,
+		FontSize:             defaultFontSize,
+		ScrollbackLines:      defaultScrollback,
+		ChimeNeeds:           true,
+		Theme:                "midnight",
+		LineSpacing:          "normal",
+		CursorStyle:          "block",
+		TaskbarFlash:         true,
+		DoneToast:            "6s",
+		ShowUsage:            true,
+		CheckUpdates:         true,
+		Sidebar:              true,
+		SidebarLauncher:      true,
+		SidebarLauncherAgent: "claude",
+		Colors:               map[string]string{},
+		Keys:                 map[string]string{},
 	}
 }
 
@@ -221,6 +225,10 @@ func Load(path string) (Config, []string, error) {
 			loadBool(v, k, &cfg.TaskbarFlash, warn)
 		case "show_usage":
 			loadBool(v, k, &cfg.ShowUsage, warn)
+		case "sidebar_launcher":
+			loadBool(v, k, &cfg.SidebarLauncher, warn)
+		case "sidebar_launcher_agent":
+			loadChoice(v, k, &cfg.SidebarLauncherAgent, []string{"claude", "codex", "shell"}, warn)
 		case "sidebar":
 			loadBool(v, k, &cfg.Sidebar, warn)
 		case "restore_sessions":

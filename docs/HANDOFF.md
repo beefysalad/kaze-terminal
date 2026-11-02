@@ -4,6 +4,23 @@ Last updated: 2026-11-02, after PRs #97 and #98 merged and release 0.21 was prep
 
 ## Where things stand
 
+**Issue #101 is implemented locally on `feat/sidebar-rework`**, in the isolated
+checkout `../kaze-sidebar-rework`. Two-line rows use the approved title priority,
+agent logos and first-line statuses; group headers have no dots. Retained models,
+session order and drawing operations avoid sidebar allocations or row shaping on
+unchanged frames, including Workspaces and a retained filter. Editors stay live
+over the cached chrome. The collapsible branch launcher supports the configurable
+`new_branch_session` shortcut, previews, explicit remote tracking and shell-ready
+agent starts. `internal/branchsession` remembers only created worktrees, bounds
+Git/state I/O, and removes only registered linked worktrees with plain Git.
+Cleanup checks are event-driven and minute-limited per repo. A close can schedule
+one trailing check to satisfy that limit; Keep cancels it. The last window waits
+for cleanup and preserves refusal reasons until dismissed. No recurring polling.
+See `docs/audits/2026-11-02-sidebar-redesign.md` for measurements and verification.
+Native installed-app interactions and Windows runtime remain owner checks. No
+release, version bump, changelog or tag. Original checkout changes were preserved.
+
+
 **Release 0.21 combines the markdown reader (#97), live subagent messages and
 report recovery (#98 / #85), and the resource-card cleanup (#96 / #95).** The owner
 explicitly authorized this agent to merge both feature PRs and publish the combined

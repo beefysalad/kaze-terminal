@@ -111,12 +111,13 @@ type queueKey struct {
 
 // Tracker is every subagent kaze knows about. The zero value is ready.
 type Tracker struct {
-	agents map[Key]*Agent
-	order  []*Agent // start order
-	done   []*Agent // stop order, oldest first
-	queues map[queueKey][]call
-	seen   map[int]string // source tab → its last session
-	waits  map[int]bool   // row tab → waiting with no subagent named
+	revision uint64
+	agents   map[Key]*Agent
+	order    []*Agent // start order
+	done     []*Agent // stop order, oldest first
+	queues   map[queueKey][]call
+	seen     map[int]string // source tab → its last session
+	waits    map[int]bool   // row tab → waiting with no subagent named
 }
 
 func (t *Tracker) init() {
@@ -128,6 +129,7 @@ func (t *Tracker) init() {
 
 // Apply folds one event in and reports whether anything shown changed.
 func (t *Tracker) Apply(e Event) bool {
+	t.revision++
 	t.init()
 	k := Key{e.Session, e.AgentID}
 	if a := t.agents[k]; a != nil {
@@ -319,6 +321,7 @@ func (t *Tracker) untracked(k Key, e Event) bool {
 // Dismiss removes a finished agent from the board and the tree. A running or
 // waiting one stays, and so does an agent kaze does not know.
 func (t *Tracker) Dismiss(k Key) bool {
+	t.revision++
 	a := t.agents[k]
 	if a == nil || a.State != Done {
 		return false
@@ -330,6 +333,7 @@ func (t *Tracker) Dismiss(k Key) bool {
 // ClearDone removes every finished agent shown under tab, or all of them for
 // tab 0, and says how many went.
 func (t *Tracker) ClearDone(tab int) int {
+	t.revision++
 	gone := func(a *Agent) bool { return a.State == Done && (tab == 0 || a.Tab == tab) }
 	n := 0
 	for _, a := range t.order {
@@ -381,6 +385,7 @@ func (t *Tracker) drop(gone func(*Agent) bool) {
 
 // CloseTab forgets the agents that show under tab or ran in it.
 func (t *Tracker) CloseTab(tab int) {
+	t.revision++
 	t.init()
 	t.drop(func(a *Agent) bool { return a.Tab == tab || a.src == tab })
 	for q := range t.queues {
@@ -466,6 +471,7 @@ func (t *Tracker) Active(tab int) int {
 
 // EndTab marks the subagents that ran in tab done: Claude left without stopping them.
 func (t *Tracker) EndTab(tab int, at time.Time) bool {
+	t.revision++
 	changed := false
 	for _, a := range t.order {
 		if a.src == tab && a.State != Done {
@@ -480,3 +486,6 @@ func (t *Tracker) EndTab(tab int, at time.Time) bool {
 	delete(t.waits, tab)
 	return changed
 }
+
+// Revision changes on tracker mutations, so views can retain their model.
+func (t *Tracker) Revision() uint64 { return t.revision }
