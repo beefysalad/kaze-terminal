@@ -908,7 +908,7 @@ Done:
 - Plan 5b: Workspaces (launch a saved set of tabs in one click).
 - Plan 6a: the session sidebar, replacing the tab strip, with repo groups, a filter and the running workspaces.
 - Plan 6b: agent awareness, titles you can rename, line counts and the Next waiting shortcut.
-- Issue #101: two-line session rows, retained sidebar drawing, a branch/worktree launcher and confirmed cleanup of Kaze-created worktrees.
+- 0.22: two-line session rows, retained sidebar drawing, a branch/worktree launcher and confirmed cleanup of Kaze-created worktrees (#101).
 - Subagents: each session's subagents in the sidebar, a live pane per subagent and the agents board (replaces Plan 2's child tabs).
 - 0.16: clickable links, Codex helpers alongside Claude Code subagents, and screenshot paste with Cmd+V.
 - 0.17: Claude and Codex logos on the sidebar rows as soon as an agent opens, and links drawn in blue.

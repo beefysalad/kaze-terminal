@@ -22,7 +22,20 @@
     <div class="section-intro"><a class="archive-back" href="index.html#changelog">Back to Kaze</a><h1 id="changelog-title">Changelog.</h1><p>Features, improvements and fixes, release by release. Kaze checks for updates in Settings, Updates.</p></div>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.21</span><span class="badge">Latest</span><time datetime="2026-11-02">Nov 2, 2026</time></div>
+        <div class="release-meta"><span class="version">0.22</span><span class="badge">Latest</span><time datetime="2026-11-02">Nov 2, 2026</time></div>
+        <div class="release-body">
+          <h3>A clearer sidebar, a session for every branch</h3>
+          <ul>
+            <li><b>Two-line session rows:</b> agent logos, useful names and status above the branch or worktree and line counts. Repo headers keep the count without repeating state dots.</li>
+            <li><b>Start on a branch:</b> choose a repo, branch and Claude, Codex or Shell. Kaze reuses the branch’s worktree or creates a sibling folder, then waits for the shell before starting the agent. Open with Cmd+Shift+N on macOS or Ctrl+Shift+N on Windows; tuck the launcher away with one click.</li>
+            <li><b>Worktree cleanup:</b> Kaze remembers only the worktrees it creates and asks before removing clean or finished ones. Branches stay, and Git refuses folders with uncommitted or untracked changes.</li>
+            <li><b>Cheaper redraws:</b> unchanged sidebar frames reuse their model and drawing, without allocating or reshaping session rows.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.21</span><time datetime="2026-11-02">Nov 2, 2026</time></div>
         <div class="release-body">
           <h3>Read docs and follow subagent conversations</h3>
           <ul>

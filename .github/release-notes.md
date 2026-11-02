@@ -1,9 +1,9 @@
-## What’s new in Kaze 0.21
+## What’s new in Kaze 0.22
 
-- **Markdown reader:** Cmd+click an .md path (Ctrl+click on Windows) to read it inside Kaze. Each doc gets a temporary row under its session, a heading outline, links and automatic reloads. The view is read-only and reads up to 2 MB; doc rows are not restored after restart.
-- **Live Claude subagent messages:** panes show assistant messages as they arrive, with tool calls folded into count summaries. They follow new output at the bottom and keep your place when you scroll up. Transcript reads stop while the pane is hidden or closed. Codex helpers keep the prompt/count/report view.
-- **Fixed: empty subagent reports:** panes recover reports delivered through SubagentHandback when the stop hook has no final text. Copy report uses the same text. If there is no report, the pane says “No report”. Cmd+click or Ctrl+click web links and .md paths in pane text to open them.
-- **Cleaner resource card:** session names drop leading agent status symbols, and the CPU/RAM card uses a short, single-line footer.
+- **Clearer session rows:** two lines with an agent logo, useful name and status above the branch or worktree and line counts. Repo headers keep counts without repeating state dots.
+- **A session for every branch:** choose a repo, branch and Claude, Codex or Shell. Kaze reuses an existing worktree or creates a sibling folder, then starts the agent after the shell is ready. Use Cmd+Shift+N on macOS or Ctrl+Shift+N on Windows. The launcher remembers when you tuck it away.
+- **Worktree cleanup:** Kaze remembers only worktrees it creates and asks before removing clean or finished ones. Branches stay, and Git refuses folders with uncommitted or untracked changes. All open terminals count, including scratch shells and workspace members.
+- **Cheaper sidebar redraws:** unchanged frames reuse their model and drawing without sidebar allocations or reshaping session rows. Next waiting stays available through its shortcut and the palette.
 
 ## Download
 
