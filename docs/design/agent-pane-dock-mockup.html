@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent pane: docked panel (approved mockup)</title>
+<style>
+  @font-face { font-family:Manrope; src:url(../site-assets/Manrope.ttf) format('truetype'); font-weight:200 800; }
+  @font-face { font-family:JB; src:url(../site-assets/JetBrainsMono-Regular.ttf) format('truetype'); }
+  :root {
+    /* Midnight, from internal/theme/theme.go */
+    --chrome:#0b0d12; --bg:#0f1117; --fg:#e7e9f0; --white:#ffffff; --mut:#8a90a2; --stat:#7d8394; --line:#1d2230; --line2:#2a3142;
+    --acc:#8b7bff; --acc2:#b9a6ff; --accbg:#2a2550; --ok:#62d39a; --needs:#f2b84b; --hover:#1a1f2c; --press:#151925; --folder:#c9cdd8; --code:#d0c3df;
+    --mono:JB,"JetBrains Mono",ui-monospace,Menlo,monospace; --sans:Manrope,-apple-system,"Segoe UI",sans-serif;
+  }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:#05060a; color:var(--fg); font:13px/1.5 var(--mono); }
+  body { display:flex; flex-direction:column; align-items:center; padding:14px; gap:10px; }
+  .hint { color:#8a90a2; font:12px var(--sans); max-width:1400px; width:100%; display:flex; gap:16px; flex-wrap:wrap; align-items:center; }
+  .hint b { color:var(--fg); }
+  .hint button { background:var(--hover); color:var(--fg); border:1px solid var(--line2); border-radius:6px; padding:3px 10px; font:inherit; cursor:pointer; }
+  .hint button:hover { border-color:var(--acc); }
+  kbd { font:10.5px var(--mono); border:1px solid var(--line2); border-radius:4px; padding:0 4px; color:var(--fg); }
+
+  .win { width:100%; max-width:1400px; height:min(860px, calc(100vh - 60px)); background:var(--bg); border:1px solid #2a2f3d; border-radius:12px; overflow:hidden; display:grid; grid-template-columns:282px 1fr; grid-template-rows:44px 1fr 32px; box-shadow:0 20px 60px rgba(0,0,0,.6); }
+
+  /* top bar */
+  .tl-left { grid-column:1; background:var(--chrome); border-right:1px solid var(--line); border-bottom:1px solid var(--line); display:flex; align-items:center; padding:0 14px; gap:16px; }
+  .lights { display:flex; gap:8px; } .lights i { width:12px; height:12px; border-radius:50%; display:block; } .lights i:nth-child(1){background:#ff5f57} .lights i:nth-child(2){background:#febc2e} .lights i:nth-child(3){background:#28c840}
+  .glyph { color:var(--mut); font-size:15px; } .plus { margin-left:auto; color:var(--mut); font-size:18px; }
+  .tl-right { background:var(--chrome); border-bottom:1px solid var(--line); display:flex; align-items:center; padding:0 14px; gap:10px; min-width:0; }
+  .crumb { display:flex; align-items:center; gap:8px; white-space:nowrap; font-size:13px; }
+  .crumb .m { color:var(--mut); } .crumb .w { color:var(--white); } .crumb .a { color:var(--acc2); }
+  .pill { background:var(--accbg); color:var(--acc2); border-radius:7px; padding:0 8px; font-size:11.5px; line-height:20px; }
+  .pill.needs { background:#3a2f15; color:var(--needs); } .pill.done { background:#16302a; color:var(--ok); }
+  .search { flex:1; max-width:420px; margin-left:14px; height:28px; border:1px solid var(--line); border-radius:8px; display:flex; align-items:center; gap:8px; padding:0 10px; color:var(--mut); font:12.5px var(--sans); }
+  .search .k { margin-left:auto; border:1px solid var(--line2); border-radius:5px; padding:0 6px; font:11px var(--mono); }
+  .icons { margin-left:auto; display:flex; gap:16px; color:var(--mut); font-size:15px; align-items:center; }
+  .icons .ag { position:relative; } .icons .ag b { position:absolute; top:-8px; right:-9px; background:var(--acc); color:#fff; font:10px/16px var(--sans); min-width:16px; text-align:center; border-radius:8px; }
+
+  /* sidebar */
+  .side { background:var(--chrome); border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+  .filter { margin:10px 10px 6px; height:30px; border:1px solid var(--line); border-radius:7px; color:var(--stat); display:flex; align-items:center; padding:0 10px; font-size:12px; }
+  .stree { flex:1; overflow:auto; padding:0 6px; }
+  .grp { display:flex; align-items:center; gap:7px; padding:8px 8px 4px; font-size:12.5px; }
+  .grp .car { color:var(--stat); font-size:9px; } .grp .n { margin-left:auto; color:var(--stat); font-size:11.5px; } .grp .n.needs { color:var(--needs); }
+  .sess { padding:6px 8px 6px 10px; border-radius:7px; position:relative; font-size:12.5px; }
+  .sess.on { background:#151821; box-shadow:inset 2px 0 0 #e8875f; }
+  .sess .cl { color:#e8875f; flex:none; } .sess .cx { color:var(--fg); flex:none; }
+  .sess .l1 .t { flex:1; overflow:hidden; text-overflow:ellipsis; }
+  .sess .l1 .st { color:var(--acc2); flex:none; font-size:11.5px; } .sess .l1 .st.needs { color:var(--needs); } .sess .l1 .st.done { color:var(--ok); }
+  .sess .l3 { margin-left:34px; } .sess .l3 .pm { margin-left:auto; color:var(--ok); }
+  .dot.idle { background:#5b6172; }
+  .ns { margin-top:auto; border-top:1px solid var(--line); padding:9px 14px; color:var(--stat); font-size:11px; letter-spacing:.06em; display:flex; gap:8px; }
+  .ns .car { font-size:9px; } .ns span:last-child { margin-left:auto; letter-spacing:0; }
+  .sess .l1 { display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; } .sess .l1 .t { color:var(--white); } .sess .l1 .c { color:var(--acc2); overflow:hidden; text-overflow:ellipsis; }
+  .sess .l2 { color:var(--stat); font-size:11.5px; } .sess .l3 { display:flex; font-size:11.5px; } .sess .l3 .br { color:var(--ok); } .sess .l3 .st { margin-left:auto; color:var(--acc2); }
+  .sess .l3 .st.needs { color:var(--needs); }
+  .agent { margin:1px 0 1px 26px; padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px; position:relative; }
+  .agent:hover { background:var(--hover); }
+  .agent.sel { background:var(--press); box-shadow:inset 2px 0 0 var(--acc); }
+  .agent .r1 { display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; }
+  .agent .ty { color:#c08fe0; flex:none; } .agent .tk { color:var(--folder); overflow:hidden; text-overflow:ellipsis; flex:1; } .agent .el { color:var(--stat); flex:none; font-size:11px; }
+  .agent .r2 { color:var(--stat); font-size:11px; margin-left:20px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .agent.waiting .r2 { color:var(--needs); }
+  .agent.done .r2, .agent.done .tk { color:var(--mut); }
+  .spin { display:inline-block; width:12px; height:12px; flex:none; border-radius:50%; border:2px solid var(--acc); border-right-color:transparent; animation:spin 1s linear infinite; }
+  .dot { display:inline-block; width:7px; height:7px; flex:none; border-radius:50%; margin:0 2.5px; }
+  .dot.ok { background:var(--ok); } .dot.needs { background:var(--needs); box-shadow:0 0 0 3px rgba(242,184,75,.18); }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .next { margin:6px 10px 8px; height:32px; border:1px solid var(--line); border-radius:7px; display:flex; align-items:center; padding:0 12px; font-size:12.5px; color:var(--white); }
+  .next span { margin-left:auto; color:var(--stat); font-size:11px; }
+  .ws { border-top:1px solid var(--line); padding:8px 14px 10px; font-size:12.5px; }
+  .ws .h { color:var(--stat); font-size:10.5px; letter-spacing:.08em; margin-bottom:4px; }
+  .ws .r { display:flex; align-items:center; gap:8px; padding:3px 0; } .ws .r i { width:3px; height:15px; border-radius:2px; background:var(--acc); } .ws .r span { margin-left:auto; color:var(--stat); }
+
+  /* terminal + panel */
+  .center { display:flex; flex-direction:column; min-width:0; min-height:0; position:relative; }
+  .term { flex:1; min-height:80px; overflow:hidden; padding:12px 16px; font:13.5px/1.62 var(--mono); white-space:pre-wrap; }
+  .term .d { color:var(--stat); } .term .a { color:var(--acc2); } .term .g { color:var(--ok); } .term .y { color:var(--needs); } .term .w { color:var(--white); }
+  .cursor { display:inline-block; width:9px; height:17px; background:var(--acc); vertical-align:-3px; }
+  .grip { height:7px; flex:none; cursor:row-resize; border-top:1px solid var(--acc); position:relative; background:var(--bg); }
+  .grip::after { content:""; position:absolute; left:50%; top:2px; width:36px; height:3px; margin-left:-18px; border-radius:2px; background:var(--line2); }
+  .grip:hover::after, .grip.drag::after { background:var(--acc); }
+  .panel { height:360px; flex:none; display:flex; flex-direction:column; background:var(--bg); min-height:0; }
+  .hidden { display:none !important; }
+  .phdr { display:flex; align-items:center; gap:12px; padding:6px 14px 8px; border-bottom:1px solid var(--line); flex:none; font-size:13px; white-space:nowrap; }
+  .phdr .ty { color:var(--white); } .phdr .tk { color:var(--white); font-weight:600; overflow:hidden; text-overflow:ellipsis; } .phdr .el { color:var(--stat); }
+  .seg { display:flex; gap:2px; border:1px solid var(--line); border-radius:7px; padding:2px; margin-left:6px; flex:none; }
+  .seg button { background:none; border:0; color:var(--mut); font:12px var(--mono); padding:1px 10px; border-radius:5px; cursor:pointer; }
+  .seg button.on { background:var(--hover); color:var(--white); }
+  .seg button:disabled { opacity:.35; cursor:default; }
+  .phdr .sp { flex:1; }
+  .lbtn { background:none; border:0; color:var(--mut); font:12.5px var(--mono); cursor:pointer; padding:0; }
+  .lbtn:hover { color:var(--white); }
+  .prow { padding:6px 14px; border-bottom:1px solid var(--line); color:var(--stat); font:12.5px var(--sans); cursor:pointer; display:flex; gap:8px; flex:none; }
+  .prow .t { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } .prow.open .t { white-space:normal; color:var(--fg); }
+  .prow .car { flex:none; transition:transform .15s; } .prow.open .car { transform:rotate(90deg); }
+  .pbody { flex:1; overflow:auto; padding:8px 14px 14px; }
+  .pbody::-webkit-scrollbar, .stree::-webkit-scrollbar { width:8px; } .pbody::-webkit-scrollbar-thumb, .stree::-webkit-scrollbar-thumb { background:var(--line2); border-radius:4px; }
+
+  /* activity, in the existing pane's style */
+  .ev { display:grid; grid-template-columns:72px 52px 1fr; gap:10px; font:13px/1.9 var(--mono); animation:in .25s ease; }
+  .ev .tm { color:var(--stat); } .ev .tool { color:var(--acc2); } .ev .arg { color:var(--fg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ev.live .tool { color:var(--acc); animation:pulse 1.2s infinite; } .ev.live .arg { color:var(--stat); }
+  .say { margin:6px 0 8px 134px; padding:6px 12px; border-left:2px solid var(--acc); background:rgba(139,123,255,.06); border-radius:0 7px 7px 0; font:13.5px/1.6 var(--sans); animation:in .25s ease; }
+  .waitbox { margin:8px 0 6px 134px; padding:8px 12px; border:1px solid rgba(242,184,75,.4); background:rgba(242,184,75,.08); border-radius:7px; color:var(--needs); font:13px var(--sans); }
+  .fin { margin:8px 0 0 134px; color:var(--ok); font:13px var(--sans); }
+  @keyframes in { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+  @keyframes pulse { 50% { opacity:.35; } }
+
+  /* rendered markdown report */
+  .md { font:14px/1.65 var(--sans); max-width:860px; color:var(--fg); }
+  .md .rh { color:var(--ok); font-size:13px; margin-bottom:2px; }
+  .md p { margin:6px 0; } .md h4 { margin:14px 0 4px; font-size:14px; color:var(--white); font-weight:700; }
+  .md ul, .md ol { margin:4px 0 8px; padding-left:22px; } .md li { margin:3px 0; } .md b { color:var(--white); }
+  code { font:12px var(--mono); color:var(--code); background:#1a1622; border:1px solid #2e2838; border-radius:4px; padding:0 5px; }
+  .md table { border-collapse:collapse; margin:6px 0 10px; font-size:13px; } .md td, .md th { border:1px solid var(--line2); padding:3px 12px; text-align:left; } .md th { color:var(--mut); font-weight:600; }
+  .lnk { color:var(--acc2); text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+  .lnk:hover { color:var(--white); }
+
+  /* status bar + toast */
+  .status { grid-column:1 / span 2; background:var(--chrome); border-top:1px solid var(--line); display:flex; align-items:center; gap:18px; padding:0 14px; font-size:12px; color:var(--stat); }
+  .status .f { color:var(--folder); } .status .b { color:var(--ok); } .status .sp { flex:1; }
+  .status .agp.done { background:#16302a; color:var(--ok); }
+  .status .agp { display:flex; align-items:center; gap:6px; background:var(--accbg); color:var(--acc2); padding:1px 9px; border-radius:7px; font:12px var(--sans); cursor:pointer; }
+  .status .agp .spin { width:10px; height:10px; }
+  .status .sep { width:1px; height:14px; background:var(--line2); }
+  .toast { position:absolute; right:14px; bottom:14px; background:#1a1f2c; border:1px solid var(--line2); border-radius:9px; padding:9px 14px; display:flex; gap:10px; align-items:center; font-size:12.5px; z-index:5; max-width:520px; }
+  .toast .go { color:var(--acc2); cursor:pointer; }
+  .flash { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); background:#1a1f2c; border:1px solid var(--line2); color:var(--fg); padding:8px 14px; border-radius:8px; font:12.5px var(--sans); opacity:0; transition:.2s; pointer-events:none; z-index:9; }
+  .flash.show { opacity:1; transform:translateX(-50%); }
+</style>
+</head>
+<body>
+
+<div class="hint">
+  <span><b>Clickable prototype · v3 with the 0.22 sidebar.</b> Click an agent under the session in the sidebar. Its panel docks under the terminal instead of floating on top.</span>
+  <span><kbd>↑</kbd><kbd>↓</kbd> next agent · <kbd>Esc</kbd> close panel</span>
+  <button id="replay">↺ Replay run</button>
+</div>
+
+<div class="win">
+  <div class="tl-left"><div class="lights"><i></i><i></i><i></i></div><span class="glyph">◫</span><span class="plus">+</span></div>
+  <div class="tl-right">
+    <div class="crumb"><span class="spin" id="crumbIcon"></span><span class="m">kaze-terminal</span><span class="m">/</span><span class="w">Spawn subagents to test kaze</span><span class="pill" id="crumbPill">running</span></div>
+    <div class="search">⌕ Search sessions, skills, commands <span class="k">Cmd+K</span></div>
+    <div class="icons"><span>⌨</span><span class="ag">⑂<b id="iconBadge">4</b></span><span>⚙</span></div>
+  </div>
+
+  <aside class="side">
+    <div class="filter">Filter sessions…</div>
+    <div class="stree">
+      <div class="grp"><span class="car">▾</span><span>kaze-terminal</span><span class="n" id="grpN">2</span></div>
+      <div class="sess on">
+        <div class="l1"><span class="spin" id="sessIcon"></span><span class="cl">✳</span><span class="t">Spawn subagents to test kaze</span><span class="st" id="sessPill">4 agents</span></div>
+        <div class="l3"><span class="br">main</span><span class="pm">+11</span></div>
+      </div>
+      <div id="agents"></div>
+      <div class="sess">
+        <div class="l1"><span class="dot idle"></span><span class="cx">◎</span><span class="t">codex</span></div>
+        <div class="l3"><span class="br">main</span><span class="pm">+11</span></div>
+      </div>
+      <div class="grp" style="margin-top:6px"><span class="car">▾</span><span>kaze-md-samples</span><span class="n">1</span></div>
+      <div class="sess"><div class="l1"><span class="dot idle"></span><span class="t">zsh</span></div></div>
+    </div>
+    <div class="ns"><span class="car">▸</span>NEW SESSION<span>show</span></div>
+    <div class="ws"><div class="h">WORKSPACES</div><div class="r"><span class="car" style="font-size:9px;color:var(--stat)">▾</span>kaze dev<span style="color:var(--ok)">all up</span></div><div class="r"><i></i>bench<span>Idle</span></div></div>
+  </aside>
+
+  <div class="center">
+    <div class="term" id="term"></div>
+    <div class="grip" id="grip"></div>
+    <div class="panel" id="panel">
+      <div class="phdr">
+        <span id="pstate"></span><span class="ty" id="pty">Explore</span><span class="tk" id="ptk"></span><span class="el" id="pel"></span>
+        <div class="seg"><button id="bAct" class="on">Activity</button><button id="bRep">Report</button></div>
+        <span class="sp"></span>
+        <button class="lbtn" id="bCopy">Copy report</button>
+        <button class="lbtn" id="bReader">Open in reader</button>
+        <button class="lbtn" id="bClose" title="Close (Esc)" style="font-size:15px">×</button>
+      </div>
+      <div class="prow" id="prow"><span class="car">▸</span><span class="t" id="ptext"></span></div>
+      <div class="pbody" id="pbody"></div>
+    </div>
+    <div class="toast hidden" id="toast"><span class="dot needs"></span><span><b style="font-weight:400;color:var(--white)">Run mdoc tests needs you</b> · Claude wants to run go test ./internal/mdoc/</span><span class="go" id="toastGo">Go ›</span></div>
+  </div>
+
+  <div class="status">
+    <span class="f">▭ ~/Documents/coding/kaze-terminal</span><span class="b">⎇ main +11</span><span class="sp"></span>
+    <span class="agp" id="statAg"><span class="spin"></span><span id="statTxt">4 agents</span></span><span class="sep"></span>
+    <span>⚙ 726 MB</span><span class="sep"></span><span>▢ 3 tabs</span>
+  </div>
+</div>
+<div class="flash" id="flash"></div>
+
+<script>
+const L = (t) => `<span class="lnk" data-open="${t}">${t}</span>`;
+const C = (t) => `<code>${t}</code>`;
+// script entries: [sec, kind, tool, arg]   kinds: ev, say, wait, done
+const AGENTS = [
+  { id:'spec', type:'Explore', task:'Review sample split-panes spec', start:0,
+    prompt:'Read-only task. Do not edit any files. Read docs/superpowers/specs/2026-11-02-sample-split-panes-design.md, then look at internal/tabs and internal/ui to check whether the architecture in section 4 fits the real code. Report in under 250 words: what fits, what doesn\'t, and the 3 most important gaps. Cite file:line.',
+    script:[[0,'ev','Read','docs/superpowers/specs/2026-11-02-sample-split-panes-design.md'],[2,'ev','Grep','type Tab in internal/tabs'],[4,'ev','Read','internal/tabs/manager.go'],
+      [6,'say',`Each ${C('Tab')} owns exactly one ${C('Session')}. Extra shells are separate tabs linked by ${C('Parent')}.`],
+      [8,'ev','Grep','floats in internal/ui'],[10,'ev','Read','internal/ui/panes.go'],[11,'ev','Read','internal/ui/panes_input.go'],
+      [13,'say',`Kaze already has floating panes in ${C('internal/ui')}, so a new ${C('tabs.Pane')} would duplicate them. Checking layout next.`],
+      [15,'ev','Bash','grep -n ResizeTab internal'],[17,'ev','Read','internal/ui/window.go'],[20,'ev','Read','internal/tabs/state.go'],[23,'done']],
+    report:`<p>The spec's section 4 <b>doesn't match the code</b>. Kaze already has panes, and they live in ${C('internal/ui')}, not ${C('internal/tabs')}.</p>
+      <h4>What fits</h4><ul><li>Keeping ${C('internal/render')} unchanged: one renderer per pane already (${L('renderer.go:178')}).</li><li>Input already goes to the focused pane (${L('panes_input.go:123')}).</li></ul>
+      <h4>3 most important gaps</h4><ol><li><b>Existing panes ignored.</b> Replace, extend or sit beside the floating panes? (${L('panes.go:36')})</li><li><b>Close rules clash.</b> ${C('closePane')} hides or docks; it never closes the tab (${L('panes_input.go:189')}).</li><li><b>No sizing or saved state.</b> Split ratio vs ${C('ResizeTab')}, and ${C('StateTab')} restore (${L('state.go:5')}).</li></ol>`,
+    line1:'The spec\'s section 4 doesn\'t match the code' },
+  { id:'keys', type:'Explore', task:'Check sample plan\'s keybindings', start:1,
+    prompt:'Read-only task. Read the sample plan and the key table in the sample spec. Search internal/ui, internal/input and internal/config for existing shortcuts and report conflicts with Cmd+D, Cmd+Shift+D, Cmd+Opt+Arrow, Cmd+W and the Windows ones.',
+    script:[[0,'ev','Read','docs/superpowers/plans/2026-11-02-sample-split-panes.md'],[1,'ev','Grep','close_tab in internal'],[3,'ev','Read','internal/ui/logic.go'],
+      [4,'say',`${C('Cmd+W')} is already ${C('close_tab')}. That's a direct clash.`],[6,'ev','Read','internal/input/keys.go'],[8,'ev','Grep','[keys] in internal/config'],[10,'done']],
+    report:`<p>Found <b>two direct conflicts</b>, both on close.</p>
+      <h4>Direct conflicts</h4><ul><li><b>Cmd+W</b> is already ${C('close_tab')} on macOS (${L('logic.go:80')}).</li><li><b>Ctrl+Shift+W</b> is already ${C('close_tab')} on Windows (${L('logic.go:92')}).</li></ul>
+      <h4>Free</h4><table><tr><th>Shortcut</th><th>Planned for</th></tr><tr><td>${C('Cmd+D')}</td><td>split right</td></tr><tr><td>${C('Cmd+Shift+D')}</td><td>split down</td></tr><tr><td>${C('Cmd+Opt+Arrow')}</td><td>move focus</td></tr></table>
+      <h4>Softer issue</h4><p>On Windows, ${C('Alt+Arrow')} reaches the shell today (${L('keys.go:66')}); binding it takes word-jumps away from apps.</p>`,
+    line1:'Found two direct conflicts, both on close' },
+  { id:'tests', type:'Explore', task:'Survey markdown reader tests', start:2,
+    prompt:'Read-only task. Read internal/mdoc and its tests plus internal/ui/doc_links.go and docs_open.go. List which markdown behaviours are covered by tests and which are not.',
+    script:[[0,'ev','Read','internal/mdoc/parse_test.go'],[2,'ev','Read','internal/mdoc/resolve_test.go'],[4,'ev','Read','internal/ui/doc_links_test.go'],[6,'ev','Read','internal/ui/docs_open_test.go'],[7,'done']],
+    report:`<h4>Covered</h4><ul><li>${C('%20')} decoding, ${C('~/')} paths, the 2 MB cut</li><li>Nesting past MaxDepth, tables, lists, tasks</li><li>Blocked schemes, repo-root fallback</li></ul>
+      <h4>Not covered</h4><ul><li><b>Links inside table cells</b></li><li>Uppercase ${C('.MD')}</li><li>CRLF, BOM, invalid UTF-8</li><li>Anchors that don't exist</li></ul>`,
+    line1:'13 behaviours covered, 11 not' },
+  { id:'gotest', type:'general-purpose', task:'Run mdoc tests', start:4,
+    prompt:'Run go test ./internal/mdoc/ and report failures.',
+    script:[[0,'ev','Read','internal/mdoc/load.go'],[3,'wait'],[14,'ev','Bash','go test ./internal/mdoc/'],[16,'done']],
+    report:`<p><b>All tests pass.</b></p><p>${C('ok  kaze/internal/mdoc  0.41s')}</p>`,
+    line1:'All tests pass' },
+];
+
+let t0 = performance.now(), sel = 'spec', view = 'act', userView = false, open = true;
+const $ = (id) => document.getElementById(id);
+const clock = (s) => { const d = new Date(2026,10,2,15,40,0); d.setSeconds(d.getSeconds()+Math.floor(s)); return d.toTimeString().slice(0,8); };
+const mins = (s) => s < 60 ? '<1m' : Math.floor(s/60)+'m';
+
+function stateOf(a, now) {
+  const t = now - a.start, ev = a.script.filter(e => e[0] <= t);
+  const done = a.script.find(e => e[1]==='done'), wait = a.script.find(e => e[1]==='wait');
+  let st = t < 0 ? 'pending' : 'run';
+  if (done && t >= done[0]) st = 'done';
+  else if (wait && t >= wait[0]) { const nx = a.script.find(e => e[0] > wait[0]); if (!nx || t < nx[0]) st = 'wait'; }
+  const evs = ev.filter(e => e[1]==='ev');
+  return { t, ev, st, last: evs[evs.length-1], took: st==='done' ? done[0] : Math.max(0,t) };
+}
+const icon = (st) => st==='done' ? '<span class="dot ok"></span>' : st==='wait' ? '<span class="dot needs"></span>' : '<span class="spin"></span>';
+
+function renderSide(now) {
+  const list = AGENTS.map(a => [a, stateOf(a,now)]).filter(([,s]) => s.st!=='pending');
+  const run = list.filter(([,s]) => s.st==='run').length, wait = list.filter(([,s]) => s.st==='wait').length;
+  $('agents').innerHTML = list.map(([a,s]) => `
+    <div class="agent ${open && sel===a.id ? 'sel':''} ${s.st==='wait'?'waiting':''} ${s.st==='done'?'done':''}" data-id="${a.id}">
+      <div class="r1">${icon(s.st)}<span class="ty">${a.type.replace('general-purpose','general-p…')}</span><span class="tk">${a.task}</span><span class="el">${s.st==='done' ? 'took '+mins(s.took) : mins(s.took)}</span></div>
+      <div class="r2">${s.st==='done' ? a.line1 : s.st==='wait' ? 'Needs your approval' : s.last ? s.last[2]+' '+s.last[3].split('/').pop() : 'Starting'}</div>
+    </div>`).join('');
+    $('iconBadge').textContent = run + wait; $('iconBadge').style.display = run+wait ? '' : 'none';
+  $('statAg').classList.toggle('done', !(run+wait));
+  $('statTxt').textContent = run+wait ? `${run+wait} agent${run+wait===1?'':'s'}` : 'agents done';
+  $('statAg').querySelector('.spin').style.display = run ? '' : 'none';
+  $('sessPill').textContent = wait ? 'needs you' : run ? `${run} agent${run===1?'':'s'}` : 'done';
+  $('sessPill').className = 'st' + (wait ? ' needs' : run ? '' : ' done');
+  $('sessIcon').className = wait ? 'dot needs' : run ? 'spin' : 'dot ok';
+  $('grpN').textContent = wait ? '1 waiting' : '2'; $('grpN').className = 'n' + (wait ? ' needs' : '');
+  $('crumbPill').textContent = wait ? 'needs you' : run ? 'running' : 'done'; $('crumbPill').className = 'pill' + (wait ? ' needs' : run ? '' : ' done');
+  $('crumbIcon').className = wait ? 'dot needs' : run ? 'spin' : 'dot ok';
+  $('toast').classList.toggle('hidden', !wait);
+}
+
+let bodyKey = '';
+function renderPanel(now, force) {
+  const a = AGENTS.find(x => x.id===sel), s = stateOf(a, now);
+  $('pstate').innerHTML = icon(s.st); $('pty').textContent = a.type; $('ptk').textContent = a.task;
+  $('pel').textContent = s.st==='done' ? 'took '+mins(s.took) : s.st==='wait' ? 'waiting for you' : mins(s.took)+' · working';
+  $('ptext').textContent = 'Prompt: ' + a.prompt;
+  $('bRep').disabled = s.st!=='done';
+  $('bCopy').style.display = $('bReader').style.display = s.st==='done' ? '' : 'none';
+  if (!userView) view = s.st==='done' ? 'rep' : 'act';
+  if (view==='rep' && s.st!=='done') view = 'act';
+  $('bAct').classList.toggle('on', view==='act'); $('bRep').classList.toggle('on', view==='rep');
+  const key = sel+view+s.ev.length+s.st; if (key===bodyKey && !force) return; bodyKey = key;
+  const b = $('pbody'), atEnd = b.scrollHeight - b.scrollTop - b.clientHeight < 30;
+  if (view==='rep') { b.innerHTML = `<div class="md"><div class="rh">Report</div>${a.report}</div>`; b.scrollTop = 0; return; }
+  let h = '';
+  for (const e of s.ev) {
+    if (e[1]==='ev') h += `<div class="ev"><span class="tm">${clock(a.start+e[0])}</span><span class="tool">${e[2]}</span><span class="arg">${e[3]}</span></div>`;
+    if (e[1]==='say') h += `<div class="say">${e[2]}</div>`;
+    if (e[1]==='wait' && s.st==='wait') h += `<div class="waitbox">⏸ Wants to run ${C('go test ./internal/mdoc/')}. Approve it in the session above.</div>`;
+    if (e[1]==='done') h += `<div class="fin">✓ Finished in ${mins(e[0])} · <span class="lnk" id="seeRep">read the report</span></div>`;
+  }
+  if (s.st==='run') h += `<div class="ev live"><span class="tm">${clock(now)}</span><span class="tool">…</span><span class="arg">working</span></div>`;
+  b.innerHTML = h; if (atEnd || force) b.scrollTop = b.scrollHeight;
+}
+
+let termKey = '';
+function renderTerm(now) {
+  const sts = AGENTS.map(a => stateOf(a,now).st), k = sts.join(); if (k===termKey) return; termKey = k;
+  const n = sts.filter(s => s!=='pending').length, w = sts.includes('wait'), all = sts.every(s => s==='done');
+  $('term').innerHTML =
+`<span class="a">❯</span> <span class="w">spawn sub agents please so i can test too</span>
+
+<span class="a">⏺</span> Starting ${n} subagents. Follow them in the sidebar.
+${AGENTS.slice(0,n).map((a,i) => `  <span class="d">⎿</span> ${a.type}(<span class="w">${a.task}</span>) ${sts[i]==='done'?'<span class="g">done</span>':sts[i]==='wait'?'<span class="y">waiting</span>':'<span class="d">running…</span>'}`).join('\n')}
+${w ? `
+<span class="y">  Run mdoc tests wants to run: go test ./internal/mdoc/
+  ❯ 1. Yes   2. Yes, and don't ask again   3. No</span>
+` : ''}
+${all ? '<span class="a">⏺</span> All four are done. Spec doesn\'t fit; two key clashes; tests pass.' : '<span class="d">✻ Waiting on subagents…</span>'}
+
+<span class="a">❯</span> <span class="cursor"></span>`;
+}
+
+function tick() { const now = (performance.now()-t0)/1000; renderSide(now); renderTerm(now); if (open) renderPanel(now); }
+function show(id) { if (sel!==id) userView = false; sel = id; open = true; $('panel').classList.remove('hidden'); $('grip').classList.remove('hidden'); renderPanel((performance.now()-t0)/1000, true); tick(); }
+function hide() { open = false; $('panel').classList.add('hidden'); $('grip').classList.add('hidden'); tick(); }
+function flash(m) { const f = $('flash'); f.textContent = m; f.classList.add('show'); clearTimeout(f._h); f._h = setTimeout(() => f.classList.remove('show'), 1700); }
+const now = () => (performance.now()-t0)/1000;
+
+$('agents').addEventListener('click', e => { const r = e.target.closest('.agent'); if (r) (open && sel===r.dataset.id) ? hide() : show(r.dataset.id); });
+$('bClose').onclick = hide;
+$('bAct').onclick = () => { view='act'; userView=true; renderPanel(now(), true); };
+$('bRep').onclick = () => { view='rep'; userView=true; renderPanel(now(), true); };
+$('prow').onclick = () => $('prow').classList.toggle('open');
+$('bCopy').onclick = () => flash('Copied the report as markdown');
+$('bReader').onclick = () => flash('Opens the report full size in the markdown reader');
+$('statAg').onclick = () => { const a = AGENTS.find(a => stateOf(a,now()).st==='wait') || AGENTS.find(a => stateOf(a,now()).st==='run') || AGENTS[0]; show(a.id); };
+$('toastGo').onclick = () => show('gotest');
+document.addEventListener('click', e => { const l = e.target.closest('[data-open]'); if (l) flash('Cmd+click opens ' + l.dataset.open + ' in your editor'); if (e.target.id==='seeRep') { view='rep'; userView=true; renderPanel(now(), true); } });
+$('replay').onclick = () => { t0 = performance.now(); termKey=''; userView=false; show('spec'); };
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') hide();
+  if (e.key==='ArrowDown' || e.key==='ArrowUp') { const ids = AGENTS.filter(a => stateOf(a,now()).st!=='pending').map(a => a.id); let i = ids.indexOf(sel) + (e.key==='ArrowDown'?1:-1); show(ids[Math.max(0, Math.min(ids.length-1, i))]); e.preventDefault(); }
+});
+(() => { const g = $('grip'); g.onmousedown = e => { const y0 = e.clientY, h0 = $('panel').offsetHeight; g.classList.add('drag');
+  const mv = ev => { $('panel').style.height = Math.max(140, Math.min(620, h0-(ev.clientY-y0))) + 'px'; };
+  const up = () => { g.classList.remove('drag'); removeEventListener('mousemove',mv); removeEventListener('mouseup',up); };
+  addEventListener('mousemove',mv); addEventListener('mouseup',up); }; })();
+
+// URL params for screenshots: ?t=<seconds into the run>&sel=<agent id>&view=act|rep&freeze=1&hint=0
+const q = new URLSearchParams(location.search);
+if (q.has('t')) t0 = performance.now() - parseFloat(q.get('t'))*1000;
+if (q.get('hint')==='0') document.querySelector('.hint').style.display = 'none';
+show(q.get('sel') || 'spec');
+if (q.get('view')) { view = q.get('view'); userView = true; renderPanel(now(), true); }
+if (q.get('freeze')==='1') { const ft = now(); tick(); t0 = performance.now() - ft*1000; renderPanel(ft, true); }
+else setInterval(tick, 250);
+</script>
+</body>
+</html>
