@@ -21,9 +21,9 @@ The new bottom section, a **branch launcher**, replaces "Next waiting": pick a r
 choose Claude, Codex or a shell, and kaze makes a sibling worktree, opens a session in it and starts the
 agent there.
 
-Mockups (local, not committed): `.superpowers/brainstorm/50462-1793595380/content/`
-`sidebar-before-after.html` (rows) and `sidebar-launcher-toggle.html` (launcher). The text below is the
-authority.
+Approved mockups: `docs/design/sidebar-before-after-mockup.html` (rows, "After") and
+`docs/design/sidebar-launcher-toggle-mockup.html` (launcher shown, picker open, tucked away). Open them in
+a browser. The text below is the authority where they differ.
 
 ## Goals
 

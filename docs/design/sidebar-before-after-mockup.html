@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sidebar rows mockup</title>
+<style>
+  body { background:#0b0d12; color:#e7e9f0; font:15px/1.5 -apple-system, "Segoe UI", sans-serif; margin:0; padding:32px; }
+  h2 { margin:0 0 4px; } h3 { margin:16px 0 8px; font-size:15px; }
+  .subtitle { color:#8a90a2; margin:0 0 20px; }
+  code { background:#1a1f2c; padding:1px 5px; border-radius:4px; }
+</style>
+</head>
+<body>
+<!-- Approved in the 2026-11-02 brainstorm; the spec docs/superpowers/specs/2026-11-02-kaze-sidebar-redesign-design.md is the authority. -->
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  .sb { --bg:#0f1117; --line:#1d2230; --muted:#7d8394; --fg:#e7e9f0; --acc:#8b7bff; --accbg:#2a2457; --green:#9fd8a0; --amber:#f2b84b; --claude:#d97757; --pink:#c792b8;
+    background:var(--bg); color:var(--fg); font:13px/1.5 'JetBrains Mono', Menlo, monospace; width:300px; border:1px solid var(--line); border-radius:10px; padding:10px; }
+  .sb .flt { border:1px solid var(--line); border-radius:7px; padding:5px 9px; color:var(--muted); margin-bottom:10px; }
+  .sb .hd { display:flex; align-items:center; gap:6px; padding:4px 2px; }
+  .sb .hd .n { margin-left:auto; color:var(--muted); }
+  .sb .hd .w { margin-left:auto; color:var(--amber); }
+  .sb .car { color:var(--muted); font-size:10px; }
+  .sb .dot { width:9px; height:9px; border-radius:50%; background:#6b7080; display:inline-block; flex:none; }
+  .sb .dot.amber { background:var(--amber); box-shadow:0 0 0 3px #f2b84b40; }
+  .sb .dot.ring { background:none; border:2px solid var(--acc); border-top-color:transparent; width:7px; height:7px; }
+  .sb .dot.green { background:#62d39a; }
+  .sb .row { padding:5px 8px 6px 10px; margin:3px 0; border-radius:7px; border-left:2px solid transparent; }
+  .sb .row.on { background:#151925; border-left-color:var(--claude); }
+  .sb .l1 { display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; }
+  .sb .l1 .t { overflow:hidden; text-overflow:ellipsis; }
+  .sb .l2, .sb .l3 { display:flex; color:var(--muted); padding-left:15px; white-space:nowrap; overflow:hidden; }
+  .sb .br { color:var(--green); overflow:hidden; text-overflow:ellipsis; }
+  .sb .d { margin-left:auto; color:var(--green); padding-left:8px; }
+  .sb .d .m { color:#e57373; }
+  .sb .st { margin-left:auto; font-size:11.5px; }
+  .sb .st.run { color:var(--acc); } .sb .st.need { color:var(--amber); } .sb .st.done { color:#62d39a; }
+  .sb .ag { color:var(--pink); }
+  .sb .logo { font-size:13px; }
+  .sb .sub { padding:2px 8px 2px 28px; color:var(--muted); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sb .sub b { color:#a99cff; font-weight:400; }
+  .sb .next { border:1px solid var(--line); border-radius:7px; padding:6px 9px; display:flex; margin-top:14px; }
+  .sb .next span:last-child { margin-left:auto; color:var(--muted); font-size:11px; }
+  .sb .pill { background:var(--accbg); color:#b9a6ff; border-radius:9px; padding:0 6px; font-size:11px; }
+  .cols { display:flex; gap:28px; flex-wrap:wrap; align-items:flex-start; }
+  .cols h3 { margin:0 0 8px; }
+  .rules { font-size:14px; max-width:720px; }
+  .rules li { margin:4px 0; }
+</style>
+
+<h2>Sidebar: before and after</h2>
+<p class="subtitle">Same sessions both sides: two in kaze-terminal (Claude and Codex, same checkout), one Claude in a todo-api worktree that needs you.</p>
+
+<div class="cols">
+  <div>
+    <h3>Now</h3>
+    <div class="sb">
+      <div class="flt">Filter sessions…</div>
+      <div class="hd"><span class="car">▾</span><span class="dot ring"></span><span class="dot"></span><span>kaze-terminal</span><span class="n">2</span></div>
+      <div class="row on">
+        <div class="l1"><span class="dot ring"></span><span class="t">kaze-terminal</span><span class="logo" style="color:var(--claude)">✳</span><span class="ag">claude</span><span class="pill">2 agents</span></div>
+        <div class="l2">~/Documents/coding/kaze-terminal</div>
+        <div class="l3"><span class="br">subagent-live-messages</span><span class="d">+47</span></div>
+      </div>
+      <div class="sub"><b>Explore</b> Find the sidebar model…</div>
+      <div class="sub"><b>Plan</b> Draft the row layout</div>
+      <div class="row">
+        <div class="l1"><span class="dot"></span><span class="t">kaze-terminal</span><span class="logo">◎</span><span class="ag">codex</span></div>
+        <div class="l2">~/Documents/coding/kaze-terminal</div>
+        <div class="l3"><span class="br">subagent-live-messages</span><span class="d">+47</span></div>
+      </div>
+      <div class="hd" style="margin-top:6px"><span class="car">▾</span><span class="dot amber"></span><span>todo-api</span><span class="w">1 waiting</span></div>
+      <div class="row">
+        <div class="l1"><span class="dot amber"></span><span class="t">todo-api-auth</span><span class="logo" style="color:var(--claude)">✳</span><span class="ag">claude</span></div>
+        <div class="l2">~/projects/todo-api-auth</div>
+        <div class="l3"><span class="br">feature/auth</span><span class="d">+7 <span style="color:var(--amber)">needs you</span></span></div>
+      </div>
+      <div class="next"><span>Next waiting</span><span>Cmd+J</span></div>
+    </div>
+  </div>
+
+  <div>
+    <h3>After</h3>
+    <div class="sb">
+      <div class="flt">Filter sessions…</div>
+      <div class="hd"><span class="car">▾</span><span>kaze-terminal</span><span class="n">2</span></div>
+      <div class="row on">
+        <div class="l1"><span class="dot ring"></span><span class="logo" style="color:var(--claude)">✳</span><span class="t">Read Markdown Reader Plan</span><span class="st run">2 agents</span></div>
+        <div class="l2"><span class="br">subagent-live-messages</span><span class="d">+47 <span class="m">−3</span></span></div>
+      </div>
+      <div class="sub"><b>Explore</b> Find the sidebar model…</div>
+      <div class="sub"><b>Plan</b> Draft the row layout</div>
+      <div class="row">
+        <div class="l1"><span class="dot"></span><span class="logo">◎</span><span class="t">codex</span></div>
+        <div class="l2"><span class="br">subagent-live-messages</span><span class="d">+47 <span class="m">−3</span></span></div>
+      </div>
+      <div class="hd" style="margin-top:6px"><span class="car">▾</span><span>todo-api</span><span class="w">1 waiting</span></div>
+      <div class="row">
+        <div class="l1"><span class="dot amber"></span><span class="logo" style="color:var(--claude)">✳</span><span class="t">Add login rate limit</span><span class="st need">needs you</span></div>
+        <div class="l2"><span class="br">⑂ todo-api-auth · feature/auth</span><span class="d">+7</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section rules">
+  <h3>The rules behind "After"</h3>
+  <ul>
+    <li><b>Group header:</b> repo name and a count, or "N waiting" in amber. No dots.</li>
+    <li><b>Line 1:</b> state dot, agent logo, then the name: your kaze name → the title the agent set (Claude's summary or <code>/rename</code>) → the folder's name, only if it differs from the repo → the program (<code>codex</code>, <code>zsh</code>). The word "claude"/"codex" is gone; the logo says it.</li>
+    <li><b>Line 2:</b> the branch and its +/− counts. In a worktree: <code>⑂ worktree-name · branch</code> (just the branch if the two match).</li>
+    <li><b>Gone:</b> the folder path line, the header dots, the "Next waiting" button (Cmd+J still works).</li>
+    <li><b>Status on the right of line 1:</b> "needs you", "done", or the agent count while running.</li>
+  </ul>
+</div>
+
+</body>
+</html>
