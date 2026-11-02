@@ -1,8 +1,17 @@
 # kaze handoff
 
-Last updated: 2026-11-02, after PR #93 merged and release 0.20 was prepared. Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-02, after PRs #97 and #98 merged and release 0.21 was prepared. Read this first when you pick up kaze on another machine.
 
 ## Where things stand
+
+**Release 0.21 combines the markdown reader (#97), live subagent messages and
+report recovery (#98 / #85), and the resource-card cleanup (#96 / #95).** The owner
+explicitly authorized this agent to merge both feature PRs and publish the combined
+release on 2026-11-02. Both features are on main. Version, Mac metadata, release
+notes, full changelog and lander are updated together. The reader and Subagents
+screenshots need native captures; no product screenshots were fabricated. Manual
+checks with real Claude sessions and Windows interactions remain open. Earlier
+"no release" notes below describe implementation-stage constraints.
 
 **Issue #85 is implemented on `feat/subagent-live-messages`, stacked on the reader.**
 Visible Claude subagent panes read their JSONL incrementally, show assistant text

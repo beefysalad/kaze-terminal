@@ -1,9 +1,9 @@
-## What’s new in Kaze 0.20
+## What’s new in Kaze 0.21
 
-- **CPU and RAM in the status bar:** the status bar shows how much CPU and memory Kaze and the shells, agents and servers it runs are using. Hover it for a breakdown by session. It refreshes on activity, at most every 2 seconds, and pauses while Kaze is minimized.
-- **Fixed: resumed conversations:** after an update or a launch from Finder, restored tabs resume their Claude Code or Codex conversation again, including when the agent is installed as a shell alias.
-- **Fixed: update prompt:** the update confirmation text no longer overlaps the Cancel and Update now buttons.
-- **Fixed: workspace status:** a closed workspace tab shows as stopped and no longer counts as a running server. The count reads N/M UP.
+- **Markdown reader:** Cmd+click an .md path (Ctrl+click on Windows) to read it inside Kaze. Each doc gets a temporary row under its session, a heading outline, links and automatic reloads. The view is read-only and reads up to 2 MB; doc rows are not restored after restart.
+- **Live Claude subagent messages:** panes show assistant messages as they arrive, with tool calls folded into count summaries. They follow new output at the bottom and keep your place when you scroll up. Transcript reads stop while the pane is hidden or closed. Codex helpers keep the prompt/count/report view.
+- **Fixed: empty subagent reports:** panes recover reports delivered through SubagentHandback when the stop hook has no final text. Copy report uses the same text. If there is no report, the pane says “No report”. Cmd+click or Ctrl+click web links and .md paths in pane text to open them.
+- **Cleaner resource card:** session names drop leading agent status symbols, and the CPU/RAM card uses a short, single-line footer.
 
 ## Download
 

@@ -888,8 +888,7 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 Done:
 
-- Markdown reader: Cmd+click an .md path to read it in kaze, nested under its session.
-
+- 0.21: read markdown docs inside kaze, follow live Claude subagent messages, recover empty reports and see a cleaner resource card.
 - Plan 1: the terminal core with tabs.
 - Plan 3: alerts with a chime when Claude Code needs you, kaze's own title bar on Windows, and
   the current folder and git branch in the status bar.
