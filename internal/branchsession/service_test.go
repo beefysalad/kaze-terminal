@@ -232,3 +232,11 @@ func TestExistingBranchRecordsItsTipAsCreationBase(t *testing.T) {
 		t.Fatalf("pre-existing work counted as new: %+v %v", st, e)
 	}
 }
+
+func TestWorktreePathsUseNativeSeparators(t *testing.T) {
+	dir := t.TempDir()
+	input := filepath.ToSlash(dir) + "/folder/../worktree"
+	if got, want := worktreePath(input), filepath.Join(dir, "worktree"); got != want {
+		t.Fatalf("worktree path %q, want native %q", got, want)
+	}
+}

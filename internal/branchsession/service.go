@@ -134,7 +134,7 @@ func trees(ctx context.Context, dir string) ([]tree, error) {
 			if cur.path != "" {
 				out = append(out, cur)
 			}
-			cur = tree{path: strings.TrimPrefix(f, "worktree ")}
+			cur = tree{path: worktreePath(strings.TrimPrefix(f, "worktree "))}
 		case strings.HasPrefix(f, "branch refs/heads/"):
 			cur.branch = strings.TrimPrefix(f, "branch refs/heads/")
 		}
@@ -423,3 +423,7 @@ func (s *Store) Remove(ctx context.Context, folder string) error {
 	}
 	return errors.New("Kaze did not create this worktree.")
 }
+
+// Git emits slash-separated worktree paths on Windows too. Normalize before
+// comparing a reused checkout with a folder Kaze created using filepath.Join.
+func worktreePath(path string) string { return filepath.Clean(filepath.FromSlash(path)) }
