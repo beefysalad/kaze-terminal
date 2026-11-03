@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sidebar subagents: fewer misclicks (mockup)</title>
+<style>
+  @font-face { font-family:Manrope; src:url(../site-assets/Manrope.ttf) format('truetype'); font-weight:200 800; }
+  @font-face { font-family:JB; src:url(../site-assets/JetBrainsMono-Regular.ttf) format('truetype'); }
+  :root {
+    --chrome:#0b0d12; --bg:#0f1117; --fg:#e7e9f0; --white:#fff; --mut:#8a90a2; --stat:#7d8394; --line:#1d2230; --line2:#2a3142;
+    --acc:#8b7bff; --acc2:#b9a6ff; --accbg:#2a2550; --ok:#62d39a; --needs:#f2b84b; --hover:#1a1f2c; --press:#151925; --folder:#c9cdd8;
+    --claude:#e8875f; --mag:#c08fe0;
+    --mono:JB,"JetBrains Mono",ui-monospace,Menlo,monospace; --sans:Manrope,"Segoe UI",sans-serif;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#05060a; color:var(--fg); font:13px/1.5 var(--mono); padding:18px 20px 24px; }
+  h1 { font:600 17px var(--sans); margin:0 0 4px; color:var(--white); }
+  .lead { font:13px/1.55 var(--sans); color:var(--mut); margin:0 0 14px; max-width:1180px; }
+  .lead b { color:var(--fg); }
+  .bar { display:flex; gap:12px; align-items:center; margin-bottom:14px; font:12px var(--sans); color:var(--mut); }
+  .bar button { background:var(--hover); color:var(--fg); border:1px solid var(--line2); border-radius:6px; padding:3px 10px; font:inherit; cursor:pointer; }
+  .legend { display:flex; gap:14px; align-items:center; }
+  .legend i { display:inline-block; width:22px; height:12px; border-radius:3px; vertical-align:-2px; margin-right:5px; }
+  .legend .s { border:1.5px dashed rgba(98,211,154,.9); } .legend .a { border:1.5px dashed rgba(242,184,75,.95); }
+  .grid { display:grid; grid-template-columns:repeat(4, 282px); gap:18px; align-items:start; }
+  .col h2 { font:600 13.5px var(--sans); color:var(--white); margin:0 0 2px; display:flex; gap:8px; align-items:center; }
+  .row2 > h2 .tag, .col h2 .tag { font:600 10.5px var(--sans); background:var(--accbg); color:var(--acc2); border-radius:6px; padding:1px 7px; }
+  .col h2 .tag.now { background:#2b1d1d; color:#f08f8f; }
+  .col p { font:12px/1.5 var(--sans); color:var(--mut); margin:0 0 10px; min-height:72px; }
+  .side { background:var(--chrome); border:1px solid #2a2f3d; border-radius:10px; overflow:hidden; padding-bottom:8px; }
+  .top { display:flex; align-items:center; gap:14px; padding:10px 12px; color:var(--mut); border-bottom:1px solid var(--line); }
+  .top .k { color:var(--acc); font-weight:700; } .top .sb { width:15px; height:12px; border:1.5px solid var(--mut); border-radius:3px; box-shadow:inset 4px 0 0 -2.5px var(--mut); display:inline-block; } .top .plus { margin-left:auto; font-size:17px; }
+  .filter { margin:10px 8px 6px; height:30px; border:1px solid var(--line); border-radius:7px; color:var(--stat); display:flex; align-items:center; padding:0 10px; font-size:12px; }
+  .grp { display:flex; align-items:center; gap:7px; padding:8px 12px 4px; font-size:12.5px; }
+  .grp .car { color:var(--stat); font-size:9px; } .grp .n { margin-left:auto; color:var(--stat); font-size:11.5px; }
+  .grp.on { background:#24161b; color:#f0a39a; border-radius:6px; margin:0 6px; padding-left:6px; box-shadow:inset 0 0 0 1px #4a2a30; }
+  .sess { margin:0 6px; padding:6px 8px 6px 10px; border-radius:7px; position:relative; font-size:12.5px; }
+  .sess.on { background:#151821; box-shadow:inset 2px 0 0 var(--claude); }
+  .l1 { display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; }
+  .l1 .t { color:var(--white); flex:1; overflow:hidden; text-overflow:ellipsis; }
+  .l1 .st { color:var(--acc2); font-size:11.5px; flex:none; }
+  .l3 { display:flex; font-size:11.5px; margin-left:20px; gap:8px; align-items:center; } .l3 .br { color:var(--ok); } .l3 .pm { margin-left:auto; color:var(--ok); } .l3 .mm { color:#f08f8f; }
+  .cl { color:var(--claude); }
+  .dot { display:inline-block; width:7px; height:7px; border-radius:50%; flex:none; background:#5b6172; }
+  .dot.ok { background:var(--ok); } .dot.needs { background:var(--needs); box-shadow:0 0 0 3px rgba(242,184,75,.18); }
+  .ring { display:inline-block; width:11px; height:11px; border-radius:50%; border:2px solid var(--acc); flex:none; position:relative; }
+  .ring::after { content:""; position:absolute; inset:2px; border-radius:50%; background:var(--acc2); }
+  .ring.red { border-color:#ff6b6b; } .ring.red::after { background:#ff9b9b; }
+  /* today's agent lines */
+  .ag { margin:0 6px 0 26px; padding:4px 8px; border-radius:6px; font-size:12px; position:relative; }
+  .ag .r1 { display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; }
+  .ag .ty { color:var(--mag); flex:none; } .ag .tk { color:var(--folder); flex:1; overflow:hidden; text-overflow:ellipsis; } .ag .el { color:var(--stat); font-size:11px; flex:none; }
+  .ag .r2 { color:var(--stat); font-size:11px; margin-left:18px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ag.wait .r2 { color:var(--needs); } .ag.done .tk, .ag.done .r2 { color:var(--mut); }
+  /* A: chip */
+  .chip { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--line2); border-radius:9px; padding:0 7px; font-size:11px; color:var(--acc2); background:#141729; line-height:18px; cursor:pointer; }
+  .chip .car { font-size:8px; color:var(--stat); }
+  .chip.needs { color:var(--needs); border-color:#4a3a18; background:#211b0e; }
+  .pop { margin:4px 6px 0 26px; border:1px solid var(--line2); border-radius:8px; background:#10131b; padding:3px 0; }
+  .pop .ag { margin:0 4px; }
+  /* B: tray */
+  .tray { margin:3px 8px 6px 30px; border-left:1px solid var(--line2); padding:2px 0 2px 0; }
+  .trow { display:flex; align-items:center; gap:7px; padding:3px 8px 3px 10px; font-size:11.5px; white-space:nowrap; border-radius:0 6px 6px 0; position:relative; }
+  .trow::before { content:""; position:absolute; left:-1px; top:50%; width:7px; border-top:1px solid var(--line2); }
+  .trow .ty { color:var(--mag); flex:none; } .trow .tk { color:var(--folder); overflow:hidden; text-overflow:ellipsis; flex:1; } .trow .el { color:var(--stat); font-size:10.5px; }
+  .trow.wait .tk { color:var(--needs); } .trow.done .tk { color:var(--mut); }
+  .trow .open { color:var(--stat); font-size:12px; margin-left:2px; width:16px; text-align:center; border-radius:4px; }
+  .trow.sel { background:var(--press); box-shadow:inset 2px 0 0 var(--acc); }
+  .more { padding:2px 10px; font-size:11px; color:var(--stat); }
+  /* click areas */
+  .zones .hs { outline:1.5px dashed rgba(98,211,154,.9); outline-offset:-1px; }
+  .zones .ha { outline:1.5px dashed rgba(242,184,75,.95); outline-offset:-1px; }
+  .row2 { display:grid; grid-template-columns:repeat(3, 282px); gap:18px; align-items:start; margin-top:22px; padding-top:16px; border-top:1px solid var(--line); }
+  .row2 > h2 { grid-column:1 / -1; font:600 15px var(--sans); color:var(--white); margin:0; display:flex; gap:8px; align-items:center; }
+  .row2 > .sub { grid-column:1 / -1; font:12.5px/1.55 var(--sans); color:var(--mut); margin:-10px 0 0; max-width:900px; }
+  .row2 > .sub b { color:var(--fg); }
+  .fold { cursor:pointer; display:inline-flex; gap:4px; align-items:center; }
+  .fold .car { font-size:9px; color:var(--stat); }
+  .morechip { margin:2px 0 0 10px; display:inline-flex; align-items:center; gap:5px; border:1px solid var(--line2); border-radius:9px; padding:0 8px; font-size:11px; color:var(--acc2); background:#141729; line-height:18px; }
+  .morechip .n { color:var(--stat); }
+  /* Sumi theme, from internal/theme/theme.go */
+  .sumi { --chrome:#0c0c0c; --bg:#111111; --fg:#e4e1da; --mut:#77736b; --stat:#77736b; --line:#222222; --line2:#2e2e2e; --acc:#e2553d; --acc2:#f08a74; --accbg:#2a1713; --hover:#1a1a1a; --press:#161616; --folder:#e4e1da; }
+  .sumi .side { border-color:#2a2a2a; }
+  .sumi .ring { border-color:var(--acc); } .sumi .ring::after { background:var(--acc2); }
+  .sumi .sess.on { background:#171717; box-shadow:inset 2px 0 0 var(--claude); }
+  .row3 { display:grid; grid-template-columns:repeat(4, 282px); gap:18px; align-items:start; margin-top:22px; padding-top:16px; border-top:1px solid var(--line); }
+  .row3 > h2 { grid-column:1 / -1; font:600 15px var(--sans); color:var(--white); margin:0; }
+  .row3 > .sub { grid-column:1 / -1; font:12.5px/1.55 var(--sans); color:var(--mut); margin:-10px 0 0; max-width:900px; } .row3 > .sub b { color:var(--fg); }
+  .grp.err { background:#2a1512; color:#f08a74; border-radius:6px; margin:0 6px; padding-left:6px; box-shadow:inset 0 0 0 1px #5a2a22; }
+  .grp.err .n { color:#f08a74; }
+  .grp.quiet { color:var(--white); font-weight:700; } .grp.quiet .here { width:6px; height:6px; border-radius:50%; background:var(--acc); }
+  .proj { position:relative; }
+  .proj.rail::before { content:""; position:absolute; left:2px; top:6px; bottom:4px; width:2px; border-radius:2px; background:var(--acc); opacity:.85; }
+  .proj.rail .grp { color:var(--white); font-weight:700; }
+  .grp.soft { background:#1c1c1c; border-radius:6px; margin:0 6px; padding-left:6px; color:var(--white); font-weight:700; } .grp.soft .car { color:var(--acc); }
+  .notes { margin-top:10px; font:11.5px/1.5 var(--sans); color:var(--mut); }
+  .notes li { margin:2px 0; } .notes b { color:var(--fg); } .notes .good { color:var(--ok); } .notes .bad { color:#f08f8f; }
+  .pick { margin-top:16px; max-width:1180px; font:13px/1.55 var(--sans); color:var(--mut); border-top:1px solid var(--line); padding-top:12px; }
+  .pick b { color:var(--white); }
+</style>
+</head>
+<body class="zones">
+<h1>Sidebar subagents: stop clicking an agent when you meant the session</h1>
+<p class="lead">Today a session row and its subagent lines are stacked with no gap and look alike, so a click just under the session's branch line lands on the agent and opens its panel instead of the terminal. Each column is the same two sessions; <b>dashed outlines show what a click hits</b>.</p>
+<div class="bar"><button onclick="document.body.classList.toggle('zones')">Show / hide click areas</button>
+  <span class="legend"><span><i class="s"></i>shows the session (terminal)</span><span><i class="a"></i>opens an agent's panel</span></span></div>
+
+<div class="grid">
+
+<!-- TODAY -->
+<div class="col">
+  <h2>Today <span class="tag now">0.24</span></h2>
+  <p>Agent lines start right under the session, the same width and weight. Two lines each (task, then current step), so the agent target (34 dp) is almost as big as the session row.</p>
+  <div class="side">
+    <div class="top"><span class="k">K</span><span class="sb"></span><span class="plus">+</span></div>
+    <div class="filter">Filter sessions…</div>
+    <div class="grp"><span class="car">▾</span>samurai_cart_v3<span class="n">1</span></div>
+    <div class="sess hs"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Epic V3-3347 tickets</span><span class="st">1 agent</span></div>
+      <div class="l3"><span class="br">V3-3261</span><span class="pm">+69</span><span class="mm">-7</span></div></div>
+    <div class="ag ha"><div class="r1"><span class="ring red"></span><span class="ty">general-purp…</span><span class="tk">Implement Ta…</span><span class="el">5m</span></div><div class="r2">ToolSearch</div></div>
+    <div class="grp on"><span class="car">▾</span>kaze<span class="n">1</span></div>
+    <div class="sess on hs"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Kaze repo updates verifica…</span></div><div class="l3"><span class="br">main</span></div></div>
+  </div>
+  <ul class="notes"><li class="bad">The agent line touches the session row with no gap.</li><li class="bad">It looks like a third line of the session.</li><li class="bad">Every agent adds a big click target.</li></ul>
+</div>
+
+<!-- A: CHIP -->
+<div class="col">
+  <h2>A. Tuck agents behind a chip</h2>
+  <p>Agents are hidden. The row's "1 agent" becomes a chip; click it to drop the list open (shown open here). The rest of the row always shows the session.</p>
+  <div class="side">
+    <div class="top"><span class="k">K</span><span class="sb"></span><span class="plus">+</span></div>
+    <div class="filter">Filter sessions…</div>
+    <div class="grp"><span class="car">▾</span>samurai_cart_v3<span class="n">1</span></div>
+    <div class="sess hs"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Epic V3-3347 tickets</span></div>
+      <div class="l3"><span class="br">V3-3261</span><span class="pm">+69</span><span class="mm">-7</span><span class="chip">1 agent <span class="car">⌄</span></span></div></div>
+    <div class="pop"><div class="ag ha"><div class="r1"><span class="ring red"></span><span class="ty">general-purp…</span><span class="tk">Implement Ta…</span><span class="el">5m</span></div><div class="r2">ToolSearch</div></div></div>
+    <div class="grp on"><span class="car">▾</span>kaze<span class="n">1</span></div>
+    <div class="sess on hs"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Kaze repo updates verifica…</span></div><div class="l3"><span class="br">main</span><span class="chip needs" style="margin-left:auto">2 agents · 1 needs you <span class="car">›</span></span></div></div>
+  </div>
+  <ul class="notes"><li class="good">No agent targets until you ask for them.</li><li class="good">Shortest sidebar.</li><li class="bad">One more click to reach an agent, and you can't see what agents are doing at a glance.</li></ul>
+</div>
+
+<!-- B: TRAY -->
+<div class="col">
+  <h2>B. A slim, separate tray</h2>
+  <p>Agents sit in a tree under the session, indented further, one line each (type, task, time), with a gap above. The current step moves to a hover tooltip. Clicking an agent still opens its panel.</p>
+  <div class="side">
+    <div class="top"><span class="k">K</span><span class="sb"></span><span class="plus">+</span></div>
+    <div class="filter">Filter sessions…</div>
+    <div class="grp"><span class="car">▾</span>samurai_cart_v3<span class="n">1</span></div>
+    <div class="sess hs"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Epic V3-3347 tickets</span><span class="st">1 agent</span></div>
+      <div class="l3"><span class="br">V3-3261</span><span class="pm">+69</span><span class="mm">-7</span></div></div>
+    <div class="tray"><div class="trow ha"><span class="ring red"></span><span class="ty">general</span><span class="tk">Implement Ta…</span><span class="el">5m</span></div></div>
+    <div class="grp on"><span class="car">▾</span>kaze<span class="n">1</span></div>
+    <div class="sess on hs"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Kaze repo updates verifica…</span><span class="st">2 agents</span></div><div class="l3"><span class="br">main</span></div></div>
+    <div class="tray"><div class="trow wait ha"><span class="dot needs"></span><span class="ty">Explore</span><span class="tk">needs you</span><span class="el">2m</span></div><div class="trow ha"><span class="ring"></span><span class="ty">Plan</span><span class="tk">Split panes</span><span class="el">&lt;1m</span></div></div>
+  </div>
+  <ul class="notes"><li class="good">A clear gap and tree line say "these belong to the session, but are separate".</li><li class="good">Agent targets are 22 dp, not 34.</li><li class="bad">A sloppy click on an agent still opens a panel.</li></ul>
+</div>
+
+<!-- RECOMMENDED -->
+<div class="col">
+  <h2>B + safe click</h2>
+  <p>The tray from B, plus one rule: <b>clicking an agent line shows its session</b>, like clicking the session. The agent's panel opens from the small <b>›</b> at the line's end, or by double-clicking the line.</p>
+  <div class="side">
+    <div class="top"><span class="k">K</span><span class="sb"></span><span class="plus">+</span></div>
+    <div class="filter">Filter sessions…</div>
+    <div class="grp"><span class="car">▾</span>samurai_cart_v3<span class="n">1</span></div>
+    <div class="sess hs"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Epic V3-3347 tickets</span><span class="st">1 agent</span></div>
+      <div class="l3"><span class="br">V3-3261</span><span class="pm">+69</span><span class="mm">-7</span></div></div>
+    <div class="tray"><div class="trow hs"><span class="ring red"></span><span class="ty">general</span><span class="tk">Implement Ta…</span><span class="el">5m</span><span class="open ha">›</span></div></div>
+    <div class="grp on"><span class="car">▾</span>kaze<span class="n">1</span></div>
+    <div class="sess on hs"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Kaze repo updates verifica…</span><span class="st">2 agents</span></div><div class="l3"><span class="br">main</span></div></div>
+    <div class="tray"><div class="trow wait hs"><span class="dot needs"></span><span class="ty">Explore</span><span class="tk">needs you</span><span class="el">2m</span><span class="open ha">›</span></div><div class="trow sel hs"><span class="ring"></span><span class="ty">Plan</span><span class="tk">Split panes</span><span class="el">&lt;1m</span><span class="open ha">›</span></div></div>
+  </div>
+  <ul class="notes"><li class="good">A misclick is harmless: it lands on the session you wanted.</li><li class="good">You still see every agent's state at a glance.</li><li>The open panel's line stays highlighted (Plan, above). "needs you" toasts and the board still open panels directly.</li></ul>
+</div>
+
+</div>
+
+<div class="row2">
+  <h2>Combined: B + chip <span class="tag">New pick</span></h2>
+  <p class="sub">B's slim tray and safe click, plus a cap so 20 subagents can't flood the sidebar: <b>at most 3 agent lines per session</b>, the rest behind a "+N more" chip, and the row's <b>"N agents"</b> folds the whole tray.</p>
+  <div class="col">
+  <div class="side">
+    <div class="top"><span class="k">K</span><span class="sb"></span><span class="plus">+</span></div>
+    <div class="filter">Filter sessions…</div>
+    <div class="grp"><span class="car">▾</span>samurai_cart_v3<span class="n">1</span></div>
+    <div class="sess hs"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Epic V3-3347 tickets</span><span class="st fold ha">20 agents <span class="car">⌄</span></span></div>
+      <div class="l3"><span class="br">V3-3261</span><span class="pm">+69</span><span class="mm">-7</span></div></div>
+    <div class="tray"><div class="trow wait hs"><span class="dot needs"></span><span class="ty">Explore</span><span class="tk">needs you</span><span class="el">2m</span><span class="open ha">›</span></div><div class="trow  hs"><span class="ring"></span><span class="ty">general</span><span class="tk">Implement Ta…</span><span class="el">5m</span><span class="open ha">›</span></div><div class="trow  hs"><span class="ring"></span><span class="ty">Plan</span><span class="tk">Split panes</span><span class="el"><1m</span><span class="open ha">›</span></div><span class="morechip ha">+17 more <span class="n">· 15 running, 2 done</span> ⌄</span></div>
+    <div class="grp on"><span class="car">▾</span>kaze<span class="n">1</span></div>
+    <div class="sess on hs"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Kaze repo updates ve…</span><span class="st fold ha">2 agents <span class="car">›</span></span></div><div class="l3"><span class="br">main</span></div></div>
+    
+  </div>
+  <ul class="notes"><li class="good"><b>20 agents, 4 lines tall.</b> Waiting first, then running, newest first.</li><li>"+17 more" opens the rest in place; the counts tell you if anything needs you.</li><li>kaze's tray is folded (›): its agents are one click away.</li></ul>
+</div>
+  <div class="col">
+  <div class="side">
+    <div class="top"><span class="k">K</span><span class="sb"></span><span class="plus">+</span></div>
+    <div class="filter">Filter sessions…</div>
+    <div class="grp"><span class="car">▾</span>samurai_cart_v3<span class="n">1</span></div>
+    <div class="sess hs"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Epic V3-3347 tickets</span><span class="st fold ha">20 agents <span class="car">⌄</span></span></div>
+      <div class="l3"><span class="br">V3-3261</span><span class="pm">+69</span><span class="mm">-7</span></div></div>
+    <div class="tray"><div class="trow wait hs"><span class="dot needs"></span><span class="ty">Explore</span><span class="tk">needs you</span><span class="el">2m</span><span class="open ha">›</span></div><div class="trow  hs"><span class="ring"></span><span class="ty">general</span><span class="tk">Implement Ta…</span><span class="el">5m</span><span class="open ha">›</span></div><div class="trow  hs"><span class="ring"></span><span class="ty">Plan</span><span class="tk">Split panes</span><span class="el"><1m</span><span class="open ha">›</span></div><div class="trow  hs"><span class="ring"></span><span class="ty">Explore</span><span class="tk">Find auth</span><span class="el">3m</span><span class="open ha">›</span></div><div class="trow  hs"><span class="ring"></span><span class="ty">general</span><span class="tk">Write tests</span><span class="el">4m</span><span class="open ha">›</span></div><div class="trow  hs"><span class="ring"></span><span class="ty">Explore</span><span class="tk">Map routes</span><span class="el">4m</span><span class="open ha">›</span></div><div class="trow done hs"><span class="dot ok"></span><span class="ty">Plan</span><span class="tk">Schema done</span><span class="el">took 2m</span><span class="open ha">›</span></div><span class="morechip ha">Show fewer <span class="n">· 13 more on the board</span></span></div>
+    <div class="grp on"><span class="car">▾</span>kaze<span class="n">1</span></div>
+    <div class="sess on hs"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Kaze repo updates ve…</span><span class="st fold ha">2 agents <span class="car">›</span></span></div><div class="l3"><span class="br">main</span></div></div>
+    
+  </div>
+  <ul class="notes"><li>"+17 more" opened: the list grows to <b>at most 8 lines</b>, then points to the agents board (Ctrl+Shift+A) for the rest.</li><li>"Show fewer" puts it back to 3.</li></ul>
+</div>
+  <div class="col">
+  <div class="side">
+    <div class="top"><span class="k">K</span><span class="sb"></span><span class="plus">+</span></div>
+    <div class="filter">Filter sessions…</div>
+    <div class="grp"><span class="car">▾</span>samurai_cart_v3<span class="n">1</span></div>
+    <div class="sess hs"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Epic V3-3347 tickets</span><span class="st fold ha">20 agents <span class="car">›</span></span></div>
+      <div class="l3"><span class="br">V3-3261</span><span class="pm">+69</span><span class="mm">-7</span></div></div>
+    <div class="grp on"><span class="car">▾</span>kaze<span class="n">1</span></div>
+    <div class="sess on hs"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Kaze repo updates ve…</span><span class="st fold ha">2 agents <span class="car">⌄</span></span></div><div class="l3"><span class="br">main</span></div></div>
+    <div class="tray"><div class="trow wait hs"><span class="dot needs"></span><span class="ty">Explore</span><span class="tk">needs you</span><span class="el">2m</span><span class="open ha">›</span></div><div class="trow  hs"><span class="ring"></span><span class="ty">Plan</span><span class="tk">Split panes</span><span class="el"><1m</span><span class="open ha">›</span></div></div>
+  </div>
+  <ul class="notes"><li>Folded: click <b>"20 agents ›"</b> on the row to hide its whole tray. Kaze remembers the fold per session.</li><li>A folded session with an agent that <b>needs you</b> shows the amber count, and the "needs you" toast still opens that agent's panel.</li><li>Clicking an agent line still shows its session (safe click); <b>›</b> opens its panel.</li></ul>
+</div>
+</div>
+
+<div class="row3 sumi">
+  <h2>The project you are in (Sumi theme)</h2>
+  <p class="sub">Same sidebar with the new agent tray. Only the <b>kaze</b> project header changes between columns.</p>
+  <div class="col"><h2>Today on Sumi</h2><p>The 0.23 highlight: the accent tint plus an outline. On Sumi the accent is red, so the project you are in reads like an error or an alert.</p><div class="side">
+    <div class="top"><span class="k">K</span><span class="sb"></span><span class="plus">+</span></div>
+    <div class="filter">Filter sessions…</div>
+    <div class="grp"><span class="car">▾</span>samurai_cart_v3<span class="n">1</span></div>
+    <div class="sess"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Epic V3-3347 tickets</span><span class="st">1 agent <span class="car">⌄</span></span></div>
+      <div class="l3"><span class="br">V3-3261</span><span class="pm">+69</span><span class="mm">-7</span></div></div>
+    <div class="tray"><div class="trow "><span class="ring"></span><span class="ty">general</span><span class="tk">Implement Ta…</span><span class="el">5m</span><span class="open">›</span></div></div>
+    <div class="proj "><div class="grp err"><span class="car">▾</span>kaze<span class="n">2</span></div>
+    <div class="sess on"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Kaze repo updates ve…</span><span class="st">2 agents <span class="car">⌄</span></span></div><div class="l3"><span class="br">main</span></div></div>
+    <div class="tray"><div class="trow wait"><span class="dot needs"></span><span class="ty">Explore</span><span class="tk">needs you</span><span class="el">2m</span><span class="open">›</span></div><div class="trow "><span class="ring"></span><span class="ty">Plan</span><span class="tk">Split panes</span><span class="el"><1m</span><span class="open">›</span></div></div>
+    <div class="sess"><div class="l1"><span class="dot"></span><span class="cx">◎</span><span class="t">codex</span></div><div class="l3"><span class="br">main</span></div></div></div>
+  </div><ul class="notes"><li class="bad">Red box = "something is wrong".</li><li class="bad">Heaviest thing in the sidebar, louder than "needs you".</li></ul></div>
+  <div class="col"><h2>1. Quiet</h2><p>No box. The project name turns bright and bold with a small accent dot; the selected session keeps its own left bar.</p><div class="side">
+    <div class="top"><span class="k">K</span><span class="sb"></span><span class="plus">+</span></div>
+    <div class="filter">Filter sessions…</div>
+    <div class="grp"><span class="car">▾</span>samurai_cart_v3<span class="n">1</span></div>
+    <div class="sess"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Epic V3-3347 tickets</span><span class="st">1 agent <span class="car">⌄</span></span></div>
+      <div class="l3"><span class="br">V3-3261</span><span class="pm">+69</span><span class="mm">-7</span></div></div>
+    <div class="tray"><div class="trow "><span class="ring"></span><span class="ty">general</span><span class="tk">Implement Ta…</span><span class="el">5m</span><span class="open">›</span></div></div>
+    <div class="proj "><div class="grp quiet"><span class="car">▾</span>kaze<span class="here"></span><span class="n">2</span></div>
+    <div class="sess on"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Kaze repo updates ve…</span><span class="st">2 agents <span class="car">⌄</span></span></div><div class="l3"><span class="br">main</span></div></div>
+    <div class="tray"><div class="trow wait"><span class="dot needs"></span><span class="ty">Explore</span><span class="tk">needs you</span><span class="el">2m</span><span class="open">›</span></div><div class="trow "><span class="ring"></span><span class="ty">Plan</span><span class="tk">Split panes</span><span class="el"><1m</span><span class="open">›</span></div></div>
+    <div class="sess"><div class="l1"><span class="dot"></span><span class="cx">◎</span><span class="t">codex</span></div><div class="l3"><span class="br">main</span></div></div></div>
+  </div><ul class="notes"><li class="good">Calmest; no colour block at all.</li><li class="bad">Easy to miss in a long list.</li></ul></div>
+  <div class="col"><h2>2. Rail <span class="tag">My pick</span></h2><p>One thin accent line runs down the left of the whole project: header, its sessions and their agents. The name turns bright and bold. No fill, no outline.</p><div class="side">
+    <div class="top"><span class="k">K</span><span class="sb"></span><span class="plus">+</span></div>
+    <div class="filter">Filter sessions…</div>
+    <div class="grp"><span class="car">▾</span>samurai_cart_v3<span class="n">1</span></div>
+    <div class="sess"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Epic V3-3347 tickets</span><span class="st">1 agent <span class="car">⌄</span></span></div>
+      <div class="l3"><span class="br">V3-3261</span><span class="pm">+69</span><span class="mm">-7</span></div></div>
+    <div class="tray"><div class="trow "><span class="ring"></span><span class="ty">general</span><span class="tk">Implement Ta…</span><span class="el">5m</span><span class="open">›</span></div></div>
+    <div class="proj rail"><div class="grp"><span class="car">▾</span>kaze<span class="n">2</span></div>
+    <div class="sess on"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Kaze repo updates ve…</span><span class="st">2 agents <span class="car">⌄</span></span></div><div class="l3"><span class="br">main</span></div></div>
+    <div class="tray"><div class="trow wait"><span class="dot needs"></span><span class="ty">Explore</span><span class="tk">needs you</span><span class="el">2m</span><span class="open">›</span></div><div class="trow "><span class="ring"></span><span class="ty">Plan</span><span class="tk">Split panes</span><span class="el"><1m</span><span class="open">›</span></div></div>
+    <div class="sess"><div class="l1"><span class="dot"></span><span class="cx">◎</span><span class="t">codex</span></div><div class="l3"><span class="br">main</span></div></div></div>
+  </div><ul class="notes"><li class="good">Shows the project as one block, so you see where it starts and ends.</li><li class="good">A line, not a box: never looks like an alert, in any theme.</li></ul></div>
+  <div class="col"><h2>3. Soft neutral</h2><p>A light grey header, like a selected row, with only the chevron in the accent colour. No outline.</p><div class="side">
+    <div class="top"><span class="k">K</span><span class="sb"></span><span class="plus">+</span></div>
+    <div class="filter">Filter sessions…</div>
+    <div class="grp"><span class="car">▾</span>samurai_cart_v3<span class="n">1</span></div>
+    <div class="sess"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Epic V3-3347 tickets</span><span class="st">1 agent <span class="car">⌄</span></span></div>
+      <div class="l3"><span class="br">V3-3261</span><span class="pm">+69</span><span class="mm">-7</span></div></div>
+    <div class="tray"><div class="trow "><span class="ring"></span><span class="ty">general</span><span class="tk">Implement Ta…</span><span class="el">5m</span><span class="open">›</span></div></div>
+    <div class="proj "><div class="grp soft"><span class="car">▾</span>kaze<span class="n">2</span></div>
+    <div class="sess on"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Kaze repo updates ve…</span><span class="st">2 agents <span class="car">⌄</span></span></div><div class="l3"><span class="br">main</span></div></div>
+    <div class="tray"><div class="trow wait"><span class="dot needs"></span><span class="ty">Explore</span><span class="tk">needs you</span><span class="el">2m</span><span class="open">›</span></div><div class="trow "><span class="ring"></span><span class="ty">Plan</span><span class="tk">Split panes</span><span class="el"><1m</span><span class="open">›</span></div></div>
+    <div class="sess"><div class="l1"><span class="dot"></span><span class="cx">◎</span><span class="t">codex</span></div><div class="l3"><span class="br">main</span></div></div></div>
+  </div><ul class="notes"><li class="good">Clearly highlighted, theme-neutral.</li><li class="bad">Looks like a second selected row next to the session.</li></ul></div>
+</div>
+<div class="pick"><b>My pick: the combined design.</b> Safe click fixes the misclick at its root, the slim tray keeps agents visible, and the 3-line cap with "+N more" and the fold keep 20 agents from crowding the sidebar. For the project you are in: <b>2. Rail</b>, a thin accent line down the project instead of a coloured box.</div>
+</body>
+</html>
