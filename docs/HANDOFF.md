@@ -1,8 +1,21 @@
 # kaze handoff
 
-Last updated: 2026-11-03, releasing 0.24 (docked agent panel #106/#103, Windows clipboard #117, workspace Ready #118). Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-03, sidebar agent tray, project rail, title symbols and colour emoji (#125, #124, #127) built on `feat/sidebar-tray-emoji`; 0.24 released before it. Read this first when you pick up kaze on another machine.
 
 ## Where things stand
+
+**Sidebar agent tray, project rail, title symbols and colour emoji (#125, #124, #127) are built on
+`feat/sidebar-tray-emoji`, not yet pushed or released.** The owner approved the mockup (PR #126)
+and chose real colour emoji on 2026-11-03. Subagents sit in a slim tray under their session (one
+22 dp line each, at most 3 then a "+N more" chip, up to 8 expanded, a fold control on the row); a
+click on a line shows the session and only `›` opens the panel. The active project gets a 2 dp
+accent rail instead of the tinted box. Title bars and the sidebar strip any leading status symbol
+(`◐` no longer draws as a box). Emoji are drawn in colour from Segoe UI Emoji (COLR/CPAL) and
+Apple Color Emoji (sbix), cached once per glyph. The chip keeps "+N more" and its caret at the
+default 260 dp width. Tests, benchmarks, captures, rulings and owner checks:
+`docs/audits/2026-11-03-sidebar-tray-emoji.md`. Open: the macOS sbix check on real hardware, U+FE0F
+as a follow-up issue, and product screenshots need retaking (`docs/site-assets/SCREENSHOTS.md`).
+One release covers all three issues.
 
 **Release 0.24 bundles PRs #121 (docked agent panel, #106 and #103), #119 (Windows Ctrl+C/Ctrl+V
 copy and paste with images, #117) and #120 (finished workspace members read Ready, #118).** The
@@ -380,7 +393,7 @@ What works (tested on Windows):
 - Full xterm-style emulation for Claude Code, git, vim, less: colors (256 + truecolor), alt screen, scroll regions, bracketed paste, mouse modes, focus events (1004), synchronized output (2026).
 - Fast renderer: CPU-drawn grid in 8 strips, only changed rows redrawn, nothing drawn when idle.
 - Japanese: wide characters, bundled Noto Sans JP subset, system font fallback for rare kanji.
-- Symbols Claude Code prints (`⏺ ⎿ ✻`, spinners, emoji in one color) via system symbol fonts. Box-drawing is drawn by kaze so borders join.
+- Symbols Claude Code prints (`⏺ ⎿ ✻`, spinners) via system symbol fonts, and emoji in colour on Windows (Segoe UI Emoji COLR) and macOS (Apple Color Emoji sbix). Box-drawing is drawn by kaze so borders join.
 - Readable text on colored backgrounds (minimum-contrast nudge).
 - Mouse selection (drag, double-click word, triple-click line, Shift+drag in mouse-mode apps), Ctrl+Shift+C / V, optional `copy_on_select`.
 - Status bar: kaze's private memory and tab count.

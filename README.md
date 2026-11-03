@@ -10,7 +10,7 @@
 kaze is my personal terminal: a small, fast terminal with a session sidebar, written in Go with
 [Gio](https://gioui.org). I built it for working in [Claude Code](https://claude.com/claude-code)
 all day, so it does a few things well (a sidebar of sessions, fast redraws, Japanese text, Claude Code's
-symbols) and leaves out most of what a full terminal suite has. It has a small settings page for
+symbols and colour emoji) and leaves out most of what a full terminal suite has. It has a small settings page for
 the everyday choices, and everything it changes lives in one config file you can also edit by hand.
 
 ## Why "kaze"
@@ -132,6 +132,15 @@ go build -ldflags "-H=windowsgui -s -w -X main.r=12345" -o kaze.exe ./cmd/kaze
 Change the number and rebuild until the binary is allowed. The same thing can happen to test
 binaries; re-run `go test` with `-ldflags "-X main.r=<random>"`.
 
+## Emoji
+
+Emoji such as `✅ ❌ 🔄 🟢 ⏳ 🚀` are drawn in colour, from Segoe UI Emoji on Windows and Apple
+Color Emoji on macOS, so Claude Code's status tables look the way they do in other terminals.
+Each emoji is drawn once and then reused, so colour costs nothing on later frames. Symbols that
+are text by default (`⚠ ✔ ❤ ⏺`) stay one colour; Claude's `✳` spinner keeps the terminal font.
+Not yet: the emoji form selected by U+FE0F (`⚠️`), joined sequences such as families, skin tones
+and flags, and colour emoji on Linux.
+
 ## Shortcuts
 
 | Action | Windows | macOS |
@@ -195,8 +204,9 @@ config. Settings, Shortcuts lists every shortcut as this machine has it.
 Sessions are listed down the left side, in place of a tab strip.
 
 - **Groups:** sessions in the same git repo sit under one header, and worktrees count as the
-  same repo. The active project's header has a soft theme-accent tint and an accent-colored
-  name and arrow, alongside the selected session's highlight. That project context stays visible
+  same repo. The project you are in is marked by a thin accent rail down the left edge, from its
+  header to its last row and agent tray, with its name in bold, alongside the selected session's
+  highlight. That project context stays visible
   in Settings, documents and floating panes. Groups start open. Click a header to fold or unfold
   it. A folded header shows an amber "N waiting" when a session in it needs you.
 - **Rows:** two lines: state dot, agent logo and name with status on the right;
@@ -206,9 +216,12 @@ Sessions are listed down the left side, in place of a tab strip.
   - **Agent:** Claude and Codex have their own logos. Hooks or foreground-program
     detection identify the agent. Codex hooks need `codex --no-daemon` for now.
   - **Status:** `needs you`, `done`, the active subagent count, then `running`, in
-    that order. Running uses a closed ring with a bright core, drawn still without animation frames.
+    that order. A session with subagents shows its tray's fold control (`N agents ⌄`) there
+    instead, and its dot keeps the state. Running uses a closed ring with a bright core, drawn still
+    without animation frames.
   - **Name:** your Kaze rename, then the last slash command's first argument,
-    then the active agent's title without its leading spinner. Otherwise Kaze
+    then the active agent's title without its leading status symbol (a spinner frame such as
+    `✳` or `◐`). Otherwise Kaze
     uses a folder name that differs from the repo, or the program's name.
     Linked worktree folder names appear only on the second line. Command arguments
     keep their name after the agent exits; old agent titles do not.
@@ -322,10 +335,20 @@ When Claude Code hands work to subagents (Explore, Plan, general-purpose or your
 Codex starts helpers, kaze shows what each one is doing. Hooks provide their state. While a Claude
 subagent's panel is shown, kaze also reads its transcript for live messages.
 
-- **In the sidebar:** each session lists its subagents under its row: the type, the task, how long
-  it has run and the step it is on now (for example `Grep authMiddleware in src`). A dot inside a ring means
-  running, an amber dot means it is waiting for your approval, a green dot means done. The row
-  shows a "3 agents" chip. Finished ones leave the list at your next prompt.
+- **In the sidebar:** each session's subagents sit in a slim tray under its row, behind a thin
+  tree line. Each agent is one line: its state mark, type, task, how long it has run and a small
+  `›` at the end. A dot inside a ring means running, an amber dot means it is waiting for your
+  approval, a green dot means done. Hover a line to see the step it is on now (for example
+  `Grep authMiddleware in src`). Finished ones leave the list at your next prompt.
+  - **Safe click:** clicking an agent line shows its session, the same as clicking the row. Only
+    the `›` (or a double-click on the line) opens the agent's panel; `›` again closes it.
+  - **Three lines, then a chip:** a tray shows at most 3 agents, waiting ones first. The rest are
+    summed up in a chip such as "+17 more · 15 running, 2 done ⌄", with "N need you" in amber when
+    a hidden agent waits. When the sidebar is narrow the chip keeps "+N more" and its `⌄` and drops
+    the counts first. Click it to show up to 8 agents; "Show fewer" folds it back, and past 8
+    "N more on the board" opens the board.
+  - **Fold:** the row's "N agents ⌄" folds the whole tray ("N agents ›" brings it back). The count
+    turns amber when a folded tray holds an agent waiting on you.
 - **Agent panel:** click a subagent to open its panel docked under the terminal (click it again
   to close). Nothing covers the terminal; only that session's terminal gets shorter. Drag the line
   between them to any height; Kaze remembers it (`agent_panel_height` in `config.toml`). The
@@ -946,6 +969,8 @@ Done:
 Next:
 
 - A redesign of the alert notification card (GitHub issue #9).
+- Emoji follow-ups: keep U+FE0F so `⚠️` draws as an emoji (and decide its width), then joined
+  emoji sequences.
 - Plans 6d and 6e: floating panes and a scratch shell, then the command palette. (`kaze status`, Plan 6c, is parked.)
 - Real panes, which would replace the workspace section of the sidebar as the way a workspace is shown.
 - The Mac milestone: run, fix and benchmark kaze on macOS.
