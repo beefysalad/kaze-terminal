@@ -1,8 +1,19 @@
 # kaze handoff
 
-Last updated: 2026-11-03, after local fixes for #107, #113 and #114. No release from this work. Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-03, while preparing release 0.23 for #107, #113 and #114. Read this first when you pick up kaze on another machine.
 
 ## Where things stand
+
+**Release 0.23 packages #107, #113 and #114.** The owner explicitly requested
+opening a PR if needed, merging this bundle and publishing its release on
+2026-11-03. This overrides the earlier release hold for this work. Feature PR
+#115 passed macOS and Windows CI and is merged, with the approved behavior,
+tests, audits and development captures.
+Version, Mac metadata, download notes, README, full changelog and lander are
+updated together on `release/0.23`. Product screenshots need native retakes as
+recorded in `docs/site-assets/SCREENSHOTS.md`; none were fabricated. Installed-app
+and native Windows interactions remain owner checks. Unrelated original changes
+in the owner's checkout are preserved.
 
 **Owner authorization (2026-11-03):** open a PR for #107, #113 and #114 if one
 is not already open, merge it after checks and publish the combined release using

@@ -1,9 +1,9 @@
-## What’s new in Kaze 0.22
+## What’s new in Kaze 0.23
 
-- **Clearer session rows:** two lines with an agent logo, useful name and status above the branch or worktree and line counts. Repo headers keep counts without repeating state dots.
-- **A session for every branch:** choose a repo, branch and Claude, Codex or Shell. Kaze reuses an existing worktree or creates a sibling folder, then starts the agent after the shell is ready. Use Cmd+Shift+N on macOS or Ctrl+Shift+N on Windows. The launcher remembers when you tuck it away.
-- **Worktree cleanup:** Kaze remembers only worktrees it creates and asks before removing clean or finished ones. Branches stay, and Git refuses folders with uncommitted or untracked changes. All open terminals count, including scratch shells and workspace members.
-- **Cheaper sidebar redraws:** unchanged frames reuse their model and drawing without sidebar allocations or reshaping session rows. Next waiting stays available through its shortcut and the palette.
+- **Find the active project:** its repo header gets a soft accent tint and accent-colored name and arrow alongside the selected session. That context stays visible in Settings, documents, floating panes and folded groups.
+- **Clearer running marks:** a still dot inside a closed ring replaces the frozen-looking spinner across session rows, subagents, the title breadcrumb and the agents pill. No animation or extra idle frames.
+- **Keep Kaze open:** closing the final session, or exiting its final plain shell, leaves a New session action and your shortcut ready. Settings, Workspaces and worktree cleanup dialogs remain usable.
+- **Shift+Enter for a newline:** continue a Claude Code prompt without sending it. Plain Enter still submits, and Alt/Option+Enter remains available.
 
 ## Download
 
