@@ -158,3 +158,122 @@ func TestDockDragEndsWhenPanelCloses(t *testing.T) {
 		t.Fatal("a reopened panel never resized its terminal")
 	}
 }
+
+// PR 121 review: keys the focused panel passes on go to the view that owns
+// the keyboard once the panel drops it, here the floating pane, never the
+// main session.
+func TestDockPassesKeysToFocusedPane(t *testing.T) {
+	win, st, r, a, _, m1, _ := floatOne(t)
+	if win.fl.keys != m1.ID {
+		t.Fatal("pane does not have the keyboard")
+	}
+	win.openDock(a.ID, dockAgent(t, win, int(a.ID), ""))
+	floatFrames(t, win, r)
+	clickAt(t, win, r, centre(win.dock.hits.body))
+	if !win.dock.keys {
+		t.Fatal("click did not give the panel the keyboard")
+	}
+	main, pane := ptyOf(st, 0).sent(), ptyOf(st, 2).sent()
+	typeKeys(t, win, r, "y")
+	sideFrame(t, win, r)
+	waitSent(t, ptyOf(st, 2), pane+"y")
+	if got := ptyOf(st, 0).sent(); got != main {
+		t.Fatalf("main session got %q", strings.TrimPrefix(got, main))
+	}
+}
+
+// PR 121 review: a finished agent whose transcript never opens does not wake
+// the window every poll forever.
+func TestDockIdleWhenTranscriptMissing(t *testing.T) {
+	win, _, r, a, _, _, _ := paneWindow(t)
+	main := filepath.Join(t.TempDir(), "s.jsonl") // its subagent transcript is never written
+	k := dockAgent(t, win, int(a.ID), main)
+	stopAgent(win, int(a.ID), "ok")
+	floatFrames(t, win, r)
+	win.openDock(a.ID, k)
+	s, ag := win.dockOf(a.ID), win.subs.Get(k)
+	if _, wake := win.dockTick(s, ag, ag.Ended.Add(time.Minute)); wake {
+		t.Fatal("a finished agent with no transcript keeps polling")
+	}
+}
+
+// PR 121 review: the panel's keyboard goes back to the terminal when its
+// agent is dropped while the reader covers the panel.
+func TestDockKeysReturnWhenAgentDroppedUnderReader(t *testing.T) {
+	win, st, r, a, _, _, _ := paneWindow(t)
+	win.openDock(a.ID, dockAgent(t, win, int(a.ID), ""))
+	floatFrames(t, win, r)
+	clickAt(t, win, r, centre(win.dock.hits.body))
+	if !win.dock.keys {
+		t.Fatal("click did not give the panel the keyboard")
+	}
+	stopAgent(win, int(a.ID), "ok")
+	d := win.openReportDoc(a.ID, "Explore · report", "# Report\n")
+	floatFrames(t, win, r)
+	win.subs.ClearDone(int(a.ID))
+	floatFrames(t, win, r)
+	if win.dockOf(a.ID) != nil {
+		t.Fatal("panel of a dropped agent still open")
+	}
+	win.closeDoc(d.id)
+	floatFrames(t, win, r)
+	before := ptyOf(st, 0).sent()
+	typeKeys(t, win, r, "z")
+	sideFrame(t, win, r)
+	waitSent(t, ptyOf(st, 0), before+"z")
+	// A panel opened later does not inherit the stale keyboard: Esc is the
+	// terminal's, not a close.
+	y := startAgent(win, a.ID, "s", "y")
+	win.openDock(a.ID, y)
+	floatFrames(t, win, r)
+	if win.dock.keys || win.focusTarget() == &win.dock.body {
+		t.Fatal("a new panel inherited the dropped panel's keyboard")
+	}
+	dockKey(t, win, r, key.NameEscape, 0)
+	if win.dockOf(a.ID) == nil {
+		t.Fatal("Esc closed a panel that never had the keyboard")
+	}
+	waitSent(t, ptyOf(st, 0), before+"z")
+}
+
+// PR 121 review: typing that follows the palette shortcut in the same frame
+// reaches the palette, not the session, when the panel has the keyboard.
+func TestDockPaletteOpeningAndTypingSameFrame(t *testing.T) {
+	win, st, r, a, _, _, _ := paneWindow(t)
+	win.openDock(a.ID, dockAgent(t, win, int(a.ID), ""))
+	floatFrames(t, win, r)
+	clickAt(t, win, r, centre(win.dock.hits.body))
+	if !win.dock.keys {
+		t.Fatal("click did not give the panel the keyboard")
+	}
+	before := ptyOf(st, 0).sent()
+	sc := shortcutFor(t, win, actPalette)
+	r.Queue(key.Event{Name: sc.Name, Modifiers: sc.Modifiers, State: key.Press}, key.Event{Name: sc.Name, Modifiers: sc.Modifiers, State: key.Release}, key.EditEvent{Range: key.Range{}, Text: "ship"})
+	sideFrame(t, win, r)
+	sideFrame(t, win, r)
+	if got := ptyOf(st, 0).sent(); got != before {
+		t.Fatalf("palette input leaked into terminal: %q", strings.TrimPrefix(got, before))
+	}
+	if got := win.palette.ed.Text(); got != "ship" {
+		t.Fatalf("query %q, want ship", got)
+	}
+}
+
+// PR 121 review: IME composition passes through the focused panel, so
+// preedit text is not sent to the shell before it is committed.
+func TestDockPassesComposition(t *testing.T) {
+	win, st, r, a, _, _, _ := paneWindow(t)
+	win.openDock(a.ID, dockAgent(t, win, int(a.ID), ""))
+	floatFrames(t, win, r)
+	clickAt(t, win, r, centre(win.dock.hits.body))
+	if !win.dock.keys {
+		t.Fatal("click did not give the panel the keyboard")
+	}
+	before := ptyOf(st, 0).sent()
+	r.Queue(key.CompositionEvent{Start: 0, End: 1}, key.EditEvent{Range: key.Range{}, Text: "に"})
+	sideFrame(t, win, r)
+	sideFrame(t, win, r)
+	if got := ptyOf(st, 0).sent(); got != before {
+		t.Fatalf("preedit reached the shell: %q", strings.TrimPrefix(got, before))
+	}
+}

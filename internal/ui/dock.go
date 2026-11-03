@@ -132,7 +132,15 @@ func (win *window) closeDock(session tabs.TabID) {
 		return
 	}
 	delete(win.dock.by, session)
-	if win.dockOwner() == session {
+	// The panel keyboard belongs to the active session's panel (it never
+	// follows a tab switch), even while the reader or a page covers it.
+	owns := win.dockOwner() == session
+	if win.mgr != nil {
+		if a := win.mgr.Active(); a != nil && a.ID == session {
+			owns = true
+		}
+	}
+	if owns {
 		win.dropDockKeys()
 		win.dock.drag.on = false
 	}
@@ -172,6 +180,9 @@ func (win *window) dockFit(gtx layout.Context, term image.Rectangle, cw, ch, pad
 		top, panel = dockSplit(term, win.dockHeight(), gtx.Metric.PxPerDp, ch, pad)
 	}
 	win.dock.lastRect = panel
+	if panel.Empty() {
+		win.dock.hits = dockHits{} // no panel this frame: nothing of it takes input or the keyboard
+	}
 	for id := range win.dock.sized {
 		if win.dockOf(id) == nil || (id == owner && panel.Empty()) {
 			win.mgr.Dock(id)

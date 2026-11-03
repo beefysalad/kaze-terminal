@@ -6,6 +6,7 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 
+	"github.com/patrick-gogo/kaze-terminal/internal/input"
 	"github.com/patrick-gogo/kaze-terminal/internal/render"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 )
@@ -38,6 +39,7 @@ func (win *window) dockEvents(gtx layout.Context, cw, ch int) {
 	}
 	tag := &win.dock.body
 	var pass []event.Event // keys the panel does not use: the terminal's
+loop:
 	for {
 		ev, ok := gtx.Event(
 			key.FocusFilter{Target: tag},
@@ -69,17 +71,25 @@ func (win *window) dockEvents(gtx layout.Context, cw, ch int) {
 				continue
 			}
 			pass = append(pass, ev)
-		case key.EditEvent, key.SnippetEvent, key.SelectionEvent:
+			if e.State == key.Press && win.km[input.Shortcut{Name: e.Name, Mods: e.Modifiers}] == actPalette {
+				// As in termEvents: leave the rest in Gio's queue for the
+				// palette's editor, so typing after the shortcut lands there.
+				break loop
+			}
+		case key.EditEvent, key.SnippetEvent, key.SelectionEvent, key.CompositionEvent:
 			pass = append(pass, ev)
 		case pointer.Event:
 			win.dockBody(gtx, owner, s, e)
 		}
 	}
 	if len(pass) > 0 {
-		// Typing and shortcuts belong to the session: hand the keyboard back
-		// and deliver them there, so nothing typed into the panel is lost.
+		// Typing and shortcuts belong to whoever has the keyboard without the
+		// panel (a floating pane or the session): hand it back and deliver
+		// them there, so nothing typed into the panel is lost.
 		win.dropDockKeys()
-		win.route(gtx, pass, cw, ch)
+		if v, ok := win.keyView(); ok {
+			win.routeView(gtx, v, pass, cw, ch)
+		}
 	}
 }
 
