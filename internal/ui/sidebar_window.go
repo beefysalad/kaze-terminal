@@ -58,6 +58,13 @@ type sideUI struct {
 	renFrom       string              // the text the rename started with
 	renKeys       []event.Filter      // the rename editor's own keys, built once
 	lastClick     titleClick          // the last press on a row's title, for a double click
+	lastAgent     agentClick          // the last press on an agent line, for a double click
+}
+
+// agentClick is a press on an agent's tray line.
+type agentClick struct {
+	key subagents.Key
+	at  time.Duration
 }
 
 // titleClick is a press on a session row's title.
@@ -576,8 +583,8 @@ func (win *window) sidePress(p image.Point, b pointer.Buttons, at time.Duration)
 		return // a click inside the editor keeps renaming
 	}
 	win.endRename(true)
-	last := win.side.lastClick
-	win.side.lastClick = titleClick{}
+	last, lastAgent := win.side.lastClick, win.side.lastAgent
+	win.side.lastClick, win.side.lastAgent = titleClick{}, agentClick{}
 	win.wantFocus = true
 	win.side.filtering = primary && p.In(h.filter) // any other click leaves the field
 	defer win.sideRedraw()
@@ -613,8 +620,24 @@ func (win *window) sidePress(p image.Point, b pointer.Buttons, at time.Duration)
 			switch a.kind {
 			case hitAgentBoard:
 				win.openBoard(a.tab)
+			case hitAgentChip:
+				if win.side.trayOpen == nil {
+					win.side.trayOpen = map[tabs.TabID]bool{}
+				}
+				win.side.trayOpen[a.tab] = true
+			case hitAgentFewer:
+				delete(win.side.trayOpen, a.tab)
 			case hitAgentLine:
-				win.showAgent(a.tab, a.key, true)
+				switch {
+				case p.In(a.btn):
+					win.showAgent(a.tab, a.key, true) // › toggles the panel
+				case lastAgent.key == a.key && at >= lastAgent.at && at-lastAgent.at < doubleClick:
+					win.showAgent(a.tab, a.key, false) // a double-click opens it, never closes it
+				default:
+					// Safe click: the line stands for its session, like the row above it.
+					win.clickRow(a.tab)
+					win.side.lastAgent = agentClick{a.key, at}
+				}
 			}
 			return
 		}
@@ -623,14 +646,16 @@ func (win *window) sidePress(p image.Point, b pointer.Buttons, at time.Duration)
 		switch {
 		case middle, p.In(r.close):
 			win.closeTab(r.id)
-		default:
-			if t := win.mgr.Lookup(r.id); t != nil {
-				if _, member := win.isMember(t); member {
-					win.floatMember(r.id)
-					return
-				}
+		case primary && p.In(r.fold):
+			// The tray's fold control folds or opens it without selecting the session.
+			if win.side.trayFolded == nil {
+				win.side.trayFolded = map[tabs.TabID]bool{}
 			}
-			win.selectTab(r.id)
+			flip(win.side.trayFolded, r.id)
+		default:
+			if !win.clickRow(r.id) {
+				return
+			}
 			if !primary || !p.In(r.title) {
 				break
 			}
@@ -663,6 +688,19 @@ func (win *window) sidePress(p image.Point, b pointer.Buttons, at time.Duration)
 			return
 		}
 	}
+}
+
+// clickRow is a click on a session row or a workspace member line: a member floats
+// over its session, a session is shown. It reports whether id was a session.
+func (win *window) clickRow(id tabs.TabID) bool {
+	if t := win.mgr.Lookup(id); t != nil {
+		if _, member := win.isMember(t); member {
+			win.floatMember(id)
+			return false
+		}
+	}
+	win.selectTab(id)
+	return true
 }
 
 // lineAt is the session row or workspace member line under p.
