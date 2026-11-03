@@ -51,6 +51,21 @@ func TestBoardFrame50Steady(t *testing.T) {
 	n := 0
 	allocs := testing.AllocsPerRun(20, func() { frame(time.Duration(40+n) * time.Millisecond); n++ })
 	t.Logf("50 agents, wide board with a running preview: %.0f allocs per still frame", allocs)
+	if allocs > 400 {
+		t.Fatalf("%.0f allocs per still frame, want at most 400", allocs)
+	}
+	// A search that keeps every row costs about what no search does: matching
+	// allocates nothing per row.
+	win.board.ed.SetText("E")
+	frame(time.Duration(70) * time.Millisecond)
+	if !boardHas(win, "50 agents in 5 sessions") {
+		t.Fatalf("the search hid rows: texts %q", win.board.texts)
+	}
+	searched := testing.AllocsPerRun(20, func() { frame(time.Duration(80+n) * time.Millisecond); n++ })
+	t.Logf("with a search: %.0f allocs per still frame", searched)
+	if searched > allocs+10 {
+		t.Fatalf("a search adds %.0f allocs per frame (%.0f, %.0f without)", searched-allocs, searched, allocs)
+	}
 }
 
 // boardFixtureTranscript is the index in boardFixture50's keys of the running

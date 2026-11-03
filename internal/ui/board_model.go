@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
@@ -196,8 +198,27 @@ func boardMatch(r boardRow, title, repo, lowerQuery string) bool {
 	if lowerQuery == "" {
 		return true
 	}
-	for _, s := range [...]string{r.typ, r.task, title, repo} {
-		if strings.Contains(strings.ToLower(s), lowerQuery) {
+	return containsLower(r.typ, lowerQuery) || containsLower(r.task, lowerQuery) ||
+		containsLower(title, lowerQuery) || containsLower(repo, lowerQuery)
+}
+
+// containsLower reports whether s, lower-cased rune by rune, contains the
+// lower-cased lowerQuery; it allocates nothing.
+func containsLower(s, lowerQuery string) bool {
+	if lowerQuery == "" {
+		return true
+	}
+	for i := range s {
+		j, k := i, 0
+		for k < len(lowerQuery) && j < len(s) {
+			sr, sn := utf8.DecodeRuneInString(s[j:])
+			qr, qn := utf8.DecodeRuneInString(lowerQuery[k:])
+			if unicode.ToLower(sr) != qr {
+				break
+			}
+			j, k = j+sn, k+qn
+		}
+		if k == len(lowerQuery) {
 			return true
 		}
 	}

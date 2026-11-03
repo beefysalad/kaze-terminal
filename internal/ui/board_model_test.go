@@ -180,3 +180,19 @@ func TestMeterSplit(t *testing.T) {
 		t.Fatalf("empty: %d %d %d", n, r, d)
 	}
 }
+
+// Matching a row against a search allocates nothing, whatever the case.
+func TestBoardMatchNoAllocs(t *testing.T) {
+	r := boardRow{typ: "General-Purpose", task: "Trace Webhook RETRIES"}
+	for _, tc := range []struct {
+		q    string
+		want bool
+	}{{"retries", true}, {"kaze", true}, {"webhook r", true}, {"zzz", false}, {"élan", true}, {"ÉLAN", false}} {
+		if got := boardMatch(r, "Kaze Terminal", "Élan", tc.q); got != tc.want {
+			t.Errorf("%q: %v, want %v", tc.q, got, tc.want)
+		}
+	}
+	if n := testing.AllocsPerRun(50, func() { boardMatch(r, "Kaze Terminal", "Élan", "retries") }); n != 0 {
+		t.Fatalf("%.0f allocs per match", n)
+	}
+}
