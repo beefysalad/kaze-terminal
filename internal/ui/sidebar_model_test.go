@@ -227,7 +227,8 @@ func TestSideRunsFromWindowRuns(t *testing.T) {
 		}},
 		1: {id: 1, workspace: "w", name: "closed", members: []*wsMember{{tab: 999, title: "x"}}},
 	}
-	// web finishes: its shell reports a prompt after its line was typed.
+	// web finishes: its shell reports a prompt after its line was typed. Its
+	// commands returned (a setup step such as activating a venv); that is not down.
 	go st.ptys[1].w.Write([]byte("\x1b]133;A\x07PS> "))
 	deadline := time.Now().Add(3 * time.Second)
 	for promptCount(tabsOpen[1].Session) == 0 {
@@ -253,13 +254,13 @@ func TestSideRunsFromWindowRuns(t *testing.T) {
 		t.Fatalf("runs %+v", got)
 	}
 	r := got[0]
-	if len(r.Members) != 4 || r.Down != 3 {
+	if len(r.Members) != 4 || r.Down != 2 {
 		t.Fatalf("members %d down %d: %+v", len(r.Members), r.Down, r.Members)
 	}
 	if r.Members[0].Status != "Running" || r.Members[0].Down || r.Members[0].Color != "green" {
 		t.Fatalf("api %+v", r.Members[0])
 	}
-	if r.Members[1].Status != "stopped" || !r.Members[1].Down {
+	if r.Members[1].Status != "Done" || r.Members[1].Down {
 		t.Fatalf("web %+v", r.Members[1])
 	}
 	if r.Members[2].Status != "Failed" || !r.Members[2].Down {
