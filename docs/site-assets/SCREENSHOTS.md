@@ -77,3 +77,11 @@ running marks. Title-bar and status-bar running marks changed too. Add a native
 capture of the empty window when useful. Existing screenshots remain historical;
 headless audit galleries and the approved HTML mockup are development evidence,
 not replacement product captures. No product screenshot was fabricated or retouched.
+
+## 0.24 docked agent panel and Windows clipboard
+
+`kaze-agents.png` shows the old floating subagent card; retake it with a subagent's panel docked
+under the terminal (Activity with a note, or the formatted Report). Workspace members whose
+commands finished now read Ready, so retake `kaze-workspaces.png` if it shows a finished setup tab.
+The headless renders in `docs/audits/agent-dock/` are development evidence, not product captures.
+No product screenshot was fabricated or retouched.
