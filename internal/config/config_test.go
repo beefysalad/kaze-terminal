@@ -344,3 +344,18 @@ func TestSidebarLauncherConfig(t *testing.T) {
 		t.Fatalf("%+v %v %v", c, w, e)
 	}
 }
+
+func TestAgentPanelHeight(t *testing.T) {
+	cfg, warns, err := Load(write(t, "agent_panel_height = 300\n"))
+	if err != nil || len(warns) != 0 || cfg.AgentPanelHeight != 300 {
+		t.Fatalf("height %d warns %v err %v", cfg.AgentPanelHeight, warns, err)
+	}
+	cfg, warns, _ = Load(write(t, "agent_panel_height = -5\n"))
+	if cfg.AgentPanelHeight != 0 || len(warns) != 1 {
+		t.Fatalf("negative: height %d warns %v", cfg.AgentPanelHeight, warns)
+	}
+	cfg, warns, _ = Load(write(t, "agent_panel_height = \"tall\"\n"))
+	if cfg.AgentPanelHeight != 0 || len(warns) != 1 {
+		t.Fatalf("string: height %d warns %v", cfg.AgentPanelHeight, warns)
+	}
+}

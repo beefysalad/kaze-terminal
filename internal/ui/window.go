@@ -210,6 +210,7 @@ type window struct {
 	skillCache *skills.Cache
 	skillsFn   func(skills.Sources) []skills.Skill // nil reads through skillCache; tests fake it
 	fl         floats                              // floating panes per session; UI goroutine only
+	dock       dockState                           // the docked agent panel; UI goroutine only
 	side       sideUI                              // the sidebar; UI goroutine only
 	wsp        wsPage                              // the Workspaces section: its list and the open draft; UI goroutine only
 }
