@@ -269,7 +269,7 @@ setup notes are historical; use the current status above and Next below for work
 - **Chime:** bundled soft chime on "needs you" (`chime_needs`, on), optional on "done" (`chime_done`, off), custom WAV via `chime_file`. No chime when that tab is already active and focused; bursts give one chime. Plays while minimized too.
 - **Taskbar flash on Windows only** (FlashWindowEx) when an alert arrives while kaze is minimized or unfocused. The macOS Dock bounce is deferred to the Mac milestone.
 - **Folder and branch in the status bar** from OSC 7 (pwsh and zsh snippets in the README) and `.git/HEAD` (worktrees handled, no git process). The branch is re-read on a new prompt report, on tab switch and on window focus gain.
-- **Installed on the owner's Windows laptop:** the Claude Code hooks in `~/.claude/settings.json` (Notification with matcher `permission_prompt|elicitation_dialog|elicitation_url_dialog|agent_needs_input` -> `kaze.exe notify needs`, Stop -> `kaze.exe notify done`, timeout 3) and the OSC 7 snippet in the pwsh profile. After each rebuild of `kaze-app\kaze.exe`, run `kaze.exe notify done` once so Smart App Control vets the new exe before a hook's 3s timeout.
+- **Installed on the owner's Windows laptop:** the Claude Code hooks in `~/.claude/settings.json` (Notification with matcher `permission_prompt|elicitation_dialog|elicitation_url_dialog|agent_needs_input` -> `kaze.exe notify needs`, Stop -> `kaze.exe notify done`, timeout 3) and the OSC 7 snippet in the pwsh profile. (Historical: the hooks then pointed at `kaze-app\kaze.exe`; since 2026-11-03 they point at the downloaded release, see "The Windows laptop setup".)
 
 **Plan 4 (Claude usage) is built** on `feature/plan-4-usage`:
 
@@ -495,7 +495,7 @@ He also considered Zellij; the answer was: it runs inside kaze, but kaze's own t
 ## The Windows laptop setup (for reference)
 
 - Repo: `C:\Users\john\Desktop\kaze`. Go 1.27 installed in `%LOCALAPPDATA%\Programs\go` (zip install; winget/go.dev downloads failed, `dl.google.com` worked).
-- His daily build: `C:\Users\john\Desktop\kaze-app\kaze.exe` (built with `-H=windowsgui`, test-launched until Smart App Control allowed it).
+- His daily Kaze (since 2026-11-03): the downloaded release at `C:\Users\john\AppData\Local\Programs\Kaze\kaze.exe`, updated from Settings, Updates. The Claude Code and Codex hooks point there. The old `Desktop\kaze-app` source build was retired and deleted. Settings > Agents reports hooks that call any `kaze.exe` as Connected, even an old copy's path, so check the paths when Kaze moves.
 - pwsh profile: `C:\Users\john\OneDrive\Documents\PowerShell\profile.ps1` (has the PSReadLine lines below).
 - Test runs used `GOTMPDIR` under the Desktop because App Control blocks test binaries in the default temp dir.
 - Backup of the pre-rewrite history: `C:\Users\john\Desktop\kaze-backup\kaze-before-rewrite-2026-10-28.bundle`.

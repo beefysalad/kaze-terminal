@@ -76,12 +76,14 @@ feature PRs land close together, one release can cover them all.
 - Go version: see `go.mod` (1.27). macOS also needs the Xcode Command Line Tools (`xcode-select --install`), because Gio uses cgo on darwin.
 - macOS: `go build -o kaze ./cmd/kaze && ./kaze`
 - Windows: `go build -ldflags "-H=windowsgui" -o kaze.exe ./cmd/kaze`
-- Release build (the one the owner runs daily, in `~\Desktop\kaze-app`): build from `main`, never a feature branch:
+- The owner's daily Kaze is the **downloaded release**, not a local build: on Windows
+  `C:\Users\john\AppData\Local\Programs\Kaze\kaze.exe`, updated in place from Settings, Updates. Changes reach
+  the owner only through a release (see "Shipping a feature" above). The Claude Code and Codex hooks in
+  `~/.claude/settings.json` and `~/.codex/hooks.json` point at that path. The old `~\Desktop\kaze-app` build
+  folder is gone; don't recreate it or rebuild the owner's copy.
+- A local release-style build, only to try something by hand (never over the owner's copy):
   `go build -trimpath -ldflags "-s -w -H=windowsgui" -o kaze.exe ./cmd/kaze` (about 14 MB; without `-s -w` it is about 19 MB).
   macOS: `go build -trimpath -ldflags "-s -w" -o kaze ./cmd/kaze`.
-  Kaze is usually running, so first rename the old `kaze.exe` to `kaze-old.exe` (a running exe can be renamed),
-  then build. Watch out: when `go build` overwrites an exe on Windows, it renames the old one to `kaze.exe~`
-  and deletes it, so it removes any `kaze.exe~` already in that folder.
 - Tests: `go test ./...` and `go vet ./...`. Run one package at a time when chasing a failure.
 - Windows only: Smart App Control can block freshly built test binaries or `kaze.exe`
   ("An Application Control policy has blocked this file"). Rebuild with a changed build id,
