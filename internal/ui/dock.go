@@ -61,6 +61,7 @@ type dockState struct {
 	drag                    dockDrag
 	hits                    dockHits
 	lastRect                image.Rectangle // the panel as drawn last frame, empty when none
+	texts                   []string        // text drawn last frame; tests read it
 }
 
 // dockSplit divides term into the terminal (top) and the panel below it.
@@ -151,12 +152,6 @@ func (win *window) invalidate() {
 		win.w.Invalidate()
 	}
 }
-
-// Filled in by the drawing code.
-type (
-	dockCache struct{}
-	dockHits  struct{}
-)
 
 // dockFit splits term for the shown session's panel and sizes PTYs: the
 // owner's session gets the grid of the area above the panel (not while the

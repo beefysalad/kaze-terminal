@@ -779,6 +779,7 @@ func (win *window) frame(gtx layout.Context) error {
 		win.drawWsBanner(gtx, active, termRect) // after the terminal, so it takes the clicks it covers
 		panes = win.paneViews(gtx, termRect, cw, ch)
 		win.drawPanes(gtx, panes) // over the session and its banner, front pane last
+		win.drawShownDock(gtx)
 	}
 	win.syncVisible(panes)
 

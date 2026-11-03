@@ -380,9 +380,9 @@ func (win *window) agentPaneEvents(gtx layout.Context, p *pane) {
 // copyReport puts a's report on the clipboard.
 func (win *window) copyReport(gtx layout.Context, a *subagents.Agent) {
 	if win.toClipboard != nil {
-		win.toClipboard(win.agentReport(a))
+		win.toClipboard(win.dockReport(a))
 	} else {
-		gtx.Execute(clipboard.WriteCmd{Type: "application/text", Data: io.NopCloser(strings.NewReader(win.agentReport(a)))})
+		gtx.Execute(clipboard.WriteCmd{Type: "application/text", Data: io.NopCloser(strings.NewReader(win.dockReport(a)))})
 	}
 	win.note("Report copied")
 }

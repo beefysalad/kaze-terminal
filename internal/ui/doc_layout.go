@@ -6,6 +6,7 @@ import (
 	"gioui.org/text"
 	"gioui.org/unit"
 	"github.com/patrick-gogo/kaze-terminal/internal/mdoc"
+	"github.com/patrick-gogo/kaze-terminal/internal/render"
 	"golang.org/x/image/math/fixed"
 	"image"
 	"image/color"
@@ -134,11 +135,14 @@ func (win *window) fitDoc(d *mdoc.Doc) {
 
 // mdStyle scales every size of a markdown layout: the reader is 1, the agent
 // panel draws its notes and report smaller.
-type mdStyle struct{ scale float32 }
+type mdStyle struct {
+	scale float32
+	paths bool // file:line paths and bare URLs in plain text become links, like in the terminal
+}
 
 var (
-	readerStyle = mdStyle{1}
-	panelStyle  = mdStyle{12.0 / 14} // body text 12 sp instead of the reader's 14
+	readerStyle = mdStyle{scale: 1}
+	panelStyle  = mdStyle{scale: 12.0 / 14, paths: true} // body text 12 sp instead of the reader's 14
 )
 
 func (win *window) layoutDoc(gtx layout.Context, d *docView, width int) *docLayout {
@@ -195,6 +199,27 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 				line.runs = append(line.runs, docRun{text: s, x: x, w: w, face: face, size: size, role: rr, link: link, under: link >= 0, strike: sp.Style&mdoc.Strike != 0, code: sp.Style&mdoc.Code != 0})
 				x += w
 			}
+			// emitLinked emits word in pieces, the links found in it as link runs.
+			emitLinked := func(word string, found []render.LinkText) {
+				width := func(s string) int {
+					var w fixed.Int26_6
+					for _, q := range s {
+						w += win.runeAdv(gtx, face, size, q)
+					}
+					return w.Ceil()
+				}
+				at, keepRole, keepLink := 0, rr, link
+				for _, f := range found {
+					emit(word[at:f.Start], width(word[at:f.Start]))
+					link = len(l.links)
+					l.links = append(l.links, f.Text)
+					rr = roleLink
+					emit(word[f.Start:f.End], width(word[f.Start:f.End]))
+					rr, link = keepRole, keepLink
+					at = f.End
+				}
+				emit(word[at:], width(word[at:]))
+			}
 			s := sp.Text
 			for len(s) > 0 {
 				if s[0] == '\n' {
@@ -231,6 +256,12 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 				if w <= x1-x0 {
 					if x+w > x1 {
 						flush()
+					}
+					if st.paths && link < 0 && !preserve {
+						if found := render.LinksIn(word); len(found) > 0 {
+							emitLinked(word, found)
+							continue
+						}
 					}
 					emit(word, w)
 					continue
