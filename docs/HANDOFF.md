@@ -4,6 +4,16 @@ Last updated: 2026-11-03, sidebar agent tray, project rail, title symbols and co
 
 ## Where things stand
 
+**Release 0.25 ships PR #129: #125 (slim capped subagent tray with safe click, fold and tooltip;
+project rail; sidebar contrast), #124 (leading status symbols stripped, no missing-glyph boxes in
+chrome text) and #127 (colour emoji: COLR/CPAL on Windows, sbix on macOS, `internal/colorfont`).**
+The owner approved the mockup (PR #126, included in #129), the design and the plan on 2026-11-03,
+then asked to merge and release. Built in two parallel worktree lanes, then a fresh whole-branch
+review (2 important findings fixed test-first). Rulings, measurements, captures and deferred minors:
+`docs/audits/2026-11-03-sidebar-tray-emoji.md`. Next: #128 (bare `.md` names next to a printed folder
+can't be found). Product screenshots need retaking; native macOS emoji and real-session tray checks
+remain owner checks.
+
 **Sidebar agent tray, project rail, title symbols and colour emoji (#125, #124, #127) are built on
 `feat/sidebar-tray-emoji`, not yet pushed or released.** The owner approved the mockup (PR #126)
 and chose real colour emoji on 2026-11-03. Subagents sit in a slim tray under their session (one

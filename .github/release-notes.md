@@ -1,9 +1,10 @@
-## What’s new in Kaze 0.24
+## What’s new in Kaze 0.25
 
-- **Agent panel:** click a subagent to open its panel under the terminal instead of a floating card. Activity lists each step with the agent’s own messages between them; Report shows the finished report, formatted. Drag the edge to any height; each session remembers its panel.
-- **Formatted reports:** bold, code, lists, headings and tables render in the panel. Copy report copies the original markdown, and Open in reader shows it in the doc reader.
-- **Copy and paste on Windows:** Ctrl+C copies a selection and otherwise still interrupts; Ctrl+V pastes text and screenshots. Typing clears an old selection, so Ctrl+C always stops Claude after you type.
-- **Fixed: workspace setup tabs:** a member whose commands finished reads Ready instead of stopped, and the workspace header no longer counts it as down.
+- **A tidier agent tray:** each subagent takes one line under its session. At most three show, waiting first; the rest sit behind “+N more”, and “N agents” folds the whole tray. Hover a line to see what the agent is doing.
+- **Safe clicks:** clicking an agent line shows its session, so a stray click lands on your terminal. Open an agent’s panel with the › at the end of the line, or a double-click.
+- **Find your project:** a thin accent rail marks the project you’re in, instead of a tinted box. Sidebar text stays readable in every theme.
+- **Colour emoji:** ✅ ❌ 🔄 ⏳ and friends draw in full colour on Windows and macOS, like your other terminals. Each one is drawn once and reused.
+- **Fixed: title symbols:** Claude’s status symbols no longer show as an empty box in the title bar or the sidebar.
 
 ## Download
 

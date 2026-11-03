@@ -40,7 +40,7 @@
       <article>
         <svg class="feature-symbol" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M6 8h0M6 12h0M6 16h0"/></svg>
         <h3>A sidebar of sessions.</h3>
-        <p>Sessions group by repo, worktrees included, with an accent header for the project you’re using. Two-line rows show the agent logo, name and status above the branch and lines changed. See what <b class="state needs">needs you</b>, what is <b class="state running">running</b> and what is <b class="state done">done</b>.</p>
+        <p>Sessions group by repo, worktrees included, with an accent rail marking the project you’re in. Two-line rows show the agent logo, name and status above the branch and lines changed. See what <b class="state needs">needs you</b>, what is <b class="state running">running</b> and what is <b class="state done">done</b>.</p>
         <button type="button" class="show-shot" data-show="sessions">See the sidebar <svg class="inline-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M8 13V3M4 7l4-4 4 4"/></svg></button>
       </article>
       <article>
@@ -70,7 +70,7 @@
       <article>
         <svg class="feature-symbol" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/><rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4m-6 4v-4h12v4"/></svg>
         <h3>See every subagent.</h3>
-        <p>When Claude Code or Codex hands work to subagents, each one shows under its session with its task and current step. Click one to open its panel under the terminal: every step with the agent’s own messages, then a formatted report. Or press <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>A</kbd> for a board of every subagent: running, waiting on you and done.</p>
+        <p>When Claude Code or Codex hands work to subagents, each one gets a slim line under its session: waiting first, the rest behind “+N more”. Hover for its current step, or press › to open its panel under the terminal: every step with the agent’s own messages, then a formatted report. Or press <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>A</kbd> for a board of every subagent: running, waiting on you and done.</p>
         <button type="button" class="show-shot" data-show="agents">See the subagents <svg class="inline-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M8 13V3M4 7l4-4 4 4"/></svg></button>
       </article>
       <article>
@@ -115,7 +115,21 @@
     <div class="section-intro"><h2 id="changelog-title">What’s new.<br><span>The latest releases.</span></h2><p>Kaze checks for new versions by itself and updates in place from Settings, Updates.</p></div>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.24</span><span class="badge">Latest</span><time datetime="2026-11-03">Nov 3, 2026</time></div>
+        <div class="release-meta"><span class="version">0.25</span><span class="badge">Latest</span><time datetime="2026-11-03">Nov 3, 2026</time></div>
+        <div class="release-body">
+          <h3>A calmer sidebar and colour emoji</h3>
+          <ul>
+            <li><b>A tidier agent tray:</b> each subagent takes one line under its session. At most three show, waiting first; the rest sit behind “+N more”, and “N agents” folds the whole tray. Hover a line to see what the agent is doing.</li>
+            <li><b>Safe clicks:</b> clicking an agent line shows its session, so a stray click lands on your terminal. Open an agent’s panel with the › at the end of the line, or a double-click.</li>
+            <li><b>Find your project:</b> a thin accent rail marks the project you’re in, instead of a tinted box. Sidebar text stays readable in every theme.</li>
+            <li><b>Colour emoji:</b> ✅ ❌ 🔄 ⏳ and friends draw in full colour on Windows and macOS, like your other terminals. Each one is drawn once and reused.</li>
+            <li><b>Fixed: title symbols:</b> Claude’s status symbols no longer show as an empty box in the title bar or the sidebar.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.24</span><time datetime="2026-11-03">Nov 3, 2026</time></div>
         <div class="release-body">
           <h3>Follow every subagent, copy and paste on Windows</h3>
           <ul>
@@ -136,19 +150,6 @@
             <li><b>Clear running marks:</b> a still dot inside a closed ring replaces the frozen-looking spinner in session rows, subagents, the title bar and the agents pill. No animation frames.</li>
             <li><b>Kaze stays open:</b> closing the final session leaves a New session button and your shortcut ready. Settings, Workspaces and cleanup dialogs stay available.</li>
             <li><b>Shift+Enter:</b> add a new line in Claude Code without sending. Plain Enter still submits; Alt/Option+Enter continues to work.</li>
-          </ul>
-        </div>
-      </li>
-
-      <li class="release">
-        <div class="release-meta"><span class="version">0.22</span><time datetime="2026-11-02">Nov 2, 2026</time></div>
-        <div class="release-body">
-          <h3>A clearer sidebar, a session for every branch</h3>
-          <ul>
-            <li><b>Two-line session rows:</b> agent logos, useful names and status above the branch or worktree and line counts. Repo headers keep the count without repeating state dots.</li>
-            <li><b>Start on a branch:</b> choose a repo, branch and Claude, Codex or Shell. Kaze reuses the branch’s worktree or creates a sibling folder, then waits for the shell before starting the agent. Open with Cmd+Shift+N on macOS or Ctrl+Shift+N on Windows; tuck the launcher away with one click.</li>
-            <li><b>Worktree cleanup:</b> Kaze remembers only the worktrees it creates and asks before removing clean or finished ones. Branches stay, and Git refuses folders with uncommitted or untracked changes.</li>
-            <li><b>Cheaper redraws:</b> unchanged sidebar frames reuse their model and drawing, without allocating or reshaping session rows.</li>
           </ul>
         </div>
       </li>
