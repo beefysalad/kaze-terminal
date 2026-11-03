@@ -85,3 +85,11 @@ under the terminal (Activity with a note, or the formatted Report). Workspace me
 commands finished now read Ready, so retake `kaze-workspaces.png` if it shows a finished setup tab.
 The headless renders in `docs/audits/agent-dock/` are development evidence, not product captures.
 No product screenshot was fabricated or retouched.
+
+## 0.25 agent tray, project rail and colour emoji
+
+Retake sidebar captures (`kaze-sessions.png`, `kaze-agents.png`): subagents are now a slim tray
+(three lines, "+N more", the fold), and the project you're in has an accent rail instead of a tinted
+header. Terminal captures with Claude's status tables now show colour emoji. The headless renders in
+`docs/audits/sidebar-tray-emoji/` are development evidence, not product captures. No product
+screenshot was fabricated or retouched.
