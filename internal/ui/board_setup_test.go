@@ -24,7 +24,7 @@ func TestBoardSetupHintOnUnreadableSettings(t *testing.T) {
 			if !win.board.missing || win.board.setup.Empty() {
 				t.Fatal("missing setup hint/action")
 			}
-			win.boardPress(center(win.board.setup).Round())
+			win.boardPress(pageContext(1200, 760), center(win.board.setup).Round(), 0)
 			if !win.set.shown || win.sections()[win.set.section].title != "Agents" {
 				t.Fatal("setup action did not open Agents")
 			}

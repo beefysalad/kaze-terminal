@@ -55,65 +55,6 @@ func boardWindow(t *testing.T) (*window, tabs.TabID) {
 	win.drainSubs(t0)
 	return win, id
 }
-
-func TestBoardColumns(t *testing.T) {
-	win, id := boardWindow(t)
-	cols := win.boardColumns()
-	ids := func(cs []boardCard) (out []string) {
-		for _, c := range cs {
-			out = append(out, c.key.ID)
-		}
-		return
-	}
-	if strings.Join(ids(cols[0]), ",") != "run" || strings.Join(ids(cols[1]), ",") != "wait" || strings.Join(ids(cols[2]), ",") != "done" {
-		t.Fatalf("columns %v %v %v", ids(cols[0]), ids(cols[1]), ids(cols[2]))
-	}
-	if cols[2][0].line != "All good" || cols[2][0].tab != id {
-		t.Fatalf("done card %+v", cols[2][0])
-	}
-	// A wait with no subagent named shows the session in Waiting.
-	win.onNotify(notify.Msg{Tab: int(id), Kind: notify.KindNeeds, Session: "s"})
-	win.drainSubs(t0)
-	cols = win.boardColumns()
-	if len(cols[1]) != 2 || !cols[1][1].session || cols[1][1].line != "a subagent may be asking" {
-		t.Fatalf("waiting %+v", cols[1])
-	}
-}
-
-func TestBoardFilteredToTab(t *testing.T) {
-	win, id := boardWindow(t)
-	other := win.mgr.Tabs()[0].ID
-	win.onNotify(notify.Msg{Tab: int(other), Kind: notify.KindAgentStart, Session: "o", AgentID: "x", AgentType: "X"})
-	win.drainSubs(t0)
-	win.openBoard(id)
-	if n := len(win.boardColumns()[0]); n != 1 {
-		t.Fatalf("filtered running %d", n)
-	}
-	win.closeBoard()
-	win.openBoard(0)
-	if n := len(win.boardColumns()[0]); n != 2 {
-		t.Fatalf("all running %d", n)
-	}
-}
-
-func TestBoardCardOpensPane(t *testing.T) {
-	win, id := boardWindow(t)
-	win.openBoard(0)
-	win.drawBoard(pageContext(1200, 760), boardRect)
-	i := slices.IndexFunc(win.board.cards, func(h boardHit) bool { return h.card.key.ID == "run" })
-	if i < 0 {
-		t.Fatal("no card hit")
-	}
-	r := win.board.cards[i].rect
-	win.boardPress(r.Min.Add(r.Size().Div(2)))
-	if win.board.open || win.mgr.Active().ID != id {
-		t.Fatal("board still open or wrong session")
-	}
-	if s := win.dockOf(id); s == nil || s.agent != (subagents.Key{Session: "s", ID: "run"}) {
-		t.Fatal("no agent panel")
-	}
-}
-
 func TestBoardEscAndKeyClose(t *testing.T) {
 	win, id := boardWindow(t)
 	start := win.mgr.Active().ID
@@ -136,7 +77,7 @@ func TestBoardEscAndKeyClose(t *testing.T) {
 	if r.Empty() {
 		t.Fatal("no back button")
 	}
-	win.boardPress(r.Min.Add(r.Size().Div(2)))
+	win.boardPress(pageContext(1200, 760), r.Min.Add(r.Size().Div(2)), 0)
 	if win.board.open || win.mgr.Active().ID != start {
 		t.Fatal("back did not return to the session it came from")
 	}
@@ -174,7 +115,7 @@ func TestBoardHooksMissingHint(t *testing.T) {
 		t.Fatalf("no hint in %q", win.board.texts)
 	}
 	r := win.board.setup
-	win.boardPress(r.Min.Add(r.Size().Div(2)))
+	win.boardPress(pageContext(1200, 760), r.Min.Add(r.Size().Div(2)), 0)
 	if !win.set.shown || win.sections()[win.set.section].title != "Agents" {
 		t.Fatal("the hint's button did not open Settings, Agents")
 	}
@@ -241,60 +182,6 @@ func TestBoardNamesSessionsLikeTheSidebar(t *testing.T) {
 		t.Fatalf("board says %q, sidebar says %q", title, want)
 	}
 }
-
-// A done card's × removes it and keeps the board open; running cards have none.
-func TestBoardDismissDoneCard(t *testing.T) {
-	win, _ := boardWindow(t)
-	win.openBoard(0)
-	win.drawBoard(pageContext(1200, 760), boardRect)
-	var x image.Rectangle
-	for _, h := range win.board.cards {
-		if h.card.key.ID == "run" && !h.close.Empty() {
-			t.Fatal("a running card has a close button")
-		}
-		if h.card.key.ID == "done" {
-			x = h.close
-		}
-	}
-	if x.Empty() {
-		t.Fatal("the done card has no close button")
-	}
-	win.boardPress(x.Min.Add(x.Size().Div(2)))
-	if !win.board.open {
-		t.Fatal("closing a card closed the board")
-	}
-	if win.subs.Get(subagents.Key{Session: "s", ID: "done"}) != nil {
-		t.Fatal("card not removed")
-	}
-	if len(win.fl.sets) != 0 {
-		for _, s := range win.fl.sets {
-			if len(s.panes) != 0 {
-				t.Fatal("dismissing opened a pane")
-			}
-		}
-	}
-}
-
-// Clear empties the Done column; running and waiting cards stay.
-func TestBoardClearDone(t *testing.T) {
-	win, _ := boardWindow(t)
-	win.openBoard(0)
-	win.drawBoard(pageContext(1200, 760), boardRect)
-	c := win.board.clear
-	if c.Empty() {
-		t.Fatal("no Clear button")
-	}
-	win.boardPress(c.Min.Add(c.Size().Div(2)))
-	cols := win.boardColumns()
-	if len(cols[2]) != 0 || len(cols[0]) != 1 || len(cols[1]) != 1 {
-		t.Fatalf("columns %d %d %d", len(cols[0]), len(cols[1]), len(cols[2]))
-	}
-	win.drawBoard(pageContext(1200, 760), boardRect)
-	if !win.board.clear.Empty() {
-		t.Fatal("Clear shown with nothing done")
-	}
-}
-
 func TestOpenBoardResetsViewAndSelectsWaiting(t *testing.T) {
 	win, id := boardWindow(t)
 	b := &win.board
@@ -331,26 +218,5 @@ func TestClearBoardSession(t *testing.T) {
 	win.clearBoardSession()
 	if !win.board.open || win.board.tab != 0 {
 		t.Fatalf("open %v tab %v", win.board.open, win.board.tab)
-	}
-}
-
-func TestBoardCardOpensDock(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
-	k := startAgent(win, a.ID, "s", "x")
-	floatFrames(t, win, r)
-	win.openBoard(a.ID)
-	floatFrames(t, win, r)
-	var card boardHit
-	for _, h := range win.board.cards {
-		if !h.card.session && h.card.key == k {
-			card = h
-		}
-	}
-	if card.rect.Empty() {
-		t.Fatal("no board card")
-	}
-	clickAt(t, win, r, centre(card.rect))
-	if s := win.dockOf(a.ID); s == nil || s.agent != k {
-		t.Fatal("board card did not open the panel")
 	}
 }

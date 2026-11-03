@@ -90,12 +90,16 @@ func (win *window) mdLayout(gtx layout.Context, cache *dockCache, c *mdCache, sr
 }
 
 // dockReport is a's report for Copy and the Report tab: the panel's
-// transcript chain when it has one, else the hook's (#85 fallback order).
+// (or the board preview's) transcript chain when it has one, else the hook's
+// (#85 fallback order).
 func (win *window) dockReport(a *subagents.Agent) string {
 	for _, s := range win.dock.by {
 		if s.agent == a.Key && s.tr != nil && s.tr.Available {
 			return s.tr.Report(a.Report)
 		}
+	}
+	if p := &win.board.prev; p.agent == a.Key && p.tr != nil && p.tr.Available {
+		return p.tr.Report(a.Report) // the board's preview read it
 	}
 	return new(subagents.Transcript).Report(a.Report)
 }
@@ -231,7 +235,7 @@ func (win *window) drawDock(gtx layout.Context, session tabs.TabID, s *dockSessi
 			l := win.mdLayout(gtx, &s.cache, &s.cache.prompt, prompt, inner.Dx()-dp(10))
 			view := image.Rect(inner.Min.X+dp(10), y, inner.Max.X, min(y+l.height, r.Max.Y))
 			paint.FillShape(ops, th.Border, clip.Rect(image.Rect(inner.Min.X, y, inner.Min.X+dp(2), view.Max.Y)).Op())
-			win.drawPanelMarkdown(gtx, l, view, view.Min, 0, &h)
+			win.drawPanelMarkdown(gtx, l, view, view.Min, 0, &h, &win.dock.texts)
 			y = view.Max.Y + dp(6)
 		}
 	}
@@ -241,9 +245,9 @@ func (win *window) drawDock(gtx layout.Context, session tabs.TabID, s *dockSessi
 	inner = image.Rect(inner.Min.X, h.body.Min.Y+dp(6), inner.Max.X, h.body.Max.Y-dp(6))
 	if inner.Dx() > 0 && inner.Dy() > 0 {
 		if s.tab == dockReport {
-			win.drawDockReport(gtx, s, a, inner, bc, &h)
+			win.drawDockReport(gtx, s, a, inner, bc, &h, &win.dock.texts)
 		} else {
-			win.drawDockActivity(gtx, s, a, inner, bc, &h)
+			win.drawDockActivity(gtx, s, a, inner, bc, &h, &win.dock.texts)
 		}
 	}
 	win.dock.hits = h
@@ -278,31 +282,31 @@ func (win *window) drawDock(gtx layout.Context, session tabs.TabID, s *dockSessi
 }
 
 // drawPanelMarkdown draws l and keeps its links as panel hits.
-func (win *window) drawPanelMarkdown(gtx layout.Context, l *docLayout, view image.Rectangle, origin image.Point, scroll int, h *dockHits) {
+func (win *window) drawPanelMarkdown(gtx layout.Context, l *docLayout, view image.Rectangle, origin image.Point, scroll int, h *dockHits, texts *[]string) {
 	var hits []docLinkHit
-	win.drawMarkdown(gtx, l, view, origin, scroll, &hits, &win.dock.texts)
+	win.drawMarkdown(gtx, l, view, origin, scroll, &hits, texts)
 	for _, x := range hits {
 		h.links = append(h.links, dockLink{r: x.rect, url: l.links[x.link]})
 	}
 }
 
 // drawDockReport draws the Report tab.
-func (win *window) drawDockReport(gtx layout.Context, s *dockSession, a *subagents.Agent, inner image.Rectangle, bc dockPalette, h *dockHits) {
+func (win *window) drawDockReport(gtx layout.Context, s *dockSession, a *subagents.Agent, inner image.Rectangle, bc dockPalette, h *dockHits, texts *[]string) {
 	if a.State != subagents.Done {
 		call, sz := win.ui.sans(gtx, "No report yet", 12, bc.muted, font.Normal)
 		place(gtx.Ops, call, inner.Min)
-		win.dock.texts = append(win.dock.texts, "No report yet")
+		*texts = append(*texts, "No report yet")
 		_ = sz
 		return
 	}
 	l := win.mdLayout(gtx, &s.cache, &s.cache.report, win.dockReport(a), inner.Dx())
 	h.scrollMax = max(l.height-inner.Dy(), 0)
 	s.scroll = min(max(s.scroll, 0), h.scrollMax)
-	win.drawPanelMarkdown(gtx, l, inner, inner.Min, s.scroll, h)
+	win.drawPanelMarkdown(gtx, l, inner, inner.Min, s.scroll, h, texts)
 }
 
 // drawDockActivity draws the Activity tab: rows, notes and the last row.
-func (win *window) drawDockActivity(gtx layout.Context, s *dockSession, a *subagents.Agent, inner image.Rectangle, bc dockPalette, h *dockHits) {
+func (win *window) drawDockActivity(gtx layout.Context, s *dockSession, a *subagents.Agent, inner image.Rectangle, bc dockPalette, h *dockHits, texts *[]string) {
 	ops, c, th := gtx.Ops, win.ui, win.ui.th
 	dp := gtx.Dp
 	items := dockTimeline(a, s.tr)
@@ -353,7 +357,7 @@ func (win *window) drawDockActivity(gtx layout.Context, s *dockSession, a *subag
 				call, sz = c.sans(gtx, s, 11, col, font.Normal)
 			}
 			place(ops, call, image.Pt(x, mid-sz.Y/2))
-			win.dock.texts = append(win.dock.texts, s)
+			*texts = append(*texts, s)
 			return x + sz.X
 		}
 		x := inner.Min.X
@@ -366,7 +370,7 @@ func (win *window) drawDockActivity(gtx layout.Context, s *dockSession, a *subag
 			paint.FillShape(ops, th.Accent, clip.Rect(image.Rect(x, top+dp(2), x+dp(2), y-dp(4))).Op())
 			l := &s.cache.notes[it.text].lay
 			view := image.Rect(x+dp(12), top+dp(2), inner.Max.X, y-dp(4)).Intersect(inner)
-			win.drawPanelMarkdown(gtx, l, view, image.Pt(x+dp(12), top+dp(2)), 0, h)
+			win.drawPanelMarkdown(gtx, l, view, image.Pt(x+dp(12), top+dp(2)), 0, h, texts)
 		case itemWaiting:
 			box := image.Rect(x, top+dp(3), inner.Max.X, y-dp(3))
 			paint.FillShape(ops, tint(th.Needs, 0x22), clip.UniformRRect(box, dp(5)).Op(ops))
