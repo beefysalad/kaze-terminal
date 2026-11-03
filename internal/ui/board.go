@@ -32,6 +32,9 @@ type boardState struct {
 	token    image.Rectangle // the "<session> ×" token; empty when none
 	list     image.Rectangle // the list pane
 	preview  image.Rectangle // the preview pane; empty while narrow
+	openIn   image.Rectangle // the preview's "Open in session"
+	copy     image.Rectangle // the preview's "Copy report"; empty unless done
+	reader   image.Rectangle // the preview's "Open in reader"; empty unless done
 	seg      [4]image.Rectangle
 	rows     []boardRowHit
 	cardHits []boardCardHit
@@ -224,6 +227,12 @@ func (win *window) drawBoard(gtx layout.Context, r image.Rectangle) {
 	}
 	v := win.boardView()
 	win.drawBoardList(gtx, b.list, &v, ink)
+	if b.wide {
+		win.drawBoardPreview(gtx, b.preview, ink)
+	} else {
+		b.openIn, b.copy, b.reader, b.prevHits = image.Rectangle{}, image.Rectangle{}, image.Rectangle{}, dockHits{}
+		b.prev.tr = nil // nobody sees a preview: hold no transcript
+	}
 }
 
 // boardBack is the session the board returns to.
