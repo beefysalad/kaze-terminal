@@ -103,3 +103,83 @@ func TestKeymapWinsOverWarpKeys(t *testing.T) {
 		t.Fatalf("tabs %d, want %d: the user's Ctrl+V binding did not run", got, before+1)
 	}
 }
+
+// selectHello opens a shell tab showing "hello-kaze" and selects it.
+func selectHello(t *testing.T) (*window, *recPTY, *[]string, func(key.Name)) {
+	t.Helper()
+	st := &recStarter{}
+	win := testWindow(t, st)
+	clip := &[]string{}
+	win.toClipboard = func(s string) { *clip = append(*clip, s) }
+	tab, p := shellTab(t, win, st, "hello-kaze", func() bool {
+		a := win.mgr.Active()
+		return a != nil && textShown(a, 9, 'e')()
+	})
+	r := &pointerRun{t: t, win: win, tab: tab}
+	P := pointer.ButtonPrimary
+	r.send(pointer.Press, P, 0, 0, 0)
+	r.send(pointer.Drag, P, 0, 9, 0)
+	r.send(pointer.Release, 0, 0, 9, 0)
+	if got := r.selected(); got != "hello-kaze" {
+		t.Fatalf("selected %q", got)
+	}
+	ctrl := func(name key.Name) {
+		win.route(layout.Context{}, []event.Event{key.Event{Name: name, Modifiers: key.ModCtrl, State: key.Press}}, testCW, testCH)
+	}
+	return win, p, clip, ctrl
+}
+
+// Typing after selecting old output clears the selection, like Windows
+// Terminal, so a later Ctrl+C interrupts instead of copying stale text.
+func TestTypingClearsSelectionSoCtrlCInterrupts(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Windows keys")
+	}
+	for _, c := range []struct {
+		name  string
+		batch []event.Event
+		typed string
+	}{
+		{"text", []event.Event{key.Event{Name: "A", State: key.Press}, key.EditEvent{Text: "a"}}, "a"},
+		{"enter", []event.Event{key.Event{Name: key.NameReturn, State: key.Press}}, "\r"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			win, p, clip, ctrl := selectHello(t)
+			win.route(layout.Context{}, c.batch, testCW, testCH)
+			waitSent(t, p, c.typed)
+			ctrl("C")
+			waitSent(t, p, c.typed+"\x03")
+			if len(*clip) != 0 {
+				t.Fatalf("Ctrl+C after typing copied %q, want nothing", *clip)
+			}
+		})
+	}
+}
+
+// A selection over empty cells has nothing to copy, so Ctrl+C interrupts.
+func TestBlankSelectionCtrlCInterrupts(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Windows keys")
+	}
+	st := &recStarter{}
+	win := testWindow(t, st)
+	var clip []string
+	win.toClipboard = func(s string) { clip = append(clip, s) }
+	tab, p := shellTab(t, win, st, "hello-kaze", func() bool {
+		a := win.mgr.Active()
+		return a != nil && textShown(a, 9, 'e')()
+	})
+	r := &pointerRun{t: t, win: win, tab: tab}
+	P := pointer.ButtonPrimary
+	r.send(pointer.Press, P, 0, 0, 3)
+	r.send(pointer.Drag, P, 0, 9, 4)
+	r.send(pointer.Release, 0, 0, 9, 4)
+	if !win.sels[tab.ID].sel.Active {
+		t.Fatal("no selection over the empty rows")
+	}
+	win.route(layout.Context{}, []event.Event{key.Event{Name: "C", Modifiers: key.ModCtrl, State: key.Press}}, testCW, testCH)
+	waitSent(t, p, "\x03")
+	if len(clip) != 0 {
+		t.Fatalf("Ctrl+C on a blank selection copied %q", clip)
+	}
+}

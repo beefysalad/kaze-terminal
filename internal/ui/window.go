@@ -1198,6 +1198,7 @@ func (win *window) routeView(gtx layout.Context, v termView, batch []event.Event
 			if win.gate.allow() && editCommits(batch, i, win.composing) && e.Text != "" {
 				win.takeOver(t)
 				win.benchKey(t)
+				win.dropSelOnInput(t)
 				win.writeInput(t, input.EncodeText(e.Text))
 				win.snapToBottom(t.Session)
 			}
@@ -1225,7 +1226,7 @@ func (win *window) onKey(gtx layout.Context, t *tabs.Tab, e key.Event, m term.Mo
 	}
 	out := routeKey(runtime.GOOS, win.km, e.Name, e.Modifiers, m)
 	if out.act == actNone {
-		switch warpClipKey(runtime.GOOS, e.Name, e.Modifiers, win.hasSel(t.ID)) {
+		switch warpClipKey(runtime.GOOS, e.Name, e.Modifiers, e.Name == "C" && win.hasSel(t)) {
 		case actCopy:
 			// Clear the selection so the next Ctrl+C interrupts again.
 			win.gate.onKey(true, keyOut{act: actCopy})
@@ -1244,6 +1245,7 @@ func (win *window) onKey(gtx layout.Context, t *tabs.Tab, e key.Event, m term.Mo
 	case out.data != nil:
 		win.takeOver(t)
 		win.benchKey(t)
+		win.dropSelOnInput(t)
 		win.writeInput(t, out.data)
 		win.snapToBottom(t.Session)
 	}

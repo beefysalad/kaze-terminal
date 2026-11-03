@@ -166,7 +166,9 @@ plain shell never gets it.
 
 On Windows, Ctrl+C and Ctrl+V work like Warp: Ctrl+C copies when text is selected and clears the
 selection, so the next Ctrl+C interrupts; with nothing selected it goes to the shell as an
-interrupt. Ctrl+V pastes. On macOS, plain Ctrl+C always goes to the shell. Shift+Enter sends the same sequence as
+interrupt. Typing clears a selection, so an old one never turns Ctrl+C into a copy. Ctrl+V always
+pastes, so it can no longer send a literal Ctrl+V to a program (such as Vim's block select). When
+the clipboard holds both text and an image, the text is pasted. On macOS, plain Ctrl+C always goes to the shell. Shift+Enter sends the same sequence as
 Alt+Enter (Option+Enter on macOS), adding a new line in Claude Code while plain Enter submits.
 Other terminal programs handle that sequence according to their own keybindings. The session, copy,
 paste, sidebar, next-waiting, palette, scratch shell, agents board and settings shortcuts can be changed under `[keys]` in the

@@ -1,8 +1,11 @@
 package ui
 
 import (
+	"strings"
+
 	"gioui.org/io/key"
 
+	"github.com/patrick-gogo/kaze-terminal/internal/render"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 )
 
@@ -24,8 +27,25 @@ func warpClipKey(goos string, name key.Name, mods key.Modifiers, hasSel bool) ac
 	return actNone
 }
 
-// hasSel reports whether id has selected text.
-func (win *window) hasSel(id tabs.TabID) bool {
-	ts := win.sels[id]
-	return ts != nil && ts.sel.Active
+// hasSel reports whether t has a selection with text worth copying. A
+// selection over empty cells has none, so Ctrl+C interrupts instead.
+func (win *window) hasSel(t *tabs.Tab) bool {
+	ts := win.sels[t.ID]
+	if ts == nil || !ts.sel.Active {
+		return false
+	}
+	t.Session.Lock()
+	text := render.SelectedText(t.Session.Screen(), ts.sel)
+	t.Session.Unlock()
+	return strings.TrimSpace(text) != ""
+}
+
+// dropSelOnInput clears t's selection when input goes to the shell, as
+// Windows Terminal does, so a stale selection never turns the next Ctrl+C
+// into a copy.
+func (win *window) dropSelOnInput(t *tabs.Tab) {
+	if ts := win.sels[t.ID]; ts != nil && ts.sel.Active {
+		ts.clear()
+		win.w.Invalidate()
+	}
 }
