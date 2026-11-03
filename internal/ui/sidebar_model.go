@@ -41,7 +41,7 @@ type sideGroup struct {
 type sideMember struct {
 	ID           tabs.TabID // 0 when its shell never started
 	Title, Color string
-	Status       string // memberStatus text, "Finished" shown as "stopped"
+	Status       string // memberStatus text, "Finished" shown as "Ready", a closed or exited shell as "stopped"
 	Down         bool   // stopped, failed or its shell exited
 	Mark         mark
 }
@@ -51,6 +51,7 @@ type sideRun struct {
 	Run     uint64
 	Name    string
 	Down    int
+	Ready   int  // members whose commands finished and whose shell is still open
 	Mark    mark // the strongest member mark, needs over done
 	Members []sideMember
 }
@@ -273,10 +274,16 @@ func (win *window) buildSideRuns(out []sideRun, ids []uint64) []sideRun {
 			}
 			exited := t != nil && t.Exited
 			closed := wm.tab != 0 && t == nil
-			if text == "Finished" || ((exited || closed) && !failed) {
+			switch {
+			case (exited || closed) && !failed:
 				mem.Status = "stopped" // a closed or exited shell is not starting or waiting
+			case text == "Finished":
+				// The commands returned and the shell is still open, such as after
+				// activating a venv. kaze sees no exit code, so it is not called down (#118).
+				mem.Status = "Ready"
+				sr.Ready++
 			}
-			mem.Down = text == "Finished" || failed || exited || closed
+			mem.Down = failed || exited || closed
 			if mem.Down {
 				sr.Down++
 			}
