@@ -23,6 +23,7 @@ const (
 	faceCJK
 	faceMissing // in neither font: every such rune shares one .notdef mask
 	faceBox     // box drawing and block elements, drawn procedurally
+	faceEmoji   // the colour emoji font, for emoji-presentation runes (✅ 🔄)
 	faceSystem  // first system fallback font; faceSystem+i is systemFonts font i
 )
 
@@ -117,13 +118,15 @@ const sysFaceCap = 64
 
 // fontSet holds the parsed bundled fonts at one pixel size.
 type fontSet struct {
-	mono, cjk *sfnt.Font
-	faces     [3]xfont.Face
-	buf       sfnt.Buffer
-	sys       *sysFonts
-	px        float64
-	lookups   int // cmap lookups, read by tests
-	sysFaces  map[sysFaceKey]xfont.Face
+	mono, cjk  *sfnt.Font
+	faces      [3]xfont.Face
+	buf        sfnt.Buffer
+	sys        *sysFonts
+	px         float64
+	lookups    int // cmap lookups, read by tests
+	sysFaces   map[sysFaceKey]xfont.Face
+	emoji      *emojiSource
+	emojiFaces map[float64]xfont.Face
 
 	cellW, cellH int
 	ascent       int // baseline offset from the top of a cell
@@ -150,7 +153,7 @@ func mustFace(f *sfnt.Font, px float64) xfont.Face {
 // newFontSet sizes everything from the mono font; px is the font size in pixels and
 // scale the line spacing, which changes only the cell height.
 func newFontSet(px, scale float64) *fontSet {
-	fs := &fontSet{mono: mustParse(fonts.MonoRegular), cjk: mustParse(fonts.CJK), sys: systemFonts, px: px}
+	fs := &fontSet{mono: mustParse(fonts.MonoRegular), cjk: mustParse(fonts.CJK), sys: systemFonts, emoji: emojiFonts, px: px}
 	fs.faces[faceMono] = mustFace(fs.mono, px)
 	fs.faces[faceMonoBold] = mustFace(mustParse(fonts.MonoBold), px)
 
@@ -173,14 +176,21 @@ func newFontSet(px, scale float64) *fontSet {
 	return fs
 }
 
-// faceFor picks the mono face when it has the rune, else the CJK face, else the first
-// system font that has it (loading them only now), else faceMissing.
+// faceFor picks, in order: the emoji font for an emoji-presentation rune it can draw;
+// the mono face; the CJK face; the first system font that has the rune (loading them
+// only now); else faceMissing. Text-default emoji (⏺ ⏸ ❤) take the same path as any
+// symbol, so they keep the fonts they had before colour emoji (Segoe UI Symbol first).
 func (fs *fontSet) faceFor(r rune, bold bool) faceID {
 	mono := faceMono
 	if bold {
 		mono = faceMonoBold
 	}
 	fs.lookups++
+	if isEmojiPresentation(r) {
+		if e := fs.emojiFont(); e != nil && fs.emojiDrawable(e, r) {
+			return faceEmoji
+		}
+	}
 	if i, _ := fs.mono.GlyphIndex(&fs.buf, r); i != 0 {
 		return mono
 	}
@@ -196,6 +206,14 @@ func (fs *fontSet) faceFor(r rune, bold bool) faceID {
 			return faceSystem + faceID(i)
 		}
 	}
+}
+
+// emojiFont is the emoji font, loaded on first use; nil when there is none.
+func (fs *fontSet) emojiFont() *emojiFont {
+	if fs.emoji == nil {
+		return nil
+	}
+	return fs.emoji.font()
 }
 
 // sysFace returns system font i at px, made once per (font, size).
@@ -219,9 +237,15 @@ func (fs *fontSet) sysFace(i int, px float64) xfont.Face {
 	return face
 }
 
-// drawFallback draws r from system font i into a w-wide cell mask, shrunk to fit and
-// centered: their metrics differ from the mono font's, and ink must not spill into neighbors.
-func (fs *fontSet) drawFallback(i int, r rune, w int) (mask *image.Alpha) {
+// drawFallback draws r from system font i into a w-wide cell mask.
+func (fs *fontSet) drawFallback(i int, r rune, w int) *image.Alpha {
+	return fs.drawOutline(func(px float64) xfont.Face { return fs.sysFace(i, px) }, r, w)
+}
+
+// drawOutline draws r from the face faceAt gives into a w-wide cell mask, shrunk to fit
+// and centered: other fonts' metrics differ from the mono font's, and ink must not spill
+// into neighbors. A nil face or a broken glyph draws blank.
+func (fs *fontSet) drawOutline(faceAt func(px float64) xfont.Face, r rune, w int) (mask *image.Alpha) {
 	h := fs.cellH
 	mask = image.NewAlpha(image.Rect(0, 0, w, h))
 	defer func() {
@@ -229,7 +253,7 @@ func (fs *fontSet) drawFallback(i int, r rune, w int) (mask *image.Alpha) {
 			mask = image.NewAlpha(image.Rect(0, 0, w, h)) // a broken glyph draws blank
 		}
 	}()
-	face := fs.sysFace(i, fs.px)
+	face := faceAt(fs.px)
 	if face == nil {
 		return mask
 	}
@@ -240,7 +264,7 @@ func (fs *fontSet) drawFallback(i int, r rune, w int) (mask *image.Alpha) {
 	gw, gh := float64(b.Max.X-b.Min.X)/64, float64(b.Max.Y-b.Min.Y)/64
 	if gw > float64(w) || gh > float64(h) {
 		s := 0.95 * min(float64(w)/max(gw, 1), float64(h)/max(gh, 1))
-		if smaller := fs.sysFace(i, fs.px*s); smaller != nil {
+		if smaller := faceAt(fs.px * s); smaller != nil {
 			face = smaller
 			b, _, _ = face.GlyphBounds(r)
 		}

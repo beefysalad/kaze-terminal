@@ -14,10 +14,19 @@ func systemFontPaths() []string {
 	dir := filepath.Join(win, "Fonts")
 	return []string{
 		filepath.Join(dir, "seguisym.ttf"), // Segoe UI Symbol: dingbats, technical, arrows, Braille
-		filepath.Join(dir, "seguiemj.ttf"), // Segoe UI Emoji: drawn from its monochrome outlines
+		filepath.Join(dir, "seguiemj.ttf"), // Segoe UI Emoji outlines, for symbols that are not emoji (emoji use the emoji face)
 		filepath.Join(dir, "cambria.ttc"),  // Cambria Math
 		// Japanese last: kanji outside the bundled cp932 subset (JIS X 0213, e.g. 𠮟).
 		filepath.Join(dir, "YuGothM.ttc"),  // Yu Gothic Medium
 		filepath.Join(dir, "msgothic.ttc"), // MS Gothic, on installs without Yu Gothic
 	}
+}
+
+// emojiFontPath is the colour emoji font: Segoe UI Emoji (COLR v0 layers).
+func emojiFontPath() string {
+	win := os.Getenv("WINDIR")
+	if win == "" {
+		win = `C:\Windows`
+	}
+	return filepath.Join(win, "Fonts", "seguiemj.ttf")
 }

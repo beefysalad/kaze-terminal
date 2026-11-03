@@ -124,3 +124,49 @@ func TestFitDropsFormatAndLineSeparators(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+// Gio packs a glyph id as face | ppem | font GID (gioui.org/text/shaper.go splitGlyphID).
+const (
+	giofacebits = 16
+	giosizebits = 16
+	giogidbits  = 64 - giofacebits - giosizebits
+)
+
+// shapedNotdef lays s out in face f and reports whether any glyph is the font's .notdef box.
+func shapedNotdef(c *chrome, s string, f font.Font) bool {
+	c.shaper.LayoutString(text.Parameters{Font: f, PxPerEm: 16 << 6, MaxLines: 1, MaxWidth: 1 << 20}, s)
+	bad := false
+	for g, ok := c.shaper.NextGlyph(); ok; g, ok = c.shaper.NextGlyph() {
+		if g.Flags&text.FlagLineBreak != 0 && g.Runes == 0 {
+			continue
+		}
+		if uint64(g.ID)&(1<<giogidbits-1) == 0 {
+			bad = true
+		}
+	}
+	return bad
+}
+
+// TestUIFontsNeverDrawBoxes covers #124: the title bar draws in Manrope at Medium and
+// SemiBold, where a rune only a fallback face has came out as an empty box.
+func TestUIFontsNeverDrawBoxes(t *testing.T) {
+	c := newChrome()
+	for _, r := range "◐◓⠂✳⏺⎇⌄日" {
+		s := c.fit(string(r) + " Epic")
+		for _, f := range []font.Font{
+			{Typeface: sansFace}, {Typeface: sansFace, Weight: font.Medium},
+			{Typeface: sansFace, Weight: font.SemiBold}, {Typeface: chromeFace},
+		} {
+			if shapedNotdef(c, s, f) {
+				t.Errorf("%q fitted to %q draws a missing-glyph box in %s weight %v", string(r), s, f.Typeface, f.Weight)
+			}
+		}
+	}
+}
+
+func TestFitSansKeepsJapanese(t *testing.T) {
+	c := newChrome()
+	if got := c.fit("日本 Epic"); got != "日本 Epic" {
+		t.Fatalf("got %q", got)
+	}
+}

@@ -676,6 +676,7 @@ func (win *window) frame(gtx layout.Context) error {
 	list := win.mgr.Tabs()
 	win.pruneDocs(list)
 	win.pruneDock(list)
+	win.pruneTray(list)
 	win.pruneSels(list)
 	win.pruneLocs(list)
 	win.drainLocations()

@@ -71,6 +71,7 @@ for i in 1 2 3 4 5; do run "launch-$i" 4; done
 # Each scenario runs in a subshell: sh keeps assignments made for a function call.
 (export KAZE_BENCH_KEYS=200 KAZE_BENCH_PACE_MS=50; run keys 40)
 (export KAZE_BENCH_TYPE="'$flood' -lines 10000" KAZE_BENCH_SCROLL=10000; run flood-scroll 60)
+(export KAZE_BENCH_TYPE="'$flood' -emoji -lines 10100" KAZE_BENCH_SCROLL=10000; run emoji-scroll 60)
 if [ -f "$capture" ]; then
   (export KAZE_BENCH_TYPE="'$flood' -claude '$capture' -seconds 10"; run claude 20)
 else

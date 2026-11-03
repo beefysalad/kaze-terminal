@@ -1,7 +1,8 @@
 // Command flood writes terminal output for kaze's benchmarks: N lines of mixed
 // ASCII, Japanese and SGR colors as fast as it can, or (-claude) a captured
 // Claude Code screen followed by a streamed response drawn the way Claude Code
-// draws it. Sizes and run time are capped so it can never fill memory or run forever.
+// draws it, or (-emoji) status-table rows with colour emoji. Sizes and run time
+// are capped so it can never fill memory or run forever.
 package main
 
 import (
@@ -27,12 +28,17 @@ func main() {
 	claude := flag.String("claude", "", "replay this raw capture (from tools/capture) instead of printing lines")
 	seconds := flag.Int("seconds", 10, "how long to replay the capture (max 300)")
 	every := flag.Duration("every", 16*time.Millisecond, "time between streamed repaints")
+	emojiRows := flag.Bool("emoji", false, "print status-table rows with colour emoji instead of colored text")
 	flag.Parse()
 	var err error
 	if *claude != "" {
 		err = replay(os.Stdout, *claude, min(max(*seconds, 1), maxSeconds), max(*every, time.Millisecond))
 	} else {
-		err = flood(os.Stdout, min(max(*lines, 0), maxLines))
+		row := line
+		if *emojiRows {
+			row = emojiLine
+		}
+		err = flood(os.Stdout, min(max(*lines, 0), maxLines), row)
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "flood:", err)
@@ -49,13 +55,25 @@ func line(b []byte, i int) []byte {
 	return b
 }
 
-func flood(w io.Writer, n int) error {
+// emoji are the 20 marks the -emoji table cycles through: emoji-presentation ones
+// and the text-default ones (⚠ ✔ ❤) Claude Code and status tables use.
+var emoji = []string{"✅", "❌", "🔄", "🟢", "🔴", "🟡", "⏳", "🚀", "📝", "⚠", "✔", "❤", "🐛", "🔥", "💡", "📦", "🧪", "🔧", "✨", "🎉"}
+
+var tasks = []string{"Shared 3D Secure helper", "Retry webhook delivery", "Tenant scoping audit", "Refund flow tests", "Cache warmup on deploy"}
+
+// emojiLine i: a status-table row like "| 0042 | Shared 3D Secure helper | ✅ Done |".
+func emojiLine(b []byte, i int) []byte {
+	state := [...]string{"Done", "Running", "Waiting", "Failed"}[i%4]
+	return fmt.Appendf(b, "| %04d | %-24s | %s %-8s |\r\n", i, tasks[i%len(tasks)], emoji[i%len(emoji)], state)
+}
+
+func flood(w io.Writer, n int, row func([]byte, int) []byte) error {
 	start := time.Now()
 	bw := bufio.NewWriterSize(w, 64<<10)
 	var b []byte
 	total := 0
 	for i := 0; i < n; i++ {
-		b = line(b[:0], i)
+		b = row(b[:0], i)
 		total += len(b)
 		if _, err := bw.Write(b); err != nil {
 			return err

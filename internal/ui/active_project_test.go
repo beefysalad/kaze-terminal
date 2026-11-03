@@ -4,6 +4,7 @@ import (
 	"image/color"
 	"testing"
 
+	"gioui.org/font"
 	"gioui.org/io/input"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 	"github.com/patrick-gogo/kaze-terminal/internal/theme"
@@ -69,19 +70,80 @@ func TestActiveProjectPersistsForFilteredSiblingAndDocument(t *testing.T) {
 	}
 }
 
-func TestActiveProjectHeaderTextContrast(t *testing.T) {
+func TestSidebarTextContrast(t *testing.T) {
 	for _, th := range theme.All() {
 		c := newChrome()
 		c.setTheme(th)
-		bg, fg := c.activeProjectColors()
-		if bg == c.th.Chrome || fg == c.th.ActiveFG {
-			t.Errorf("%s active header lacks accent emphasis", th.Key)
-		}
-		for label, col := range map[string]color.NRGBA{"name": fg, "count": c.activeProjectCountColor(false), "waiting": c.activeProjectCountColor(true)} {
-			if got := contrast(col, bg); got < 4.5 {
-				t.Errorf("%s active project %s contrast %.2f", th.Key, label, got)
+		ink := c.sideInk()
+		ui := th.UI
+		for _, p := range []struct {
+			name   string
+			fg, bg color.NRGBA
+		}{
+			{"muted", ink.muted, ui.Chrome}, {"needs", ink.needs, ui.Chrome}, {"agent type", ink.kind, ui.Chrome},
+			{"task", ui.Folder, ui.Chrome}, {"chip lead", ink.chipLead, ink.chipBG}, {"chip muted", ink.muted, ink.chipBG},
+			{"chip needs", ink.needs, ink.chipBG}, {"tooltip", ink.tipFG, ink.tipBG},
+			// The fold control ("N agents ⌄") on a plain and on a selected row; amber when one waits.
+			{"fold", ui.Accent, ui.Chrome}, {"fold on active", ui.Accent, ui.Active},
+			{"fold needs", ink.needs, ui.Chrome}, {"fold needs on active", ink.needs, ui.Active},
+			// The open agent's line, highlighted with th.Active.
+			{"open task", ui.Folder, ui.Active}, {"open muted", ink.muted, ui.Active},
+			{"open needs", ink.needs, ui.Active}, {"open agent type", ink.kind, ui.Active},
+		} {
+			if got := contrast(p.fg, p.bg); got < 4.5 {
+				t.Errorf("%s %s contrast %.2f, want 4.5", th.Key, p.name, got)
 			}
 		}
+	}
+}
+
+// railFixture is two groups, the second active with two rows; its first row has two tray lines.
+func railFixture() sideModel {
+	m := sideModel{Groups: []sideGroup{
+		{Key: "a", Name: "alpha", Rows: sideRows(1, 1, "a"), Count: 1},
+		{Key: "b", Name: "beta", Rows: sideRows(10, 2, "b"), Count: 2},
+	}}
+	m.Groups[1].Rows[0].Agents = []sideAgent{{Type: "Explore", Task: "one"}, {Type: "Plan", Task: "two"}}
+	m.Groups[1].Rows[0].TrayTotal = 2
+	return m
+}
+
+func TestActiveProjectRail(t *testing.T) {
+	m := railFixture()
+	gtx := pageContext(sidebarW, 700)
+	h, _ := sideDraw(t, m, sideState{activeRepo: "b"}, 700)
+	hd := h.groups[1].rect
+	last := h.rows[len(h.rows)-1].rect
+	if h.rail.Min.Y != hd.Min.Y || h.rail.Max.Y != last.Min.Y+rowSpan(gtx, m.Groups[1].Rows[1]) || h.rail.Dx() != gtx.Dp(2) {
+		t.Fatalf("rail %v, want from header %v to the last row's span below %v, 2dp wide", h.rail, hd, last)
+	}
+	if h.rail.Min.X >= hd.Min.X {
+		t.Fatalf("rail %v is not left of the header %v", h.rail, hd)
+	}
+	m.Groups[1].Folded = true
+	h, _ = sideDraw(t, m, sideState{activeRepo: "b"}, 700)
+	if hd := h.groups[1].rect; h.rail.Min.Y != hd.Min.Y || h.rail.Max.Y != hd.Max.Y {
+		t.Fatalf("folded rail %v, want the header %v", h.rail, hd)
+	}
+	if h, _ := sideDraw(t, m, sideState{}, 700); !h.rail.Empty() {
+		t.Fatalf("no active project, rail %v", h.rail)
+	}
+}
+
+func TestActiveProjectNameStyle(t *testing.T) {
+	for _, th := range theme.All() {
+		c := newChrome()
+		c.setTheme(th)
+		if col, w := c.groupNameStyle(true); col != th.UI.ActiveFG || w != font.Bold {
+			t.Errorf("%s active name %v %v, want ActiveFG bold", th.Key, col, w)
+		}
+		if _, w := c.groupNameStyle(false); w != font.Normal {
+			t.Errorf("%s other names weight %v", th.Key, w)
+		}
+	}
+	c := newChrome()
+	if shapedNotdef(c, c.fit("日本 alpha"), font.Font{Typeface: chromeFace, Weight: font.Bold}) {
+		t.Fatal("a bold project name draws a missing-glyph box")
 	}
 }
 

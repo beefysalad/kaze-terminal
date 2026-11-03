@@ -16,6 +16,7 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 
+	"github.com/patrick-gogo/kaze-terminal/internal/render"
 	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 	"github.com/patrick-gogo/kaze-terminal/internal/theme"
@@ -37,6 +38,7 @@ type sideState struct {
 	doc, hoverDoc docID
 	shown         tabs.TabID      // highlighted row or member
 	openAgent     subagents.Key   // the subagent whose docked panel is shown
+	hoverAgent    subagents.Key   // the tray line under the pointer, whose step shows as a tooltip
 	settings      bool            // the pinned "Settings" row is open
 	settingsOn    bool            // and shown
 	hover         tabs.TabID      // row showing its ×
@@ -54,6 +56,7 @@ type sideRowHit struct {
 	id          tabs.TabID
 	rect, close image.Rectangle
 	title       image.Rectangle // a session row's title line, where a double click renames
+	fold        image.Rectangle // its agent tray's fold control, empty when it has no tray
 	mark        mark            // the alert dot a member line drew
 }
 
@@ -84,15 +87,29 @@ type sideHits struct {
 	filter                                                                          image.Rectangle
 	next                                                                            image.Rectangle // the "Next waiting" button
 	list                                                                            image.Rectangle // the scrollable area, for wheel events
+	rail                                                                            image.Rectangle // the active project's accent rail, empty when none shows
+	tip                                                                             image.Rectangle // the hovered agent's step tooltip, empty when none shows
 	rename                                                                          image.Rectangle // the rename editor, empty while none is drawn
 	scrollMax                                                                       int
-	noMatches                                                                       bool // the filter hides every session
+	noMatches                                                                       bool      // the filter hides every session
+	chip                                                                            [3]string // the tray chip or footer parts as drawn, for tests
 }
 
 // fitSide draws s at size within room px, cut with a trailing "…" when it is longer.
 func (c *chrome) fitSide(gtx layout.Context, s string, size unit.Sp, room int, col color.NRGBA) (op.CallOp, image.Point) {
+	return c.fitSideWeight(gtx, s, size, room, col, font.Normal)
+}
+
+// fitSideWeight is fitSide in the chrome font at weight w.
+func (c *chrome) fitSideWeight(gtx layout.Context, s string, size unit.Sp, room int, col color.NRGBA, w font.Weight) (op.CallOp, image.Point) {
+	call, sz, _ := c.fitSideText(gtx, s, size, room, col, w)
+	return call, sz
+}
+
+// fitSideText is fitSideWeight that also returns the text it drew.
+func (c *chrome) fitSideText(gtx layout.Context, s string, size unit.Sp, room int, col color.NRGBA, w font.Weight) (op.CallOp, image.Point, string) {
 	s = cutRunes(c.fit(s), maxSideText)
-	call, sz := c.label(gtx, s, size, col)
+	call, sz := c.labelW(gtx, s, size, col, w)
 	for i := 0; i < 6 && sz.X > room && s != ""; i++ {
 		n := utf8.RuneCountInString(s)
 		keep := min(n*max(room, 0)/max(sz.X, 1), n-1)
@@ -101,13 +118,13 @@ func (c *chrome) fitSide(gtx layout.Context, s string, size unit.Sp, room int, c
 		} else {
 			s = cutRunes(s, keep)
 		}
-		call, sz = c.label(gtx, s, size, col)
+		call, sz = c.labelW(gtx, s, size, col, w)
 	}
 	if sz.X > room {
-		call, sz = c.label(gtx, "", size, col)
-		sz.X = 0
+		call, sz = c.labelW(gtx, "", size, col, w)
+		sz.X, s = 0, ""
 	}
-	return call, sz
+	return call, sz, s
 }
 
 // sideDot draws a state mark: an amber dot with a soft halo for needs you, green for
@@ -180,7 +197,7 @@ func (c *chrome) runningMark(gtx layout.Context, slot image.Rectangle) {
 // layoutSidebar paints the sidebar into size and returns where its parts are. The
 // session list scrolls inside hits.list; the workspaces section is pinned to the bottom.
 func (c *chrome) layoutSidebar(gtx layout.Context, m sideModel, st sideState, size image.Point) sideHits {
-	ops, th := gtx.Ops, c.th
+	ops, th := gtx.Ops, c.sideTheme()
 	var h sideHits
 	paint.FillShape(ops, th.Chrome, clip.Rect{Max: size}.Op())
 	paint.FillShape(ops, th.Border, clip.Rect(image.Rect(size.X-1, 0, size.X, size.Y)).Op())
@@ -249,13 +266,48 @@ func (c *chrome) layoutSidebar(gtx layout.Context, m sideModel, st sideState, si
 	if len(m.Runs) > 0 {
 		c.sideRuns(gtx, &h, m, st, secTop, size, closeCall, closeSize)
 	}
+	c.trayTip(gtx, &h, st.hoverAgent)
 	return h
+}
+
+// trayTip draws the hovered tray line's current step as a one-line tooltip under the
+// line, or above it when the list has no room below. It is part of the retained
+// sidebar, keyed by the hovered agent, so it needs no timer and no extra frames.
+func (c *chrome) trayTip(gtx layout.Context, h *sideHits, k subagents.Key) {
+	if k == (subagents.Key{}) {
+		return
+	}
+	for _, a := range h.agents {
+		if a.kind != hitAgentLine || a.key != k || a.tip == "" {
+			continue
+		}
+		ops, ink := gtx.Ops, c.sideInk()
+		pad, rad := gtx.Dp(6), gtx.Dp(6)
+		box := image.Rect(a.rect.Min.X, 0, h.list.Max.X-gtx.Dp(8), 0)
+		call, sz := c.fitSide(gtx, a.tip, 11, max(box.Dx()-2*pad, 0), ink.tipFG)
+		ht := sz.Y + 2*pad
+		box.Min.Y, box.Max.Y = a.rect.Max.Y, a.rect.Max.Y+ht
+		if box.Max.Y > h.list.Max.Y {
+			box.Min.Y, box.Max.Y = a.rect.Min.Y-ht, a.rect.Min.Y
+		}
+		if box.Empty() || sz.X == 0 {
+			return
+		}
+		cl := clip.Rect(h.list).Push(ops)
+		defer cl.Pop()
+		rr := clip.UniformRRect(box, rad)
+		paint.FillShape(ops, ink.tipBG, rr.Op(ops))
+		stroke(ops, box, rad, c.th.ToastLine)
+		place(ops, call, image.Pt(box.Min.X+pad, box.Min.Y+pad))
+		h.tip = box.Intersect(h.list)
+		return
+	}
 }
 
 // lineEditor draws a sidebar text field's editor in r, gap in from its left, and ph
 // while it is empty.
 func (c *chrome) lineEditor(gtx layout.Context, ed *widget.Editor, r image.Rectangle, ph string, phCol color.NRGBA, gap int) {
-	ops, th := gtx.Ops, c.th
+	ops, th := gtx.Ops, c.sideTheme()
 	_, line := c.label(gtx, "Ag", 12, th.ActiveFG)
 	at := image.Pt(r.Min.X+gap, r.Min.Y+(r.Dy()-line.Y)/2)
 	if ed.Len() == 0 && ph != "" {
@@ -284,7 +336,7 @@ func fillGlyph(ops *op.Ops, col color.NRGBA, r image.Rectangle, glyph clip.Op) {
 // sideList draws the scrolled groups and loose rows, clipped to h.list, and records hits
 // for the visible parts only.
 func (c *chrome) sideList(gtx layout.Context, h *sideHits, m sideModel, st sideState, closeCall op.CallOp, closeSize image.Point) {
-	ops, th := gtx.Ops, c.th
+	ops, th, ink := gtx.Ops, c.sideTheme(), c.sideInk()
 	pad, gap, hitPad := gtx.Dp(8), gtx.Dp(8), gtx.Dp(4)
 	groupH, rowH := gtx.Dp(sideGroupH), gtx.Dp(sideRowH)
 	dot := gtx.Dp(7)
@@ -323,9 +375,7 @@ func (c *chrome) sideList(gtx layout.Context, h *sideHits, m sideModel, st sideS
 		rect := image.Rect(pad, y, h.list.Max.X-pad, y+rowH)
 		y += rowSpan(gtx, r)
 		c.docLines(gtx, h, r, st, rect.Min.X+gap+dot+gap, rect.Max.X-gap, rect.Max.Y, closeCall, closeSize)
-		if len(r.Agents) > 0 || r.MoreAgents > 0 {
-			c.agentLines(gtx, h, r, rect.Min.X+gap+dot+gap, rect.Max.X-gap, rect.Max.Y+len(r.Docs)*gtx.Dp(sideDocH), st.openAgent)
-		}
+		c.trayLines(gtx, h, r, rect, rect.Max.Y+len(r.Docs)*gtx.Dp(sideDocH), st.openAgent, ink)
 		if !rect.Overlaps(h.list) {
 			return
 		}
@@ -342,10 +392,15 @@ func (c *chrome) sideList(gtx layout.Context, h *sideHits, m sideModel, st sideS
 		titleBand := image.Rect(tx, rect.Min.Y+gtx.Dp(4), tx+max(room, 0), rect.Min.Y+gtx.Dp(24))
 		word := r.stateWord()
 		wcol := th.Accent
-		switch r.Mark {
-		case markNeeds:
+		switch {
+		case r.TrayTotal > 0:
+			// The tray's fold control: amber when the session or a folded agent waits.
+			if r.Mark == markNeeds || r.TrayFolded && r.TrayWaiting > 0 {
+				wcol = ink.needs
+			}
+		case r.Mark == markNeeds:
 			wcol = th.Needs
-		case markDone:
+		case r.Mark == markDone:
 			wcol = th.Done
 		}
 		var wCall op.CallOp
@@ -409,11 +464,20 @@ func (c *chrome) sideList(gtx layout.Context, h *sideHits, m sideModel, st sideS
 			}
 		}
 		hit := sideRowHit{id: r.ID, rect: rect.Intersect(h.list), title: titleBand.Intersect(h.list)}
+		if r.TrayTotal > 0 && word != "" {
+			wmid := rect.Min.Y + gtx.Dp(14)
+			// It ends at right, a gap clear of the × on a hovered row, so a near-miss never closes.
+			hit.fold = image.Rect(right-wordW-hitPad, wmid-wSize.Y/2-hitPad, right, wmid+wSize.Y/2+hitPad).Intersect(h.list)
+		}
 		if st.hover == r.ID && r.ID != 0 {
 			cx := rect.Max.X - gap - closeSize.X
 			cmid := rect.Min.Y + gtx.Dp(14)
 			place(ops, closeCall, image.Pt(cx, cmid-closeSize.Y/2))
-			hit.close = image.Rect(cx-hitPad, cmid-closeSize.Y/2-hitPad, rect.Max.X, cmid+closeSize.Y/2+hitPad).Intersect(h.list)
+			left := cx - hitPad
+			if !hit.fold.Empty() {
+				left = cx // no left pad: the gap to the fold control stays a dead zone
+			}
+			hit.close = image.Rect(left, cmid-closeSize.Y/2-hitPad, rect.Max.X, cmid+closeSize.Y/2+hitPad).Intersect(h.list)
 		}
 		h.rows = append(h.rows, hit)
 	}
@@ -428,6 +492,14 @@ func (c *chrome) sideList(gtx layout.Context, h *sideHits, m sideModel, st sideS
 		if !g.Folded {
 			for _, r := range g.Rows {
 				row(r)
+			}
+		}
+		if g.Key != "" && g.Key == st.activeRepo {
+			// The project you are in: a thin accent rail from its header to its last row.
+			x := h.list.Min.X + gtx.Dp(2)
+			h.rail = image.Rect(x, hd.Min.Y, x+gtx.Dp(2), y).Intersect(h.list)
+			if !h.rail.Empty() {
+				paint.FillShape(ops, th.Accent, clip.UniformRRect(h.rail, gtx.Dp(1)).Op(ops))
 			}
 		}
 		if g.Finished > 0 {
@@ -447,7 +519,7 @@ func (c *chrome) sideList(gtx layout.Context, h *sideHits, m sideModel, st sideS
 
 // rowTitle draws the agent logo and name, or the rename field.
 func (c *chrome) rowTitle(gtx layout.Context, r sideRow, st sideState, h *sideHits, band image.Rectangle, fg color.NRGBA) {
-	ops, th := gtx.Ops, c.th
+	ops, th := gtx.Ops, c.sideTheme()
 	if r.ID == st.renaming {
 		field := image.Rect(band.Min.X-gtx.Dp(4), band.Min.Y, band.Max.X, band.Max.Y)
 		rr := clip.UniformRRect(field, gtx.Dp(4))
@@ -477,16 +549,11 @@ func (c *chrome) rowTitle(gtx layout.Context, r sideRow, st sideState, h *sideHi
 // sideGroupHeader draws one repo header: the name and the count, or the
 // amber "N waiting"; a folded group also names the shown session inside it.
 func (c *chrome) sideGroupHeader(gtx layout.Context, g sideGroup, st sideState, hd image.Rectangle) {
-	ops, th := gtx.Ops, c.th
+	ops, th := gtx.Ops, c.sideTheme()
 	gap := gtx.Dp(8)
 	mid := hd.Min.Y + hd.Dy()/2
-	nameColor, arrowColor := th.ActiveFG, th.Muted
-	if g.Key != "" && g.Key == st.activeRepo {
-		bg, fg := c.activeProjectColors()
-		paint.FillShape(ops, bg, clip.UniformRRect(hd, gtx.Dp(7)).Op(ops))
-		stroke(ops, hd, gtx.Dp(7), mix(th.Chrome, th.Accent, 0.28))
-		nameColor, arrowColor = fg, fg
-	}
+	nameColor, weight := c.groupNameStyle(g.Key != "" && g.Key == st.activeRepo)
+	arrowColor := th.Muted
 
 	cx := hd.Min.X + gap
 	chev := "▾"
@@ -501,9 +568,6 @@ func (c *chrome) sideGroupHeader(gtx layout.Context, g sideGroup, st sideState, 
 	if g.Waiting > 0 {
 		right, rcol = strconv.Itoa(g.Waiting)+" waiting", th.Needs
 	}
-	if g.Key != "" && g.Key == st.activeRepo {
-		rcol = c.activeProjectCountColor(g.Waiting > 0)
-	}
 	rCall, rSize := c.label(gtx, right, 11, rcol)
 	rx := hd.Max.X - gap - rSize.X
 	place(ops, rCall, image.Pt(rx, mid-rSize.Y/2))
@@ -517,7 +581,7 @@ func (c *chrome) sideGroupHeader(gtx layout.Context, g sideGroup, st sideState, 
 			}
 		}
 	}
-	nCall, nSize := c.fitSide(gtx, name, 12, rx-gap-cx, nameColor)
+	nCall, nSize := c.fitSideWeight(gtx, name, 12, rx-gap-cx, nameColor, weight)
 	place(ops, nCall, image.Pt(cx, mid-nSize.Y/2))
 }
 
@@ -525,7 +589,7 @@ func (c *chrome) sideGroupHeader(gtx layout.Context, g sideGroup, st sideState, 
 // run its name with all up / N ready / N down and one line per member, with its alert dot and,
 // while hovered, its ×.
 func (c *chrome) sideRuns(gtx layout.Context, h *sideHits, m sideModel, st sideState, secTop int, size image.Point, closeCall op.CallOp, closeSize image.Point) {
-	ops, th := gtx.Ops, c.th
+	ops, th := gtx.Ops, c.sideTheme()
 	pad, gap, hitPad := gtx.Dp(8), gtx.Dp(8), gtx.Dp(4)
 	hdH, memH := gtx.Dp(26), gtx.Dp(24)
 	right := size.X - 1
@@ -708,22 +772,42 @@ func (c *chrome) alertDot(gtx layout.Context, right, mid int, mk mark) int {
 	return x
 }
 
-func (c *chrome) activeProjectColors() (color.NRGBA, color.NRGBA) {
-	fg := c.th.ToastGo
-	if fg == c.th.Accent {
-		fg = mix(c.th.Accent, c.th.ActiveFG, 0.2)
+// sideInk is the sidebar's text colors, nudged just far enough to read at 4.5:1 on
+// the sidebar, the tray chip and the tooltip in every theme (spec 5).
+type sideInk struct{ muted, needs, kind, chipLead, chipBG, tipFG, tipBG color.NRGBA }
+
+func (c *chrome) sideInk() sideInk {
+	if c.inkFor == c.th && c.inkMag == c.ansi[5] {
+		return c.ink
 	}
-	return mix(c.th.Chrome, c.th.Accent, 0.12), fg
+	th := c.th
+	var k sideInk
+	k.chipBG = mix(th.Chrome, th.Accent, 0.08)
+	// Muted and amber text also sit on the chip, a touch nearer the accent than the sidebar.
+	k.muted = render.Readable(render.Readable(th.Muted, k.chipBG), th.Chrome)
+	k.needs = render.Readable(render.Readable(th.Needs, k.chipBG), th.Chrome)
+	k.kind = render.Readable(c.memberColor("magenta"), th.Chrome)
+	k.chipLead = render.Readable(mix(th.Accent, th.ActiveFG, 0.35), k.chipBG)
+	k.tipBG = th.ToastBG
+	k.tipFG = render.Readable(th.ToastFG, th.ToastBG)
+	c.ink, c.inkFor, c.inkMag = k, th, c.ansi[5]
+	return k
 }
 
-// Raise secondary-text contrast on the tinted header while retaining the
-// muted count and amber waiting-count distinction, including light themes.
-func (c *chrome) activeProjectCountColor(waiting bool) color.NRGBA {
-	col := c.th.Muted
-	if waiting {
-		col = c.th.Needs
+// sideTheme is the theme with the sidebar's muted and amber text nudged by sideInk.
+func (c *chrome) sideTheme() theme.Chrome {
+	th, k := c.th, c.sideInk()
+	th.Muted, th.Needs = k.muted, k.needs
+	return th
+}
+
+// groupNameStyle is a project header's name color and weight: the project you are
+// in is bold, the rail beside it does the rest.
+func (c *chrome) groupNameStyle(active bool) (color.NRGBA, font.Weight) {
+	if active {
+		return c.th.ActiveFG, font.Bold
 	}
-	return mix(col, c.th.ActiveFG, 0.4)
+	return c.th.ActiveFG, font.Normal
 }
 
 // runHeaderState is a workspace header's state text and color: "N down" in red

@@ -387,7 +387,11 @@ func (r *Renderer) drawCell(img *image.RGBA, x, y int, cell screen.Cell, over *c
 
 	if cell.Rune > ' ' && cell.Width != 0 {
 		g := r.glyphs.get(cell.Rune, cell.Attrs&screen.AttrBold != 0, cells == 2)
-		if !g.empty {
+		if g.empty {
+			// nothing to draw
+		} else if g.color != nil {
+			blendColor(img, x, y, w, h, g.color)
+		} else {
 			blendMask(img, x, y, w, h, g.mask, fg, bg)
 		}
 	}
@@ -410,6 +414,31 @@ func fillRect(img *image.RGBA, x, y, w, h int, c color.NRGBA) {
 	first := row[:w*4]
 	for j := 1; j < h; j++ {
 		copy(img.Pix[img.PixOffset(x, y+j):], first)
+	}
+}
+
+// blendColor draws a premultiplied colour glyph over the cell: dst = src + dst*(255-a)/255.
+// It ignores FG; the background (selection, inverse) shows through transparent pixels.
+func blendColor(img *image.RGBA, x, y, w, h int, c *image.RGBA) {
+	w = min(w, c.Rect.Dx())
+	h = min(h, c.Rect.Dy())
+	for j := 0; j < h; j++ {
+		src := c.Pix[j*c.Stride : j*c.Stride+w*4]
+		dst := img.Pix[img.PixOffset(x, y+j):]
+		for o := 0; o < len(src); o += 4 {
+			a := uint32(src[o+3])
+			if a == 0 {
+				continue
+			}
+			if a == 0xff {
+				dst[o], dst[o+1], dst[o+2] = src[o], src[o+1], src[o+2]
+				continue
+			}
+			k := 255 - a
+			dst[o] = uint8(uint32(src[o]) + (uint32(dst[o])*k+127)/255)
+			dst[o+1] = uint8(uint32(src[o+1]) + (uint32(dst[o+1])*k+127)/255)
+			dst[o+2] = uint8(uint32(src[o+2]) + (uint32(dst[o+2])*k+127)/255)
+		}
 	}
 }
 

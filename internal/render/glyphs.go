@@ -28,6 +28,7 @@ type glyphKey struct {
 // so one rasterization serves every color combination.
 type glyph struct {
 	mask  *image.Alpha
+	color *image.RGBA // a colour emoji (premultiplied, the span's size); mask is nil then
 	face  faceID
 	empty bool // no ink at all: the copy can skip the mask
 }
@@ -120,8 +121,16 @@ func (c *glyphCache) get(r rune, bold, wide bool) *glyph {
 	}
 	w := cells * fs.cellW
 	var mask *image.Alpha
-	if id == faceBox {
+	var col *image.RGBA
+	if id == faceEmoji {
+		col = fs.drawColor(r, w)
+	}
+	if col != nil {
+		// drawn in colour
+	} else if id == faceBox {
 		mask = drawBox(r, w, fs.cellH, fs.cellW)
+	} else if id == faceEmoji {
+		mask = fs.drawOutline(fs.emojiFace, r, w)
 	} else if id >= faceSystem {
 		mask = fs.drawFallback(int(id-faceSystem), r, w)
 	} else {
@@ -142,11 +151,20 @@ func (c *glyphCache) get(r rune, bold, wide bool) *glyph {
 		d.DrawString(string(draw))
 	}
 
-	g := &glyph{mask: mask, face: id, empty: true}
-	for _, p := range mask.Pix {
-		if p != 0 {
-			g.empty = false
-			break
+	g := &glyph{mask: mask, color: col, face: id, empty: true}
+	if col != nil {
+		for i := 3; i < len(col.Pix); i += 4 {
+			if col.Pix[i] != 0 {
+				g.empty = false
+				break
+			}
+		}
+	} else {
+		for _, p := range mask.Pix {
+			if p != 0 {
+				g.empty = false
+				break
+			}
 		}
 	}
 	c.m[k] = g

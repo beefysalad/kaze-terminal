@@ -39,14 +39,14 @@ func (f *fakePTY) Close() error {
 }
 
 type harness struct {
-	t       *testing.T
+	t       testing.TB
 	pty     *fakePTY
 	s       *term.Session
 	changed chan struct{}
 	r       *Renderer
 }
 
-func newHarness(t *testing.T, cols, rows int) *harness {
+func newHarness(t testing.TB, cols, rows int) *harness {
 	t.Helper()
 	h := &harness{t: t, pty: newFakePTY(), changed: make(chan struct{}, 64)}
 	h.s = term.NewSession(h.pty, cols, rows, func() { h.changed <- struct{}{} })
