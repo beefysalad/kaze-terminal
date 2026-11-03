@@ -172,6 +172,29 @@ colours are nudged against every surface they sit on; a `needsRaised` colour exi
 raised surfaces; colours are worked out once per theme; `reveal` and `selY` scroll the selection
 into view after ↑/↓.
 
+## Review fixes
+
+Fixed after review, each with a failing test first:
+
+- Clicking a sidebar "+N more" chip while the board's search had the keyboard turned search back
+  on in the same frame, so the arrows, `/` and Enter went to the field. Now only a field that has
+  just gained the keyboard counts as a click into it.
+- Enter did nothing when the previewed agent's row was hidden by the filter, search or a fold;
+  it now opens that agent, as "Open in session" does.
+- A finished agent's sidebar line skipped report lines like "#125 landed". Only `#` followed by a
+  space, or a line of only `#`, counts as a heading now.
+- Closing the board now drops the preview's transcript and parsed report. "Open in reader" reads
+  the report before it closes the board, so it still shows the transcript's report.
+- The board search no longer lower-cases every row's text each frame; it compares letter by
+  letter and allocates nothing. A search frame now costs about the same as one without (290 vs
+  289 allocations with 50 agents).
+- The 50-agent still-frame test now fails above 400 allocations (289 today), and when a search
+  adds more than 10.
+- The preview's "In <session> · <repo>" line has its own line height instead of reusing the
+  eyebrow's middle.
+- The board's unread list-pane rectangle is gone. The card hit's `rect` and `meter` stay: tests
+  use them to check the layout.
+
 ## Owner checks
 
 - Product screenshots (lander and README) need retaking with the new board and tray
