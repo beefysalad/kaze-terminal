@@ -1224,6 +1224,19 @@ func (win *window) onKey(gtx layout.Context, t *tabs.Tab, e key.Event, m term.Mo
 		return
 	}
 	out := routeKey(runtime.GOOS, win.km, e.Name, e.Modifiers, m)
+	if out.act == actNone {
+		switch warpClipKey(runtime.GOOS, e.Name, e.Modifiers, win.hasSel(t.ID)) {
+		case actCopy:
+			// Clear the selection so the next Ctrl+C interrupts again.
+			win.gate.onKey(true, keyOut{act: actCopy})
+			win.copySel(gtx, t)
+			win.selOf(t.ID).clear()
+			win.w.Invalidate()
+			return
+		case actPaste:
+			out = keyOut{act: actPaste}
+		}
+	}
 	win.gate.onKey(true, out)
 	switch {
 	case out.act != actNone:
@@ -1289,11 +1302,18 @@ func (win *window) hasClipImage() bool {
 	return systemClipImage()
 }
 
-// emptyPasteKey is what the paste shortcut sends when the clipboard has no
-// text. On macOS that is Ctrl+V, since Cmd+V is kaze's paste and Ctrl+V is how
-// Claude Code and Codex paste an image. Elsewhere Ctrl+V already reaches the app.
-func emptyPasteKey(goos string) string {
-	if goos == "darwin" {
+// emptyPasteKey is what the paste shortcut sends to agent when the clipboard
+// has an image and no text: the agent's own image-paste key. On macOS that is
+// Ctrl+V, since Cmd+V is kaze's paste. On Windows, Ctrl+V is kaze's paste too;
+// Claude Code pastes an image with Alt+V there and Codex with Ctrl+V.
+func emptyPasteKey(goos, agent string) string {
+	switch goos {
+	case "darwin":
+		return "\x16"
+	case "windows":
+		if agent == "claude" {
+			return "\x1bv"
+		}
 		return "\x16"
 	}
 	return ""
@@ -1308,9 +1328,10 @@ func (win *window) paste(t *tabs.Tab, e transfer.DataEvent, m term.Modes) {
 	}
 	if len(b) == 0 {
 		// No text: the clipboard may hold an image, such as a screenshot. Let
-		// an agent read it the way it pastes images (Claude Code and Codex:
-		// Ctrl+V). Only then: in a plain zsh, Ctrl+V makes the next key literal.
-		if k := emptyPasteKey(runtime.GOOS); k != "" && win.terms.in(t) != "" && win.hasClipImage() {
+		// an agent read it with its own image-paste key. Only an agent: in a
+		// plain shell, Ctrl+V makes the next key literal.
+		agent := win.terms.in(t)
+		if k := emptyPasteKey(runtime.GOOS, agent); k != "" && agent != "" && win.hasClipImage() {
 			win.takeOver(t)
 			win.writeInput(t, []byte(k))
 			win.snapToBottom(t.Session)

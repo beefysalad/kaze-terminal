@@ -1,6 +1,6 @@
-//go:build !darwin || ios
+//go:build (!darwin && !windows) || ios
 
 package ui
 
-// systemClipImage is only needed on macOS, where Cmd+V stands in for Ctrl+V.
+// systemClipImage has no clipboard image check on this platform.
 func systemClipImage() bool { return false }

@@ -146,8 +146,8 @@ binaries; re-run `go test` with `-ldflags "-X main.r=<random>"`.
 | Open the palette | Ctrl+Shift+K | Cmd+K |
 | Show or hide the scratch shell | Ctrl+Shift+` | Ctrl+` |
 | Show or hide the agents board | Ctrl+Shift+A | Cmd+Shift+A |
-| Copy the selection | Ctrl+Shift+C | Cmd+C |
-| Paste | Ctrl+Shift+V | Cmd+V |
+| Copy the selection | Ctrl+C (with a selection) or Ctrl+Shift+C | Cmd+C |
+| Paste | Ctrl+V or Ctrl+Shift+V | Cmd+V |
 | Open settings | Ctrl+, | Cmd+, |
 | New line in Claude Code (without sending) | Shift+Enter or Alt+Enter | Shift+Enter or Option+Enter |
 
@@ -160,10 +160,13 @@ Session switching follows sidebar order, skips workspace members and scratch she
 from a focused floating terminal too. If a busy terminal cannot accept more input, Kaze shows
 "Input not sent"; wait for it to respond before trying again.
 
-On macOS, Cmd+V with an image on the clipboard (a screenshot, say) pastes it into Claude Code or
-Codex: kaze sends them Ctrl+V, the key they read images with. A plain shell never gets it.
+Pasting with an image on the clipboard (a screenshot, say) puts it into Claude Code or Codex:
+kaze sends them the key they read images with (Ctrl+V; on Windows, Alt+V for Claude Code). A
+plain shell never gets it.
 
-Plain Ctrl+C always goes to the shell as an interrupt. Shift+Enter sends the same sequence as
+On Windows, Ctrl+C and Ctrl+V work like Warp: Ctrl+C copies when text is selected and clears the
+selection, so the next Ctrl+C interrupts; with nothing selected it goes to the shell as an
+interrupt. Ctrl+V pastes. On macOS, plain Ctrl+C always goes to the shell. Shift+Enter sends the same sequence as
 Alt+Enter (Option+Enter on macOS), adding a new line in Claude Code while plain Enter submits.
 Other terminal programs handle that sequence according to their own keybindings. The session, copy,
 paste, sidebar, next-waiting, palette, scratch shell, agents board and settings shortcuts can be changed under `[keys]` in the
