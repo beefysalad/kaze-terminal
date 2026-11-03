@@ -3,7 +3,6 @@ package ui
 import (
 	"slices"
 	"strings"
-	"unicode"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/branchsession"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
@@ -342,10 +341,8 @@ func (in sideInput) ruled(t *tabs.Tab, loc locEntry, a agentState) string {
 		return a.arg
 	}
 	if a.agentName() != "" {
-		title := strings.TrimLeftFunc(t.Title, func(r rune) bool {
-			return unicode.IsSpace(r) || r == '✳' || r == '✻' || r == '✽' || r == '⏺' || (r >= 0x2800 && r <= 0x28ff)
-		})
-		if title != "" && !looksLikePath(title) {
+		title := dropStatusMark(t.Title)
+		if !onlyStatus(title) && !looksLikePath(title) {
 			return title
 		}
 	}
