@@ -198,5 +198,4 @@ func (win *window) pruneSubs(list []*tabs.Tab) {
 			delete(win.subTabs, id)
 		}
 	}
-	win.dropGoneAgents()
 }

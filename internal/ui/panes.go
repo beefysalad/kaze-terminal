@@ -4,14 +4,8 @@ import (
 	"image"
 	"slices"
 	"sort"
-	"time"
-
-	"gioui.org/io/system"
-	"gioui.org/text"
-	"gioui.org/unit"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/render"
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 )
 
@@ -35,7 +29,6 @@ type paneKind int
 const (
 	paneMember paneKind = iota
 	paneScratch
-	paneAgent // a subagent's live pane: drawn by kaze, no terminal, never the keyboard
 )
 
 // pane is one floating terminal over a session. r is kept in dp relative to
@@ -52,47 +45,12 @@ type pane struct {
 	frame  int             // event tag: header and edges
 	hits   paneHits
 	grab   paneGrab
-
-	// Live panes only.
-	transcript                      *subagents.Transcript
-	transcriptPath                  string
-	transcriptAt, transcriptStarted time.Time
-	agent                           subagents.Key
-	scroll                          int  // px the body is scrolled down
-	follow                          bool // keep the newest line in view
-	wrapKey                         paneWrapKey
-	wrapped                         []agentLine
-	promptWrap                      wrapCache // the prompt and report laid out once, so a new step
-	reportWrap                      wrapCache // only redoes the one-line summary
-}
-
-// wrapCache is one block of text wrapped to a width, kept until either changes.
-type paneWrapKey struct {
-	stream          *subagents.Transcript
-	streamVersion   uint64
-	streamAvailable bool
-	width           int
-	prompt, report  string
-	activity        subagents.Activity
-	state           subagents.State
-	metric          unit.Metric
-	locale          system.Locale
-	shaper          *text.Shaper
-}
-
-type wrapCache struct {
-	metric unit.Metric
-	locale system.Locale
-	shaper *text.Shaper
-	src    string
-	w      int
-	lines  []agentLine
 }
 
 // paneHits is where the last frame drew a pane, in window px.
 type paneHits struct {
 	outer, header, body image.Rectangle
-	expand, close, copy image.Rectangle // empty when the pane has no such button
+	expand, close       image.Rectangle // empty when the pane has no such button
 }
 
 // paneGrab is a header drag or an edge resize in progress.
@@ -116,9 +74,6 @@ type floats struct {
 	views   []paneView   // drawn last frame, front last; input uses them
 	redraws int          // frames pane gestures asked for; tests count them
 	refocus bool         // the pane with the keyboard was just drawn: focus it once its filters are up
-
-	agentIDs  map[subagents.Key]tabs.TabID // live panes' ids, negative
-	lastAgent tabs.TabID
 }
 
 func (f *floats) set(session tabs.TabID) *paneSet {
@@ -155,9 +110,6 @@ func (f *floats) open(session, id tabs.TabID, kind paneKind) (p *pane, dropped t
 		p.r = scratchRectDp
 	} else {
 		size := memberSizeDp
-		if kind == paneAgent {
-			size = agentSizeDp
-		}
 		n := len(s.visible())
 		at := image.Pt(80+30*n, 40+30*n)
 		p.r = image.Rectangle{Min: at, Max: at.Add(size)}
@@ -226,10 +178,6 @@ func (f *floats) prune(exists func(tabs.TabID) bool) (orphans, released []tabs.T
 		kept := s.panes[:0]
 		for _, p := range s.panes {
 			switch {
-			case p.kind == paneAgent && !gone:
-				kept = append(kept, p)
-				continue
-			case p.kind == paneAgent: // its session closed
 			case !exists(p.id):
 			case gone && p.kind == paneScratch:
 				orphans = append(orphans, p.id)

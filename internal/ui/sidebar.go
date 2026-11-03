@@ -16,6 +16,7 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 
+	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 )
 
@@ -34,6 +35,7 @@ type sideState struct {
 	launch        *branchLauncher
 	doc, hoverDoc docID
 	shown         tabs.TabID      // highlighted row or member
+	openAgent     subagents.Key   // the subagent whose docked panel is shown
 	settings      bool            // the pinned "Settings" row is open
 	settingsOn    bool            // and shown
 	hover         tabs.TabID      // row showing its ×
@@ -321,7 +323,7 @@ func (c *chrome) sideList(gtx layout.Context, h *sideHits, m sideModel, st sideS
 		y += rowSpan(gtx, r)
 		c.docLines(gtx, h, r, st, rect.Min.X+gap+dot+gap, rect.Max.X-gap, rect.Max.Y, closeCall, closeSize)
 		if len(r.Agents) > 0 || r.MoreAgents > 0 {
-			c.agentLines(gtx, h, r, rect.Min.X+gap+dot+gap, rect.Max.X-gap, rect.Max.Y+len(r.Docs)*gtx.Dp(sideDocH))
+			c.agentLines(gtx, h, r, rect.Min.X+gap+dot+gap, rect.Max.X-gap, rect.Max.Y+len(r.Docs)*gtx.Dp(sideDocH), st.openAgent)
 		}
 		if !rect.Overlaps(h.list) {
 			return

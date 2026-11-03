@@ -109,8 +109,8 @@ func TestBoardCardOpensPane(t *testing.T) {
 	if win.board.open || win.mgr.Active().ID != id {
 		t.Fatal("board still open or wrong session")
 	}
-	if p := win.fl.set(id).find(win.fl.agentID(subagents.Key{Session: "s", ID: "run"})); p == nil {
-		t.Fatal("no live pane")
+	if s := win.dockOf(id); s == nil || s.agent != (subagents.Key{Session: "s", ID: "run"}) {
+		t.Fatal("no agent panel")
 	}
 }
 
@@ -213,7 +213,7 @@ func TestAgentLineUnderActiveRowClosesTheBoard(t *testing.T) {
 	win, id := boardWindow(t)
 	win.mgr.SetActive(id)
 	win.openBoard(0)
-	win.openAgentPane(id, subagents.Key{Session: "s", ID: "run"})
+	win.showAgent(id, subagents.Key{Session: "s", ID: "run"}, false)
 	if win.board.open {
 		t.Fatal("the pane opened behind the board")
 	}

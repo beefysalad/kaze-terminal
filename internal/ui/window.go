@@ -689,6 +689,7 @@ func (win *window) frame(gtx layout.Context) error {
 	win.publish(win.shownTab(), win.focused)
 	win.drainAlerts(gtx.Now)
 	win.drainSubs(gtx.Now)
+	win.dropGoneAgents() // after the drain, so a panel never closes on an agent not applied yet
 	if at, ok := win.subTimer(gtx.Now); ok {
 		gtx.Execute(op.InvalidateCmd{At: at}) // the elapsed minutes, only while a subagent runs
 	}

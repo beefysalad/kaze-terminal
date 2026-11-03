@@ -97,7 +97,7 @@ func (win *window) dockReport(a *subagents.Agent) string {
 			return s.tr.Report(a.Report)
 		}
 	}
-	return win.agentReport(a) // the floating pane's transcript, then the hook's
+	return new(subagents.Transcript).Report(a.Report)
 }
 
 // dockTick reads s's transcript at most once per agentTranscriptPoll while

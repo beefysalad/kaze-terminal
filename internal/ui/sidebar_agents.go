@@ -31,6 +31,7 @@ type sideAgentHit struct {
 	key  subagents.Key
 	tab  tabs.TabID
 	more bool
+	open bool // its panel is the one shown
 	rect image.Rectangle
 }
 
@@ -96,7 +97,7 @@ func rowSpan(gtx layout.Context, r sideRow) int {
 }
 
 // agentLines draws a row's subagent lines from y down, inside x0..x1.
-func (c *chrome) agentLines(gtx layout.Context, h *sideHits, r sideRow, x0, x1, y int) {
+func (c *chrome) agentLines(gtx layout.Context, h *sideHits, r sideRow, x0, x1, y int, open subagents.Key) {
 	ops, th := gtx.Ops, c.th
 	gap, dot := gtx.Dp(8), gtx.Dp(6)
 	mag := c.memberColor("magenta")
@@ -105,6 +106,11 @@ func (c *chrome) agentLines(gtx layout.Context, h *sideHits, r sideRow, x0, x1, 
 		y = band.Max.Y
 		if !band.Overlaps(h.list) {
 			continue
+		}
+		isOpen := open != (subagents.Key{}) && a.Key == open
+		if isOpen {
+			// The agent whose panel is shown, highlighted like the selected session row.
+			paint.FillShape(ops, th.Active, clip.UniformRRect(image.Rect(x0-gtx.Dp(6), band.Min.Y, x1+gtx.Dp(4), band.Max.Y), gtx.Dp(6)).Op(ops))
 		}
 		x := x0 + gtx.Dp(12)*min(a.Depth, 1)
 		mid := band.Min.Y + gtx.Dp(10)
@@ -135,7 +141,7 @@ func (c *chrome) agentLines(gtx layout.Context, h *sideHits, r sideRow, x0, x1, 
 			aCall, aSize := c.fitSide(gtx, a.Action, 10, x1-tx, th.Muted)
 			place(ops, aCall, image.Pt(tx, amid-aSize.Y/2))
 		}
-		h.agents = append(h.agents, sideAgentHit{key: a.Key, tab: r.ID, rect: band.Intersect(h.list)})
+		h.agents = append(h.agents, sideAgentHit{key: a.Key, tab: r.ID, open: isOpen, rect: band.Intersect(h.list)})
 	}
 	if r.MoreAgents > 0 {
 		band := image.Rect(x0, y, x1, y+gtx.Dp(sideMoreH))

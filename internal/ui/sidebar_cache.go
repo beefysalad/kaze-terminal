@@ -10,6 +10,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/text"
 	"gioui.org/unit"
+	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 	"github.com/patrick-gogo/kaze-terminal/internal/theme"
 )
@@ -30,6 +31,7 @@ type sideDocInput struct {
 }
 type sideDrawKey struct {
 	activeRepo             string
+	openAgent              subagents.Key
 	launchVersion          uint64
 	launcher               bool
 	size                   image.Point

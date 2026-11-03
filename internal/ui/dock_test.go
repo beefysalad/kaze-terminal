@@ -82,7 +82,7 @@ func TestDockPerSession(t *testing.T) {
 
 func TestDockShrinksOnlyItsSession(t *testing.T) {
 	win, st, r, a, _, _, _ := paneWindow(t)
-	win.openDock(a.ID, subagents.Key{Session: "s", ID: "x"})
+	win.openDock(a.ID, startAgent(win, a.ID, "s", "x"))
 	floatFrames(t, win, r)
 	_, rows := win.mgr.Size()
 	if got := ptyOf(st, 0).lastSize()[1]; got >= rows {
@@ -98,7 +98,7 @@ func TestDockShrinksOnlyItsSession(t *testing.T) {
 
 func TestDockNoResizeChurn(t *testing.T) {
 	win, st, r, a, _, _, _ := paneWindow(t)
-	win.openDock(a.ID, subagents.Key{Session: "s", ID: "x"})
+	win.openDock(a.ID, startAgent(win, a.ID, "s", "x"))
 	floatFrames(t, win, r)
 	n := ptyOf(st, 0).resizeCount()
 	for range 5 {
@@ -111,7 +111,7 @@ func TestDockNoResizeChurn(t *testing.T) {
 
 func TestDockCloseRestoresSize(t *testing.T) {
 	win, st, r, a, _, _, _ := paneWindow(t)
-	win.openDock(a.ID, subagents.Key{Session: "s", ID: "x"})
+	win.openDock(a.ID, startAgent(win, a.ID, "s", "x"))
 	floatFrames(t, win, r)
 	win.closeDock(a.ID)
 	floatFrames(t, win, r)
@@ -126,7 +126,7 @@ func TestDockCloseRestoresSize(t *testing.T) {
 
 func TestDockPrunedWithSession(t *testing.T) {
 	win, _, r, a, _, _, _ := paneWindow(t)
-	win.openDock(a.ID, subagents.Key{Session: "s", ID: "x"})
+	win.openDock(a.ID, startAgent(win, a.ID, "s", "x"))
 	floatFrames(t, win, r)
 	win.closeTab(a.ID)
 	floatFrames(t, win, r)
@@ -140,7 +140,7 @@ func TestDockPrunedWithSession(t *testing.T) {
 
 func TestDockMemberPaneStaysAbove(t *testing.T) {
 	win, _, r, a, _, m1, _ := paneWindow(t)
-	win.openDock(a.ID, subagents.Key{Session: "s", ID: "x"})
+	win.openDock(a.ID, startAgent(win, a.ID, "s", "x"))
 	win.fl.open(a.ID, m1.ID, paneMember)
 	p := win.fl.set(a.ID).find(m1.ID)
 	p.r = image.Rect(0, 400, 560, 900) // asks to reach far below

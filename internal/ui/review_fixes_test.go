@@ -20,14 +20,14 @@ import (
 
 // recPTY records what the shell is sent; Close ends Read and Wait.
 type recPTY struct {
-	r    *io.PipeReader
-	w    *io.PipeWriter
-	mu   sync.Mutex
-	got  strings.Builder
-	size [2]int // the last Resize, cols and rows
-	resizes int // Resize calls
-	done chan struct{}
-	once sync.Once
+	r       *io.PipeReader
+	w       *io.PipeWriter
+	mu      sync.Mutex
+	got     strings.Builder
+	size    [2]int // the last Resize, cols and rows
+	resizes int    // Resize calls
+	done    chan struct{}
+	once    sync.Once
 }
 
 func newRecPTY() *recPTY {

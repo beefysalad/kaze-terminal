@@ -398,7 +398,7 @@ func (win *window) boardPress(p image.Point) {
 		if h.card.session {
 			win.selectTab(h.card.tab)
 		} else {
-			win.openAgentPane(h.card.tab, h.card.key)
+			win.showAgent(h.card.tab, h.card.key, false)
 		}
 		return
 	}

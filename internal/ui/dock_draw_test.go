@@ -101,6 +101,19 @@ func TestDockIdleNoWake(t *testing.T) {
 	}
 }
 
+func TestDockCodexNeverRead(t *testing.T) {
+	win, _, r, a, _, _, _ := paneWindow(t)
+	win.liveMgr.Store(win.mgr)
+	win.onNotify(notify.Msg{Tab: int(a.ID), Kind: notify.KindAgentStart, Session: "s", AgentID: "x", Agent: "codex", Transcript: filepath.Join(t.TempDir(), "s.jsonl")})
+	k := subagents.Key{Session: "s", ID: "x"}
+	win.openDock(a.ID, k)
+	floatFrames(t, win, r)
+	s := win.dockOf(a.ID)
+	if _, wake := win.dockTick(s, win.subs.Get(k), time.Now()); wake || s.tr != nil {
+		t.Fatal("a Codex helper's transcript was read")
+	}
+}
+
 func TestDockReportCopyIsMarkdown(t *testing.T) {
 	win, _, r, a, _, _, _ := paneWindow(t)
 	k := dockAgent(t, win, int(a.ID), "")
