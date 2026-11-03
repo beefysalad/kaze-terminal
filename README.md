@@ -534,11 +534,13 @@ the ones you already have. If any of the workspace's tabs is still open, the but
 ### Running workspaces in the sidebar
 
 A running workspace gets a header in the Workspaces section at the bottom of the sidebar,
-reading "all up" or "N down". Click the header to fold it.
+reading "all up", "N ready" (muted, when some members' commands finished) or "N down" (red,
+which wins). Click the header to fold it.
 
-- Each member gets one line: its color bar, its title and its status. A member reads `stopped`
-  in red when its commands finished or its shell exited, and `Failed` in red when its run
-  failed. A member's line shows an amber dot when it needs you and a green dot when it is done;
+- Each member gets one line: its color bar, its title and its status. A member reads `Ready`
+  (muted, not down) when its commands finished and its shell is still open, such as after
+  `docker compose up -d` or activating a venv. It reads `stopped` in red when its shell exited
+  or was closed, and `Failed` in red when its run failed. A member's line shows an amber dot when it needs you and a green dot when it is done;
   a folded header shows the amber one if any member needs you, else the green one. Click a
   member to float it over your session (see Floating panes below).
 - The Workspaces list in Settings shows how far each member got: Starting, Waiting for Docker

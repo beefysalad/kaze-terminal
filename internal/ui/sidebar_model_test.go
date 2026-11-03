@@ -254,13 +254,13 @@ func TestSideRunsFromWindowRuns(t *testing.T) {
 		t.Fatalf("runs %+v", got)
 	}
 	r := got[0]
-	if len(r.Members) != 4 || r.Down != 2 {
-		t.Fatalf("members %d down %d: %+v", len(r.Members), r.Down, r.Members)
+	if len(r.Members) != 4 || r.Down != 2 || r.Ready != 1 {
+		t.Fatalf("members %d down %d ready %d: %+v", len(r.Members), r.Down, r.Ready, r.Members)
 	}
 	if r.Members[0].Status != "Running" || r.Members[0].Down || r.Members[0].Color != "green" {
 		t.Fatalf("api %+v", r.Members[0])
 	}
-	if r.Members[1].Status != "Done" || r.Members[1].Down {
+	if r.Members[1].Status != "Ready" || r.Members[1].Down {
 		t.Fatalf("web %+v", r.Members[1])
 	}
 	if r.Members[2].Status != "Failed" || !r.Members[2].Down {
@@ -268,6 +268,37 @@ func TestSideRunsFromWindowRuns(t *testing.T) {
 	}
 	if !r.Members[3].Down || r.Members[3].ID != tabsOpen[3].ID {
 		t.Fatalf("gone %+v", r.Members[3])
+	}
+}
+
+func TestFinishedMemberWhoseShellExitedReadsStoppedAndDown(t *testing.T) {
+	win, st := sideWindow(t, true)
+	m := openMember(t, win, "api")
+	win.runs[1].members[0].run = workspaces.TabRun{Line: "x", State: workspaces.Launched, ShellReady: true}
+	// Its commands return (a prompt after the line was typed): Ready, not down.
+	go st.ptys[0].w.Write([]byte("]133;APS> "))
+	for deadline := time.Now().Add(3 * time.Second); promptCount(m.Session) == 0; time.Sleep(time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatal("prompt never applied")
+		}
+	}
+	if r := win.sideRuns()[0]; r.Members[0].Status != "Ready" || r.Members[0].Down || r.Ready != 1 {
+		t.Fatalf("finished member %+v ready %d, want Ready and not down", r.Members[0], r.Ready)
+	}
+	// Then its shell exits: that is down, whatever the commands did before.
+	st.ptys[0].Close()
+	for deadline := time.Now().Add(3 * time.Second); ; time.Sleep(time.Millisecond) {
+		win.mgr.Tabs() // refreshes Exited
+		if m.Exited {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("shell exit never seen")
+		}
+	}
+	r := win.sideRuns()[0]
+	if r.Members[0].Status != "stopped" || !r.Members[0].Down || r.Down != 1 || r.Ready != 0 {
+		t.Fatalf("finished and exited member %+v down %d ready %d, want stopped, down 1, ready 0", r.Members[0], r.Down, r.Ready)
 	}
 }
 

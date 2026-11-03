@@ -119,8 +119,8 @@ The next-waiting key (and the sidebar's "Next waiting" button) goes to the next 
 ## 7. The workspaces section
 
 - Every **running workspace** (a Plan 5b run) shows in a section at the bottom of the sidebar instead of as a group chip in the tab strip. The group chip and its dropdown go away; their information moves here.
-- **Header:** `WORKSPACES`, then the workspace's name and its overall state: "all up", or "1 down" in red. With more than one workspace running, one header per workspace. The header folds and unfolds the section.
-- **One short line per member:** a bar in the member's color, its title, and on the right its status from PR 21 (Starting, Waiting for Docker / port N, Confirm to run, Running, No commands…). A member whose commands **finished** (a prompt report after the line was typed: the server stopped) shows red `stopped`, and counts as down in the header. Claude's call: for a server, finishing means it died, so it is shown as a problem.
+- **Header:** `WORKSPACES`, then the workspace's name and its overall state: "all up", "1 ready" muted when some members' commands finished and none is down, or "1 down" in red (down wins; "all up" only when no member is down or ready). With more than one workspace running, one header per workspace. The header folds and unfolds the section.
+- **One short line per member:** a bar in the member's color, its title, and on the right its status from PR 21 (Starting, Waiting for Docker / port N, Confirm to run, Running, No commands…). A member whose commands **finished** (a prompt report after the line was typed) shows muted `Ready` and does not count as down; kaze sees no exit code, and setup commands such as `docker compose up -d` or activating a venv return by design. A member whose shell exited or was closed shows red `stopped` and counts as down. (Changed by #118; this first read a finished member as red `stopped` and down.)
 - **Clicking a member** opens it as a floating pane over the current session (section 8). Clicking a member that is already the main view does nothing.
 - Members do not appear among the sessions and are not reached by next/prev tab. They are reached by clicking, the palette, or the status bar's server dots.
 - Running a workspace no longer moves the main view: the current session stays in front and the members appear in the section.
@@ -289,7 +289,7 @@ After the build, and only on the owner's word:
 - Timed checks as the way chips appear with no session running (the owner didn't object; strike it if wrong).
 - The title rule (5.2) and lines added/removed from `git diff --shortstat HEAD`.
 - Only the slash command the owner typed is shown, not skills Claude calls itself.
-- A finished workspace member counts as stopped (red).
+- A finished workspace member reads Ready (muted) and is not down (changed by #118; it first counted as stopped, red).
 - Running a workspace no longer moves the main view.
 - Esc goes to the program, not to floating panes.
 - Into an existing session kaze only types; a new session sends the prompt at once.

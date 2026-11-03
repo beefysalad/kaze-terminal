@@ -17,6 +17,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/patrick-gogo/kaze-terminal/internal/theme"
 )
 
 // sidebarW is the sidebar's width in dp at 100% scale.
@@ -519,7 +520,7 @@ func (c *chrome) sideGroupHeader(gtx layout.Context, g sideGroup, st sideState, 
 }
 
 // sideRuns draws the workspaces section from secTop to the bottom: a header, then per
-// run its name with all up / N down and one line per member, with its alert dot and,
+// run its name with all up / N ready / N down and one line per member, with its alert dot and,
 // while hovered, its ×.
 func (c *chrome) sideRuns(gtx layout.Context, h *sideHits, m sideModel, st sideState, secTop int, size image.Point, closeCall op.CallOp, closeSize image.Point) {
 	ops, th := gtx.Ops, c.th
@@ -550,10 +551,7 @@ func (c *chrome) sideRuns(gtx layout.Context, h *sideHits, m sideModel, st sideS
 		hd := image.Rect(pad, y, right-pad, y+hdH)
 		y += hdH
 		if whole(hd) {
-			state, scol := "all up", th.Done
-			if run.Down > 0 {
-				state, scol = strconv.Itoa(run.Down)+" down", th.UsageHigh
-			}
+			state, scol := runHeaderState(run, th)
 			sCall, sSize := c.label(gtx, state, 11, scol)
 			sx := hd.Max.X - gap - sSize.X
 			place(ops, sCall, image.Pt(sx, hd.Min.Y+(hdH-sSize.Y)/2))
@@ -724,4 +722,17 @@ func (c *chrome) activeProjectCountColor(waiting bool) color.NRGBA {
 		col = c.th.Needs
 	}
 	return mix(col, c.th.ActiveFG, 0.4)
+}
+
+// runHeaderState is a workspace header's state text and color: "N down" in red
+// when any member is down, else "N ready" muted when any member's commands
+// finished (no server may be running there, #118), else "all up".
+func runHeaderState(run sideRun, th theme.Chrome) (string, color.NRGBA) {
+	switch {
+	case run.Down > 0:
+		return strconv.Itoa(run.Down) + " down", th.UsageHigh
+	case run.Ready > 0:
+		return strconv.Itoa(run.Ready) + " ready", th.Muted
+	}
+	return "all up", th.Done
 }
