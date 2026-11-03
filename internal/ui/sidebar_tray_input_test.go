@@ -22,15 +22,10 @@ func sideClickAt(win *window, r *input.Router, p image.Point, b pointer.Buttons,
 	)
 }
 
-// lineSpot is a point on k's tray line well left of its › button.
+// lineSpot is the centre of k's tray line.
 func lineSpot(t *testing.T, win *window, k subagents.Key) image.Point {
 	t.Helper()
-	h := agentHit(t, win, k)
-	p := image.Pt(h.rect.Min.X+h.rect.Dx()/3, h.rect.Min.Y+h.rect.Dy()/2)
-	if p.In(h.btn) {
-		t.Fatalf("line spot %v falls in the button %v", p, h.btn)
-	}
-	return p
+	return centre(agentHit(t, win, k).rect)
 }
 
 // trayHits is tab's tray hits of kind.
@@ -44,7 +39,26 @@ func trayHits(win *window, tab tabs.TabID, kind agentHitKind) []sideAgentHit {
 	return out
 }
 
-func TestAgentLineShowsSession(t *testing.T) {
+func TestAgentLineTogglesPanel(t *testing.T) {
+	win, _, r, a, _, _, _ := paneWindow(t)
+	k := startAgent(win, a.ID, "s", "x")
+	floatFrames(t, win, r)
+	sideClickAt(win, r, lineSpot(t, win, k), pointer.ButtonPrimary, 0)
+	floatFrames(t, win, r)
+	if s := win.dockOf(a.ID); s == nil || s.agent != k {
+		t.Fatal("a click on the line did not open its panel")
+	}
+	if !agentHit(t, win, k).open {
+		t.Fatal("the open agent's line is not highlighted")
+	}
+	sideClickAt(win, r, lineSpot(t, win, k), pointer.ButtonPrimary, 2*doubleClick)
+	floatFrames(t, win, r)
+	if win.dockOf(a.ID) != nil {
+		t.Fatal("a second click on the line did not close it")
+	}
+}
+
+func TestAgentLineOpensOtherSession(t *testing.T) {
 	win, _, r, a, b, _, _ := paneWindow(t)
 	k := startAgent(win, a.ID, "s", "x")
 	win.selectTab(b.ID)
@@ -54,92 +68,22 @@ func TestAgentLineShowsSession(t *testing.T) {
 	if win.mgr.Active().ID != a.ID {
 		t.Fatalf("active %d, want the agent's session %d", win.mgr.Active().ID, a.ID)
 	}
-	if win.dockOf(a.ID) != nil {
-		t.Fatal("a click on the agent line opened its panel")
-	}
-}
-
-func TestAgentButtonTogglesPanel(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
-	k := startAgent(win, a.ID, "s", "x")
-	floatFrames(t, win, r)
-	sideClickAt(win, r, centre(agentHit(t, win, k).btn), pointer.ButtonPrimary, 0)
-	floatFrames(t, win, r)
 	if s := win.dockOf(a.ID); s == nil || s.agent != k {
-		t.Fatal("› did not open the panel")
-	}
-	if !agentHit(t, win, k).open {
-		t.Fatal("the open agent's line is not highlighted")
-	}
-	sideClickAt(win, r, centre(agentHit(t, win, k).btn), pointer.ButtonPrimary, 2*doubleClick)
-	floatFrames(t, win, r)
-	if win.dockOf(a.ID) != nil {
-		t.Fatal("a second › did not close it")
+		t.Fatal("the agent's panel did not open in its session")
 	}
 }
 
-func TestAgentLineDoubleClickOpensPanel(t *testing.T) {
+// TestAgentLineQuickClicksToggleTwice: no double-click rule is left, so two quick
+// presses on one line open the panel and close it again.
+func TestAgentLineQuickClicksToggleTwice(t *testing.T) {
 	win, _, r, a, _, _, _ := paneWindow(t)
 	k := startAgent(win, a.ID, "s", "x")
 	floatFrames(t, win, r)
 	sideClickAt(win, r, lineSpot(t, win, k), pointer.ButtonPrimary, 0)
 	sideClickAt(win, r, lineSpot(t, win, k), pointer.ButtonPrimary, 100*time.Millisecond)
 	floatFrames(t, win, r)
-	if s := win.dockOf(a.ID); s == nil || s.agent != k {
-		t.Fatal("a double-click on the line did not open the panel")
-	}
-	sideClickAt(win, r, lineSpot(t, win, k), pointer.ButtonPrimary, 3*time.Second)
-	sideClickAt(win, r, lineSpot(t, win, k), pointer.ButtonPrimary, 3*time.Second+100*time.Millisecond)
-	floatFrames(t, win, r)
-	if s := win.dockOf(a.ID); s == nil || s.agent != k {
-		t.Fatal("a second double-click closed the panel")
-	}
-}
-
-func TestAgentLineDoubleClickNeedsSameLine(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
-	k := startAgent(win, a.ID, "s", "x")
-	j := startAgent(win, a.ID, "s", "y")
-	floatFrames(t, win, r)
-	sideClickAt(win, r, lineSpot(t, win, k), pointer.ButtonPrimary, 0)
-	sideClickAt(win, r, lineSpot(t, win, j), pointer.ButtonPrimary, 100*time.Millisecond)
-	floatFrames(t, win, r)
 	if win.dockOf(a.ID) != nil {
-		t.Fatal("clicks on two different lines opened a panel")
-	}
-	sideClickAt(win, r, lineSpot(t, win, k), pointer.ButtonPrimary, 5*time.Second)
-	sideClickAt(win, r, lineSpot(t, win, k), pointer.ButtonPrimary, 7*time.Second)
-	floatFrames(t, win, r)
-	if win.dockOf(a.ID) != nil {
-		t.Fatal("two slow clicks on one line opened a panel")
-	}
-}
-
-// TestAgentLineMatchesRowClick: a click on an agent line leaves the window as a click
-// on its session's row does.
-func TestAgentLineMatchesRowClick(t *testing.T) {
-	type state struct {
-		active, keys tabs.TabID
-		dock         bool
-		panes        int
-	}
-	run := func(onLine bool) state {
-		win, _, r, a, b, m1, _ := paneWindow(t)
-		k := startAgent(win, a.ID, "s", "x")
-		win.fl.open(a.ID, m1.ID, paneMember)
-		floatFrames(t, win, r)
-		win.selectTab(b.ID)
-		floatFrames(t, win, r)
-		if onLine {
-			sideClickAt(win, r, lineSpot(t, win, k), pointer.ButtonPrimary, 0)
-		} else {
-			sideClickAt(win, r, centre(rowHit(t, win, a.ID).rect), pointer.ButtonPrimary, 0)
-		}
-		floatFrames(t, win, r)
-		return state{win.mgr.Active().ID, win.fl.keys, win.dockOf(a.ID) != nil, len(win.fl.set(a.ID).panes)}
-	}
-	if line, row := run(true), run(false); line != row {
-		t.Fatalf("agent line click %+v, row click %+v", line, row)
+		t.Fatal("two quick clicks left the panel open")
 	}
 }
 
@@ -253,10 +197,11 @@ func TestTrayTooltipShowsStep(t *testing.T) {
 	if at, ok := r.WakeupTime(); ok != wakeOK || at != wake {
 		t.Fatalf("the tooltip changed the wakeup: %v %v, was %v %v", at, ok, wake, wakeOK)
 	}
-	sideMove(win, &r, pointer.Move, centre(agentHit(t, win, k).btn))
+	line = agentHit(t, win, k)
+	sideMove(win, &r, pointer.Move, image.Pt(line.rect.Max.X-2, centre(line.rect).Y))
 	sideFrame(t, win, &r)
 	if win.side.hits.tip.Empty() || win.side.redraws != before+1 {
-		t.Fatal("moving onto › hid the tooltip or redrew")
+		t.Fatal("moving along the line to its elapsed time hid the tooltip or redrew")
 	}
 }
 

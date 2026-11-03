@@ -245,8 +245,8 @@ func TestSidebarDrawsTray(t *testing.T) {
 		if a.kind != hitAgentLine || a.key.ID != fmt.Sprintf("a%d", i) || a.rect.Dy() != gtx.Dp(sideAgentH) {
 			t.Fatalf("line %d %+v, want a %ddp agent line", i, a, sideAgentH)
 		}
-		if !a.btn.In(a.rect) || a.btn.Max.X != a.rect.Max.X || a.btn.Empty() || a.btn.Dx() >= a.rect.Dx()/3 {
-			t.Fatalf("line %d button %v not at the right end of %v", i, a.btn, a.rect)
+		if a.rect.Max.X != h.rows[0].rect.Max.X {
+			t.Fatalf("line %d %v does not reach the row's right edge %v", i, a.rect, h.rows[0].rect)
 		}
 		if i > 0 && a.rect.Min.Y != h.agents[i-1].rect.Max.Y {
 			t.Fatalf("line %d does not follow line %d", i, i-1)

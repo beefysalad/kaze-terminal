@@ -47,7 +47,7 @@ func TestSidebarAgentOtherSession(t *testing.T) {
 	floatFrames(t, win, r)
 	win.showAgent(a.ID, x, false)
 	floatFrames(t, win, r)
-	sideClick(win, r, agentHit(t, win, y).btn, pointer.ButtonPrimary)
+	sideClick(win, r, agentHit(t, win, y).rect, pointer.ButtonPrimary)
 	floatFrames(t, win, r)
 	if win.mgr.Active().ID != b.ID || win.dockOf(b.ID).agent != y {
 		t.Fatal("other session's agent did not open there")
@@ -109,7 +109,7 @@ func TestNoFloatingAgentPane(t *testing.T) {
 	win, _, r, a, _, _, _ := paneWindow(t)
 	k := startAgent(win, a.ID, "s", "x")
 	floatFrames(t, win, r)
-	sideClick(win, r, agentHit(t, win, k).btn, pointer.ButtonPrimary)
+	sideClick(win, r, agentHit(t, win, k).rect, pointer.ButtonPrimary)
 	floatFrames(t, win, r)
 	for _, p := range win.fl.set(a.ID).panes {
 		if p.id < 0 {

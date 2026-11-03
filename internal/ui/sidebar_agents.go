@@ -37,7 +37,7 @@ type sideAgent struct {
 type agentHitKind uint8
 
 const (
-	hitAgentLine  agentHitKind = iota // an agent's line; btn is its › button
+	hitAgentLine  agentHitKind = iota // an agent's line: a click toggles its panel
 	hitAgentChip                      // "+N more ⌄": expands the tray
 	hitAgentFewer                     // "Show fewer": collapses it
 	hitAgentBoard                     // "N more on the board": opens the board
@@ -45,12 +45,12 @@ const (
 
 // sideAgentHit is where a tray line, its chip or a footer link was drawn.
 type sideAgentHit struct {
-	key       subagents.Key
-	tab       tabs.TabID
-	kind      agentHitKind
-	open      bool            // its panel is the one shown
-	rect, btn image.Rectangle // btn: the › box, full line height
-	tip       string          // the current step, for the hover tooltip
+	key  subagents.Key
+	tab  tabs.TabID
+	kind agentHitKind
+	open bool // its panel is the one shown
+	rect image.Rectangle
+	tip  string // the current step, for the hover tooltip
 }
 
 // sideAgentOf is a tracker subagent as its sidebar line at now.
@@ -210,7 +210,7 @@ func rowSpan(gtx layout.Context, r sideRow) int {
 }
 
 // trayLines draws r's agent tray from y down under row: a thin tree line, one line
-// per agent (mark, type, task, elapsed, ›) and the chip or footer.
+// per agent (mark, type, task, elapsed) and the chip or footer.
 func (c *chrome) trayLines(gtx layout.Context, h *sideHits, r sideRow, row image.Rectangle, y int, open subagents.Key, ink sideInk) {
 	if trayHeight(gtx, r) == 0 {
 		return
@@ -248,11 +248,8 @@ func (c *chrome) trayLines(gtx layout.Context, h *sideHits, r sideRow, row image
 			mk = markDone
 		}
 		c.stateDot(gtx, image.Rect(mx, mid-dot/2, mx+dot, mid-dot/2+dot), mk, a.State == subagents.Running, false)
-		box := image.Rect(x1-gtx.Dp(16), band.Min.Y, x1, band.Max.Y)
-		bCall, bSize := c.label(gtx, "›", 12, ink.muted)
-		place(ops, bCall, image.Pt(box.Min.X+(box.Dx()-bSize.X)/2, mid-bSize.Y/2))
 		eCall, eSize := c.label(gtx, a.Elapsed, 10, ink.muted)
-		right := box.Min.X - gtx.Dp(2) - eSize.X
+		right := x1 - gtx.Dp(6) - eSize.X
 		place(ops, eCall, image.Pt(right, mid-eSize.Y/2))
 		tx := mx + dot + gap
 		tCall, tSize := c.fitSide(gtx, a.Type, 11, max(right-gap-tx, 0)/2, ink.kind)
@@ -267,9 +264,8 @@ func (c *chrome) trayLines(gtx layout.Context, h *sideHits, r sideRow, row image
 		kx := tx + tSize.X + gap
 		kCall, kSize := c.fitSide(gtx, a.Task, 11, max(right-gap-kx, 0), col)
 		place(ops, kCall, image.Pt(kx, mid-kSize.Y/2))
-		btn := image.Rect(box.Min.X-gtx.Dp(4), band.Min.Y, x1, band.Max.Y)
 		h.agents = append(h.agents, sideAgentHit{key: a.Key, tab: r.ID, kind: hitAgentLine, open: isOpen,
-			rect: band.Intersect(h.list), btn: btn.Intersect(h.list), tip: a.Action})
+			rect: band.Intersect(h.list), tip: a.Action})
 	}
 	if r.trayChipLine() {
 		if band := image.Rect(tree, y, x1, y+gtx.Dp(sideChipH)); band.Overlaps(h.list) {
