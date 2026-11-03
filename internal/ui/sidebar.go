@@ -3,7 +3,6 @@ package ui
 import (
 	"image"
 	"image/color"
-	"math"
 	"path/filepath"
 	"strconv"
 	"unicode/utf8"
@@ -31,6 +30,7 @@ const maxSideText = 160
 
 // sideState is what the window knows that the model does not.
 type sideState struct {
+	activeRepo    string // common repository of the selected main session
 	launch        *branchLauncher
 	doc, hoverDoc docID
 	shown         tabs.TabID      // highlighted row or member
@@ -117,7 +117,7 @@ func (c *chrome) sideDot(gtx layout.Context, d image.Rectangle, mk mark, running
 func (c *chrome) stateDot(gtx layout.Context, d image.Rectangle, mk mark, running, glow bool) {
 	ops := gtx.Ops
 	if running && mk == markNone {
-		paint.FillShape(ops, c.th.Accent, runningRing(gtx, d))
+		c.runningMark(gtx, centeredMarkBox(d, gtx.Dp(14)))
 		return
 	}
 	col, ok := c.dotColor(false, mk)
@@ -133,21 +133,45 @@ func (c *chrome) stateDot(gtx layout.Context, d image.Rectangle, mk mark, runnin
 	paint.FillShape(ops, col, clip.Ellipse(d).Op(ops))
 }
 
-// runningRing is an open ring around d, its gap at the top. It is drawn still, so a
-// session stuck in running never costs a frame.
-// ringOverflow is how far the running ring reaches past its dot on each side.
-func ringOverflow(gtx layout.Context) int { return max(gtx.Dp(2), 1) }
+// centeredMarkBox gives the running symbol a bounded slot around the existing
+// idle-dot center, keeping neighboring text and all non-running dots in place.
+func centeredMarkBox(dot image.Rectangle, size int) image.Rectangle {
+	at := dot.Min.Sub(image.Pt((size-dot.Dx())/2, (size-dot.Dy())/2))
+	return image.Rectangle{Min: at, Max: at.Add(image.Pt(size, size))}
+}
 
-func runningRing(gtx layout.Context, d image.Rectangle) clip.Op {
-	sw := float32(ringOverflow(gtx))
-	r := float32(d.Dx())/2 + sw/2
-	cx, cy := float32(d.Min.X)+float32(d.Dx())/2, float32(d.Min.Y)+float32(d.Dy())/2
-	ctr := f32.Pt(cx, cy)
-	var p clip.Path
-	p.Begin(gtx.Ops)
-	p.MoveTo(f32.Pt(cx+r*0.7071, cy-r*0.7071)) // top right, then round through the bottom
-	p.ArcTo(ctr, ctr, 3*math.Pi/2)
-	return clip.Stroke{Path: p.End(), Width: sw}.Op()
+// runningMark is the approved still closed ring with a bright core. At 14px,
+// the ring radius is 5.6px, its stroke 1.3px and the core radius 2.6px. All
+// geometry stays inside slot; painting this mark never requests a frame.
+func (c *chrome) runningMark(gtx layout.Context, slot image.Rectangle) {
+	if slot.Empty() {
+		return
+	}
+	ops := gtx.Ops
+	size := float32(min(slot.Dx(), slot.Dy()))
+	cx, cy := float32(slot.Min.X)+float32(slot.Dx())/2, float32(slot.Min.Y)+float32(slot.Dy())/2
+	// Fractional paths retain the same proportions at 1x and 2x, including
+	// the smaller mark in the agents pill.
+	circle := func(radius float32) clip.PathSpec {
+		var p clip.Path
+		p.Begin(ops)
+		const k = float32(0.5522847498)
+		p.MoveTo(f32.Pt(cx+radius, cy))
+		p.CubeTo(f32.Pt(cx+radius, cy+k*radius), f32.Pt(cx+k*radius, cy+radius), f32.Pt(cx, cy+radius))
+		p.CubeTo(f32.Pt(cx-k*radius, cy+radius), f32.Pt(cx-radius, cy+k*radius), f32.Pt(cx-radius, cy))
+		p.CubeTo(f32.Pt(cx-radius, cy-k*radius), f32.Pt(cx-k*radius, cy-radius), f32.Pt(cx, cy-radius))
+		p.CubeTo(f32.Pt(cx+k*radius, cy-radius), f32.Pt(cx+radius, cy-k*radius), f32.Pt(cx+radius, cy))
+		p.Close()
+		return p.End()
+	}
+	ring := c.th.Accent
+	ring.A = 140 // approximately 55%, as approved
+	paint.FillShape(ops, ring, clip.Stroke{Path: circle(size * 5.6 / 14), Width: size * 1.3 / 14}.Op())
+	core := c.th.ToastGo
+	if core == c.th.Accent {
+		core = mix(c.th.Accent, c.th.ActiveFG, 0.2)
+	}
+	paint.FillShape(ops, core, clip.Outline{Path: circle(size * 2.6 / 14)}.Op())
 }
 
 // layoutSidebar paints the sidebar into size and returns where its parts are. The
@@ -453,19 +477,29 @@ func (c *chrome) sideGroupHeader(gtx layout.Context, g sideGroup, st sideState, 
 	ops, th := gtx.Ops, c.th
 	gap := gtx.Dp(8)
 	mid := hd.Min.Y + hd.Dy()/2
+	nameColor, arrowColor := th.ActiveFG, th.Muted
+	if g.Key != "" && g.Key == st.activeRepo {
+		bg, fg := c.activeProjectColors()
+		paint.FillShape(ops, bg, clip.UniformRRect(hd, gtx.Dp(7)).Op(ops))
+		stroke(ops, hd, gtx.Dp(7), mix(th.Chrome, th.Accent, 0.28))
+		nameColor, arrowColor = fg, fg
+	}
 
 	cx := hd.Min.X + gap
 	chev := "▾"
 	if g.Folded {
 		chev = "›"
 	}
-	cCall, cSize := c.label(gtx, chev, 10, th.Muted)
+	cCall, cSize := c.label(gtx, chev, 10, arrowColor)
 	place(ops, cCall, image.Pt(cx, mid-cSize.Y/2))
 	cx += cSize.X + gap
 
 	right, rcol := strconv.Itoa(g.Count), th.Muted
 	if g.Waiting > 0 {
 		right, rcol = strconv.Itoa(g.Waiting)+" waiting", th.Needs
+	}
+	if g.Key != "" && g.Key == st.activeRepo {
+		rcol = c.activeProjectCountColor(g.Waiting > 0)
 	}
 	rCall, rSize := c.label(gtx, right, 11, rcol)
 	rx := hd.Max.X - gap - rSize.X
@@ -480,7 +514,7 @@ func (c *chrome) sideGroupHeader(gtx layout.Context, g sideGroup, st sideState, 
 			}
 		}
 	}
-	nCall, nSize := c.fitSide(gtx, name, 12, rx-gap-cx, th.ActiveFG)
+	nCall, nSize := c.fitSide(gtx, name, 12, rx-gap-cx, nameColor)
 	place(ops, nCall, image.Pt(cx, mid-nSize.Y/2))
 }
 
@@ -672,4 +706,22 @@ func (c *chrome) alertDot(gtx layout.Context, right, mid int, mk mark) int {
 	x := right - gap - d
 	paint.FillShape(gtx.Ops, c.badgeColor(mk), clip.Ellipse(image.Rect(x, mid-d/2, x+d, mid-d/2+d)).Op(gtx.Ops))
 	return x
+}
+
+func (c *chrome) activeProjectColors() (color.NRGBA, color.NRGBA) {
+	fg := c.th.ToastGo
+	if fg == c.th.Accent {
+		fg = mix(c.th.Accent, c.th.ActiveFG, 0.2)
+	}
+	return mix(c.th.Chrome, c.th.Accent, 0.12), fg
+}
+
+// Raise secondary-text contrast on the tinted header while retaining the
+// muted count and amber waiting-count distinction, including light themes.
+func (c *chrome) activeProjectCountColor(waiting bool) color.NRGBA {
+	col := c.th.Muted
+	if waiting {
+		col = c.th.Needs
+	}
+	return mix(col, c.th.ActiveFG, 0.4)
 }

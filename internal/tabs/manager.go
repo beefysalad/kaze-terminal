@@ -428,7 +428,7 @@ func (m *Manager) CloseAllReleased() bool {
 	}
 }
 
-// Empty reports that the last tab was closed; the window quits then.
+// Empty reports whether no terminal tabs remain.
 func (m *Manager) Empty() bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()

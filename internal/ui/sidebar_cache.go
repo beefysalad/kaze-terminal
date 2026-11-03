@@ -29,6 +29,7 @@ type sideDocInput struct {
 	doc     sideDoc
 }
 type sideDrawKey struct {
+	activeRepo             string
 	launchVersion          uint64
 	launcher               bool
 	size                   image.Point

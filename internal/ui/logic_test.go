@@ -336,3 +336,23 @@ func TestScratchKeyIsAShortcutNotText(t *testing.T) {
 		}
 	}
 }
+
+func TestShiftEnterRoutesToTerminalAndHonorsOverrides(t *testing.T) {
+	for _, goos := range []string{"windows", "darwin"} {
+		km, _ := buildKeymap(goos, nil)
+		for _, name := range []key.Name{key.NameReturn, key.NameEnter} {
+			got := routeKey(goos, km, name, key.ModShift, term.Modes{})
+			if got.act != actNone || string(got.data) != "\x1b\r" {
+				t.Errorf("%s %q: got act=%v bytes=%q, want multiline sequence", goos, name, got.act, got.data)
+			}
+		}
+		km, warns := buildKeymap(goos, map[string]string{"new_tab": "shift+enter"})
+		if len(warns) != 0 {
+			t.Fatal(warns)
+		}
+		got := routeKey(goos, km, key.NameReturn, key.ModShift, term.Modes{})
+		if got.act != actNewTab || len(got.data) != 0 {
+			t.Errorf("%s override: got act=%v bytes=%q", goos, got.act, got.data)
+		}
+	}
+}

@@ -149,7 +149,12 @@ binaries; re-run `go test` with `-ldflags "-X main.r=<random>"`.
 | Copy the selection | Ctrl+Shift+C | Cmd+C |
 | Paste | Ctrl+Shift+V | Cmd+V |
 | Open settings | Ctrl+, | Cmd+, |
-| New line in Claude Code (without sending) | Alt+Enter | Option+Enter |
+| New line in Claude Code (without sending) | Shift+Enter or Alt+Enter | Shift+Enter or Option+Enter |
+
+Closing the final session keeps Kaze open. Start again with **New session**, the title bar
+button or your configured shortcut. Settings and Workspaces stay available. Exiting the final
+plain shell shows the same empty state; stopped workspace members keep their output.
+Use the window close button or the system Quit command to exit Kaze.
 
 Session switching follows sidebar order, skips workspace members and scratch shells, and works
 from a focused floating terminal too. If a busy terminal cannot accept more input, Kaze shows
@@ -158,8 +163,9 @@ from a focused floating terminal too. If a busy terminal cannot accept more inpu
 On macOS, Cmd+V with an image on the clipboard (a screenshot, say) pastes it into Claude Code or
 Codex: kaze sends them Ctrl+V, the key they read images with. A plain shell never gets it.
 
-Plain Ctrl+C always goes to the shell as an interrupt. In Claude Code, Shift+Enter currently
-submits like Enter, so use Alt+Enter (Option+Enter on macOS) for a new line. The session, copy,
+Plain Ctrl+C always goes to the shell as an interrupt. Shift+Enter sends the same sequence as
+Alt+Enter (Option+Enter on macOS), adding a new line in Claude Code while plain Enter submits.
+Other terminal programs handle that sequence according to their own keybindings. The session, copy,
 paste, sidebar, next-waiting, palette, scratch shell, agents board and settings shortcuts can be changed under `[keys]` in the
 config. Settings, Shortcuts lists every shortcut as this machine has it.
 
@@ -184,8 +190,10 @@ config. Settings, Shortcuts lists every shortcut as this machine has it.
 Sessions are listed down the left side, in place of a tab strip.
 
 - **Groups:** sessions in the same git repo sit under one header, and worktrees count as the
-  same repo. Groups start open. Click a header to fold or unfold it. A folded header shows an
-  amber "N waiting" when a session in it needs you.
+  same repo. The active project's header has a soft theme-accent tint and an accent-colored
+  name and arrow, alongside the selected session's highlight. That project context stays visible
+  in Settings, documents and floating panes. Groups start open. Click a header to fold or unfold
+  it. A folded header shows an amber "N waiting" when a session in it needs you.
 - **Rows:** two lines: state dot, agent logo and name with status on the right;
   branch and `+N −M` below. Linked worktrees show their folder and branch unless
   the folder already ends in the branch's slug. Outside a repo, the second line
@@ -193,7 +201,7 @@ Sessions are listed down the left side, in place of a tab strip.
   - **Agent:** Claude and Codex have their own logos. Hooks or foreground-program
     detection identify the agent. Codex hooks need `codex --no-daemon` for now.
   - **Status:** `needs you`, `done`, the active subagent count, then `running`, in
-    that order. The running ring stays still, so it costs no animation frames.
+    that order. Running uses a closed ring with a bright core, drawn still without animation frames.
   - **Name:** your Kaze rename, then the last slash command's first argument,
     then the active agent's title without its leading spinner. Otherwise Kaze
     uses a folder name that differs from the repo, or the program's name.
@@ -310,7 +318,7 @@ Codex starts helpers, kaze shows what each one is doing. Hooks provide their sta
 subagent pane is visible, kaze also reads its transcript for live messages.
 
 - **In the sidebar:** each session lists its subagents under its row: the type, the task, how long
-  it has run and the step it is on now (for example `Grep authMiddleware in src`). A ring means
+  it has run and the step it is on now (for example `Grep authMiddleware in src`). A dot inside a ring means
   running, an amber dot means it is waiting for your approval, a green dot means done. The row
   shows a "3 agents" chip. Finished ones leave the list at your next prompt.
 - **Live pane:** click a subagent to open a read-only floating pane that reads like a conversation:

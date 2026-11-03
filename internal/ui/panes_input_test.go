@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"image"
 	"io"
 	"strings"
@@ -302,5 +303,32 @@ func TestOnlyTheViewWithTheKeyboardLooksFocused(t *testing.T) {
 	win.setFocused(false)
 	if win.viewFocused(m1.ID) {
 		t.Fatal("an unfocused window still shows a focused pane")
+	}
+}
+
+func TestShiftEnterReachesFocusedTerminal(t *testing.T) {
+	for _, name := range []key.Name{key.NameReturn, key.NameEnter} {
+		for _, mainView := range []bool{false, true} {
+			t.Run(string(name)+"/main="+fmt.Sprint(mainView), func(t *testing.T) {
+				win, st, r, _, _, _, p := floatOne(t)
+				destination := 2
+				if mainView {
+					outside := image.Pt(win.gridRect.Max.X-20, win.gridRect.Max.Y-20)
+					if outside.In(p.hits.outer) {
+						t.Fatal("test point is inside pane")
+					}
+					clickAt(t, win, r, outside)
+					destination = 0
+				}
+				r.Queue(key.Event{Name: name, Modifiers: key.ModShift, State: key.Press})
+				sideFrame(t, win, r)
+				waitSent(t, ptyOf(st, destination), "\x1b\r")
+				for _, other := range []int{0, 1, 2} {
+					if other != destination && ptyOf(st, other).sent() != "" {
+						t.Fatalf("input reached unfocused terminal %d", other)
+					}
+				}
+			})
+		}
 	}
 }

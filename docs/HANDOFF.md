@@ -1,8 +1,62 @@
 # kaze handoff
 
-Last updated: 2026-11-02, after sidebar PR #104 merged and release 0.22 was prepared. Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-03, after local fixes for #107, #113 and #114. No release from this work. Read this first when you pick up kaze on another machine.
 
 ## Where things stand
+
+**Owner authorization (2026-11-03):** open a PR for #107, #113 and #114 if one
+is not already open, merge it after checks and publish the combined release using
+the shipping workflow. This overrides this work's earlier no-release/no-push
+instructions and the general release hold for this bundle. Feature PR and release
+0.23 are being prepared; unrelated original checkout changes are preserved.
+
+**Running mark and active-project header (#107) are implemented locally.**
+The owner approved the project-header design on 2026-11-03 after reviewing its
+localhost mockup. The selected main session's common repository gets a soft
+accent-tinted header, accent name/arrow and retained count or amber waiting count.
+Context stays through Settings, documents, folded/filtered views and focused
+floating panes; empty/plain-no-repo sessions highlight no group. The draw cache
+includes the repo key; selection changes do not rebuild the model and unchanged
+sidebar drawing still allocates zero times. Name/count/waiting text contrast is
+at least 4.5:1 across all five themes, with local contrast adjustments on the tint.
+The approved still closed ring and bright core replace the open arc in session
+rows, subagents, title breadcrumb and status agents pill, without animation or
+extra idle frames. Pixel tests cover bounds/core/closed top at 1x/2x in every theme.
+Tests failed before changes and pass afterward. Full tests, vet, focused UI
+races, macOS build and Windows amd64 cross-build pass. Independent UI review
+returned ship with no material fixes. Native installed-app checks remain open.
+See `docs/audits/2026-11-03-running-projects.md` for captures and final checks.
+#107, #113 and #114 remain local and unreleased for the owner's later bundle.
+No commit, push, version bump or release.
+
+**Empty window (issue #113) is implemented locally for the next bundled release.**
+Closing the last session leaves the existing chrome and a "No open sessions" view
+with a New session button and configured shortcut. The final plain shell exiting
+uses the same state; exited workspace members retain their stopped status/output.
+Settings, Workspaces, palette and branch launcher stay reachable. Shared frame
+housekeeping and status notices run without a terminal; cursor blink stops. New
+views install their input filters before focus moves. Worktree cleanup choices,
+refusals and explicit window close keep working. Empty session snapshots persist.
+Tests failed before the changes and pass afterward; full tests, vet, focused UI
+races, macOS build and Windows amd64 cross-build pass. Actual headless dark/light
+wide/narrow captures were inspected; review's secondary-text contrast finding was
+fixed locally and verified across all five themes. See
+`docs/audits/2026-11-02-empty-window.md`. Installed macOS and Windows interactions
+remain owner checks. The owner approved the design/plan and explicitly requested
+no release, to bundle this with #114 and later issues. No commit or push.
+
+**Shift+Enter (issue #114) is implemented locally for the next bundled release.**
+Return and keypad Enter with Shift now send the existing Alt/Option+Enter sequence
+(Escape + Return), which Claude Code uses for a newline. This is a compatibility
+alias, not kitty keyboard protocol support; programs use their own bindings for
+that sequence. Plain Enter and Ctrl/Cmd combinations keep their existing behavior,
+and configured Kaze actions take precedence. Regression tests cover both platform
+encoders, shortcut overrides, and delivery to the focused main terminal or floating
+pane. The new tests failed before the fix and pass afterward. Full `go test ./...`,
+`go vet ./...`, native macOS build and Windows amd64 cross-build pass. README
+shortcuts are updated. Native installed-app checks remain open. The owner
+explicitly requested no release and will bundle this with later issues.
+No commit, push, version bump or release is part of this work.
 
 **Release 0.22 ships the sidebar redesign (#101 / PR #104).** The owner explicitly
 requested merging #104 and publishing this release on 2026-11-02, overriding the
@@ -373,7 +427,7 @@ setup/checklist is historical; unresolved platform checks are listed above.
 - **No pulsing dot, no idle reminders** (spec 6.8 note): a static dot keeps idle CPU at zero; `idle_prompt` and `auth_success` notifications are dropped.
 - **Copy is Ctrl+Shift+C** (Ctrl+C must stay "interrupt"). Smart Ctrl+C is a later idea, not wanted yet.
 - **Ctrl+Backspace** sends 0x08 (word delete in PSReadLine).
-- **Claude Code features left unanswered** (kitty keyboard protocol, XTVERSION, some OSCs): Claude falls back fine. Side effect: Shift+Enter submits; use Alt+Enter for a newline.
+- **Claude Code features left unanswered** (kitty keyboard protocol, XTVERSION, some OSCs): Claude falls back fine. Shift+Enter now aliases Alt/Option+Enter for a newline (issue #114); full kitty keyboard support remains deferred.
 - **Fonts:** JetBrains Mono + Noto Sans JP subset bundled (OFL); missing symbols and rare kanji come from system fonts, loaded lazily, memoized, malformed fonts skipped.
 - **Low-contrast text** is nudged just enough to reach 4.5:1, not forced to white (keeps dim text dim).
 - **Benchmarks** measure keypress latency inside kaze (`KAZE_BENCH`), never with global input.
@@ -440,7 +494,7 @@ Later:
 - Glyph cache unguarded across UI goroutines (fine with one window); double-line box junction overlap. Shared font-size caches retain only the two most recent sizes.
 - Selection uses retained dirty-row scratch. Ideographic space U+3000 is not a word stop (matters for Japanese double-click).
 - Full-history memory varies with retained line widths; cells are packed to 16 bytes and blank tails are trimmed.
-- Shift+Enter submits in Claude Code (needs the kitty keyboard protocol); Alt+Enter works.
+- Full kitty keyboard protocol support remains deferred. Shift+Enter aliases Alt/Option+Enter for Claude Code multiline input (issue #114, implemented locally).
 - A ConPTY close timeout keeps that tab's screen alive until ConPTY releases.
 - kaze's own keypress p99 (~24ms) and first frame (~0.45s).
 
