@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"gioui.org/font"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
@@ -298,12 +299,15 @@ func (c *chrome) trayChip(gtx layout.Context, h *sideHits, r sideRow, band image
 	mid := band.Min.Y + band.Dy()/2
 	pill := image.Rect(band.Min.X+gtx.Dp(10), mid-rad, band.Max.X, mid+rad)
 	room := pill.Dx() - 2*padX
+	if !r.TrayExpanded {
+		c.narrowChip(gtx, &parts[1].s, &parts[2].s, parts[0].s, room)
+	}
 	var calls [3]op.CallOp
 	var sizes [3]image.Point
 	w := 0
 	for i, p := range parts {
 		if p.s != "" {
-			calls[i], sizes[i] = c.fitSide(gtx, p.s, 11, max(room-w, 0), p.col)
+			calls[i], sizes[i], h.chip[i] = c.fitSideText(gtx, p.s, 11, max(room-w, 0), p.col, font.Normal)
 			w += sizes[i].X
 		}
 	}
@@ -327,6 +331,26 @@ func (c *chrome) trayChip(gtx layout.Context, h *sideHits, r sideRow, band image
 		hit(hitAgentBoard, split, pill.Max.X)
 	default:
 		hit(hitAgentFewer, pill.Min.X, pill.Max.X)
+	}
+}
+
+// narrowChip shortens a chip that does not fit in room px so it never loses
+// "+N more" or its caret: the counts go first, then the "need you" part.
+func (c *chrome) narrowChip(gtx layout.Context, needs, rest *string, lead string, room int) {
+	width := func(s string) int {
+		if s == "" {
+			return 0
+		}
+		_, sz := c.labelW(gtx, s, 11, c.th.Border, font.Normal)
+		return sz.X
+	}
+	lw := width(lead)
+	if lw+width(*needs)+width(*rest) <= room {
+		return
+	}
+	*rest = " " + trayOpenCaret
+	if *needs != "" && lw+width(*needs)+width(*rest) > room {
+		*needs = ""
 	}
 }
 

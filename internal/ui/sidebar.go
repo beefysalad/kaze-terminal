@@ -91,7 +91,8 @@ type sideHits struct {
 	tip                                                                             image.Rectangle // the hovered agent's step tooltip, empty when none shows
 	rename                                                                          image.Rectangle // the rename editor, empty while none is drawn
 	scrollMax                                                                       int
-	noMatches                                                                       bool // the filter hides every session
+	noMatches                                                                       bool      // the filter hides every session
+	chip                                                                            [3]string // the tray chip or footer parts as drawn, for tests
 }
 
 // fitSide draws s at size within room px, cut with a trailing "…" when it is longer.
@@ -101,6 +102,12 @@ func (c *chrome) fitSide(gtx layout.Context, s string, size unit.Sp, room int, c
 
 // fitSideWeight is fitSide in the chrome font at weight w.
 func (c *chrome) fitSideWeight(gtx layout.Context, s string, size unit.Sp, room int, col color.NRGBA, w font.Weight) (op.CallOp, image.Point) {
+	call, sz, _ := c.fitSideText(gtx, s, size, room, col, w)
+	return call, sz
+}
+
+// fitSideText is fitSideWeight that also returns the text it drew.
+func (c *chrome) fitSideText(gtx layout.Context, s string, size unit.Sp, room int, col color.NRGBA, w font.Weight) (op.CallOp, image.Point, string) {
 	s = cutRunes(c.fit(s), maxSideText)
 	call, sz := c.labelW(gtx, s, size, col, w)
 	for i := 0; i < 6 && sz.X > room && s != ""; i++ {
@@ -115,9 +122,9 @@ func (c *chrome) fitSideWeight(gtx layout.Context, s string, size unit.Sp, room 
 	}
 	if sz.X > room {
 		call, sz = c.labelW(gtx, "", size, col, w)
-		sz.X = 0
+		sz.X, s = 0, ""
 	}
-	return call, sz
+	return call, sz, s
 }
 
 // sideDot draws a state mark: an amber dot with a soft halo for needs you, green for

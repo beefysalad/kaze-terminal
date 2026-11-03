@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"image"
+	"strings"
 	"testing"
 	"time"
 
@@ -330,4 +331,30 @@ func TestRevealScrollCountsAgentLines(t *testing.T) {
 		}
 	}
 	t.Fatalf("row 6 not shown whole at scroll %d", sc)
+}
+
+// chipText is the chip text as drawn into the sidebar's hits.
+func chipText(h sideHits) string { return h.chip[0] + h.chip[1] + h.chip[2] }
+
+func TestTrayChipKeepsCaretAtDefaultWidth(t *testing.T) {
+	for _, c := range []struct {
+		name  string
+		h     subagents.TrayCounts
+		needs string
+	}{
+		{"running", subagents.TrayCounts{Running: 15, Done: 2}, ""},
+		{"waiting", subagents.TrayCounts{Waiting: 2, Running: 13, Done: 2}, "2 need you"},
+	} {
+		rows := sideRows(1, 2, "s")
+		rows[0].Agents = trayAgents(3)
+		rows[0].Hidden, rows[0].TrayTotal, rows[0].AgentCount = c.h, 20, 18
+		h, _ := sideDraw(t, sideModel{Loose: rows}, sideState{}, 700)
+		got := chipText(h)
+		if !strings.HasSuffix(got, trayOpenCaret) || !strings.Contains(got, "+17 more") || strings.Contains(got, "…") {
+			t.Errorf("%s: chip drew %q, want it whole with \"+17 more\" and the caret", c.name, got)
+		}
+		if c.needs != "" && !strings.Contains(h.chip[1], c.needs) {
+			t.Errorf("%s: chip drew %q, want %q kept in its amber part", c.name, got, c.needs)
+		}
+	}
 }
