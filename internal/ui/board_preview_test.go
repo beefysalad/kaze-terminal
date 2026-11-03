@@ -137,3 +137,34 @@ func TestBoardCopyReportUsesPreviewTranscript(t *testing.T) {
 		t.Fatalf("copied %q", copied)
 	}
 }
+
+// Open in reader shows the transcript's report, and closing the board lets go
+// of the preview's transcript.
+func TestBoardReaderUsesTranscriptAndCloseDropsIt(t *testing.T) {
+	win, _, r, a, _, _, _ := paneWindow(t)
+	main := filepath.Join(t.TempDir(), "s.jsonl")
+	writeTranscript(t, subagents.TranscriptPath(main, "x"), "Transcript says done")
+	k := dockAgent(t, win, int(a.ID), main)
+	stopAgent(win, int(a.ID), "")
+	floatFrames(t, win, r)
+	win.openBoard(0)
+	win.boardSelect(k)
+	gtx := drawPreview(win)
+	if win.board.prev.tr == nil || win.board.reader.Empty() {
+		t.Fatal("fixture: no transcript or no Open in reader")
+	}
+	win.boardPress(gtx, centre(win.board.reader), 0)
+	if win.board.open || win.board.prev.tr != nil {
+		t.Fatalf("open %v, transcript kept %v", win.board.open, win.board.prev.tr != nil)
+	}
+	d := win.docs.list[len(win.docs.list)-1]
+	var got string
+	for _, b := range d.doc.Blocks {
+		for _, s := range b.Spans {
+			got += s.Text
+		}
+	}
+	if got != "Transcript says done" {
+		t.Fatalf("reader shows %q", got)
+	}
+}

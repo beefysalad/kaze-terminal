@@ -157,6 +157,7 @@ func (win *window) closeBoard() {
 		return
 	}
 	win.board.open = false
+	win.board.prev = dockSession{} // nobody sees the preview: hold no transcript or parsed report
 	win.wantFocus = true
 	if win.w != nil {
 		win.w.Invalidate()
@@ -470,8 +471,9 @@ func (win *window) boardPress(gtx layout.Context, p image.Point, at time.Duratio
 			win.copyReport(gtx, a)
 			return
 		case p.In(b.reader):
+			report := win.dockReport(a) // before closing: it reads the preview's transcript
 			win.closeBoard()
-			win.openReportDoc(tab, a.Type+" · "+a.Task, win.dockReport(a))
+			win.openReportDoc(tab, a.Type+" · "+a.Task, report)
 			return
 		}
 	}
