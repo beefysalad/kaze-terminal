@@ -1,8 +1,16 @@
 # kaze handoff
 
-Last updated: 2026-11-03, agents board redesign and sidebar follow-ups built on `feat/agents-board`; 0.25 released before it. Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-03, release 0.26 (agents board redesign and sidebar follow-ups, PR #131). Read this first when you pick up kaze on another machine.
 
 ## Where things stand
+
+**Release 0.26 ships PR #131: the agents board redesign (filters with counts, search, session token,
+pinned Needs you card, per-session cards with a state meter, finished-agent folds, a preview pane with
+the live timeline or report) and the sidebar follow-ups (project rail removed, a click on an agent line
+toggles its panel, "+N more" opens the board for that session).** Approved from the mockup on
+2026-11-03, built in two parallel worktree lanes, then a fresh whole-branch review (8 minor findings,
+all fixed test-first). Audit: `docs/audits/2026-11-03-agents-board.md`. Next: #128 (`.md` links split
+on the line: a folder printed earlier, or a space in the path). Product screenshots need retaking.
 
 **Agents board redesign and sidebar follow-ups (2026-11-03) are built on `feat/agents-board`, not yet
 pushed or released. Release 0.26 is next.** The owner approved the clickable mockup

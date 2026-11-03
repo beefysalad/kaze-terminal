@@ -40,7 +40,7 @@
       <article>
         <svg class="feature-symbol" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M6 8h0M6 12h0M6 16h0"/></svg>
         <h3>A sidebar of sessions.</h3>
-        <p>Sessions group by repo, worktrees included, with an accent rail marking the project you’re in. Two-line rows show the agent logo, name and status above the branch and lines changed. See what <b class="state needs">needs you</b>, what is <b class="state running">running</b> and what is <b class="state done">done</b>.</p>
+        <p>Sessions group by repo, worktrees included, with a bold name for the project you’re in. Two-line rows show the agent logo, name and status above the branch and lines changed. See what <b class="state needs">needs you</b>, what is <b class="state running">running</b> and what is <b class="state done">done</b>.</p>
         <button type="button" class="show-shot" data-show="sessions">See the sidebar <svg class="inline-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M8 13V3M4 7l4-4 4 4"/></svg></button>
       </article>
       <article>
@@ -70,7 +70,7 @@
       <article>
         <svg class="feature-symbol" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/><rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4m-6 4v-4h12v4"/></svg>
         <h3>See every subagent.</h3>
-        <p>When Claude Code or Codex hands work to subagents, each one gets a slim line under its session: waiting first, the rest behind “+N more”. Hover for its current step, or press › to open its panel under the terminal: every step with the agent’s own messages, then a formatted report. Or press <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>A</kbd> for a board of every subagent: running, waiting on you and done.</p>
+        <p>When Claude Code or Codex hands work to subagents, each one gets a slim line under its session: waiting first, the rest behind “+N more”. Click one to open its panel under the terminal: every step with the agent’s own messages, then a formatted report. Or press <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>A</kbd> for the agents board: filter and search every subagent, grouped by session, and preview its steps or report without leaving the list.</p>
         <button type="button" class="show-shot" data-show="agents">See the subagents <svg class="inline-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M8 13V3M4 7l4-4 4 4"/></svg></button>
       </article>
       <article>
@@ -115,7 +115,21 @@
     <div class="section-intro"><h2 id="changelog-title">What’s new.<br><span>The latest releases.</span></h2><p>Kaze checks for new versions by itself and updates in place from Settings, Updates.</p></div>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.25</span><span class="badge">Latest</span><time datetime="2026-11-03">Nov 3, 2026</time></div>
+        <div class="release-meta"><span class="version">0.26</span><span class="badge">Latest</span><time datetime="2026-11-03">Nov 3, 2026</time></div>
+        <div class="release-body">
+          <h3>An agents board you can work from</h3>
+          <ul>
+            <li><b>A new agents board:</b> filter by All, Needs you, Running or Done, and search by type, task, session or repo (press /). Waiting agents sit in a pinned Needs you card; the rest are grouped under their session, with a bar showing what’s waiting, running and done. Finished agents fold away.</li>
+            <li><b>Preview without leaving:</b> pick an agent to see its steps and messages, or its formatted report, beside the list. Double-click it, press Enter or use Open in session to jump to it.</li>
+            <li><b>One click opens an agent:</b> clicking an agent line in the sidebar opens its panel again, and a second click closes it. “+N more” opens the board for that session.</li>
+            <li><b>A quieter highlight:</b> the project rail is gone. The project you’re in keeps its bold name and your session keeps its own bar.</li>
+            <li><b>Fixed: report summaries:</b> a finished agent shows the first sentence of its report, not its heading.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.25</span><time datetime="2026-11-03">Nov 3, 2026</time></div>
         <div class="release-body">
           <h3>A calmer sidebar and colour emoji</h3>
           <ul>
@@ -140,13 +154,6 @@
           </ul>
         </div>
       </li>
-
-      <li class="release">
-        <div class="release-meta"><span class="version">0.23</span><time datetime="2026-11-03">Nov 3, 2026</time></div>
-        <div class="release-body">
-          <h3>Keep your place, start another session</h3>
-          <ul>
-            <li><b>Active project:</b> a soft accent tint highlights the current repo header alongside its selected session. It stays visible through Settings, documents, floating panes and folded groups.</li>
             <li><b>Clear running marks:</b> a still dot inside a closed ring replaces the frozen-looking spinner in session rows, subagents, the title bar and the agents pill. No animation frames.</li>
             <li><b>Kaze stays open:</b> closing the final session leaves a New session button and your shortcut ready. Settings, Workspaces and cleanup dialogs stay available.</li>
             <li><b>Shift+Enter:</b> add a new line in Claude Code without sending. Plain Enter still submits; Alt/Option+Enter continues to work.</li>
