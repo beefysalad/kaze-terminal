@@ -31,7 +31,7 @@ type sideDocInput struct {
 }
 type sideDrawKey struct {
 	activeRepo             string
-	openAgent              subagents.Key
+	openAgent, hoverAgent  subagents.Key
 	launchVersion          uint64
 	launcher               bool
 	size                   image.Point

@@ -203,3 +203,29 @@ func TestSidebarCacheTrayAllocatesNothing(t *testing.T) {
 		t.Fatal("unchanged sidebar with trays rebuilt or reshaped")
 	}
 }
+
+func TestSidebarCacheTooltipAllocatesNothing(t *testing.T) {
+	win, _ := sideWindow(t, true)
+	a := openIn(t, win, osPath("/code/repo/api"))
+	k := stepAgent(win, a.ID, "x")
+	var router input.Router
+	sideFrame(t, win, &router)
+	win.side.st.hoverAgent = k
+	var ops op.Ops
+	g := pageContext(1000, 600)
+	g.Ops = &ops
+	draw := func() { ops.Reset(); win.drawSide(g, image.Rect(0, 42, 260, 568)) }
+	for range 10 {
+		draw()
+	}
+	if win.side.hits.tip.Empty() {
+		t.Fatal("fixture drew no tooltip")
+	}
+	builds, draws := win.side.cache.builds, win.side.cache.draws
+	if n := testing.AllocsPerRun(100, draw); n != 0 {
+		t.Fatalf("unchanged sidebar with a tooltip allocates %g times", n)
+	}
+	if win.side.cache.builds != builds || win.side.cache.draws != draws {
+		t.Fatal("unchanged sidebar with a tooltip rebuilt or reshaped")
+	}
+}

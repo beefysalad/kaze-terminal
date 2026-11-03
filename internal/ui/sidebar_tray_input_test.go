@@ -7,6 +7,7 @@ import (
 
 	"gioui.org/io/input"
 	"gioui.org/io/pointer"
+	"gioui.org/unit"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
@@ -182,5 +183,102 @@ func TestTrayFoldControl(t *testing.T) {
 	floatFrames(t, win, r)
 	if win.side.trayFolded[a.ID] || len(trayHits(win, a.ID, hitAgentLine)) != trayCap {
 		t.Fatal("a second click did not open the tray")
+	}
+}
+
+// stepAgent starts agent id in tab with a current step "Grep auth".
+func stepAgent(win *window, tab tabs.TabID, id string) subagents.Key {
+	k := startAgent(win, tab, "s", id)
+	win.subs.Apply(subagents.Event{Kind: subagents.EvTool, Tab: int(tab), Src: int(tab), Session: "s", AgentID: id, AgentType: "Explore", Tool: "Grep", Summary: "auth", At: time.Now()})
+	return k
+}
+
+func sideMove(win *window, r *input.Router, kind pointer.Kind, p image.Point) {
+	r.Queue(pointer.Event{Kind: kind, Source: pointer.Mouse, Position: sidePt(win, p)})
+}
+
+func TestTrayTooltipShowsStep(t *testing.T) {
+	win, _ := sideWindow(t, true)
+	a := openIn(t, win, osPath("/code/repo/api"))
+	k := stepAgent(win, a.ID, "x")
+	var r input.Router
+	sideFrame(t, win, &r)
+	sideFrame(t, win, &r)
+	wake, wakeOK := r.WakeupTime()
+	line := agentHit(t, win, k)
+	if line.tip != "Grep auth" || !win.side.hits.tip.Empty() {
+		t.Fatalf("before hover: tip %q, tooltip %v", line.tip, win.side.hits.tip)
+	}
+	before := win.side.redraws
+	sideMove(win, &r, pointer.Move, centre(line.rect))
+	sideFrame(t, win, &r)
+	sideFrame(t, win, &r)
+	tip := win.side.hits.tip
+	if tip.Empty() || tip.Min.Y < line.rect.Max.Y || !tip.Overlaps(win.side.hits.list) {
+		t.Fatalf("tooltip %v, want it just below the line %v", tip, line.rect)
+	}
+	if win.side.redraws != before+1 {
+		t.Fatalf("hover asked for %d redraws, want 1", win.side.redraws-before)
+	}
+	for range 3 {
+		sideFrame(t, win, &r)
+	}
+	if win.side.redraws != before+1 {
+		t.Fatal("idle frames with the tooltip asked for redraws")
+	}
+	if at, ok := r.WakeupTime(); ok != wakeOK || at != wake {
+		t.Fatalf("the tooltip changed the wakeup: %v %v, was %v %v", at, ok, wake, wakeOK)
+	}
+	sideMove(win, &r, pointer.Move, centre(agentHit(t, win, k).btn))
+	sideFrame(t, win, &r)
+	if win.side.hits.tip.Empty() || win.side.redraws != before+1 {
+		t.Fatal("moving onto › hid the tooltip or redrew")
+	}
+}
+
+func TestTrayTooltipFlipsAbove(t *testing.T) {
+	rows := sideRows(1, 1, "s")
+	rows[0].Agents = trayAgents(1)
+	rows[0].TrayTotal = 1
+	m := sideModel{Loose: rows}
+	st := sideState{hoverAgent: rows[0].Agents[0].Key}
+	h, _ := sideDraw(t, m, st, 700)
+	line := h.agents[0].rect
+	if h.tip.Empty() || h.tip.Min.Y < line.Max.Y {
+		t.Fatalf("tall list: tooltip %v, want it below %v", h.tip, line)
+	}
+	h, _ = sideDraw(t, m, st, line.Max.Y+gtx0Dp(10))
+	line = h.agents[0].rect
+	if h.tip.Empty() || h.tip.Max.Y > line.Min.Y || h.tip.Max.Y > h.list.Max.Y {
+		t.Fatalf("line at the bottom: tooltip %v, want it above %v", h.tip, line)
+	}
+	rows[0].Agents[0].Action = ""
+	if h, _ := sideDraw(t, sideModel{Loose: rows}, st, 700); !h.tip.Empty() {
+		t.Fatal("a line with no step drew a tooltip")
+	}
+}
+
+// gtx0Dp is n dp at the test pages' scale.
+func gtx0Dp(n unit.Dp) int { return pageContext(sidebarW, 100).Dp(n) }
+
+func TestTrayTooltipGoneOnLeave(t *testing.T) {
+	win, _ := sideWindow(t, true)
+	a := openIn(t, win, osPath("/code/repo/api"))
+	k := stepAgent(win, a.ID, "x")
+	var r input.Router
+	sideFrame(t, win, &r)
+	sideFrame(t, win, &r)
+	p := centre(agentHit(t, win, k).rect)
+	sideMove(win, &r, pointer.Move, p)
+	sideFrame(t, win, &r)
+	sideFrame(t, win, &r)
+	if win.side.hits.tip.Empty() {
+		t.Fatal("no tooltip on hover")
+	}
+	sideMove(win, &r, pointer.Leave, p)
+	sideFrame(t, win, &r)
+	sideFrame(t, win, &r)
+	if !win.side.hits.tip.Empty() {
+		t.Fatalf("tooltip %v after the pointer left", win.side.hits.tip)
 	}
 }

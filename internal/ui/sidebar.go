@@ -38,6 +38,7 @@ type sideState struct {
 	doc, hoverDoc docID
 	shown         tabs.TabID      // highlighted row or member
 	openAgent     subagents.Key   // the subagent whose docked panel is shown
+	hoverAgent    subagents.Key   // the tray line under the pointer, whose step shows as a tooltip
 	settings      bool            // the pinned "Settings" row is open
 	settingsOn    bool            // and shown
 	hover         tabs.TabID      // row showing its ×
@@ -87,6 +88,7 @@ type sideHits struct {
 	next                                                                            image.Rectangle // the "Next waiting" button
 	list                                                                            image.Rectangle // the scrollable area, for wheel events
 	rail                                                                            image.Rectangle // the active project's accent rail, empty when none shows
+	tip                                                                             image.Rectangle // the hovered agent's step tooltip, empty when none shows
 	rename                                                                          image.Rectangle // the rename editor, empty while none is drawn
 	scrollMax                                                                       int
 	noMatches                                                                       bool // the filter hides every session
@@ -257,7 +259,42 @@ func (c *chrome) layoutSidebar(gtx layout.Context, m sideModel, st sideState, si
 	if len(m.Runs) > 0 {
 		c.sideRuns(gtx, &h, m, st, secTop, size, closeCall, closeSize)
 	}
+	c.trayTip(gtx, &h, st.hoverAgent)
 	return h
+}
+
+// trayTip draws the hovered tray line's current step as a one-line tooltip under the
+// line, or above it when the list has no room below. It is part of the retained
+// sidebar, keyed by the hovered agent, so it needs no timer and no extra frames.
+func (c *chrome) trayTip(gtx layout.Context, h *sideHits, k subagents.Key) {
+	if k == (subagents.Key{}) {
+		return
+	}
+	for _, a := range h.agents {
+		if a.kind != hitAgentLine || a.key != k || a.tip == "" {
+			continue
+		}
+		ops, ink := gtx.Ops, c.sideInk()
+		pad, rad := gtx.Dp(6), gtx.Dp(6)
+		box := image.Rect(a.rect.Min.X, 0, h.list.Max.X-gtx.Dp(8), 0)
+		call, sz := c.fitSide(gtx, a.tip, 11, max(box.Dx()-2*pad, 0), ink.tipFG)
+		ht := sz.Y + 2*pad
+		box.Min.Y, box.Max.Y = a.rect.Max.Y, a.rect.Max.Y+ht
+		if box.Max.Y > h.list.Max.Y {
+			box.Min.Y, box.Max.Y = a.rect.Min.Y-ht, a.rect.Min.Y
+		}
+		if box.Empty() || sz.X == 0 {
+			return
+		}
+		cl := clip.Rect(h.list).Push(ops)
+		defer cl.Pop()
+		rr := clip.UniformRRect(box, rad)
+		paint.FillShape(ops, ink.tipBG, rr.Op(ops))
+		stroke(ops, box, rad, c.th.ToastLine)
+		place(ops, call, image.Pt(box.Min.X+pad, box.Min.Y+pad))
+		h.tip = box.Intersect(h.list)
+		return
+	}
 }
 
 // lineEditor draws a sidebar text field's editor in r, gap in from its left, and ph

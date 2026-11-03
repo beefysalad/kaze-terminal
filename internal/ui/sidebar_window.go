@@ -203,7 +203,7 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 	s := &win.side
 	s.at = r.Min
 	if r.Empty() {
-		s.hits, s.st.hover, s.reveal = sideHits{}, 0, false
+		s.hits, s.st.hover, s.st.hoverAgent, s.reveal = sideHits{}, 0, subagents.Key{}, false
 		return
 	}
 	ops := gtx.Ops
@@ -241,7 +241,7 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 				s.st.floating = f.id
 			}
 		}
-		key := sideDrawKey{activeRepo: s.st.activeRepo, openAgent: s.st.openAgent, size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, floating: s.st.floating, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds, launchVersion: s.launch.version, launcher: s.launch.shown, renaming: s.renaming}
+		key := sideDrawKey{activeRepo: s.st.activeRepo, openAgent: s.st.openAgent, hoverAgent: s.st.hoverAgent, size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, floating: s.st.floating, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds, launchVersion: s.launch.version, launcher: s.launch.shown, renaming: s.renaming}
 		if !s.cache.drawValid || s.cache.drawKey != key || s.reveal {
 			s.cache.ops.Reset()
 			cg := sg
@@ -546,9 +546,17 @@ func (win *window) sidePointer(e pointer.Event) {
 		if r, ok := s.hits.lineAt(p); ok && e.Kind != pointer.Leave {
 			hover = r.id
 		}
-		if hover != s.st.hover || hoverDoc != s.st.hoverDoc {
+		var hoverAgent subagents.Key // the tray line under the pointer, › included
+		for _, a := range s.hits.agents {
+			if a.kind == hitAgentLine && p.In(a.rect) && e.Kind != pointer.Leave {
+				hoverAgent = a.key
+				break
+			}
+		}
+		if hover != s.st.hover || hoverDoc != s.st.hoverDoc || hoverAgent != s.st.hoverAgent {
 			s.st.hoverDoc = hoverDoc
 			s.st.hover = hover
+			s.st.hoverAgent = hoverAgent
 			win.sideRedraw()
 		}
 	case pointer.Scroll:
