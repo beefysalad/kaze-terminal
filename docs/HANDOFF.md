@@ -1,8 +1,15 @@
 # kaze handoff
 
-Last updated: 2026-11-03, after building the docked agent panel (#106, #103) on `feat/agent-dock`. Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-03, releasing 0.24 (docked agent panel #106/#103, Windows clipboard #117, workspace Ready #118). Read this first when you pick up kaze on another machine.
 
 ## Where things stand
+
+**Release 0.24 bundles PRs #121 (docked agent panel, #106 and #103), #119 (Windows Ctrl+C/Ctrl+V
+copy and paste with images, #117) and #120 (finished workspace members read Ready, #118).** The
+owner asked on 2026-11-03 for a review subagent per PR, a fixer per PR for real findings, then merge
+and release. All three reviews found issues; each was fixed test-first and passed macOS and Windows
+CI, #121 together with the other two. Deferred minors are listed in PR #121. Product screenshots
+need retaking (`docs/site-assets/SCREENSHOTS.md`); native installed-app checks remain owner checks.
 
 **Docked agent panel (#106, includes #103) is built on `feat/agent-dock`.** The owner approved
 the mockups (2026-11-02), the three open details and five builder calls, then the plan

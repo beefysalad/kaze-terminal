@@ -921,6 +921,7 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 Done:
 
+- 0.24: subagents open in a panel docked under the terminal with an Activity timeline and formatted reports (#106, #103); Ctrl+C/Ctrl+V copy and paste on Windows, screenshots included (#117); finished workspace setup tabs read Ready (#118).
 - 0.23: active-project header emphasis, still ring-and-core running marks, a reusable empty window and Shift+Enter multiline input (#107, #113, #114).
 - 0.21: read markdown docs inside kaze, follow live Claude subagent messages, recover empty reports and see a cleaner resource card.
 - Plan 1: the terminal core with tabs.

@@ -1,9 +1,9 @@
-## What’s new in Kaze 0.23
+## What’s new in Kaze 0.24
 
-- **Find the active project:** its repo header gets a soft accent tint and accent-colored name and arrow alongside the selected session. That context stays visible in Settings, documents, floating panes and folded groups.
-- **Clearer running marks:** a still dot inside a closed ring replaces the frozen-looking spinner across session rows, subagents, the title breadcrumb and the agents pill. No animation or extra idle frames.
-- **Keep Kaze open:** closing the final session, or exiting its final plain shell, leaves a New session action and your shortcut ready. Settings, Workspaces and worktree cleanup dialogs remain usable.
-- **Shift+Enter for a newline:** continue a Claude Code prompt without sending it. Plain Enter still submits, and Alt/Option+Enter remains available.
+- **Agent panel:** click a subagent to open its panel under the terminal instead of a floating card. Activity lists each step with the agent’s own messages between them; Report shows the finished report, formatted. Drag the edge to any height; each session remembers its panel.
+- **Formatted reports:** bold, code, lists, headings and tables render in the panel. Copy report copies the original markdown, and Open in reader shows it in the doc reader.
+- **Copy and paste on Windows:** Ctrl+C copies a selection and otherwise still interrupts; Ctrl+V pastes text and screenshots. Typing clears an old selection, so Ctrl+C always stops Claude after you type.
+- **Fixed: workspace setup tabs:** a member whose commands finished reads Ready instead of stopped, and the workspace header no longer counts it as down.
 
 ## Download
 
