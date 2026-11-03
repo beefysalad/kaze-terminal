@@ -466,13 +466,18 @@ func (c *chrome) sideList(gtx layout.Context, h *sideHits, m sideModel, st sideS
 		hit := sideRowHit{id: r.ID, rect: rect.Intersect(h.list), title: titleBand.Intersect(h.list)}
 		if r.TrayTotal > 0 && word != "" {
 			wmid := rect.Min.Y + gtx.Dp(14)
-			hit.fold = image.Rect(right-wordW-hitPad, wmid-wSize.Y/2-hitPad, right+hitPad, wmid+wSize.Y/2+hitPad).Intersect(h.list)
+			// It ends at right, a gap clear of the × on a hovered row, so a near-miss never closes.
+			hit.fold = image.Rect(right-wordW-hitPad, wmid-wSize.Y/2-hitPad, right, wmid+wSize.Y/2+hitPad).Intersect(h.list)
 		}
 		if st.hover == r.ID && r.ID != 0 {
 			cx := rect.Max.X - gap - closeSize.X
 			cmid := rect.Min.Y + gtx.Dp(14)
 			place(ops, closeCall, image.Pt(cx, cmid-closeSize.Y/2))
-			hit.close = image.Rect(cx-hitPad, cmid-closeSize.Y/2-hitPad, rect.Max.X, cmid+closeSize.Y/2+hitPad).Intersect(h.list)
+			left := cx - hitPad
+			if !hit.fold.Empty() {
+				left = cx // no left pad: the gap to the fold control stays a dead zone
+			}
+			hit.close = image.Rect(left, cmid-closeSize.Y/2-hitPad, rect.Max.X, cmid+closeSize.Y/2+hitPad).Intersect(h.list)
 		}
 		h.rows = append(h.rows, hit)
 	}

@@ -186,6 +186,30 @@ func TestTrayFoldControl(t *testing.T) {
 	}
 }
 
+// TestTrayFoldClearOfClose: on a hovered row the fold control and the × leave a dead
+// zone of at least 8 dp, so a near-miss on the fold never closes the session.
+func TestTrayFoldClearOfClose(t *testing.T) {
+	win, _, r, a, b, _, _ := paneWindow(t)
+	startAgents(win, a.ID, 4)
+	win.selectTab(b.ID)
+	floatFrames(t, win, r)
+	sideMove(win, r, pointer.Move, centre(rowHit(t, win, a.ID).fold))
+	floatFrames(t, win, r)
+	h := rowHit(t, win, a.ID)
+	if h.close.Empty() || h.fold.Empty() {
+		t.Fatalf("hovered row: fold %v close %v, want both", h.fold, h.close)
+	}
+	if gap := h.close.Min.X - h.fold.Max.X; gap < gtx0Dp(8) {
+		t.Fatalf("fold %v and close %v are %d px apart, want at least %d (8 dp)", h.fold, h.close, gap, gtx0Dp(8))
+	}
+	// One pixel right of the fold rect (Max is exclusive).
+	sideClickAt(win, r, image.Pt(h.fold.Max.X, centre(h.fold).Y), pointer.ButtonPrimary, 0)
+	floatFrames(t, win, r)
+	if !win.mgr.Has(a.ID) {
+		t.Fatal("a press just right of the fold control closed the session")
+	}
+}
+
 // stepAgent starts agent id in tab with a current step "Grep auth".
 func stepAgent(win *window, tab tabs.TabID, id string) subagents.Key {
 	k := startAgent(win, tab, "s", id)
