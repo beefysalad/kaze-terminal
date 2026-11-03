@@ -657,6 +657,7 @@ func (win *window) frame(gtx layout.Context) error {
 		} else if win.docs.shown != 0 {
 			win.docEvents(gtx)
 		} else if active != nil {
+			win.dockEvents(gtx)
 			win.paneEvents(gtx, cw, ch) // before the session: a pane sits over it
 			if win.fl.refocus {
 				win.fl.refocus, win.wantFocus = false, true // its filters are up now
@@ -1021,6 +1022,9 @@ func (win *window) focusTarget() event.Tag {
 	if win.docs.shown != 0 {
 		return &win.docs.tag
 	}
+	if win.dock.keys && !win.dock.hits.panel.Empty() {
+		return &win.dock.body
+	}
 	if v, ok := win.paneKeyView(); ok {
 		return v.tag
 	}
@@ -1117,6 +1121,7 @@ func (win *window) termEvents(gtx layout.Context, v termView, cw, ch int) {
 		if e, ok := ev.(pointer.Event); ok && e.Kind == pointer.Press && !win.bench.IgnoreInput() {
 			// A press in a pane takes the keyboard there; one in the session takes it back.
 			if v.tag == win.termTag {
+				win.dock.keys = false // the terminal takes the keyboard back from the panel
 				if win.fl.keys != 0 {
 					win.focusSession()
 				}

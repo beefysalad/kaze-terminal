@@ -188,3 +188,6 @@ func (win *window) docEvents(gtx layout.Context) {
 		}
 	}
 }
+
+// openReportDoc opens an agent's report in the reader (filled in by the reader task).
+func (win *window) openReportDoc(session tabs.TabID, title, md string) *docView { return nil }
