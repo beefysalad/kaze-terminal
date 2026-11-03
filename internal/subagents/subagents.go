@@ -426,6 +426,49 @@ func (t *Tracker) Tree(tab int) (shown []*Agent, more int) {
 	return shown, 0
 }
 
+// TrayCounts counts a tray's agents by state.
+type TrayCounts struct{ Waiting, Running, Done int }
+
+// Total is every agent counted.
+func (c TrayCounts) Total() int { return c.Waiting + c.Running + c.Done }
+
+// trayRank orders the tray: waiting, then running, then done.
+var trayRank = [...]int{Running: 1, Waiting: 0, Done: 2}
+
+// Tray is tab's subagents for the sidebar tray: Tree's members (finished ones only
+// while another still runs), flat, waiting first, then running, then done, newest
+// first within each. The first limit are shown; hidden counts the rest by state.
+func (t *Tracker) Tray(tab, limit int) (shown []*Agent, hidden TrayCounts) {
+	busy := t.Active(tab) > 0
+	var all []*Agent
+	for i := len(t.order) - 1; i >= 0; i-- { // newest first, so ties keep the later start first
+		if a := t.order[i]; a.Tab == tab && a.InTree && (busy || a.State != Done) {
+			all = append(all, a)
+		}
+	}
+	slices.SortStableFunc(all, func(a, b *Agent) int {
+		if d := trayRank[a.State] - trayRank[b.State]; d != 0 {
+			return d
+		}
+		return b.Started.Compare(a.Started)
+	})
+	limit = max(limit, 0)
+	if len(all) <= limit {
+		return all, hidden
+	}
+	for _, a := range all[limit:] {
+		switch a.State {
+		case Waiting:
+			hidden.Waiting++
+		case Running:
+			hidden.Running++
+		default:
+			hidden.Done++
+		}
+	}
+	return all[:limit], hidden
+}
+
 // Board is every subagent by column: running and waiting in start order,
 // done newest first.
 func (t *Tracker) Board() (running, waiting, done []*Agent) {

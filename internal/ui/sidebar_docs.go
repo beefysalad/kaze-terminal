@@ -36,7 +36,7 @@ func (c *chrome) docLines(gtx layout.Context, h *sideHits, r sideRow, st sideSta
 		if !band.Overlaps(h.list) {
 			continue
 		}
-		fg, ic := c.th.Folder, c.th.Muted
+		fg, ic := c.th.Folder, c.sideInk().muted
 		if st.doc == d.ID {
 			paint.FillShape(gtx.Ops, c.th.Active, clip.UniformRRect(band, gtx.Dp(5)).Op(gtx.Ops))
 			fg, ic = c.th.ActiveFG, c.th.Accent
@@ -47,7 +47,7 @@ func (c *chrome) docLines(gtx layout.Context, h *sideHits, r sideRow, st sideSta
 		call, sz := c.fitSide(gtx, d.Name, 12, max(0, cl.Min.X-tx-gtx.Dp(4)), fg)
 		place(gtx.Ops, call, image.Pt(tx, band.Min.Y+gtx.Dp(2)))
 		_ = sz
-		call, _ = c.fitSide(gtx, d.Folder, 10, max(0, x1-tx), c.th.Muted)
+		call, _ = c.fitSide(gtx, d.Folder, 10, max(0, x1-tx), c.sideInk().muted)
 		place(gtx.Ops, call, image.Pt(tx, band.Min.Y+gtx.Dp(19)))
 		if st.hoverDoc == d.ID {
 			place(gtx.Ops, closeCall, cl.Min)

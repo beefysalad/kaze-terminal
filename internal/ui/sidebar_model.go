@@ -3,9 +3,9 @@ package ui
 import (
 	"slices"
 	"strings"
-	"unicode"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/branchsession"
+	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 )
 
@@ -21,9 +21,13 @@ type sideRow struct {
 	Claude                bool // Claude Code has reported from this tab
 	Add, Del              int  // lines added and removed in the folder's repo
 	Mark                  mark
-	Agents                []sideAgent // its subagents, as the tree shows them
-	MoreAgents            int         // subagents past the tree's limit
-	AgentCount            int         // running and waiting, for the chip
+	Agents                []sideAgent          // its tray's lines; empty while folded
+	Hidden                subagents.TrayCounts // tray agents past the lines, by state
+	AgentCount            int                  // running and waiting, for the group chip
+	TrayTotal             int                  // every agent in its tray, finished ones included
+	TrayWaiting           int                  // tray agents waiting for the owner
+	TrayExpanded          bool                 // the chip was clicked: up to trayMax lines
+	TrayFolded            bool                 // the fold control hid the tray
 }
 
 // sideGroup is one repo's sessions. Rows is filtered; Count is not.
@@ -73,11 +77,11 @@ type sideInput struct {
 	Filter   string
 	Home     string
 	DefTitle string
-	Clean    func(string) string                                    // drops runes the fonts lack before a title is shortened; nil keeps them
-	Agent    func(tabs.TabID) agentState                            // nil: no tab runs an agent
-	Name     func(tabs.TabID) string                                // the owner's name for a row; nil or "" for none
-	Lines    func(tabs.TabID) (add, del int)                        // nil: no counts
-	Agents   func(tabs.TabID) (shown []sideAgent, more, active int) // nil: no subagents
+	Clean    func(string) string             // drops runes the fonts lack before a title is shortened; nil keeps them
+	Agent    func(tabs.TabID) agentState     // nil: no tab runs an agent
+	Name     func(tabs.TabID) string         // the owner's name for a row; nil or "" for none
+	Lines    func(tabs.TabID) (add, del int) // nil: no counts
+	Agents   func(tabs.TabID) sideTray       // nil: no subagents
 }
 
 // branchPrefixes are the leading segments dropped from a branch name.
@@ -155,7 +159,9 @@ func buildSide(in sideInput) sideModel {
 			row.Add, row.Del = in.Lines(t.ID)
 		}
 		if in.Agents != nil {
-			row.Agents, row.MoreAgents, row.AgentCount = in.Agents(t.ID)
+			tr := in.Agents(t.ID)
+			row.Agents, row.Hidden, row.AgentCount = tr.Shown, tr.Hidden, tr.Active
+			row.TrayTotal, row.TrayWaiting, row.TrayExpanded, row.TrayFolded = tr.Total, tr.Waiting, tr.Expanded, tr.Folded
 		}
 		if loc.cwd == "" || loc.repo == "" {
 			loose = append(loose, row)
@@ -342,10 +348,8 @@ func (in sideInput) ruled(t *tabs.Tab, loc locEntry, a agentState) string {
 		return a.arg
 	}
 	if a.agentName() != "" {
-		title := strings.TrimLeftFunc(t.Title, func(r rune) bool {
-			return unicode.IsSpace(r) || r == '✳' || r == '✻' || r == '✽' || r == '⏺' || (r >= 0x2800 && r <= 0x28ff)
-		})
-		if title != "" && !looksLikePath(title) {
+		title := dropStatusMark(t.Title)
+		if !onlyStatus(title) && !looksLikePath(title) {
 			return title
 		}
 	}
@@ -375,8 +379,11 @@ func folderName(dir string) string {
 }
 
 // stateWord is the first-line status; alerts take priority over subagent counts.
+// A row with a tray shows the tray's fold control instead; its dot keeps the mark.
 func (r sideRow) stateWord() string {
 	switch {
+	case r.TrayTotal > 0:
+		return trayFold(r.TrayTotal, r.TrayFolded)
 	case r.Mark == markNeeds:
 		return "needs you"
 	case r.Mark == markDone:

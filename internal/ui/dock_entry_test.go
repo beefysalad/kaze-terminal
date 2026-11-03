@@ -20,28 +20,12 @@ func startAgent(win *window, tab tabs.TabID, session, id string) subagents.Key {
 func agentHit(t *testing.T, win *window, k subagents.Key) sideAgentHit {
 	t.Helper()
 	for _, h := range win.side.hits.agents {
-		if h.key == k && !h.more {
+		if h.key == k && h.kind == hitAgentLine {
 			return h
 		}
 	}
 	t.Fatalf("no sidebar line for %v", k)
 	return sideAgentHit{}
-}
-
-func TestSidebarAgentTogglesDock(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
-	k := startAgent(win, a.ID, "s", "x")
-	floatFrames(t, win, r)
-	sideClick(win, r, agentHit(t, win, k).rect, pointer.ButtonPrimary)
-	floatFrames(t, win, r)
-	if s := win.dockOf(a.ID); s == nil || s.agent != k {
-		t.Fatal("click did not open the panel")
-	}
-	sideClick(win, r, agentHit(t, win, k).rect, pointer.ButtonPrimary)
-	floatFrames(t, win, r)
-	if win.dockOf(a.ID) != nil {
-		t.Fatal("second click did not close it")
-	}
 }
 
 func TestSidebarAgentHighlight(t *testing.T) {
@@ -63,7 +47,7 @@ func TestSidebarAgentOtherSession(t *testing.T) {
 	floatFrames(t, win, r)
 	win.showAgent(a.ID, x, false)
 	floatFrames(t, win, r)
-	sideClick(win, r, agentHit(t, win, y).rect, pointer.ButtonPrimary)
+	sideClick(win, r, agentHit(t, win, y).btn, pointer.ButtonPrimary)
 	floatFrames(t, win, r)
 	if win.mgr.Active().ID != b.ID || win.dockOf(b.ID).agent != y {
 		t.Fatal("other session's agent did not open there")
@@ -146,7 +130,7 @@ func TestNoFloatingAgentPane(t *testing.T) {
 	win, _, r, a, _, _, _ := paneWindow(t)
 	k := startAgent(win, a.ID, "s", "x")
 	floatFrames(t, win, r)
-	sideClick(win, r, agentHit(t, win, k).rect, pointer.ButtonPrimary)
+	sideClick(win, r, agentHit(t, win, k).btn, pointer.ButtonPrimary)
 	floatFrames(t, win, r)
 	for _, p := range win.fl.set(a.ID).panes {
 		if p.id < 0 {

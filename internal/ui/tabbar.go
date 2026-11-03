@@ -41,6 +41,9 @@ type chrome struct {
 	ansi      [16]color.NRGBA // the terminal's ANSI colors, for workspace members
 
 	faces   []font.FontFace
+	ink     sideInk         // sideInk for inkFor and inkMag
+	inkFor  theme.Chrome    // the theme ink was worked out for
+	inkMag  color.NRGBA     // and its magenta
 	covered map[rune]bool   // rune -> some face has it
 	loaded  map[string]bool // system font files already added
 }
@@ -52,7 +55,7 @@ func newChrome() *chrome {
 		name   string
 		weight font.Weight
 	}{
-		{fonts.MonoRegular, chromeFace, font.Normal}, {fonts.CJK, "Noto Sans JP", font.Normal},
+		{fonts.MonoRegular, chromeFace, font.Normal}, {fonts.MonoBold, chromeFace, font.Bold}, {fonts.CJK, "Noto Sans JP", font.Normal},
 		{fonts.SansRegular, sansFace, font.Normal}, {fonts.SansMedium, sansFace, font.Medium},
 		{fonts.SansSemiBold, sansFace, font.SemiBold},
 	} {
@@ -60,7 +63,12 @@ func newChrome() *chrome {
 		if err != nil {
 			panic("ui: bundled font does not parse: " + err.Error()) // embedded at build time
 		}
-		faces = append(faces, font.FontFace{Font: font.Font{Typeface: font.Typeface(src.name), Weight: src.weight}, Face: f})
+		ff := font.FontFace{Font: font.Font{Typeface: font.Typeface(src.name), Weight: src.weight}, Face: f}
+		if src.name == sansFace || src.name == chromeFace {
+			faces = append(faces, ff)
+		} else {
+			faces = append(faces, atChromeWeights(ff)...)
+		}
 	}
 	return &chrome{
 		shaper:  text.NewShaper(text.NoSystemFonts(), text.WithCollection(faces)),
@@ -160,12 +168,37 @@ func (c *chrome) addFont(path string) (ok, fresh bool) {
 	if err != nil || len(ff) == 0 {
 		return false, false
 	}
-	c.faces = append(c.faces, ff...)
+	for _, f := range ff {
+		c.faces = append(c.faces, atChromeWeights(f)...)
+	}
 	return true, true
+}
+
+// chromeWeights are the weights chrome text is drawn at besides Normal.
+var chromeWeights = [...]font.Weight{font.Medium, font.SemiBold, font.Bold}
+
+// atChromeWeights lists a fallback face again under each chrome weight. The font
+// matcher only falls back to a face of the asked weight, so a rune only a fallback
+// font has (◐, ⎇, Japanese) drew as an empty box in Medium or SemiBold text (#124).
+func atChromeWeights(f font.FontFace) []font.FontFace {
+	out := []font.FontFace{f}
+	for _, w := range chromeWeights {
+		if w != f.Font.Weight {
+			a := f
+			a.Font.Weight = w
+			out = append(out, a)
+		}
+	}
+	return out
 }
 
 // label records one line of text so its size is known before it is placed.
 func (c *chrome) label(gtx layout.Context, s string, size unit.Sp, col color.NRGBA) (op.CallOp, image.Point) {
+	return c.labelW(gtx, s, size, col, font.Normal)
+}
+
+// labelW is label at weight w.
+func (c *chrome) labelW(gtx layout.Context, s string, size unit.Sp, col color.NRGBA, w font.Weight) (op.CallOp, image.Point) {
 	s = c.fit(s)
 	m := op.Record(gtx.Ops)
 	mat := op.Record(gtx.Ops)
@@ -173,7 +206,7 @@ func (c *chrome) label(gtx layout.Context, s string, size unit.Sp, col color.NRG
 	matc := mat.Stop()
 	lg := gtx
 	lg.Constraints = layout.Constraints{Max: image.Pt(1<<16, 1<<16)}
-	d := widget.Label{MaxLines: 1}.Layout(lg, c.shaper, font.Font{Typeface: chromeFace}, size, s, matc)
+	d := widget.Label{MaxLines: 1}.Layout(lg, c.shaper, font.Font{Typeface: chromeFace, Weight: w}, size, s, matc)
 	return m.Stop(), d.Size
 }
 

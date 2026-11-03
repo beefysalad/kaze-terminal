@@ -574,3 +574,51 @@ func TestClearDoneByTab(t *testing.T) {
 		t.Fatalf("clear all %d", n)
 	}
 }
+
+func trayIDs(shown []*Agent) []string {
+	var ids []string
+	for _, a := range shown {
+		ids = append(ids, a.Key.ID)
+	}
+	return ids
+}
+
+func TestTrayOrderAndCap(t *testing.T) {
+	var tr Tracker
+	for i := range 5 {
+		e := ev(EvStart, fmt.Sprintf("a%d", i), "Explore")
+		e.At = at(i)
+		tr.Apply(e)
+	}
+	tr.Apply(ev(EvNeeds, "a1", ""))
+	tr.Apply(ev(EvStop, "a2", "Explore"))
+	tr.Apply(ev(EvNeeds, "a4", ""))
+	shown, hidden := tr.Tray(1, 3)
+	if got := fmt.Sprint(trayIDs(shown)); got != "[a4 a1 a3]" {
+		t.Fatalf("Tray(1, 3) shows %s, want [a4 a1 a3]", got)
+	}
+	if hidden != (TrayCounts{Running: 1, Done: 1}) || hidden.Total() != 2 {
+		t.Fatalf("hidden %+v", hidden)
+	}
+	shown, hidden = tr.Tray(1, 8)
+	if got := fmt.Sprint(trayIDs(shown)); got != "[a4 a1 a3 a0 a2]" || hidden.Total() != 0 {
+		t.Fatalf("Tray(1, 8) shows %s hidden %+v", got, hidden)
+	}
+	if shown, _ := tr.Tray(2, 3); len(shown) != 0 {
+		t.Fatalf("another tab's tray holds %v", trayIDs(shown))
+	}
+}
+
+func TestTrayDropsFinishedWhenNoneRun(t *testing.T) {
+	var tr Tracker
+	tr.Apply(ev(EvStart, "a1", "X"))
+	tr.Apply(ev(EvStart, "a2", "X"))
+	tr.Apply(ev(EvStop, "a1", "X"))
+	if shown, _ := tr.Tray(1, 3); len(shown) != 2 {
+		t.Fatalf("while a2 runs the finished a1 stays: %v", trayIDs(shown))
+	}
+	tr.Apply(ev(EvStop, "a2", "X"))
+	if shown, hidden := tr.Tray(1, 3); len(shown) != 0 || hidden.Total() != 0 {
+		t.Fatalf("all finished, the tray still shows %v %+v", trayIDs(shown), hidden)
+	}
+}

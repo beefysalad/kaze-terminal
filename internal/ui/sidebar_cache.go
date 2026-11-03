@@ -31,7 +31,7 @@ type sideDocInput struct {
 }
 type sideDrawKey struct {
 	activeRepo             string
-	openAgent              subagents.Key
+	openAgent, hoverAgent  subagents.Key
 	launchVersion          uint64
 	launcher               bool
 	size                   image.Point
@@ -52,6 +52,8 @@ type sideCache struct {
 	docs              []sideDocInput
 	folded            map[string]bool
 	runFolded         map[uint64]bool
+	trayOpen          map[tabs.TabID]bool
+	trayFolded        map[tabs.TabID]bool
 	filter, home, def string
 	revision          uint64
 	until             time.Time
@@ -106,7 +108,8 @@ func (win *window) cachedSide(now time.Time) sideModel {
 			dirty = true
 		}
 	}
-	if !maps.Equal(c.folded, s.folded) || !maps.Equal(c.runFolded, s.st.runFolded) {
+	if !maps.Equal(c.folded, s.folded) || !maps.Equal(c.runFolded, s.st.runFolded) ||
+		!maps.Equal(c.trayOpen, s.trayOpen) || !maps.Equal(c.trayFolded, s.trayFolded) {
 		dirty = true
 	}
 	runs := win.curRuns()
@@ -127,6 +130,8 @@ func (win *window) cachedSide(now time.Time) sideModel {
 		c.order = sessionOrder(c.base)
 		c.folded = maps.Clone(s.folded)
 		c.runFolded = maps.Clone(s.st.runFolded)
+		c.trayOpen = maps.Clone(s.trayOpen)
+		c.trayFolded = maps.Clone(s.trayFolded)
 		c.docs = c.docs[:0]
 		for _, d := range win.docs.list {
 			c.docs = append(c.docs, sideDocInput{d.session, sideDoc{d.id, d.name, d.folder}})
