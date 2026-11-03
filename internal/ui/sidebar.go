@@ -323,7 +323,7 @@ func (c *chrome) sideList(gtx layout.Context, h *sideHits, m sideModel, st sideS
 		rect := image.Rect(pad, y, h.list.Max.X-pad, y+rowH)
 		y += rowSpan(gtx, r)
 		c.docLines(gtx, h, r, st, rect.Min.X+gap+dot+gap, rect.Max.X-gap, rect.Max.Y, closeCall, closeSize)
-		if len(r.Agents) > 0 || r.MoreAgents > 0 {
+		if len(r.Agents) > 0 || r.Hidden.Total() > 0 {
 			c.agentLines(gtx, h, r, rect.Min.X+gap+dot+gap, rect.Max.X-gap, rect.Max.Y+len(r.Docs)*gtx.Dp(sideDocH), st.openAgent)
 		}
 		if !rect.Overlaps(h.list) {

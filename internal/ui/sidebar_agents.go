@@ -76,21 +76,95 @@ func agentChip(n int) string {
 	return fmt.Sprintf("%d agents", n)
 }
 
-// sideAgents is the sidebar input's view of the tracker.
-func (win *window) sideAgents(id tabs.TabID) ([]sideAgent, int, int) {
-	shown, more := win.subs.Tree(int(id))
-	now := time.Now()
-	out := make([]sideAgent, 0, len(shown))
-	for _, a := range shown {
-		out = append(out, sideAgentOf(a, now))
+// trayCap and trayMax are a tray's agent lines collapsed and expanded (spec 3).
+const trayCap, trayMax = 3, 8
+
+// The fold control's carets: open, and folded.
+const trayOpenCaret, trayShutCaret = "⌄", "›"
+
+// sideTray is one session's subagent tray as the sidebar model sees it.
+type sideTray struct {
+	Shown            []sideAgent          // the lines to draw; nil while folded
+	Hidden           subagents.TrayCounts // agents past the lines, by state; zero while folded
+	Total, Waiting   int                  // every agent in the tray, and those waiting
+	Active           int                  // running and waiting, for the group chip
+	Expanded, Folded bool
+}
+
+// sideAgents is the sidebar input's view of the tracker for one session.
+func (win *window) sideAgents(id tabs.TabID) sideTray {
+	tr := sideTray{Expanded: win.side.trayOpen[id], Folded: win.side.trayFolded[id], Active: win.subs.Active(int(id))}
+	limit := trayCap
+	if tr.Expanded {
+		limit = trayMax
 	}
-	return out, more, win.subs.Active(int(id))
+	shown, hidden := win.subs.Tray(int(id), limit)
+	tr.Total, tr.Waiting = len(shown)+hidden.Total(), hidden.Waiting
+	for _, a := range shown {
+		if a.State == subagents.Waiting {
+			tr.Waiting++
+		}
+	}
+	if tr.Folded {
+		return tr
+	}
+	tr.Hidden = hidden
+	now := time.Now()
+	tr.Shown = make([]sideAgent, 0, len(shown))
+	for _, a := range shown {
+		tr.Shown = append(tr.Shown, sideAgentOf(a, now))
+	}
+	return tr
+}
+
+// trayFold is the row's fold control: "20 agents ⌄" open, "20 agents ›" folded.
+func trayFold(total int, folded bool) string {
+	if folded {
+		return agentChip(total) + " " + trayShutCaret
+	}
+	return agentChip(total) + " " + trayOpenCaret
+}
+
+// trayChip is the chip under a capped tray, in three colored parts: "+17 more",
+// " · 2 need you" (empty when none waits) and " · 15 running, 2 done ⌄".
+func trayChip(h subagents.TrayCounts) (lead, needs, rest string) {
+	lead = "+" + strconv.Itoa(h.Total()) + " more"
+	switch {
+	case h.Waiting == 1:
+		needs = " · 1 needs you"
+	case h.Waiting > 1:
+		needs = " · " + strconv.Itoa(h.Waiting) + " need you"
+	}
+	var parts []string
+	if h.Running > 0 {
+		parts = append(parts, strconv.Itoa(h.Running)+" running")
+	}
+	if h.Done > 0 {
+		parts = append(parts, strconv.Itoa(h.Done)+" done")
+	}
+	if len(parts) > 0 {
+		sep := " · "
+		if needs != "" {
+			sep = ", "
+		}
+		rest = sep + strings.Join(parts, ", ")
+	}
+	return lead, needs, rest + " " + trayOpenCaret
+}
+
+// trayFooter is an expanded tray's last line: "Show fewer", and past trayMax
+// " · N more on the board".
+func trayFooter(beyond int) (fewer, board string) {
+	if beyond > 0 {
+		board = " · " + strconv.Itoa(beyond) + " more on the board"
+	}
+	return "Show fewer", board
 }
 
 // rowSpan is a row's height with its subagent lines.
 func rowSpan(gtx layout.Context, r sideRow) int {
 	h := gtx.Dp(sideRowH) + len(r.Docs)*gtx.Dp(sideDocH) + len(r.Agents)*gtx.Dp(sideAgentH)
-	if r.MoreAgents > 0 {
+	if r.Hidden.Total() > 0 {
 		h += gtx.Dp(sideMoreH)
 	}
 	return h
@@ -143,10 +217,10 @@ func (c *chrome) agentLines(gtx layout.Context, h *sideHits, r sideRow, x0, x1, 
 		}
 		h.agents = append(h.agents, sideAgentHit{key: a.Key, tab: r.ID, open: isOpen, rect: band.Intersect(h.list)})
 	}
-	if r.MoreAgents > 0 {
+	if r.Hidden.Total() > 0 {
 		band := image.Rect(x0, y, x1, y+gtx.Dp(sideMoreH))
 		if band.Overlaps(h.list) {
-			call, sz := c.label(gtx, "+"+strconv.Itoa(r.MoreAgents)+" more", 10, th.Muted)
+			call, sz := c.label(gtx, "+"+strconv.Itoa(r.Hidden.Total())+" more", 10, th.Muted)
 			place(ops, call, image.Pt(x0+dot+gap, band.Min.Y+band.Dy()/2-sz.Y/2))
 			h.agents = append(h.agents, sideAgentHit{tab: r.ID, more: true, rect: band.Intersect(h.list)})
 		}

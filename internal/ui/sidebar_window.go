@@ -39,29 +39,42 @@ type sideUI struct {
 	cache         sideCache
 	tabs          []*tabs.Tab
 	st            sideState
-	folded        map[string]bool // repo groups the owner folded, by key
-	hidden        bool            // off in the settings, or the window is too narrow
-	w             int             // this frame's sidebar width in px, set once at the frame's start
-	hits          sideHits        // sidebar-local, like the pointer events on tag
-	at            image.Point     // the sidebar's top-left in the window
-	tag           int             // pointer events on the sidebar or the rail
-	reveal        bool            // scroll the shown row into view next frame
-	redraws       int             // frames the sidebar's pointer input asked for; tests count them
-	ed            widget.Editor   // the filter field
-	filtering     bool            // the filter field has the keyboard
-	narrow        bool            // the window is too narrow for the sidebar
-	filters       []event.Filter  // the filter's own keys, built once
-	ren           widget.Editor   // the title of the row being renamed
-	renaming      tabs.TabID      // 0 when no row is being renamed
-	renFrom       string          // the text the rename started with
-	renKeys       []event.Filter  // the rename editor's own keys, built once
-	lastClick     titleClick      // the last press on a row's title, for a double click
+	folded        map[string]bool     // repo groups the owner folded, by key
+	trayOpen      map[tabs.TabID]bool // sessions whose agent tray is expanded to trayMax lines
+	trayFolded    map[tabs.TabID]bool // sessions whose agent tray is folded away
+	hidden        bool                // off in the settings, or the window is too narrow
+	w             int                 // this frame's sidebar width in px, set once at the frame's start
+	hits          sideHits            // sidebar-local, like the pointer events on tag
+	at            image.Point         // the sidebar's top-left in the window
+	tag           int                 // pointer events on the sidebar or the rail
+	reveal        bool                // scroll the shown row into view next frame
+	redraws       int                 // frames the sidebar's pointer input asked for; tests count them
+	ed            widget.Editor       // the filter field
+	filtering     bool                // the filter field has the keyboard
+	narrow        bool                // the window is too narrow for the sidebar
+	filters       []event.Filter      // the filter's own keys, built once
+	ren           widget.Editor       // the title of the row being renamed
+	renaming      tabs.TabID          // 0 when no row is being renamed
+	renFrom       string              // the text the rename started with
+	renKeys       []event.Filter      // the rename editor's own keys, built once
+	lastClick     titleClick          // the last press on a row's title, for a double click
 }
 
 // titleClick is a press on a session row's title.
 type titleClick struct {
 	id tabs.TabID
 	at time.Duration
+}
+
+// pruneTray forgets the tray state of closed sessions, so a reused id starts open and collapsed.
+func (win *window) pruneTray(list []*tabs.Tab) {
+	for _, m := range []map[tabs.TabID]bool{win.side.trayOpen, win.side.trayFolded} {
+		for id := range m {
+			if !slices.ContainsFunc(list, func(t *tabs.Tab) bool { return t.ID == id }) {
+				delete(m, id)
+			}
+		}
+	}
 }
 
 // isMember reports whether t belongs to an open workspace run; members are not sessions.
