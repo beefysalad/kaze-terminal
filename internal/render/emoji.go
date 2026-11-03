@@ -1,6 +1,9 @@
 package render
 
 import (
+	"image"
+	"image/color"
+	"image/draw"
 	"io"
 	"os"
 	"sync"
@@ -8,6 +11,8 @@ import (
 	xfont "golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/font/sfnt"
+	"golang.org/x/image/math/fixed"
+	"golang.org/x/image/vector"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/colorfont"
 )
@@ -197,4 +202,129 @@ func (fs *fontSet) emojiFace(px float64) xfont.Face {
 	}
 	fs.emojiFaces[px] = face
 	return face
+}
+
+// textColorNeutral is drawn for palette index 0xFFFF ("text colour") and for indices
+// past the palette: a fixed mid grey, readable on dark and light themes, so a colour
+// glyph never depends on the cell's FG and stays one cached image.
+const textColorNeutral = 0x9a9a9a
+
+// layerColor is palette entry idx, or the neutral for TextColor and bad indices.
+func layerColor(pal colorfont.Palette, idx uint16) color.NRGBA {
+	if idx == colorfont.TextColor || int(idx) >= len(pal) {
+		return color.NRGBA{R: textColorNeutral >> 16 & 0xff, G: textColorNeutral >> 8 & 0xff, B: textColorNeutral & 0xff, A: 0xff}
+	}
+	return pal[idx]
+}
+
+// colrBounds is the union of the layers' ink bounds at ppem, in pixels (y down).
+func (fs *fontSet) colrBounds(sf *sfnt.Font, layers []colorfont.Layer, ppem fixed.Int26_6) (fixed.Rectangle26_6, bool) {
+	var u fixed.Rectangle26_6
+	any := false
+	for _, l := range layers {
+		b, _, err := sf.GlyphBounds(&fs.buf, sfnt.GlyphIndex(l.Glyph), ppem, xfont.HintingNone)
+		if err != nil {
+			return u, false
+		}
+		if b.Empty() {
+			continue
+		}
+		if !any {
+			u, any = b, true
+		} else {
+			u = u.Union(b)
+		}
+	}
+	return u, any
+}
+
+// drawCOLR composites gid's COLR layers, each glyph outline filled in its palette
+// colour, into a premultiplied w×cellH image, scaled to fit and centred. It returns
+// nil on any error or panic; the caller then draws the outline.
+func (fs *fontSet) drawCOLR(e *emojiFont, gid uint16, layers []colorfont.Layer, w int) (img *image.RGBA) {
+	defer func() {
+		if recover() != nil {
+			img = nil
+		}
+	}()
+	if e == nil || e.sf == nil || len(layers) == 0 {
+		return nil
+	}
+	h := fs.cellH
+	ppem := fixed.Int26_6(fs.px * 64)
+	u, ok := fs.colrBounds(e.sf, layers, ppem)
+	if !ok {
+		return nil
+	}
+	gw, gh := float64(u.Max.X-u.Min.X)/64, float64(u.Max.Y-u.Min.Y)/64
+	if gw > float64(w) || gh > float64(h) {
+		s := 0.95 * min(float64(w)/max(gw, 1), float64(h)/max(gh, 1))
+		ppem = fixed.Int26_6(float64(ppem) * s)
+		if u, ok = fs.colrBounds(e.sf, layers, ppem); !ok {
+			return nil
+		}
+	}
+	dx := (float32(w) - float32(u.Min.X+u.Max.X)/64) / 2
+	dy := (float32(h) - float32(u.Min.Y+u.Max.Y)/64) / 2
+
+	img = image.NewRGBA(image.Rect(0, 0, w, h))
+	mask := image.NewAlpha(image.Rect(0, 0, w, h))
+	var z vector.Rasterizer
+	pt := func(p fixed.Point26_6) (float32, float32) {
+		return float32(p.X)/64 + dx, float32(p.Y)/64 + dy
+	}
+	for _, l := range layers {
+		segs, err := e.sf.LoadGlyph(&fs.buf, sfnt.GlyphIndex(l.Glyph), ppem, nil)
+		if err != nil {
+			return nil
+		}
+		z.Reset(w, h)
+		open := false
+		for _, s := range segs {
+			switch s.Op {
+			case sfnt.SegmentOpMoveTo:
+				if open {
+					z.ClosePath()
+				}
+				z.MoveTo(pt(s.Args[0]))
+				open = true
+			case sfnt.SegmentOpLineTo:
+				z.LineTo(pt(s.Args[0]))
+			case sfnt.SegmentOpQuadTo:
+				x1, y1 := pt(s.Args[0])
+				x2, y2 := pt(s.Args[1])
+				z.QuadTo(x1, y1, x2, y2)
+			case sfnt.SegmentOpCubeTo:
+				x1, y1 := pt(s.Args[0])
+				x2, y2 := pt(s.Args[1])
+				x3, y3 := pt(s.Args[2])
+				z.CubeTo(x1, y1, x2, y2, x3, y3)
+			}
+		}
+		if open {
+			z.ClosePath()
+		}
+		clear(mask.Pix)
+		z.Draw(mask, mask.Bounds(), image.Opaque, image.Point{})
+		draw.DrawMask(img, img.Bounds(), image.NewUniform(layerColor(e.pal, l.Palette)), image.Point{}, mask, image.Point{}, draw.Over)
+	}
+	return img
+}
+
+// drawColor draws r in colour from the emoji font, nil when it has no colour for r.
+func (fs *fontSet) drawColor(r rune, w int) *image.RGBA {
+	e := fs.emojiFont()
+	if e == nil {
+		return nil
+	}
+	gid := e.glyph(&fs.buf, r)
+	if gid == 0 {
+		return nil
+	}
+	if e.colr != nil {
+		if layers := e.colr.Layers(gid); layers != nil {
+			return fs.drawCOLR(e, gid, layers, w)
+		}
+	}
+	return nil
 }
