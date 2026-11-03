@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"image"
+	"image/color"
 	"strings"
 	"testing"
 
@@ -257,6 +258,25 @@ func TestRunningMarkIsStill(t *testing.T) {
 		r.Frame(gtx.Ops)
 		if _, wake := r.WakeupTime(); wake {
 			t.Fatalf("frame %d asked for another frame", i)
+		}
+	}
+}
+
+func TestRunHeaderStateSaysReadyNotAllUp(t *testing.T) {
+	th := theme.Default().UI
+	for _, c := range []struct {
+		down, ready int
+		want        string
+		col         color.NRGBA
+	}{
+		{0, 0, "all up", th.Done},
+		{0, 1, "1 ready", th.Muted},
+		{0, 2, "2 ready", th.Muted},
+		{1, 2, "1 down", th.UsageHigh}, // down wins
+	} {
+		s, col := runHeaderState(sideRun{Down: c.down, Ready: c.ready}, th)
+		if s != c.want || col != c.col {
+			t.Fatalf("down %d ready %d reads %q %v, want %q %v", c.down, c.ready, s, col, c.want, c.col)
 		}
 	}
 }

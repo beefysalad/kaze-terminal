@@ -141,20 +141,27 @@ func TestLinkCursorAreasPassPressesToTheTerminal(t *testing.T) {
 	}
 }
 
-// A screenshot on the clipboard reaches kaze as an empty text paste. On macOS,
-// Cmd+V then sends Ctrl+V, the key Claude Code and Codex use to paste an image,
-// but only to an agent and only when the clipboard really holds an image: in a
-// plain zsh, Ctrl+V would make the next key literal.
-func TestEmptyPasteSendsCtrlVOnlyForAnAgentImage(t *testing.T) {
-	if got := emptyPasteKey("darwin"); got != "\x16" {
-		t.Fatalf("darwin: %q", got)
+// A screenshot on the clipboard reaches kaze as an empty text paste. The paste
+// then sends the agent's own image-paste key, but only to an agent and only
+// when the clipboard really holds an image: in a plain shell, Ctrl+V would make
+// the next key literal. On macOS that is Ctrl+V. On Windows, Claude Code pastes
+// an image with Alt+V and Codex with Ctrl+V.
+func TestEmptyPasteSendsTheAgentsImageKey(t *testing.T) {
+	for _, c := range []struct{ goos, agent, want string }{
+		{"darwin", "claude", "\x16"},
+		{"darwin", "codex", "\x16"},
+		{"windows", "claude", "\x1bv"},
+		{"windows", "codex", "\x16"},
+		{"linux", "claude", ""},
+	} {
+		if got := emptyPasteKey(c.goos, c.agent); got != c.want {
+			t.Errorf("%s %s: %q, want %q", c.goos, c.agent, got, c.want)
+		}
 	}
-	if got := emptyPasteKey("windows"); got != "" {
-		t.Fatalf("windows: %q", got)
-	}
-	if runtime.GOOS != "darwin" {
+	if runtime.GOOS != "darwin" && runtime.GOOS != "windows" {
 		t.Skip("the window path uses the running OS")
 	}
+	imageKey := emptyPasteKey(runtime.GOOS, "claude")
 	empty := transfer.DataEvent{Type: "application/text", Open: func() io.ReadCloser { return io.NopCloser(strings.NewReader("")) }}
 	for _, c := range []struct {
 		name         string
@@ -163,7 +170,7 @@ func TestEmptyPasteSendsCtrlVOnlyForAnAgentImage(t *testing.T) {
 	}{
 		{"shell with an image", false, true, ""},
 		{"agent with an empty clipboard", true, false, ""},
-		{"agent with an image", true, true, "\x16"},
+		{"agent with an image", true, true, imageKey},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			st := &recStarter{}
@@ -193,8 +200,8 @@ func TestEmptyPasteSendsCtrlVOnlyForAnAgentImage(t *testing.T) {
 // A scratch shell's hooks count on its session's row, but the paste goes to the
 // scratch terminal itself: the agent identity must be that terminal's.
 func TestEmptyPasteFollowsTheTerminalRunningTheAgent(t *testing.T) {
-	if runtime.GOOS != "darwin" {
-		t.Skip("macOS only")
+	if runtime.GOOS != "darwin" && runtime.GOOS != "windows" {
+		t.Skip("macOS and Windows only")
 	}
 	empty := transfer.DataEvent{Type: "application/text", Open: func() io.ReadCloser { return io.NopCloser(strings.NewReader("")) }}
 	for _, c := range []struct {
@@ -248,8 +255,8 @@ func TestEmptyPasteFollowsTheTerminalRunningTheAgent(t *testing.T) {
 // Once the agent quits and the shell prompt is back, the terminal is a plain
 // shell again: an empty paste must not send Ctrl+V.
 func TestEmptyPasteStopsAfterTheAgentQuits(t *testing.T) {
-	if runtime.GOOS != "darwin" {
-		t.Skip("macOS only")
+	if runtime.GOOS != "darwin" && runtime.GOOS != "windows" {
+		t.Skip("macOS and Windows only")
 	}
 	st := &recStarter{}
 	win := testWindow(t, st)

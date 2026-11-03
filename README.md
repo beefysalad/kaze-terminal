@@ -146,8 +146,8 @@ binaries; re-run `go test` with `-ldflags "-X main.r=<random>"`.
 | Open the palette | Ctrl+Shift+K | Cmd+K |
 | Show or hide the scratch shell | Ctrl+Shift+` | Ctrl+` |
 | Show or hide the agents board | Ctrl+Shift+A | Cmd+Shift+A |
-| Copy the selection | Ctrl+Shift+C | Cmd+C |
-| Paste | Ctrl+Shift+V | Cmd+V |
+| Copy the selection | Ctrl+C (with a selection) or Ctrl+Shift+C | Cmd+C |
+| Paste | Ctrl+V or Ctrl+Shift+V | Cmd+V |
 | Open settings | Ctrl+, | Cmd+, |
 | New line in Claude Code (without sending) | Shift+Enter or Alt+Enter | Shift+Enter or Option+Enter |
 
@@ -160,10 +160,15 @@ Session switching follows sidebar order, skips workspace members and scratch she
 from a focused floating terminal too. If a busy terminal cannot accept more input, Kaze shows
 "Input not sent"; wait for it to respond before trying again.
 
-On macOS, Cmd+V with an image on the clipboard (a screenshot, say) pastes it into Claude Code or
-Codex: kaze sends them Ctrl+V, the key they read images with. A plain shell never gets it.
+Pasting with an image on the clipboard (a screenshot, say) puts it into Claude Code or Codex:
+kaze sends them the key they read images with (Ctrl+V; on Windows, Alt+V for Claude Code). A
+plain shell never gets it.
 
-Plain Ctrl+C always goes to the shell as an interrupt. Shift+Enter sends the same sequence as
+On Windows, Ctrl+C and Ctrl+V work like Warp: Ctrl+C copies when text is selected and clears the
+selection, so the next Ctrl+C interrupts; with nothing selected it goes to the shell as an
+interrupt. Typing clears a selection, so an old one never turns Ctrl+C into a copy. Ctrl+V always
+pastes, so it can no longer send a literal Ctrl+V to a program (such as Vim's block select). When
+the clipboard holds both text and an image, the text is pasted. On macOS, plain Ctrl+C always goes to the shell. Shift+Enter sends the same sequence as
 Alt+Enter (Option+Enter on macOS), adding a new line in Claude Code while plain Enter submits.
 Other terminal programs handle that sequence according to their own keybindings. The session, copy,
 paste, sidebar, next-waiting, palette, scratch shell, agents board and settings shortcuts can be changed under `[keys]` in the
@@ -541,11 +546,13 @@ the ones you already have. If any of the workspace's tabs is still open, the but
 ### Running workspaces in the sidebar
 
 A running workspace gets a header in the Workspaces section at the bottom of the sidebar,
-reading "all up" or "N down". Click the header to fold it.
+reading "all up", "N ready" (muted, when some members' commands finished) or "N down" (red,
+which wins). Click the header to fold it.
 
-- Each member gets one line: its color bar, its title and its status. A member reads `stopped`
-  in red when its commands finished or its shell exited, and `Failed` in red when its run
-  failed. A member's line shows an amber dot when it needs you and a green dot when it is done;
+- Each member gets one line: its color bar, its title and its status. A member reads `Ready`
+  (muted, not down) when its commands finished and its shell is still open, such as after
+  `docker compose up -d` or activating a venv. It reads `stopped` in red when its shell exited
+  or was closed, and `Failed` in red when its run failed. A member's line shows an amber dot when it needs you and a green dot when it is done;
   a folded header shows the amber one if any member needs you, else the green one. Click a
   member to float it over your session (see Floating panes below).
 - The Workspaces list in Settings shows how far each member got: Starting, Waiting for Docker
