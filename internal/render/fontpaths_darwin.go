@@ -14,3 +14,6 @@ func systemFontPaths() []string {
 		"/System/Library/Fonts/Supplemental/STIXTwoMath.otf",
 	}
 }
+
+// emojiFontPath is the colour emoji font: Apple Color Emoji (sbix bitmaps).
+func emojiFontPath() string { return "/System/Library/Fonts/Apple Color Emoji.ttc" }

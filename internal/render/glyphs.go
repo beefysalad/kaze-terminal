@@ -122,6 +122,8 @@ func (c *glyphCache) get(r rune, bold, wide bool) *glyph {
 	var mask *image.Alpha
 	if id == faceBox {
 		mask = drawBox(r, w, fs.cellH, fs.cellW)
+	} else if id == faceEmoji || id == faceEmojiText {
+		mask = fs.drawOutline(fs.emojiFace, r, w)
 	} else if id >= faceSystem {
 		mask = fs.drawFallback(int(id-faceSystem), r, w)
 	} else {
