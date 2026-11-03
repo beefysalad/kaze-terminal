@@ -97,7 +97,7 @@ func (win *window) drawBoardPreview(gtx layout.Context, r image.Rectangle, ink b
 	place(ops, kc, image.Pt(x0, y))
 	y += ks.Y + dp(4)
 	title, repo := win.sessionName(tabs.TabID(a.Tab))
-	x = x0
+	x, lineH := x0, 0
 	for _, part := range [...]struct {
 		s   string
 		col color.NRGBA
@@ -110,9 +110,9 @@ func (win *window) drawBoardPreview(gtx layout.Context, r image.Rectangle, ink b
 		call, sz := c.fitSans(gtx, part.s, 12, x1-x, part.col, part.w)
 		place(ops, call, image.Pt(x, y))
 		x += sz.X
-		mid = sz.Y
+		lineH = max(lineH, sz.Y)
 	}
-	y += mid + dp(14)
+	y += lineH + dp(14)
 
 	// Actions.
 	bx := x0

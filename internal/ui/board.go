@@ -30,7 +30,6 @@ type boardState struct {
 	setup    image.Rectangle // the hooks hint's button
 	search   image.Rectangle // the search field
 	token    image.Rectangle // the "<session> ×" token; empty when none
-	list     image.Rectangle // the list pane
 	preview  image.Rectangle // the preview pane; empty while narrow
 	openIn   image.Rectangle // the preview's "Open in session"
 	copy     image.Rectangle // the preview's "Copy report"; empty unless done
@@ -229,15 +228,15 @@ func (win *window) drawBoard(gtx layout.Context, r image.Rectangle) {
 	area.Pop()
 
 	b.wide = r.Dx() >= gtx.Dp(boardWideDp)
-	b.list = r
+	list := r
 	if b.wide {
 		cut := r.Min.X + r.Dx()*105/205
-		b.list = image.Rect(r.Min.X, r.Min.Y, cut, r.Max.Y)
+		list = image.Rect(r.Min.X, r.Min.Y, cut, r.Max.Y)
 		b.preview = image.Rect(cut+1, r.Min.Y, r.Max.X, r.Max.Y)
 		paint.FillShape(ops, ink.line, clip.Rect(image.Rect(cut, r.Min.Y, cut+1, r.Max.Y)).Op())
 	}
 	v := win.boardView()
-	win.drawBoardList(gtx, b.list, &v, ink)
+	win.drawBoardList(gtx, list, &v, ink)
 	if b.wide {
 		win.drawBoardPreview(gtx, b.preview, ink)
 	} else {
