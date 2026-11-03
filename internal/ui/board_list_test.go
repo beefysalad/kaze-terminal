@@ -226,7 +226,7 @@ func TestBoardEmptyStates(t *testing.T) {
 func TestBoardCardOpensPane(t *testing.T) {
 	win, id := boardWindow(t)
 	win.openBoard(0)
-	gtx := drawWide(win)
+	gtx := drawNarrow(win) // narrow: a click opens the agent in its session
 	win.boardPress(gtx, centre(mustRow(t, win, "run").rect), 0)
 	if win.board.open || win.mgr.Active().ID != id {
 		t.Fatal("board still open or wrong session")

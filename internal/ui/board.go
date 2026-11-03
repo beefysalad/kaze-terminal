@@ -53,8 +53,10 @@ type boardState struct {
 	lastRow   boardClick          // the last row press, for double clicks
 	prev      dockSession         // the preview's own panel state
 	prevHits  dockHits
-	wide      bool // the preview pane fits beside the list
-	redraws   int
+	wide      bool   // the preview pane fits beside the list
+	reveal    bool   // scroll the selected row into view on the next draw
+	selY      [2]int // the selected row's top and bottom as drawn, unscrolled; [0,0] when not drawn
+	redraws   int    // hover changes that asked for a frame; tests count them
 
 	ink   boardInk // colours for inkOf, worked out once per theme
 	inkOf theme.Chrome
@@ -208,6 +210,13 @@ func (win *window) drawBoard(gtx layout.Context, r image.Rectangle) {
 	b.rows, b.cardHits, b.texts = b.rows[:0], b.cardHits[:0], b.texts[:0]
 	b.back, b.setup, b.search, b.token, b.preview = image.Rectangle{}, image.Rectangle{}, image.Rectangle{}, image.Rectangle{}, image.Rectangle{}
 	b.seg = [4]image.Rectangle{}
+	// A token whose session closed, or a selection whose agent is gone, goes now.
+	if b.tab != 0 && win.mgr.Lookup(b.tab) == nil {
+		b.tab = 0
+	}
+	if b.sel != (subagents.Key{}) && win.subs.Get(b.sel) == nil {
+		b.sel, b.prev = subagents.Key{}, dockSession{}
+	}
 	ink := win.boardInk()
 	ops := gtx.Ops
 	cl := clip.Rect(r).Push(ops)
@@ -244,12 +253,14 @@ func (win *window) boardBack() tabs.TabID {
 }
 
 func (win *window) boardEvents(gtx layout.Context) {
-	tag := &win.board.tag
+	b := &win.board
+	tag := &b.tag
+	win.boardSearchEvents(gtx)
 	for {
 		ev, ok := gtx.Event(
 			key.FocusFilter{Target: tag},
 			key.Filter{Focus: tag, Optional: allMods},
-			pointer.Filter{Target: tag, Kinds: pointer.Press | pointer.Scroll, ScrollY: pointer.ScrollRange{Min: -1 << 20, Max: 1 << 20}},
+			pointer.Filter{Target: tag, Kinds: pointer.Press | pointer.Scroll | pointer.Move | pointer.Enter | pointer.Leave, ScrollY: pointer.ScrollRange{Min: -1 << 20, Max: 1 << 20}},
 		)
 		if !ok {
 			return
@@ -267,31 +278,156 @@ func (win *window) boardEvents(gtx layout.Context) {
 			}
 			win.boardKey(e)
 		case pointer.Event:
+			p := e.Position.Round()
 			switch {
 			case e.Kind == pointer.Scroll:
-				win.board.scroll += int(e.Scroll.Y)
+				if p.In(b.prevHits.body) {
+					b.prev.scroll += int(e.Scroll.Y)
+					b.prev.follow = b.prev.scroll >= b.prevHits.scrollMax
+				} else {
+					b.scroll += int(e.Scroll.Y)
+				}
 				win.w.Invalidate()
-			case e.Buttons.Contain(pointer.ButtonPrimary):
-				win.boardPress(gtx, e.Position.Round(), e.Time)
+			case e.Kind == pointer.Move || e.Kind == pointer.Enter || e.Kind == pointer.Leave:
+				var k subagents.Key
+				if e.Kind != pointer.Leave {
+					for _, h := range b.rows {
+						if p.In(h.rect) && !h.row.session {
+							k = h.row.key
+						}
+					}
+				}
+				if k != b.hover { // redraw only when the hovered row changes
+					b.hover = k
+					b.redraws++
+					win.w.Invalidate()
+				}
+			case e.Kind == pointer.Press && e.Buttons.Contain(pointer.ButtonPrimary):
+				win.boardPress(gtx, p, e.Time)
 			}
 		}
 	}
 }
 
-// boardKey handles a key on the board: Esc closes it.
-func (win *window) boardKey(e key.Event) {
-	if e.State == key.Press && e.Name == key.NameEscape {
-		win.closeBoard()
+// boardSearchEvents runs the search field: Esc clears it (or closes the board
+// when it is empty), Enter keeps the text and gives the keyboard back, kaze's
+// shortcuts still work.
+func (win *window) boardSearchEvents(gtx layout.Context) {
+	b := &win.board
+	b.ed.SingleLine, b.ed.Submit = true, true
+	if b.edKeys == nil {
+		b.edKeys = win.edKeys(&b.ed)
 	}
+	if gtx.Focused(&b.ed) && !b.searching {
+		b.searching = true // a click went straight into the field
+	}
+	if win.edShortcuts(gtx, &b.ed, b.edKeys, win.boardSearchEsc) {
+		return // a shortcut ran; the layout drains what is left
+	}
+	for {
+		ev, ok := b.ed.Update(gtx)
+		if !ok {
+			return
+		}
+		switch ev.(type) {
+		case widget.ChangeEvent:
+			win.ui.fit(b.ed.Text()) // loads a fallback font for any rune the bundled ones lack
+			b.scroll = 0
+			win.invalidate()
+		case widget.SubmitEvent:
+			b.searching = false
+			win.wantFocus = true
+			win.invalidate()
+		}
+	}
+}
+
+// boardSearchEsc is Esc on the board: a search with text is cleared and gives
+// the keyboard back; an empty one closes the board.
+func (win *window) boardSearchEsc() {
+	b := &win.board
+	if b.ed.Text() == "" {
+		win.closeBoard()
+		return
+	}
+	b.ed.SetText("")
+	b.searching, b.scroll = false, 0
+	win.wantFocus = true
+	win.invalidate()
+}
+
+// boardKey handles a key while the board, not its search field, has the keyboard.
+func (win *window) boardKey(e key.Event) {
+	if e.State != key.Press {
+		return
+	}
+	b := &win.board
+	switch e.Name {
+	case key.NameEscape:
+		win.boardSearchEsc()
+	case "/":
+		b.searching = true
+		win.wantFocus = true
+		win.invalidate()
+	case key.NameUpArrow:
+		win.boardMove(-1)
+	case key.NameDownArrow:
+		win.boardMove(1)
+	case key.NameReturn, key.NameEnter:
+		for _, r := range win.boardView().order {
+			if r.key == b.sel {
+				win.boardOpenAgent(r)
+				return
+			}
+		}
+	}
+}
+
+// boardMove moves the selection d rows through the selectable rows, stopping at
+// the ends; from no selection, Down picks the first and Up the last.
+func (win *window) boardMove(d int) {
+	b := &win.board
+	order := win.boardView().order
+	if len(order) == 0 {
+		return
+	}
+	i := -1
+	for j, r := range order {
+		if r.key == b.sel {
+			i = j
+		}
+	}
+	switch {
+	case i < 0 && d > 0:
+		i = 0
+	case i < 0:
+		i = len(order) - 1
+	default:
+		i = min(max(i+d, 0), len(order)-1)
+	}
+	win.boardSelect(order[i].key)
+	b.reveal = true
+	win.invalidate()
+}
+
+// boardOpenAgent closes the board and shows r in its session: the agent's
+// panel, or the session itself for a session wait.
+func (win *window) boardOpenAgent(r boardRow) {
+	win.closeBoard()
+	win.board.lastRow = boardClick{}
+	if r.session {
+		win.selectTab(r.tab)
+		return
+	}
+	win.showAgent(r.tab, r.key, false)
 }
 
 // boardPress handles a click on the board at p; at is the press time.
 func (win *window) boardPress(gtx layout.Context, p image.Point, at time.Duration) {
 	b := &win.board
-	invalidate := func() {
-		if win.w != nil {
-			win.w.Invalidate()
-		}
+	if b.searching && !p.In(b.search) {
+		b.searching = false // a click elsewhere gives the keyboard back to the board
+		win.wantFocus = true
 	}
 	switch {
 	case p.In(b.back):
@@ -312,13 +448,28 @@ func (win *window) boardPress(gtx layout.Context, p image.Point, at time.Duratio
 	case p.In(b.search):
 		b.searching = true
 		win.wantFocus = true
-		invalidate()
+		win.invalidate()
 		return
+	}
+	if a := win.boardPreviewAgent(); a != nil {
+		tab := tabs.TabID(a.Tab)
+		switch {
+		case p.In(b.openIn):
+			win.boardOpenAgent(boardRow{key: a.Key, tab: tab})
+			return
+		case p.In(b.copy):
+			win.copyReport(gtx, a)
+			return
+		case p.In(b.reader):
+			win.closeBoard()
+			win.openReportDoc(tab, a.Type+" · "+a.Task, win.dockReport(a))
+			return
+		}
 	}
 	for i, s := range b.seg {
 		if p.In(s) {
 			b.filter, b.scroll = boardFilter(i), 0
-			invalidate()
+			win.invalidate()
 			return
 		}
 	}
@@ -326,7 +477,7 @@ func (win *window) boardPress(gtx layout.Context, p image.Point, at time.Duratio
 		if p.In(h.close) {
 			win.subs.Dismiss(h.row.key)
 			win.dropGoneAgents()
-			invalidate()
+			win.invalidate()
 			return
 		}
 	}
@@ -334,11 +485,16 @@ func (win *window) boardPress(gtx layout.Context, p image.Point, at time.Duratio
 		if !p.In(h.rect) {
 			continue
 		}
-		win.closeBoard()
-		if h.row.session {
-			win.selectTab(h.row.tab)
-		} else {
-			win.showAgent(h.row.tab, h.row.key, false)
+		last := b.lastRow
+		switch {
+		case !b.wide || h.row.session:
+			win.boardOpenAgent(h.row) // no preview to show it in
+		case last.key == h.row.key && at-last.at < doubleClick:
+			win.boardOpenAgent(h.row)
+		default:
+			win.boardSelect(h.row.key)
+			b.lastRow = boardClick{key: h.row.key, at: at}
+			win.invalidate()
 		}
 		return
 	}
@@ -351,14 +507,14 @@ func (win *window) boardPress(gtx layout.Context, p image.Point, at time.Duratio
 		case p.In(c.clear):
 			win.subs.ClearDone(int(c.tab))
 			win.dropGoneAgents()
-			invalidate()
+			win.invalidate()
 			return
 		case p.In(c.fold):
 			if b.showDone == nil {
 				b.showDone = map[tabs.TabID]bool{}
 			}
 			b.showDone[c.tab] = !b.showDone[c.tab]
-			invalidate()
+			win.invalidate()
 			return
 		}
 	}

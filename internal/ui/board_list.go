@@ -226,6 +226,7 @@ func (win *window) drawBoardList(gtx layout.Context, r image.Rectangle, v *board
 	}
 	cx0, cx1 := r.Min.X+dp(16), r.Max.X-dp(16)
 	cy := y + dp(14) - b.scroll
+	b.selY = [2]int{}
 	if len(v.needs) > 0 {
 		cy = win.drawBoardCard(gtx, cx0, cx1, cy, body, nil, v.needs, ink) + dp(12)
 	}
@@ -233,8 +234,24 @@ func (win *window) drawBoardList(gtx layout.Context, r image.Rectangle, v *board
 		g := &v.cards[i]
 		cy = win.drawBoardCard(gtx, cx0, cx1, cy, body, g, g.rows, ink) + dp(12)
 	}
-	end = cy - dp(12) + dp(24) + b.scroll
+	before := b.scroll
+	if b.reveal {
+		// The keys moved the selection: bring its row into view on the next frame.
+		b.reveal = false
+		if s := b.selY; s != [2]int{} {
+			switch {
+			case s[0] < body.Min.Y:
+				b.scroll -= body.Min.Y - s[0]
+			case s[1] > body.Max.Y:
+				b.scroll += s[1] - body.Max.Y
+			}
+		}
+	}
+	end = cy - dp(12) + dp(24) + before
 	b.scroll = min(max(b.scroll, 0), max(0, end-body.Max.Y))
+	if b.scroll != before {
+		gtx.Execute(op.InvalidateCmd{})
+	}
 }
 
 // drawBoardCard draws one card from y between x0 and x1: the Needs you card
@@ -259,6 +276,14 @@ func (win *window) drawBoardCard(gtx layout.Context, x0, x1, y int, body image.R
 	}
 	total := headH + meterH + len(rows)*dp(boardRowDp) + foldH
 	rect := image.Rect(x0, y, x1, y+total)
+	if b.reveal && b.sel != (subagents.Key{}) {
+		for i, row := range rows {
+			if !row.session && row.key == b.sel {
+				top := y + headH + meterH + i*dp(boardRowDp)
+				b.selY = [2]int{top, top + dp(boardRowDp)}
+			}
+		}
+	}
 	if !rect.Overlaps(body) {
 		return rect.Max.Y // off screen: nothing drawn, nothing to hit
 	}
