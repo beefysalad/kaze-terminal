@@ -2,42 +2,43 @@ package ui
 
 import (
 	"image"
-	"image/color"
 	"strconv"
-	"strings"
 	"time"
 
-	"gioui.org/font"
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
-	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"gioui.org/unit"
 	"gioui.org/widget"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/claudesetup"
 	kinput "github.com/patrick-gogo/kaze-terminal/internal/input"
 	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/patrick-gogo/kaze-terminal/internal/theme"
 )
 
-// boardState is the agents board (spec 6.3): a page over the terminal area
-// listing every subagent by column.
+// boardState is the agents board (spec 2026-11-03-kaze-agents-board-design): a
+// page over the terminal area with a filtered list of session cards on the
+// left and a preview of the selected agent on the right.
 type boardState struct {
-	open    bool
-	tab     tabs.TabID // the session it is filtered to; 0 for all
-	back    image.Rectangle
-	all     image.Rectangle // "Show all" while filtered
-	setup   image.Rectangle // the hooks hint's button
-	clear   image.Rectangle // "Clear" on the Done column; empty when nothing is done
-	cards   []boardHit
-	texts   []string // drawn text, for tests
-	scroll  int
-	missing bool // the subagent hooks are not all set up
-	tag     int
+	open     bool
+	tab      tabs.TabID // the session token: the session it is filtered to; 0 for all
+	back     image.Rectangle
+	setup    image.Rectangle // the hooks hint's button
+	search   image.Rectangle // the search field
+	token    image.Rectangle // the "<session> ×" token; empty when none
+	list     image.Rectangle // the list pane
+	preview  image.Rectangle // the preview pane; empty while narrow
+	seg      [4]image.Rectangle
+	rows     []boardRowHit
+	cardHits []boardCardHit
+	texts    []string // drawn text, for tests
+	scroll   int
+	missing  bool // the subagent hooks are not all set up
+	tag      int
 
 	filter    boardFilter
 	ed        widget.Editor // the search field
@@ -51,6 +52,10 @@ type boardState struct {
 	prevHits  dockHits
 	wide      bool // the preview pane fits beside the list
 	redraws   int
+
+	ink   boardInk // colours for inkOf, worked out once per theme
+	inkOf theme.Chrome
+	inkOK bool
 }
 
 // boardFilter is the board's segment; the values index [4] arrays.
@@ -67,20 +72,6 @@ const (
 type boardClick struct {
 	key subagents.Key
 	at  time.Duration
-}
-
-type boardCard struct {
-	key                          subagents.Key
-	tab                          tabs.TabID
-	session                      bool // a session wait with no subagent named
-	state                        subagents.State
-	typ, task, where, time, line string
-}
-
-type boardHit struct {
-	card  boardCard
-	rect  image.Rectangle
-	close image.Rectangle // the × on a done card; empty on the others
 }
 
 // agentsRunning is the status bar's text for n running and waiting subagents.
@@ -195,191 +186,44 @@ func (win *window) sessionMeta(id tabs.TabID) (title, repo, branch string) {
 	return title, loc.repoName, loc.branch
 }
 
-// boardColumns is the board's cards: running, waiting on you, done.
-func (win *window) boardColumns() [3][]boardCard {
-	var cols [3][]boardCard
-	now := time.Now()
-	run, wait, done := win.subs.Board()
-	add := func(col int, as []*subagents.Agent) {
-		for _, a := range as {
-			if win.board.tab != 0 && tabs.TabID(a.Tab) != win.board.tab {
-				continue
-			}
-			s := sideAgentOf(a, now)
-			title, repo := win.sessionName(tabs.TabID(a.Tab))
-			where := title
-			if repo != "" && repo != title {
-				where += " · " + repo
-			}
-			cols[col] = append(cols[col], boardCard{key: a.Key, tab: tabs.TabID(a.Tab), state: a.State,
-				typ: a.Type, task: a.Task, where: where, time: s.Elapsed, line: s.Action})
-		}
+// boardInk is the board's colours for the current theme, worked out once per theme.
+func (win *window) boardInk() boardInk {
+	b := &win.board
+	if !b.inkOK || b.inkOf != win.ui.th {
+		b.ink, b.inkOf, b.inkOK = win.ui.boardInk(), win.ui.th, true
 	}
-	add(0, run)
-	add(1, wait)
-	for _, tab := range win.subs.SessionWaits() {
-		id := tabs.TabID(tab)
-		if win.board.tab != 0 && id != win.board.tab {
-			continue
-		}
-		title, repo := win.sessionName(id)
-		cols[1] = append(cols[1], boardCard{tab: id, session: true, state: subagents.Waiting, typ: "Session",
-			task: title, where: repo, line: "a subagent may be asking"})
-	}
-	add(2, done)
-	return cols
+	return b.ink
 }
 
-// drawBoard lays the board out in r.
+// boardWideDp is the least board width that shows the preview beside the list
+// (mockup: a 460 px list and a 400 px preview).
+const boardWideDp = 860
+
+// drawBoard lays the board out in r: the list, and the preview when it fits.
 func (win *window) drawBoard(gtx layout.Context, r image.Rectangle) {
 	b := &win.board
-	b.cards, b.texts = b.cards[:0], b.texts[:0]
-	b.back, b.all, b.setup, b.clear = image.Rectangle{}, image.Rectangle{}, image.Rectangle{}, image.Rectangle{}
-	c, ops := win.ui, gtx.Ops
-	col := c.pageColors()
-	text := func(s string, size unit.Sp, cl color.NRGBA, w font.Weight) (op.CallOp, image.Point) {
-		b.texts = append(b.texts, s)
-		return c.sans(gtx, s, size, cl, w)
-	}
+	b.rows, b.cardHits, b.texts = b.rows[:0], b.cardHits[:0], b.texts[:0]
+	b.back, b.setup, b.search, b.token, b.preview = image.Rectangle{}, image.Rectangle{}, image.Rectangle{}, image.Rectangle{}, image.Rectangle{}
+	b.seg = [4]image.Rectangle{}
+	ink := win.boardInk()
+	ops := gtx.Ops
 	cl := clip.Rect(r).Push(ops)
 	defer cl.Pop()
-	paint.FillShape(ops, col.bg, clip.Rect(r).Op())
+	paint.FillShape(ops, ink.bg, clip.Rect(r).Op())
 	area := clip.Rect(r).Push(ops)
 	event.Op(ops, &b.tag)
 	area.Pop()
 
-	pad := gtx.Dp(28)
-	x0, x1 := r.Min.X+pad, r.Max.X-pad
-	y := r.Min.Y + gtx.Dp(24)
-	cols := win.boardColumns()
-
-	// Header: the title and counts on the left, Back on the right.
-	tc, ts := text("Agents", 22, col.title, font.SemiBold)
-	place(ops, tc, image.Pt(x0, y))
-	sub := strconv.Itoa(len(cols[0])) + " running · " + strconv.Itoa(len(cols[1])) + " waiting on you · " + strconv.Itoa(len(cols[2])) + " done"
-	sc, ss := text(sub, 12, col.muted, font.Normal)
-	place(ops, sc, image.Pt(x0, y+ts.Y+gtx.Dp(2)))
-	if back, _ := win.sessionName(win.boardBack()); back != "" {
-		bc, bs := text("Back to "+back+"  ×", 12, col.fg, font.Medium)
-		bx := x1 - bs.X - 2*gtx.Dp(12)
-		b.back = image.Rect(bx, y, x1, y+bs.Y+2*gtx.Dp(8))
-		paint.FillShape(ops, col.raised, clip.UniformRRect(b.back, gtx.Dp(8)).Op(ops))
-		place(ops, bc, image.Pt(bx+gtx.Dp(12), y+gtx.Dp(8)))
+	b.wide = r.Dx() >= gtx.Dp(boardWideDp)
+	b.list = r
+	if b.wide {
+		cut := r.Min.X + r.Dx()*105/205
+		b.list = image.Rect(r.Min.X, r.Min.Y, cut, r.Max.Y)
+		b.preview = image.Rect(cut+1, r.Min.Y, r.Max.X, r.Max.Y)
+		paint.FillShape(ops, ink.line, clip.Rect(image.Rect(cut, r.Min.Y, cut+1, r.Max.Y)).Op())
 	}
-	y += ts.Y + ss.Y + gtx.Dp(14)
-	if b.tab != 0 {
-		title, _ := win.sessionName(b.tab)
-		fc, fs := text("Showing "+title+" only.", 12, col.muted, font.Normal)
-		place(ops, fc, image.Pt(x0, y))
-		ac, as := text("Show all", 12, col.accent, font.Medium)
-		place(ops, ac, image.Pt(x0+fs.X+gtx.Dp(8), y))
-		b.all = image.Rect(x0+fs.X+gtx.Dp(4), y-gtx.Dp(4), x0+fs.X+gtx.Dp(12)+as.X, y+as.Y+gtx.Dp(4))
-		y += fs.Y + gtx.Dp(12)
-	}
-	if b.missing {
-		hc, hs := text("kaze needs three more Claude Code hooks to see subagents.", 13, col.needs, font.Medium)
-		place(ops, hc, image.Pt(x0, y+gtx.Dp(6)))
-		bc, bs := text("Set up in Settings", 12, col.title, font.Medium)
-		bx := x0 + hs.X + gtx.Dp(12)
-		b.setup = image.Rect(bx, y, bx+bs.X+2*gtx.Dp(12), y+bs.Y+2*gtx.Dp(6))
-		paint.FillShape(ops, col.raised, clip.UniformRRect(b.setup, gtx.Dp(8)).Op(ops))
-		place(ops, bc, image.Pt(bx+gtx.Dp(12), y+gtx.Dp(6)))
-		y += b.setup.Dy() + gtx.Dp(12)
-	}
-
-	// Columns, side by side when there is room, else stacked.
-	names := [3]string{"RUNNING", "WAITING ON YOU", "DONE"}
-	gap := gtx.Dp(16)
-	wide := (x1 - x0) >= gtx.Dp(720)
-	colW := x1 - x0
-	if wide {
-		colW = (x1 - x0 - 2*gap) / 3
-	}
-	cardH := gtx.Dp(84)
-	body := image.Rect(r.Min.X, y, r.Max.X, r.Max.Y)
-	bc := clip.Rect(body).Push(ops)
-	top := y - b.scroll
-	maxY := y
-	cy := top
-	for i := range cols {
-		cx := x0
-		if wide {
-			cx = x0 + i*(colW+gap)
-			cy = top
-		}
-		hc, hs := text(names[i]+"  "+strconv.Itoa(len(cols[i])), 11, col.dim, font.SemiBold)
-		place(ops, hc, image.Pt(cx, cy))
-		if i == 2 && len(cols[i]) > 0 {
-			// Clear removes every finished card (only this session's while filtered).
-			cc, cs := text("Clear", 11, col.accent, font.Medium)
-			place(ops, cc, image.Pt(cx+colW-cs.X, cy))
-			pd := gtx.Dp(6)
-			if r := image.Rect(cx+colW-cs.X-pd, cy-pd, cx+colW+pd, cy+cs.Y+pd); r.Overlaps(body) {
-				b.clear = r.Intersect(body)
-			}
-		}
-		cy += hs.Y + gtx.Dp(8)
-		if len(cols[i]) == 0 {
-			ec, es := text("Nothing here.", 12, col.muted, font.Normal)
-			place(ops, ec, image.Pt(cx, cy))
-			cy += es.Y + gtx.Dp(12)
-		}
-		for _, card := range cols[i] {
-			rect := image.Rect(cx, cy, cx+colW, cy+cardH)
-			x := win.drawBoardCard(gtx, rect, card, text)
-			if rect.Overlaps(body) {
-				h := boardHit{card: card, rect: rect.Intersect(body)}
-				if x.Overlaps(body) {
-					h.close = x.Intersect(body)
-				}
-				b.cards = append(b.cards, h)
-			}
-			cy += cardH + gtx.Dp(10)
-		}
-		cy += gtx.Dp(14)
-		maxY = max(maxY, cy)
-	}
-	bc.Pop()
-	b.scroll = min(max(b.scroll, 0), max(0, maxY+b.scroll-r.Max.Y))
-}
-
-// drawBoardCard draws one card: type and task, where, time and its line. A done
-// card gets a × in its top right corner; drawBoardCard returns where it is.
-func (win *window) drawBoardCard(gtx layout.Context, r image.Rectangle, card boardCard, text func(string, unit.Sp, color.NRGBA, font.Weight) (op.CallOp, image.Point)) (close image.Rectangle) {
-	c, ops := win.ui, gtx.Ops
-	col := c.pageColors()
-	paint.FillShape(ops, col.card, clip.UniformRRect(r, gtx.Dp(10)).Op(ops))
-	stroke(ops, r, gtx.Dp(10), col.line)
-	if card.state == subagents.Waiting {
-		edge := image.Rect(r.Min.X, r.Min.Y+gtx.Dp(10), r.Min.X+gtx.Dp(3), r.Max.Y-gtx.Dp(10))
-		paint.FillShape(ops, col.needs, clip.UniformRRect(edge, gtx.Dp(1)).Op(ops))
-	}
-	pad := gtx.Dp(14)
-	x, w := r.Min.X+pad, r.Dx()-2*pad
-	y := r.Min.Y + gtx.Dp(10)
-	if card.state == subagents.Done && !card.session {
-		xc, xs := text("×", 14, col.dim, font.Normal)
-		place(ops, xc, image.Pt(r.Max.X-pad-xs.X, y-gtx.Dp(2)))
-		hit := gtx.Dp(8)
-		close = image.Rect(r.Max.X-pad-xs.X-hit, r.Min.Y, r.Max.X, y+xs.Y+hit)
-		w -= xs.X + gtx.Dp(8) // keep the text clear of the ×
-	}
-	tc, ts := c.fitSide(gtx, card.typ, 12, w/2, c.memberColor("magenta"))
-	place(ops, tc, image.Pt(x, y))
-	win.board.texts = append(win.board.texts, card.typ, card.task)
-	kc, _ := c.fitSide(gtx, card.task, 12, w-ts.X-gtx.Dp(8), col.title)
-	place(ops, kc, image.Pt(x+ts.X+gtx.Dp(8), y))
-	y += ts.Y + gtx.Dp(6)
-	wc, ws := c.fitSide(gtx, card.where, 11, w, col.muted)
-	place(ops, wc, image.Pt(x, y))
-	y += ws.Y + gtx.Dp(6)
-	line := card.line
-	if card.time != "" {
-		line = card.time + "  ·  " + line
-	}
-	lc, _ := c.fitSide(gtx, strings.TrimSpace(line), 11, w, col.dim)
-	place(ops, lc, image.Pt(x, y))
-	return close
+	v := win.boardView()
+	win.drawBoardList(gtx, b.list, &v, ink)
 }
 
 // boardBack is the session the board returns to.
@@ -419,7 +263,7 @@ func (win *window) boardEvents(gtx layout.Context) {
 				win.board.scroll += int(e.Scroll.Y)
 				win.w.Invalidate()
 			case e.Buttons.Contain(pointer.ButtonPrimary):
-				win.boardPress(e.Position.Round())
+				win.boardPress(gtx, e.Position.Round(), e.Time)
 			}
 		}
 	}
@@ -432,21 +276,17 @@ func (win *window) boardKey(e key.Event) {
 	}
 }
 
-// boardPress handles a click on the board.
-func (win *window) boardPress(p image.Point) {
+// boardPress handles a click on the board at p; at is the press time.
+func (win *window) boardPress(gtx layout.Context, p image.Point, at time.Duration) {
 	b := &win.board
+	invalidate := func() {
+		if win.w != nil {
+			win.w.Invalidate()
+		}
+	}
 	switch {
 	case p.In(b.back):
 		win.closeBoard()
-		return
-	case p.In(b.clear):
-		win.subs.ClearDone(int(b.tab))
-		win.dropGoneAgents()
-		win.w.Invalidate()
-		return
-	case p.In(b.all):
-		b.tab = 0
-		win.w.Invalidate()
 		return
 	case p.In(b.setup):
 		win.closeBoard()
@@ -457,25 +297,60 @@ func (win *window) boardPress(p image.Point) {
 			}
 		}
 		return
+	case p.In(b.token):
+		win.clearBoardSession()
+		return
+	case p.In(b.search):
+		b.searching = true
+		win.wantFocus = true
+		invalidate()
+		return
 	}
-	for _, h := range b.cards {
-		if p.In(h.close) {
-			win.subs.Dismiss(h.card.key)
-			win.dropGoneAgents()
-			win.w.Invalidate()
+	for i, s := range b.seg {
+		if p.In(s) {
+			b.filter, b.scroll = boardFilter(i), 0
+			invalidate()
 			return
 		}
 	}
-	for _, h := range b.cards {
+	for _, h := range b.rows {
+		if p.In(h.close) {
+			win.subs.Dismiss(h.row.key)
+			win.dropGoneAgents()
+			invalidate()
+			return
+		}
+	}
+	for _, h := range b.rows {
 		if !p.In(h.rect) {
 			continue
 		}
 		win.closeBoard()
-		if h.card.session {
-			win.selectTab(h.card.tab)
+		if h.row.session {
+			win.selectTab(h.row.tab)
 		} else {
-			win.showAgent(h.card.tab, h.card.key, false)
+			win.showAgent(h.row.tab, h.row.key, false)
 		}
 		return
+	}
+	for _, c := range b.cardHits {
+		switch {
+		case p.In(c.goTo):
+			win.closeBoard()
+			win.selectTab(c.tab)
+			return
+		case p.In(c.clear):
+			win.subs.ClearDone(int(c.tab))
+			win.dropGoneAgents()
+			invalidate()
+			return
+		case p.In(c.fold):
+			if b.showDone == nil {
+				b.showDone = map[tabs.TabID]bool{}
+			}
+			b.showDone[c.tab] = !b.showDone[c.tab]
+			invalidate()
+			return
+		}
 	}
 }
