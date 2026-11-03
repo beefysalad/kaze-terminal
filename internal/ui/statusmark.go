@@ -13,12 +13,13 @@ func isStatusRune(r rune) bool {
 	}
 	switch {
 	case r >= 0x2300 && r <= 0x23ff, // misc technical (⏺)
-		r >= 0x25a0 && r <= 0x25ff, // geometric shapes (◐)
-		r >= 0x2700 && r <= 0x27bf, // dingbats (✳ ✻ ✽)
-		r >= 0x2800 && r <= 0x28ff: // braille spinners
+		r >= 0x25a0 && r <= 0x25ff,            // geometric shapes (◐)
+		r >= 0x2700 && r <= 0x27bf,            // dingbats (✳ ✻ ✽)
+		r >= 0x2800 && r <= 0x28ff,            // braille spinners
+		r == 0xfe0e, r == 0xfe0f, r == 0x200d: // variation selectors and ZWJ belong to the emoji before them
 		return true
 	}
-	return unicode.In(r, unicode.So, unicode.Sm)
+	return unicode.In(r, unicode.So, unicode.Sm, unicode.Sk) // Sk: skin-tone modifiers
 }
 
 // dropStatusMark strips a leading run of status symbols and spaces. A title

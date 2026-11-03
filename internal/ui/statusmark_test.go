@@ -52,3 +52,24 @@ func TestResourceNameDropsSpinner(t *testing.T) {
 		}
 	}
 }
+
+// TestStatusMarkTakesVariationSelectors: FE0F/FE0E, ZWJ and skin-tone modifiers
+// belong to the emoji before them, so they never end the leading status run.
+func TestStatusMarkTakesVariationSelectors(t *testing.T) {
+	for _, s := range []string{"⚡\uFE0F", "⚡\uFE0E", "👍\U0001F3FD", "✳\u200D⚡\uFE0F "} {
+		if !onlyStatus(s) {
+			t.Errorf("onlyStatus(%q) = false, want true", s)
+		}
+	}
+	for _, c := range [][2]string{{"⚡\uFE0F Deploy", "Deploy"}, {"👍\U0001F3FD Ship", "Ship"}, {"✳\u200D⚡ Run", "Run"}} {
+		if got := dropStatusMark(c[0]); got != c[1] {
+			t.Errorf("dropStatusMark(%q) = %q, want %q", c[0], got, c[1])
+		}
+	}
+	ts := []*tabs.Tab{sideTab(1, "⚡\uFE0F")}
+	in := sideIn(ts, map[tabs.TabID]locEntry{1: {cwd: "/code/repo/api"}})
+	in.Agent = func(tabs.TabID) agentState { return agentState{claude: true} }
+	if m := buildSide(in); len(m.Loose) != 1 || m.Loose[0].Title != "api" {
+		t.Errorf("title ⚡️: rows %+v, want the folder api", m.Loose)
+	}
+}
