@@ -299,7 +299,9 @@ func (c *chrome) trayChip(gtx layout.Context, h *sideHits, r sideRow, band image
 	mid := band.Min.Y + band.Dy()/2
 	pill := image.Rect(band.Min.X+gtx.Dp(10), mid-rad, band.Max.X, mid+rad)
 	room := pill.Dx() - 2*padX
-	if !r.TrayExpanded {
+	if r.TrayExpanded {
+		c.narrowFooter(gtx, &parts[1].s, parts[0].s, r.Hidden.Total(), room)
+	} else {
 		c.narrowChip(gtx, &parts[1].s, &parts[2].s, parts[0].s, room)
 	}
 	var calls [3]op.CallOp
@@ -337,21 +339,32 @@ func (c *chrome) trayChip(gtx layout.Context, h *sideHits, r sideRow, band image
 // narrowChip shortens a chip that does not fit in room px so it never loses
 // "+N more" or its caret: the counts go first, then the "need you" part.
 func (c *chrome) narrowChip(gtx layout.Context, needs, rest *string, lead string, room int) {
-	width := func(s string) int {
-		if s == "" {
-			return 0
-		}
-		_, sz := c.labelW(gtx, s, 11, c.th.Border, font.Normal)
-		return sz.X
-	}
-	lw := width(lead)
-	if lw+width(*needs)+width(*rest) <= room {
+	lw := c.chipWidth(gtx, lead)
+	if lw+c.chipWidth(gtx, *needs)+c.chipWidth(gtx, *rest) <= room {
 		return
 	}
 	*rest = " " + trayOpenCaret
-	if *needs != "" && lw+width(*needs)+width(*rest) > room {
+	if *needs != "" && lw+c.chipWidth(gtx, *needs)+c.chipWidth(gtx, *rest) > room {
 		*needs = ""
 	}
+}
+
+// narrowFooter shortens an expanded tray's board link to " · N on the board" when
+// "Show fewer · N more on the board" does not fit in room px.
+func (c *chrome) narrowFooter(gtx layout.Context, board *string, fewer string, beyond, room int) {
+	if *board == "" || c.chipWidth(gtx, fewer)+c.chipWidth(gtx, *board) <= room {
+		return
+	}
+	*board = " · " + strconv.Itoa(beyond) + " on the board"
+}
+
+// chipWidth is s's width in px in the chip's 11 sp text; 0 for "".
+func (c *chrome) chipWidth(gtx layout.Context, s string) int {
+	if s == "" {
+		return 0
+	}
+	_, sz := c.labelW(gtx, s, 11, c.th.Border, font.Normal)
+	return sz.X
 }
 
 // agentChipAt draws the chip right-aligned in band and returns its width.

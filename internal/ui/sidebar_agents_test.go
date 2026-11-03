@@ -358,3 +358,14 @@ func TestTrayChipKeepsCaretAtDefaultWidth(t *testing.T) {
 		}
 	}
 }
+
+func TestTrayFooterKeepsBoardLinkAtDefaultWidth(t *testing.T) {
+	rows := sideRows(1, 2, "s")
+	rows[0].Agents = trayAgents(trayMax)
+	rows[0].Hidden, rows[0].TrayTotal, rows[0].TrayExpanded = subagents.TrayCounts{Running: 10, Done: 2}, 20, true
+	h, _ := sideDraw(t, sideModel{Loose: rows}, sideState{}, 900)
+	got := chipText(h)
+	if h.chip[0] != "Show fewer" || !strings.Contains(h.chip[1], "12") || !strings.HasSuffix(got, "board") || strings.Contains(got, "…") {
+		t.Errorf("footer drew %q, want \"Show fewer\" and the whole board link with its count", got)
+	}
+}
