@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sidebar: the project and session you are in (mockup)</title>
+<style>
+  @font-face { font-family:Manrope; src:url(../site-assets/Manrope.ttf) format('truetype'); font-weight:200 800; }
+  @font-face { font-family:JB; src:url(../site-assets/JetBrainsMono-Regular.ttf) format('truetype'); }
+  :root { --mono:JB,"JetBrains Mono",ui-monospace,monospace; --sans:Manrope,"Segoe UI",sans-serif; --ok:#62d39a; --needs:#f2b84b; --claude:#e8875f; --mag:#c08fe0; }
+  .sumi { --chrome:#0c0c0c; --fg:#e4e1da; --white:#fff; --mut:#8f8a80; --line:#222; --line2:#2e2e2e; --acc:#e2553d; --acc2:#f08a74; --sel:#1b1b1b; --name:#c9c5bd; }
+  .midnight { --chrome:#0b0d12; --fg:#e7e9f0; --white:#fff; --mut:#8a90a2; --line:#1d2230; --line2:#2a3142; --acc:#8b7bff; --acc2:#b9a6ff; --sel:#171b26; --name:#c9cdd8; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#05060a; color:#e7e9f0; font:13px/1.5 var(--mono); padding:18px 20px 24px; }
+  h1 { font:600 17px var(--sans); margin:0 0 4px; color:#fff; }
+  .lead { font:13px/1.55 var(--sans); color:#8a90a2; margin:0 0 16px; max-width:1200px; } .lead b { color:#e7e9f0; }
+  .theme { font:600 13px var(--sans); color:#fff; margin:18px 0 8px; }
+  .grid { display:grid; grid-template-columns:repeat(5, 236px); gap:16px; align-items:start; }
+  .col h2 { font:600 13px var(--sans); color:#fff; margin:0 0 2px; display:flex; gap:8px; align-items:center; }
+  .tag { font:600 10.5px var(--sans); background:#2a2550; color:#b9a6ff; border-radius:6px; padding:1px 7px; } .tag.now { background:#2b1d1d; color:#f08f8f; }
+  .col p { font:12px/1.5 var(--sans); color:#8a90a2; margin:0 0 8px; min-height:54px; }
+  .side { background:var(--chrome); border:1px solid #2a2a2a; border-radius:10px; overflow:hidden; padding:8px 0; color:var(--fg); }
+  .grp { display:flex; align-items:center; gap:7px; padding:6px 12px 3px; font-size:12.5px; color:var(--name); }
+  .grp .car { color:var(--mut); font-size:9px; } .grp .n { margin-left:auto; color:var(--mut); font-size:11.5px; }
+  .proj { position:relative; margin-top:4px; }
+  .sess { margin:0 6px; padding:5px 8px 5px 10px; border-radius:7px; font-size:12.5px; position:relative; }
+  .l1 { display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; } .l1 .t { color:var(--white); flex:1; overflow:hidden; text-overflow:ellipsis; }
+  .l3 { margin-left:20px; font-size:11.5px; display:flex; gap:8px; } .l3 .br { color:var(--ok); } .l3 .pm { margin-left:auto; color:var(--ok); }
+  .dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#5b6172; flex:none; } .cl { color:var(--claude); }
+  .dim .l1 .t { color:var(--name); }
+  /* today */
+  .today .proj::before { content:""; position:absolute; left:2px; top:2px; bottom:2px; width:2px; background:var(--acc); }
+  .today .proj .grp { color:var(--white); font-weight:700; }
+  .today .on { background:var(--sel); box-shadow:inset 2px 0 0 var(--acc); }
+  /* 1: one rail, segment */
+  .seg .proj::before { content:""; position:absolute; left:2px; top:2px; bottom:2px; width:2px; border-radius:2px; background:var(--acc); opacity:.35; }
+  .seg .proj .grp { color:var(--white); font-weight:700; }
+  .seg .on { background:var(--sel); }
+  .seg .on::before { content:""; position:absolute; left:-4px; top:3px; bottom:3px; width:3px; border-radius:2px; background:var(--acc); }
+  /* 2: rail only, soft row */
+  .railonly .proj::before { content:""; position:absolute; left:2px; top:2px; bottom:2px; width:2px; border-radius:2px; background:var(--acc); }
+  .railonly .proj .grp { color:var(--white); font-weight:700; }
+  .railonly .on { background:var(--sel); }
+  /* 3: session only, bold header */
+  .sessonly .proj .grp { color:var(--white); font-weight:700; }
+  .sessonly .on { background:var(--sel); box-shadow:inset 2px 0 0 var(--acc); }
+  /* 4: neutral pill */
+  .pill .proj .grp { color:var(--white); font-weight:700; }
+  .pill .on { background:var(--sel); outline:1px solid var(--line2); }
+  .pill .on .l1 .t { color:var(--white); }
+  .notes { margin:8px 0 0; padding-left:16px; font:11.5px/1.5 var(--sans); color:#8a90a2; } .notes .good { color:#62d39a; } .notes .bad { color:#f08f8f; }
+  .pick { margin-top:18px; max-width:1200px; font:13px/1.55 var(--sans); color:#8a90a2; border-top:1px solid #1d2230; padding-top:12px; } .pick b { color:#fff; }
+</style>
+</head>
+<body>
+<h1>The project and session you are in</h1>
+<p class="lead">0.25 draws <b>two red lines side by side</b>: the project rail and the selected session's own left bar. Each column shows the same sidebar; only the highlight changes.</p>
+<div id="out"></div>
+<div class="pick"><b>My pick: 1. One rail.</b> A single line down the left: faint for the project, bright and thicker beside the session you are on. One line instead of two, and the bright part shows exactly where you are.</div>
+<script>
+const cols = [
+ ['today','Today','now','The project rail and the session bar are two parallel lines, both full accent.',['<li class="bad">Two red stripes, side by side.</li>','<li class="bad">Loud; on Sumi it reads like an error.</li>']],
+ ['seg','1. One rail','pick','One line down the project: faint for the project, a short bright segment beside the selected session.',['<li class="good">One line, not two.</li>','<li class="good">Bright part = exactly where you are.</li>']],
+ ['railonly','2. Rail only','','The rail stays; the selected session loses its bar and keeps only a soft background.',['<li class="good">Calm.</li>','<li class="bad">Which session? Only a faint grey shows it.</li>']],
+ ['sessonly','3. Session bar only','','No rail. The project name is bold; the selected session keeps its bar.',['<li class="good">Familiar, like before 0.23.</li>','<li class="bad">Project edge is less obvious in long lists.</li>']],
+ ['pill','4. Neutral','','No colour at all: bold project name, selected session in a soft outlined pill.',['<li class="good">Theme-neutral, never alarming.</li>','<li class="bad">Weakest "you are here".</li>']],
+];
+const side = () => `<div class="side">
+  <div class="grp"><span class="car">▾</span>samurai_cart_v3<span class="n">1</span></div>
+  <div class="sess dim"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Epic V3-3347 tickets</span></div><div class="l3"><span class="br">V3-3261</span><span class="pm">+91 -2</span></div></div>
+  <div class="proj"><div class="grp"><span class="car">▾</span>kaze<span class="n">2</span></div>
+  <div class="sess on"><div class="l1"><span class="dot"></span><span class="cl">✳</span><span class="t">Kaze repo updates verifica…</span></div><div class="l3"><span class="br">spike/agent-browser-windows</span></div></div>
+  <div class="sess dim"><div class="l1"><span class="dot"></span><span class="t">codex</span></div><div class="l3"><span class="br">main</span></div></div></div>
+  <div class="grp" style="margin-top:4px"><span class="car">▾</span>todo-api<span class="n">1</span></div>
+  <div class="sess dim"><div class="l1"><span class="dot"></span><span class="t">Add login rate limit</span></div><div class="l3"><span class="br">feature/auth</span></div></div>
+</div>`;
+let h='';
+for (const th of ['sumi','midnight']) {
+  h += `<div class="theme">${th==='sumi'?'Sumi (your theme)':'Midnight'}</div><div class="grid ${th}">`;
+  for (const [cls,t,tag,d,n] of cols) {
+    const tg = tag==='now' ? ' <span class="tag now">0.25</span>' : tag==='pick' ? ' <span class="tag">My pick</span>' : '';
+    h += `<div class="col ${cls}"><h2>${t}${tg}</h2><p>${d}</p>${side()}<ul class="notes">${n.join('')}</ul></div>`;
+  }
+  h += '</div>';
+}
+document.getElementById('out').innerHTML = h;
+</script>
+</body>
+</html>
