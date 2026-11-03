@@ -131,6 +131,16 @@ func (win *window) fitDoc(d *mdoc.Doc) {
 		}
 	}
 }
+
+// mdStyle scales every size of a markdown layout: the reader is 1, the agent
+// panel draws its notes and report smaller.
+type mdStyle struct{ scale float32 }
+
+var (
+	readerStyle = mdStyle{1}
+	panelStyle  = mdStyle{12.0 / 14} // body text 12 sp instead of the reader's 14
+)
+
 func (win *window) layoutDoc(gtx layout.Context, d *docView, width int) *docLayout {
 	width = max(1, width)
 	k := docLayKey{d.doc, width, gtx.Metric, win.ui.shaper}
@@ -138,8 +148,20 @@ func (win *window) layoutDoc(gtx layout.Context, d *docView, width int) *docLayo
 		return &d.lay
 	}
 	d.layouts++
-	l := docLayout{key: k}
-	dp := gtx.Dp
+	d.lay = win.layoutMarkdown(gtx, d.doc, width, readerStyle)
+	d.lay.key = k
+	return &d.lay
+}
+
+// layoutMarkdown lays doc out width px wide at st's scale, uncached.
+func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, st mdStyle) docLayout {
+	width = max(1, width)
+	l := docLayout{}
+	if st.scale <= 0 {
+		st.scale = 1
+	}
+	dp := func(v unit.Dp) int { return gtx.Dp(v * unit.Dp(st.scale)) }
+	spx := func(v unit.Sp) unit.Sp { return v * unit.Sp(st.scale) }
 	y := 0
 	// wrap measures each rune at most once per face/size and walks text only forwards.
 	wrap := func(spans []mdoc.Span, x0, x1, y0, h int, size unit.Sp, base font.Font, role docRole, preserve bool) int {
@@ -236,7 +258,7 @@ func (win *window) layoutDoc(gtx layout.Context, d *docView, width int) *docLayo
 		}
 		return ly
 	}
-	for _, b := range d.doc.Blocks {
+	for _, b := range doc.Blocks {
 		indent := min(dp(22)*b.Indent+dp(14)*b.Quote, max(0, width-dp(48)))
 		x0 := indent
 		start := y
@@ -248,7 +270,7 @@ func (win *window) layoutDoc(gtx layout.Context, d *docView, width int) *docLayo
 				y += dp(20)
 			}
 			l.headY = append(l.headY, y)
-			sz := unit.Sp([]float32{24, 20, 17, 15, 14, 13}[max(0, min(b.Level-1, 5))])
+			sz := spx(unit.Sp([]float32{24, 20, 17, 15, 14, 13}[max(0, min(b.Level-1, 5))]))
 			y = wrap(b.Spans, x0, width, y, gtx.Sp(sz)+dp(8), sz, font.Font{Typeface: sansFace, Weight: font.SemiBold}, roleHeading, false)
 			if b.Level <= 2 {
 				l.boxes = append(l.boxes, docBox{image.Rect(x0, y, width, y+1), boxRule})
@@ -259,7 +281,7 @@ func (win *window) layoutDoc(gtx layout.Context, d *docView, width int) *docLayo
 			pad := min(dp(12), max(0, (width-x0-1)/3))
 			top := y
 			y += pad
-			y = wrap([]mdoc.Span{{Text: strings.ReplaceAll(b.Code, "\t", "    ")}}, x0+pad, max(x0+pad+1, width-pad), y, dp(19), 12.5, font.Font{Typeface: chromeFace}, roleCode, true)
+			y = wrap([]mdoc.Span{{Text: strings.ReplaceAll(b.Code, "\t", "    ")}}, x0+pad, max(x0+pad+1, width-pad), y, dp(19), spx(12.5), font.Font{Typeface: chromeFace}, roleCode, true)
 			y += pad
 			l.boxes = append(l.boxes, docBox{image.Rect(x0, top, width, y), boxCode})
 			y += dp(10)
@@ -271,7 +293,7 @@ func (win *window) layoutDoc(gtx layout.Context, d *docView, width int) *docLayo
 				continue
 			}
 			n := len(b.Table.Align)
-			minW := dp(48)
+			minW := max(1, min(dp(48), (width-x0)/n)) // a narrow panel shrinks columns instead of overflowing
 			natural := make([]int, n)
 			for c := range natural {
 				natural[c] = minW
@@ -285,7 +307,7 @@ func (win *window) layoutDoc(gtx layout.Context, d *docView, width int) *docLayo
 					sum := 0
 					for _, sp := range cell {
 						for _, q := range sp.Text {
-							sum += win.runeAdv(gtx, face, 13, q).Ceil()
+							sum += win.runeAdv(gtx, face, spx(13), q).Ceil()
 						}
 					}
 					natural[c] = max(natural[c], sum+dp(16))
@@ -320,7 +342,7 @@ func (win *window) layoutDoc(gtx layout.Context, d *docView, width int) *docLayo
 					cx := x + dp(8)
 					end := x + colW[ci] - dp(8)
 					before := len(l.lines)
-					cy := wrap(cell, cx, max(cx+1, end), top+dp(8), dp(20), 13, f, roleBody, false)
+					cy := wrap(cell, cx, max(cx+1, end), top+dp(8), dp(20), spx(13), f, roleBody, false)
 					bottom = max(bottom, cy+dp(8))
 					for li := before; li < len(l.lines); li++ {
 						ln := &l.lines[li]
@@ -366,16 +388,16 @@ func (win *window) layoutDoc(gtx layout.Context, d *docView, width int) *docLayo
 				} else {
 					mw := 0
 					for _, q := range b.Marker {
-						mw += win.runeAdv(gtx, font.Font{Typeface: sansFace}, 14, q).Ceil()
+						mw += win.runeAdv(gtx, font.Font{Typeface: sansFace}, spx(14), q).Ceil()
 					}
-					l.lines = append(l.lines, docLine{y: y, h: dp(22), runs: []docRun{{text: b.Marker, x: max(0, x0-dp(8)-mw), w: mw, face: font.Font{Typeface: sansFace}, size: 14, role: roleMuted, link: -1}}})
+					l.lines = append(l.lines, docLine{y: y, h: dp(22), runs: []docRun{{text: b.Marker, x: max(0, x0-dp(8)-mw), w: mw, face: font.Font{Typeface: sansFace}, size: spx(14), role: roleMuted, link: -1}}})
 				}
 			}
 			role := roleBody
 			if b.Quote > 0 {
 				role = roleMuted
 			}
-			y = wrap(b.Spans, x0, width, y, dp(22), 14, font.Font{Typeface: sansFace}, role, false)
+			y = wrap(b.Spans, x0, width, y, dp(22), spx(14), font.Font{Typeface: sansFace}, role, false)
 			y += dp(10)
 		}
 		if b.Quote > 0 {
@@ -385,6 +407,5 @@ func (win *window) layoutDoc(gtx layout.Context, d *docView, width int) *docLayo
 	sort.SliceStable(l.lines, func(i, j int) bool { return l.lines[i].y < l.lines[j].y })
 	sort.SliceStable(l.boxes, func(i, j int) bool { return l.boxes[i].r.Min.Y < l.boxes[j].r.Min.Y })
 	l.height = y
-	d.lay = l
-	return &d.lay
+	return l
 }

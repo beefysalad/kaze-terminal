@@ -63,9 +63,16 @@ func (win *window) drawDoc(gtx layout.Context, d *docView, r image.Rectangle) {
 		d.anchor = ""
 	}
 	win.drawDocOutline(gtx, d, original)
+	win.drawMarkdown(gtx, l, view, image.Pt(x, y), d.scroll, &win.docs.hits.links, &win.docs.texts)
+}
+
+// drawMarkdown draws layout l clipped to view, its top-left at origin scrolled
+// up by scroll px, adding link hit areas to links and drawn text to texts.
+func (win *window) drawMarkdown(gtx layout.Context, l *docLayout, view image.Rectangle, origin image.Point, scroll int, links *[]docLinkHit, texts *[]string) {
+	ops := gtx.Ops
 	cl := clip.Rect(view).Push(ops)
 	defer cl.Pop()
-	offset := image.Pt(x, y-d.scroll)
+	offset := origin.Sub(image.Pt(0, scroll))
 	// Boxes may overlap multiple lines, so retain any whose bottom is still visible.
 	for _, b := range l.boxes {
 		rr := b.r.Add(offset)
@@ -91,7 +98,7 @@ func (win *window) drawDoc(gtx layout.Context, d *docView, r image.Rectangle) {
 		}
 		paint.FillShape(ops, col, clip.Rect(rr).Op())
 	}
-	start := sort.Search(len(l.lines), func(i int) bool { return l.lines[i].y+l.lines[i].h > d.scroll })
+	start := sort.Search(len(l.lines), func(i int) bool { return l.lines[i].y+l.lines[i].h > scroll })
 	for _, line := range l.lines[start:] {
 		if line.y+offset.Y >= view.Max.Y {
 			break
@@ -101,7 +108,7 @@ func (win *window) drawDoc(gtx layout.Context, d *docView, r image.Rectangle) {
 			if run.link >= 0 {
 				hit := image.Rect(at.X, at.Y, at.X+run.w, at.Y+line.h).Intersect(view)
 				if !hit.Empty() {
-					win.docs.hits.links = append(win.docs.hits.links, docLinkHit{hit, run.link})
+					*links = append(*links, docLinkHit{hit, run.link})
 					a := clip.Rect(hit).Push(ops)
 					pointer.CursorPointer.Add(ops)
 					a.Pop()
@@ -112,7 +119,9 @@ func (win *window) drawDoc(gtx layout.Context, d *docView, r image.Rectangle) {
 			}
 			call, _ := win.ui.faceText(gtx, run.text, run.size, run.face, win.docColor(run.role))
 			place(ops, call, at)
-			win.docs.texts = append(win.docs.texts, run.text)
+			if texts != nil {
+				*texts = append(*texts, run.text)
+			}
 			if run.under {
 				paint.FillShape(ops, win.docColor(run.role), clip.Rect(image.Rect(at.X, at.Y+gtx.Sp(run.size)+2, at.X+run.w, at.Y+gtx.Sp(run.size)+3)).Op())
 			}
