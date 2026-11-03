@@ -25,17 +25,8 @@ func TestEmojiTables(t *testing.T) {
 			t.Errorf("isEmojiPresentation(%c %U) = true", r, r)
 		}
 	}
-	for _, r := range []rune{'⚠', '✔', '❤', '⏺', '©'} {
-		if !isTextEmoji(r) {
-			t.Errorf("isTextEmoji(%c %U) = false", r, r)
-		}
-	}
-	for _, r := range []rune{'✅', '🔄', '#', '7', '✳'} {
-		if isTextEmoji(r) {
-			t.Errorf("isTextEmoji(%c %U) = true", r, r)
-		}
-	}
-	if a := testing.AllocsPerRun(100, func() { isEmojiPresentation('🔄'); isTextEmoji('⚠') }); a != 0 {
+	// Text-default emoji (⚠ ⏺) have no table of their own: they resolve like any symbol.
+	if a := testing.AllocsPerRun(100, func() { isEmojiPresentation('🔄') }); a != 0 {
 		t.Fatalf("emoji table lookups allocate %v times", a)
 	}
 }
@@ -87,20 +78,39 @@ func TestCheckMarkUsesEmojiFace(t *testing.T) {
 	}
 }
 
-func TestTextEmojiUsesEmojiOutline(t *testing.T) {
+// TestTextEmojiKeepsOldFonts: text-default emoji (⏺ starts every Claude Code reply,
+// ⏸ is plan mode) resolve exactly as in 0.24: the bundled fonts, then the system
+// fonts in order (Segoe UI Symbol first). An earlier version of this branch drew them
+// from Segoe UI Emoji's monochrome outlines (TestTextEmojiUsesEmojiOutline), which
+// changed ⏺ into a boxed record icon; that step was removed.
+func TestTextEmojiKeepsOldFonts(t *testing.T) {
 	segoeEmoji(t)
+	segoeSymbol(t)
 	c := NewRenderer(14.5, DefaultPalette(), Options{}).glyphs
-	for _, r := range []rune{'❤', '✔', '⏺'} {
-		if g := c.get(r, false, false); g.face != faceEmojiText || g.empty {
-			t.Fatalf("%c: face %d empty %v, want faceEmojiText %d with ink", r, g.face, g.empty, faceEmojiText)
+	for _, r := range []rune{'⏺', '⏸', '❤', '✔'} {
+		want := faceMissing
+		for i := 0; c.fs.sys.font(i) != nil; i++ {
+			if hasRune(c.fs.sys.font(i), &c.fs.buf, r) {
+				want = faceSystem + faceID(i)
+				break
+			}
+		}
+		if g := c.get(r, false, false); g.face != want || g.empty {
+			t.Errorf("%c: face %d empty %v, want %d (first system font with it, as in 0.24)", r, g.face, g.empty, want)
 		}
 	}
-	// ⚠ is in the bundled mono font, which comes before the emoji outline.
+	for _, r := range []rune{'⏺', '⏸'} {
+		if g := c.get(r, false, false); g.face != faceSystem {
+			t.Errorf("%c: face %d, want Segoe UI Symbol (faceSystem %d)", r, g.face, faceSystem)
+		}
+	}
+	// ⚠ is in the bundled mono font, which comes first.
 	if g := c.get('⚠', false, false); g.face != faceMono {
 		t.Fatalf("⚠: face %d, want the bundled mono font", g.face)
 	}
-	if g := c.get('✻', false, false); g.face != faceSystem {
-		t.Fatalf("✻: face %d, want faceSystem %d (Segoe UI Symbol, unchanged)", g.face, faceSystem)
+	// Emoji-presentation runes still go to the colour emoji face first.
+	if g := c.get('✅', false, true); g.face != faceEmoji {
+		t.Fatalf("✅: face %d, want faceEmoji %d", g.face, faceEmoji)
 	}
 }
 
@@ -108,7 +118,7 @@ func TestNoEmojiFontKeepsOldOrder(t *testing.T) {
 	swapEmojiOpen(t, func(string) *emojiFont { return nil })
 	c := NewRenderer(14.75, DefaultPalette(), Options{}).glyphs
 	for _, r := range []rune{'✅', '🔄', '⚠', '⏺'} {
-		if id := c.fs.faceFor(r, false); id == faceEmoji || id == faceEmojiText {
+		if id := c.fs.faceFor(r, false); id == faceEmoji {
 			t.Errorf("%c: faceFor gave an emoji face %d with no emoji font", r, id)
 		}
 	}

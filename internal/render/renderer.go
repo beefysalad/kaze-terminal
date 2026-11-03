@@ -417,7 +417,6 @@ func fillRect(img *image.RGBA, x, y, w, h int, c color.NRGBA) {
 	}
 }
 
-// blendMask mixes fg over the opaque bg by the mask's coverage.
 // blendColor draws a premultiplied colour glyph over the cell: dst = src + dst*(255-a)/255.
 // It ignores FG; the background (selection, inverse) shows through transparent pixels.
 func blendColor(img *image.RGBA, x, y, w, h int, c *image.RGBA) {
@@ -443,6 +442,7 @@ func blendColor(img *image.RGBA, x, y, w, h int, c *image.RGBA) {
 	}
 }
 
+// blendMask mixes fg over the opaque bg by the mask's coverage.
 func blendMask(img *image.RGBA, x, y, w, h int, m *image.Alpha, fg, bg color.NRGBA) {
 	for j := 0; j < h; j++ {
 		src := m.Pix[j*m.Stride : j*m.Stride+w]

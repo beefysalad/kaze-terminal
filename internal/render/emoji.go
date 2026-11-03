@@ -42,9 +42,6 @@ func isEmojiPresentation(r rune) bool {
 	return r >= 0x231A && inSpans(emojiPresentationSpans[:], r)
 }
 
-// isTextEmoji reports whether r is an emoji drawn as text by default (⚠ ✔ ❤ ⏺).
-func isTextEmoji(r rune) bool { return r > 0x7F && inSpans(textEmojiSpans[:], r) }
-
 // emojiFont is the system colour emoji font. sf is set when its outlines are
 // usable (Segoe UI Emoji); an sbix font (Apple Color Emoji) is drawn from its
 // bitmaps only and looks runes up through cmap.

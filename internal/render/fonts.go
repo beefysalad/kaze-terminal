@@ -21,11 +21,10 @@ const (
 	faceMono faceID = iota
 	faceMonoBold
 	faceCJK
-	faceMissing   // in neither font: every such rune shares one .notdef mask
-	faceBox       // box drawing and block elements, drawn procedurally
-	faceEmoji     // the colour emoji font, for emoji-presentation runes (✅ 🔄)
-	faceEmojiText // the emoji font's outline in one colour, for text-default emoji (⚠ ⏺)
-	faceSystem    // first system fallback font; faceSystem+i is systemFonts font i
+	faceMissing // in neither font: every such rune shares one .notdef mask
+	faceBox     // box drawing and block elements, drawn procedurally
+	faceEmoji   // the colour emoji font, for emoji-presentation runes (✅ 🔄)
+	faceSystem  // first system fallback font; faceSystem+i is systemFonts font i
 )
 
 // sysFonts parses the system fallback fonts lazily, each file at most once, for every size.
@@ -178,8 +177,9 @@ func newFontSet(px, scale float64) *fontSet {
 }
 
 // faceFor picks, in order: the emoji font for an emoji-presentation rune it can draw;
-// the mono face; the CJK face; the emoji font's outline for a text-default emoji; the
-// first system font that has the rune (loading them only now); else faceMissing.
+// the mono face; the CJK face; the first system font that has the rune (loading them
+// only now); else faceMissing. Text-default emoji (⏺ ⏸ ❤) take the same path as any
+// symbol, so they keep the fonts they had before colour emoji (Segoe UI Symbol first).
 func (fs *fontSet) faceFor(r rune, bold bool) faceID {
 	mono := faceMono
 	if bold {
@@ -196,11 +196,6 @@ func (fs *fontSet) faceFor(r rune, bold bool) faceID {
 	}
 	if i, _ := fs.cjk.GlyphIndex(&fs.buf, r); i != 0 {
 		return faceCJK
-	}
-	if isTextEmoji(r) {
-		if e := fs.emojiFont(); e != nil && e.outline() && e.glyph(&fs.buf, r) != 0 {
-			return faceEmojiText
-		}
 	}
 	for i := 0; ; i++ {
 		f := fs.sys.font(i)
