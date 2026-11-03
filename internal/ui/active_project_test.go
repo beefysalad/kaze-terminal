@@ -83,6 +83,12 @@ func TestSidebarTextContrast(t *testing.T) {
 			{"muted", ink.muted, ui.Chrome}, {"needs", ink.needs, ui.Chrome}, {"agent type", ink.kind, ui.Chrome},
 			{"task", ui.Folder, ui.Chrome}, {"chip lead", ink.chipLead, ink.chipBG}, {"chip muted", ink.muted, ink.chipBG},
 			{"chip needs", ink.needs, ink.chipBG}, {"tooltip", ink.tipFG, ink.tipBG},
+			// The fold control ("N agents ⌄") on a plain and on a selected row; amber when one waits.
+			{"fold", ui.Accent, ui.Chrome}, {"fold on active", ui.Accent, ui.Active},
+			{"fold needs", ink.needs, ui.Chrome}, {"fold needs on active", ink.needs, ui.Active},
+			// The open agent's line, highlighted with th.Active.
+			{"open task", ui.Folder, ui.Active}, {"open muted", ink.muted, ui.Active},
+			{"open needs", ink.needs, ui.Active}, {"open agent type", ink.kind, ui.Active},
 		} {
 			if got := contrast(p.fg, p.bg); got < 4.5 {
 				t.Errorf("%s %s contrast %.2f, want 4.5", th.Key, p.name, got)
