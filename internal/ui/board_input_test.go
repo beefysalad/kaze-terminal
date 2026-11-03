@@ -250,3 +250,49 @@ func TestBoardPressElsewhereLeavesSearch(t *testing.T) {
 		t.Fatalf("searching %v sel %+v", win.board.searching, win.board.sel)
 	}
 }
+
+// A "+N more" chip clicked while the board's search has the keyboard gives the
+// keyboard back to the board: the field still reports focus in that frame, but
+// only a newly focused field counts as a click into it.
+func TestBoardChipLeavesSearch(t *testing.T) {
+	win, _, r, a, _, _, _ := paneWindow(t)
+	startAgents(win, a.ID, 12)
+	floatFrames(t, win, r)
+	win.openBoard(a.ID)
+	floatFrames(t, win, r)
+	win.boardKey(keyPress("/"))
+	floatFrames(t, win, r)
+	if !win.board.searching || !r.Source().Focused(&win.board.ed) {
+		t.Fatalf("fixture: searching %v", win.board.searching)
+	}
+	chips := trayHits(win, a.ID, hitAgentChip)
+	if len(chips) != 1 {
+		t.Fatalf("chips %v", chips)
+	}
+	sideClickAt(win, r, centre(chips[0].rect), pointer.ButtonPrimary, 0)
+	floatFrames(t, win, r)
+	if win.board.searching || win.focusTarget() != &win.board.tag || r.Source().Focused(&win.board.ed) {
+		t.Fatalf("after the chip: searching %v, field focused %v", win.board.searching, r.Source().Focused(&win.board.ed))
+	}
+	// A click straight into the field still gives it the keyboard.
+	win.boardKey(keyPress("/"))
+	floatFrames(t, win, r)
+	if !win.board.searching || !r.Source().Focused(&win.board.ed) {
+		t.Fatalf("/ after the chip: searching %v", win.board.searching)
+	}
+}
+
+// Enter opens the previewed agent even when the search hides its row, as
+// "Open in session" does.
+func TestBoardEnterOpensHiddenPreview(t *testing.T) {
+	win, id := boardWindow(t)
+	win.openBoard(0)
+	drawWide(win)
+	win.boardSelect(subagents.Key{Session: "s", ID: "run"})
+	win.board.ed.SetText("zzz")
+	drawWide(win)
+	win.boardKey(keyPress(key.NameReturn))
+	if win.board.open || win.dockOf(id) == nil || win.dockOf(id).agent.ID != "run" {
+		t.Fatal("Enter did not open the previewed agent hidden by the search")
+	}
+}

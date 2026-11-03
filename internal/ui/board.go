@@ -46,6 +46,7 @@ type boardState struct {
 	filter    boardFilter
 	ed        widget.Editor // the search field
 	searching bool          // the search field has the keyboard
+	edFocused bool          // the search field had the focus last frame
 	edKeys    []event.Filter
 	sel       subagents.Key // the previewed agent
 	hover     subagents.Key
@@ -318,9 +319,14 @@ func (win *window) boardSearchEvents(gtx layout.Context) {
 	if b.edKeys == nil {
 		b.edKeys = win.edKeys(&b.ed)
 	}
-	if gtx.Focused(&b.ed) && !b.searching {
-		b.searching = true // a click went straight into the field
+	// Only a field that newly has the focus is a click straight into it: one
+	// that still has it from before may be about to lose it to a FocusCmd that
+	// runs at the end of this frame (a "+N more" chip, say).
+	focused := gtx.Focused(&b.ed)
+	if focused && !b.edFocused {
+		b.searching = true
 	}
+	b.edFocused = focused
 	if win.edShortcuts(gtx, &b.ed, b.edKeys, win.boardSearchEsc) {
 		return // a shortcut ran; the layout drains what is left
 	}
@@ -379,6 +385,9 @@ func (win *window) boardKey(e key.Event) {
 				win.boardOpenAgent(r)
 				return
 			}
+		}
+		if a := win.boardPreviewAgent(); a != nil { // previewed, but hidden by the filter, search or a fold
+			win.boardOpenAgent(boardRow{key: a.Key, tab: tabs.TabID(a.Tab)})
 		}
 	}
 }
