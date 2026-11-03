@@ -258,7 +258,7 @@ func agentMsg(m *notify.Msg, kind notify.Kind, parsed bool, id, typ, tool string
 			}
 		}
 		m.Tool, m.Description, m.AgentType = "Agent", trimRunes(strings.TrimSpace(desc), reasonMaxRunes), typ
-		m.TaskPrompt = notify.FitReport(strings.TrimSpace(prompt), notify.MaxPrompt)
+		m.TaskPrompt = notify.FitReport(prompt, notify.MaxPrompt) // the UI trims blank lines only (#106)
 		return true
 	}
 	return true

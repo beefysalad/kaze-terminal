@@ -214,3 +214,13 @@ func TestNotifyStepInSubagentHasNoPrompt(t *testing.T) {
 		t.Fatalf("a step carried a prompt: %q", m.TaskPrompt)
 	}
 }
+
+func TestAgentToolKeepsPromptIndent(t *testing.T) {
+	srv, got := startServer(t)
+	in := hookJSON(t, map[string]any{"tool_name": "Agent",
+		"tool_input": map[string]any{"description": "Indent", "prompt": "    indented code\nnext"}})
+	runNotify([]string{"tool"}, in, envOf(srv, "3"))
+	if m := wait(t, got); m.TaskPrompt != "    indented code\nnext" {
+		t.Fatalf("prompt %q", m.TaskPrompt)
+	}
+}
