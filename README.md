@@ -907,6 +907,7 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 Done:
 
+- 0.23: active-project header emphasis, still ring-and-core running marks, a reusable empty window and Shift+Enter multiline input (#107, #113, #114).
 - 0.21: read markdown docs inside kaze, follow live Claude subagent messages, recover empty reports and see a cleaner resource card.
 - Plan 1: the terminal core with tabs.
 - Plan 3: alerts with a chime when Claude Code needs you, kaze's own title bar on Windows, and

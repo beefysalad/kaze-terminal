@@ -69,3 +69,11 @@ and add a native capture of the markdown reader and outline. The CPU/RAM hover c
 also changed in #96. Existing captures remain historical; no generated or retouched
 screenshots were substituted for this release. Headless QA renders are validation
 artifacts, not lander product captures.
+
+## 0.23 running marks, active project and empty window
+
+Retake sidebar-visible captures to show the active-project header and closed-ring
+running marks. Title-bar and status-bar running marks changed too. Add a native
+capture of the empty window when useful. Existing screenshots remain historical;
+headless audit galleries and the approved HTML mockup are development evidence,
+not replacement product captures. No product screenshot was fabricated or retouched.
