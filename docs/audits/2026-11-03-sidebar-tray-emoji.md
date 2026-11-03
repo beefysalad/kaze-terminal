@@ -35,7 +35,7 @@ New or changed tests, all passing (`go test ./...` on Windows):
   `TestParseCPAL`, `TestParseCOLRRejects`, `TestParseCPALRejects`, `TestSegoeEmojiCOLR`,
   `TestParseCmapFormat12`, `TestParseCmapFormat4`, `TestParseCmapRejects`, `TestSbixNearestStrike`,
   `TestSbixPNG`, `TestSbixPNGTooLarge`, `TestSbixRejects`.
-- `internal/render`: `TestEmojiTables`, `TestCheckMarkUsesEmojiFace`, `TestTextEmojiUsesEmojiOutline`,
+- `internal/render`: `TestEmojiTables`, `TestCheckMarkUsesEmojiFace`, `TestTextEmojiKeepsOldFonts`,
   `TestNoEmojiFontKeepsOldOrder`, `TestCheckMarkIsColour`, `TestColourGlyphIgnoresFG`,
   `TestSelectionAndInverseShowBehindEmoji`, `TestBrokenColourTablesDrawMonochrome`,
   `TestColourGlyphMemory`, `TestColourGlyphRasterizedOnce`, `TestSbixGlyphScaledIntoSpan`,
@@ -144,7 +144,7 @@ Headless renders, development evidence only, **not product screenshots**:
 
 Checked by eye against the mockup: the tray, chip, footer, fold control, tooltip and rail match;
 the chip and footer are whole at 260 dp after this audit's fix. In the emoji sample `⏺` draws as
-Segoe UI Emoji's outlined record button, as Windows Terminal shows it.
+a solid dot from Segoe UI Symbol, as in 0.24 (re-rendered after the final-review fix below).
 
 ## Rulings
 
@@ -164,8 +164,9 @@ Segoe UI Emoji's outlined record button, as Windows Terminal shows it.
     itself never returns empty.
 11. COLR, CPAL, sbix and cmap live in a new `internal/colorfont` package.
 12. Palette index 0xFFFF draws a fixed neutral `#9a9a9a`.
-13. Text-default emoji (`⚠ ✔ ❤ ⏺ ©`) use Segoe UI Emoji's outline on Windows after mono and CJK;
-    macOS keeps today's order for them.
+13. Text-default emoji (`⚠ ✔ ❤ ⏺ ©`) keep 0.24's fonts on both systems (mono, CJK, then the
+    system list with Segoe UI Symbol first). Overturned in the final review: the earlier ruling sent
+    them to Segoe UI Emoji's outline, which changed about 184 runes, `⏺` and `⏸` among them.
 14. Emoji-presentation runes go to the emoji face before the bundled mono font too.
 15. Segoe UI Emoji stays in the Windows system list for other runes; the emoji face is a separate handle.
 16. Contrast is a sidebar-local `render.Readable` nudge, not a theme change.
@@ -181,8 +182,9 @@ width; keeping U+FE0F and deciding 1 or 2 cells is a follow-up issue to open).
 ### Lane A (colour emoji)
 
 - Test table builders live in `internal/colorfont/colorfonttest`; `COLR.NumBase` was added.
-- `✳` (U+2733) is excluded from the text-emoji set, so Claude's spinner never switches font.
-- `⚠` stays on JetBrains Mono (it has the glyph); the text emoji `❤ ✔ ⏺` use Segoe UI Emoji outlines.
+- `✳` (U+2733) is excluded from the text-emoji set, so Claude's spinner never switches font (the set itself was removed in the final review).
+- `⚠` stays on JetBrains Mono (it has the glyph); the text emoji `❤ ✔ ⏺` keep their 0.24 fonts
+  (see the final review).
 - sbix fonts never use outlines.
 - 200 emoji take 256,000 bytes at 14 px; palette 0xFFFF draws neutral `#9a9a9a`.
 
@@ -206,6 +208,41 @@ width; keeping U+FE0F and deciding 1 or 2 cells is a follow-up issue to open).
   or `⌄`. A footer that does not fit shortens "N more on the board" to "N on the board".
 - The drawn chip and footer parts are kept in `sideHits.chip` so tests can read them.
 
+## Final review fixes
+
+1. **Text emoji keep their 0.24 fonts** (`fix(render)`). The step that sent text-default emoji to
+   Segoe UI Emoji's monochrome outline before Segoe UI Symbol is gone, with its face and the
+   text-emoji table (`gen_emoji.go` no longer writes it). `⏺` (every Claude Code reply) and `⏸`
+   (plan mode) are Segoe UI Symbol again; `✅ ❌ 🔄 ⏳` still go to the colour emoji face first.
+   `TestTextEmojiKeepsOldFonts` replaces `TestTextEmojiUsesEmojiOutline`. `blendMask` and
+   `blendColor` have their own doc comments again.
+2. **Fold control clear of the ×** (`fix(ui)`). On a hovered row the fold hit rect touched the ×'s,
+   and a near-miss closed the session. The fold rect now ends at its text and the × drops its left
+   pad when a fold is shown: an 8 dp dead zone (`TestTrayFoldClearOfClose`).
+3. **Variation selectors are part of a status mark** (`fix(ui)`). U+FE0E, U+FE0F, U+200D and Sk
+   (skin tones) no longer end the leading run, so a title of just `⚡️` falls back to the folder and
+   `⚡️ Deploy` becomes `Deploy` (`TestStatusMarkTakesVariationSelectors`).
+4. **Fold and open-line contrast** (`test(ui)`). `TestSidebarTextContrast` now also checks the fold
+   control (accent, and amber) on the sidebar and on a selected row, and the open agent line's
+   task, muted, amber and type text on `Active`. All pass without a nudge:
+
+   | Theme | Fold on sidebar | Fold on selected | Amber fold on selected | Task on open line | Muted on open line | Type on open line |
+   |---|---|---|---|---|---|---|
+   | Midnight | 5.90 | 5.73 | 10.54 | 11.87 | 5.92 | 8.95 |
+   | Sumi | 5.22 | 5.04 | 9.68 | 14.46 | 4.68 | 6.96 |
+   | Tide | 11.53 | 11.06 | 12.75 | 13.73 | 6.77 | 8.83 |
+   | Washi | 5.53 | 6.16 | 5.68 | 12.69 | 5.68 | 5.25 |
+   | Sakura | 8.96 | 8.63 | 11.84 | 14.10 | 6.25 | 8.63 |
+
+### Deferred minors
+
+- Colour emoji ignore `AttrDim`.
+- Colour glyph memory can reach about 28 MB at about 40 px with every emoji cached at two sizes
+  (bounded by the cache).
+- On Windows `seguiemj.ttf` is opened and parsed twice (emoji face and system fallback list).
+- On macOS an sbix glyph that fails to decode draws blank instead of falling through to the next font.
+- The tray tooltip covers the lines below it and is click-through.
+
 ## Checks
 
 - `go test ./...` and `go vet ./...` pass on Windows (Smart App Control needed `GOTMPDIR` under
@@ -219,7 +256,6 @@ width; keeping U+FE0F and deciding 1 or 2 cells is a follow-up issue to open).
   click on a line no longer opens a panel by mistake.
 - Sumi's rail uses the theme accent, which is red; check that it reads as "you are here", not an error.
 - Colour emoji in a real Claude status table on Windows, and Apple Color Emoji on a Mac.
-- `⏺` now draws as Segoe UI Emoji's outlined record button; check it looks right in Claude's output.
 - Open the U+FE0F follow-up issue.
 - Product screenshots of the sidebar need retaking (`docs/site-assets/SCREENSHOTS.md`); the
   captures above are not product screenshots.
