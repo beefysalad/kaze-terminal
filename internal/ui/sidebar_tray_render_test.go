@@ -31,7 +31,7 @@ func trayRenderAgents(n int) []sideAgent {
 	return out
 }
 
-// Opt-in actual Gio GPU render of the agent tray and project rail; creates no
+// Opt-in actual Gio GPU render of the agent tray (no project rail); creates no
 // native window and injects no input. Development captures, not product screenshots.
 func TestSidebarTrayRenders(t *testing.T) {
 	dir := os.Getenv("KAZE_TRAY_RENDER_DIR")
@@ -42,7 +42,7 @@ func TestSidebarTrayRenders(t *testing.T) {
 		t.Fatal(e)
 	}
 	// Columns: default (3 lines and the chip), expanded (8 lines and the footer),
-	// folded, and the hovered line's tooltip. The project rail marks the group in each.
+	// folded, and the hovered line's tooltip. The active project shows only its bold name.
 	states := []string{"default", "expanded", "folded", "tooltip"}
 	for _, key := range []string{"sumi", "washi", "midnight"} {
 		th, ok := theme.ByKey(key)

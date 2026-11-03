@@ -46,7 +46,7 @@ type sideUI struct {
 	w             int                 // this frame's sidebar width in px, set once at the frame's start
 	hits          sideHits            // sidebar-local, like the pointer events on tag
 	at            image.Point         // the sidebar's top-left in the window
-	tag           int                 // pointer events on the sidebar or the rail
+	tag           int                 // pointer events on the sidebar
 	reveal        bool                // scroll the shown row into view next frame
 	redraws       int                 // frames the sidebar's pointer input asked for; tests count them
 	ed            widget.Editor       // the filter field

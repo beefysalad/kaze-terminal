@@ -87,7 +87,6 @@ type sideHits struct {
 	filter                                                                          image.Rectangle
 	next                                                                            image.Rectangle // the "Next waiting" button
 	list                                                                            image.Rectangle // the scrollable area, for wheel events
-	rail                                                                            image.Rectangle // the active project's accent rail, empty when none shows
 	tip                                                                             image.Rectangle // the hovered agent's step tooltip, empty when none shows
 	rename                                                                          image.Rectangle // the rename editor, empty while none is drawn
 	scrollMax                                                                       int
@@ -494,14 +493,6 @@ func (c *chrome) sideList(gtx layout.Context, h *sideHits, m sideModel, st sideS
 				row(r)
 			}
 		}
-		if g.Key != "" && g.Key == st.activeRepo {
-			// The project you are in: a thin accent rail from its header to its last row.
-			x := h.list.Min.X + gtx.Dp(2)
-			h.rail = image.Rect(x, hd.Min.Y, x+gtx.Dp(2), y).Intersect(h.list)
-			if !h.rail.Empty() {
-				paint.FillShape(ops, th.Accent, clip.UniformRRect(h.rail, gtx.Dp(1)).Op(ops))
-			}
-		}
 		if g.Finished > 0 {
 			band := image.Rect(pad, y, h.list.Max.X-pad, y+gtx.Dp(sideMoreH))
 			y = band.Max.Y
@@ -802,7 +793,7 @@ func (c *chrome) sideTheme() theme.Chrome {
 }
 
 // groupNameStyle is a project header's name color and weight: the project you are
-// in is bold, the rail beside it does the rest.
+// in is bold.
 func (c *chrome) groupNameStyle(active bool) (color.NRGBA, font.Weight) {
 	if active {
 		return c.th.ActiveFG, font.Bold
