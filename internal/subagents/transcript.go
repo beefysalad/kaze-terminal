@@ -231,3 +231,6 @@ func (tr *Transcript) Report(hook string) string {
 	}
 	return "No report"
 }
+
+// AtEnd reports whether the last Read reached the end of the file it saw.
+func (tr *Transcript) AtEnd() bool { return tr.info != nil && tr.Offset >= tr.info.Size() }

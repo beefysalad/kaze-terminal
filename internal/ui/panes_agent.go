@@ -56,11 +56,12 @@ func (win *window) showAgent(tab tabs.TabID, k subagents.Key, toggle bool) {
 		win.fl.remove(tab)
 		win.mgr.Dock(tab)
 	}
-	if win.dockOwner() != tab {
+	shown := win.dockOwner() == tab
+	if !shown {
 		win.selectTab(tab)
 		win.side.reveal = true
 	}
-	if toggle {
+	if toggle && shown { // a click from elsewhere shows the panel; only a second click closes it
 		win.toggleDock(tab, k)
 	} else {
 		win.openDock(tab, k)

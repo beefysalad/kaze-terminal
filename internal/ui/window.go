@@ -657,7 +657,7 @@ func (win *window) frame(gtx layout.Context) error {
 		} else if win.docs.shown != 0 {
 			win.docEvents(gtx)
 		} else if active != nil {
-			win.dockEvents(gtx)
+			win.dockEvents(gtx, cw, ch)
 			win.paneEvents(gtx, cw, ch) // before the session: a pane sits over it
 			if win.fl.refocus {
 				win.fl.refocus, win.wantFocus = false, true // its filters are up now
@@ -874,6 +874,7 @@ func (win *window) switchedTo(t *tabs.Tab) {
 		win.updateTitle(t)
 		return
 	}
+	win.dropDockKeys() // a panel's keyboard never follows a tab switch
 	if k := win.fl.keys; k != 0 {
 		// The keyboard was in a pane of the old session: it leaves with it.
 		win.fl.keys = 0
@@ -1122,7 +1123,7 @@ func (win *window) termEvents(gtx layout.Context, v termView, cw, ch int) {
 		if e, ok := ev.(pointer.Event); ok && e.Kind == pointer.Press && !win.bench.IgnoreInput() {
 			// A press in a pane takes the keyboard there; one in the session takes it back.
 			if v.tag == win.termTag {
-				win.dock.keys = false // the terminal takes the keyboard back from the panel
+				win.dropDockKeys() // the terminal takes the keyboard back from the panel
 				if win.fl.keys != 0 {
 					win.focusSession()
 				}

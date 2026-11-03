@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
@@ -12,7 +13,7 @@ import (
 // dockEvents runs the shown panel's input from last frame's hits: the handle
 // resizes, the header switches tabs and runs its buttons, the body scrolls,
 // follows links and takes the keyboard when clicked.
-func (win *window) dockEvents(gtx layout.Context) {
+func (win *window) dockEvents(gtx layout.Context, cw, ch int) {
 	owner := win.dockOwner()
 	s := win.dockOf(owner)
 	for {
@@ -20,7 +21,8 @@ func (win *window) dockEvents(gtx layout.Context) {
 		if !ok {
 			break
 		}
-		if e, ok := ev.(pointer.Event); ok && s != nil && !win.bench.IgnoreInput() {
+		// A release or cancel always ends a drag, even after its panel closed.
+		if e, ok := ev.(pointer.Event); ok && !win.bench.IgnoreInput() && (s != nil || e.Kind == pointer.Release || e.Kind == pointer.Cancel) {
 			win.dockHandle(gtx, e)
 		}
 	}
@@ -35,12 +37,12 @@ func (win *window) dockEvents(gtx layout.Context) {
 		}
 	}
 	tag := &win.dock.body
+	var pass []event.Event // keys the panel does not use: the terminal's
 	for {
 		ev, ok := gtx.Event(
 			key.FocusFilter{Target: tag},
-			key.Filter{Focus: tag, Name: key.NameEscape},
-			key.Filter{Focus: tag, Name: key.NameUpArrow},
-			key.Filter{Focus: tag, Name: key.NameDownArrow},
+			key.Filter{Focus: tag, Optional: allMods},
+			key.Filter{Focus: tag, Name: key.NameTab, Optional: allMods},
 			pointer.Filter{Target: tag, Kinds: pointer.Press | pointer.Scroll, ScrollY: pointer.ScrollRange{Min: -1 << 20, Max: 1 << 20}},
 		)
 		if !ok {
@@ -51,22 +53,33 @@ func (win *window) dockEvents(gtx layout.Context) {
 		}
 		switch e := ev.(type) {
 		case key.Event:
-			if e.State != key.Press || !win.dock.keys {
+			if e.Modifiers == 0 && (e.Name == key.NameEscape || e.Name == key.NameUpArrow || e.Name == key.NameDownArrow) {
+				if e.State != key.Press || !win.dock.keys {
+					continue
+				}
+				switch e.Name {
+				case key.NameEscape:
+					win.closeDock(owner)
+					s = nil
+				case key.NameUpArrow:
+					win.dockStep(owner, -1)
+				case key.NameDownArrow:
+					win.dockStep(owner, 1)
+				}
 				continue
 			}
-			switch e.Name {
-			case key.NameEscape:
-				win.closeDock(owner)
-				win.dock.keys, win.wantFocus = false, true
-				s = nil
-			case key.NameUpArrow:
-				win.dockStep(owner, -1)
-			case key.NameDownArrow:
-				win.dockStep(owner, 1)
-			}
+			pass = append(pass, ev)
+		case key.EditEvent, key.SnippetEvent, key.SelectionEvent:
+			pass = append(pass, ev)
 		case pointer.Event:
 			win.dockBody(gtx, owner, s, e)
 		}
+	}
+	if len(pass) > 0 {
+		// Typing and shortcuts belong to the session: hand the keyboard back
+		// and deliver them there, so nothing typed into the panel is lost.
+		win.dropDockKeys()
+		win.route(gtx, pass, cw, ch)
 	}
 }
 

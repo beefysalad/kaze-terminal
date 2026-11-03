@@ -116,8 +116,8 @@ func (win *window) dockTick(s *dockSession, a *subagents.Agent, now time.Time) (
 		_ = s.tr.Read(path)
 		s.trAt = now
 	}
-	if a.State == subagents.Done && s.trAt.After(a.Ended) {
-		return time.Time{}, false
+	if a.State == subagents.Done && s.trAt.After(a.Ended) && s.tr.AtEnd() {
+		return time.Time{}, false // read to the end after it finished: nothing more will come
 	}
 	return s.trAt.Add(agentTranscriptPoll), true
 }

@@ -133,9 +133,17 @@ func (win *window) closeDock(session tabs.TabID) {
 	}
 	delete(win.dock.by, session)
 	if win.dockOwner() == session {
-		win.dock.keys = false
+		win.dropDockKeys()
+		win.dock.drag.on = false
 	}
 	win.invalidate()
+}
+
+// dropDockKeys gives the keyboard back to the terminal if the panel had it.
+func (win *window) dropDockKeys() {
+	if win.dock.keys {
+		win.dock.keys, win.wantFocus = false, true
+	}
 }
 
 // toggleDock closes session's panel when it already shows k, else opens k.

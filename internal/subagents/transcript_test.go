@@ -127,3 +127,26 @@ func TestTranscriptMessageTime(t *testing.T) {
 		t.Fatalf("merged tools keep the first time, got %v", tr.Messages[2].At)
 	}
 }
+
+func TestTranscriptAtEnd(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "a.jsonl")
+	var b strings.Builder
+	for b.Len() < transcriptReadBudget+1000 {
+		b.WriteString(fixtureLine("assistant", textBlock(strings.Repeat("x", 900))))
+	}
+	os.WriteFile(p, []byte(b.String()), 0o644)
+	var tr Transcript
+	if tr.AtEnd() {
+		t.Fatal("unread transcript at end")
+	}
+	tr.Read(p)
+	if tr.AtEnd() {
+		t.Fatal("a file past the read budget reported fully read")
+	}
+	for i := 0; i < 4 && !tr.AtEnd(); i++ {
+		tr.Read(p)
+	}
+	if !tr.AtEnd() {
+		t.Fatal("never reached the end")
+	}
+}
