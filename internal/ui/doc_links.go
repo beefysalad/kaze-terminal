@@ -18,7 +18,11 @@ func (win *window) followDocLink(d *docView, dest string) {
 		if win.topFn != nil {
 			top = win.topFn
 		}
-		path, e := mdoc.Resolve(t.Path, mdoc.Roots{Dir: filepath.Dir(d.path), Home: win.home, Top: top})
+		dir := filepath.Dir(d.path)
+		if d.path == "" { // an agent report: relative links start at the session's folder
+			dir = win.termFolder(win.mgr.Lookup(d.session))
+		}
+		path, e := mdoc.Resolve(t.Path, mdoc.Roots{Dir: dir, Home: win.home, Top: top})
 		if e != nil {
 			win.note("Can't find " + t.Path)
 			return

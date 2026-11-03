@@ -39,8 +39,12 @@ func (win *window) drawDoc(gtx layout.Context, d *docView, r image.Rectangle) {
 		win.docs.texts = append(win.docs.texts, s)
 		y += sz.Y + gtx.Dp(8)
 	}
-	label(tildeHome(d.path, win.home), 11, false)
-	label("Loaded "+d.loadedAt.Format("3:04 PM"), 11, false)
+	if d.path == "" {
+		label("Agent report", 11, false)
+	} else {
+		label(tildeHome(d.path, win.home), 11, false)
+		label("Loaded "+d.loadedAt.Format("3:04 PM"), 11, false)
+	}
 	if d.file.Cut {
 		label(fmt.Sprintf("Showing the first 2 MB of %.1f MB.", float64(d.file.Total)/1e6), 11, true)
 	}

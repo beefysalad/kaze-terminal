@@ -189,5 +189,29 @@ func (win *window) docEvents(gtx layout.Context) {
 	}
 }
 
-// openReportDoc opens an agent's report in the reader (filled in by the reader task).
-func (win *window) openReportDoc(session tabs.TabID, title, md string) *docView { return nil }
+// openReportDoc opens an agent's report, held in memory, in the reader under
+// session, titled title. Reopening the same title shows it again with md.
+// It has no file: nothing reloads it, and its links resolve from the
+// session's folder.
+func (win *window) openReportDoc(session tabs.TabID, title, md string) *docView {
+	if win.mgr.Lookup(session) == nil {
+		return nil
+	}
+	key := "report:" + title
+	var d *docView
+	for _, x := range win.docs.list {
+		if x.session == session && x.key == key {
+			d = x
+		}
+	}
+	if d == nil {
+		win.docs.last++
+		d = &docView{id: win.docs.last, session: session, key: key, name: title}
+		win.docs.list = append(win.docs.list, d)
+	}
+	d.doc = mdoc.Parse([]byte(md))
+	win.fitDoc(d.doc)
+	d.loadedAt = time.Now()
+	win.showDoc(d.id)
+	return d
+}
