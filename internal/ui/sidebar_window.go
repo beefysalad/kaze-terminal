@@ -203,9 +203,10 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 			s.st.ed = &s.ed
 		}
 		s.st.renaming, s.st.ren = s.renaming, &s.ren
-		s.st.shown = 0
+		s.st.shown, s.st.activeRepo = 0, ""
 		if a := win.mgr.Active(); a != nil {
 			s.st.shown = a.ID
+			s.st.activeRepo = win.locOf(a).repo
 		}
 		s.st.doc = win.docs.shown
 		s.st.settings, s.st.settingsOn = win.set.open, win.set.shown
@@ -215,7 +216,7 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 				s.st.floating = f.id
 			}
 		}
-		key := sideDrawKey{size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, floating: s.st.floating, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds, launchVersion: s.launch.version, launcher: s.launch.shown, renaming: s.renaming}
+		key := sideDrawKey{activeRepo: s.st.activeRepo, size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, floating: s.st.floating, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds, launchVersion: s.launch.version, launcher: s.launch.shown, renaming: s.renaming}
 		if !s.cache.drawValid || s.cache.drawKey != key || s.reveal {
 			s.cache.ops.Reset()
 			cg := sg

@@ -121,6 +121,12 @@ func encodeKey(goos string, name key.Name, mods key.Modifiers, m term.Modes) []b
 	var b []byte
 	switch name {
 	case key.NameReturn, key.NameEnter:
+		// Alias Shift+Enter to Alt/Option+Enter for multiline prompts (Claude
+		// Code). Keep one Escape prefix even when Alt is also held. Exact
+		// matching leaves Ctrl/Cmd/Super combinations at their legacy encoding.
+		if mods == key.ModShift || mods == key.ModShift|key.ModAlt {
+			return []byte{0x1b, '\r'}
+		}
 		b = []byte{'\r'}
 	case key.NameTab:
 		if mods&key.ModShift != 0 {

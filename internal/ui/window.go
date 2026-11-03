@@ -172,6 +172,7 @@ type window struct {
 	subIn    subInbox                  // subagent events on their way to subs
 	subTabs  map[int]bool              // tabs subs has seen, so closing one forgets its subagents
 	board    boardState                // the agents board; UI goroutine only
+	empty    emptyState                // no-session message and New session control
 	stat     statusState               // the status bar as last drawn
 	names    map[tabs.TabID]string     // row names the owner gave; UI goroutine only
 	lc       lineCounter               // git lines added and removed per tab; UI goroutine only
@@ -328,12 +329,9 @@ func (win *window) loop() error {
 			if win.bench != nil {
 				win.bench.FrameDone(start, time.Now(), win.bf.frame)
 				win.bf = benchFrame{}
-				if win.bench.ShouldQuit() {
-					win.w.Perform(system.ActionClose)
-				}
 			}
 			if win.shouldClose() {
-				win.w.Perform(system.ActionClose)
+				win.perform(system.ActionClose)
 			}
 		default:
 			if h, ok := viewHandle(e); ok {
@@ -485,6 +483,7 @@ func (win *window) newTab() {
 	win.dropSideEdit()
 	win.hideSettings() // the new tab is shown
 	win.closeBoard()
+	win.wantFocus = true
 	if _, err := win.mgr.NewOpts(tabs.StartOpts{Dir: win.plainStartDir()}); err != nil {
 		log.Printf("kaze: new tab: %v", err)
 		// A windowsgui build has no console, so the status bar is where this can be seen.
@@ -532,7 +531,7 @@ func rendOptions(c config.Config) render.Options {
 
 // blinks reports whether the cursor blinks: only while the terminal is in front of the user.
 func (win *window) blinks() bool {
-	return win.opt.Config.CursorBlink && win.focused && !win.set.shown && win.docs.shown == 0
+	return win.opt.Config.CursorBlink && win.focused && !win.set.shown && !win.board.open && win.docs.shown == 0 && win.mgr != nil && !win.mgr.Empty()
 }
 
 // blink sets the cursor's phase for now and returns when the next phase starts;
@@ -624,6 +623,7 @@ func (win *window) frame(gtx layout.Context) error {
 		}
 	}
 	win.mgr.ResizeAll(cols, rows)
+	win.closeExitedFinalSession()
 
 	var active *tabs.Tab
 	win.drainBranchWork()
@@ -656,19 +656,13 @@ func (win *window) frame(gtx layout.Context) error {
 			if win.docs.shown == 0 {
 				win.termEvents(gtx, win.mainView(active), cw, ch)
 			}
+		} else {
+			win.emptyEvents(gtx, cw, ch)
 		}
-	}
-	if win.mgr.Empty() {
-		paint.Fill(gtx.Ops, win.ui.th.Chrome)
-		win.drawWorktreeDialog(gtx, image.Rectangle{Max: size})
-		if win.wantFocus && win.worktreeDialogShown() {
-			gtx.Execute(key.FocusCmd{Tag: win.focusTarget()})
-			win.wantFocus = false
-		}
-		return nil
 	}
 	active = win.mgr.Active()
 	win.paneStep(active)
+	active = win.mgr.Active() // pane pruning may have removed the final orphan
 	win.switchedTo(active)
 	list := win.mgr.Tabs()
 	win.pruneDocs(list)
@@ -710,7 +704,10 @@ func (win *window) frame(gtx layout.Context) error {
 			gtx.Execute(op.InvalidateCmd{At: at}) // one wake to ask about a new session's prompt
 		}
 	}
-	sel := win.checkSel(active)
+	var sel render.Selection
+	if active != nil {
+		sel = win.checkSel(active)
+	}
 	// After input, so a key typed this frame shows the cursor in it.
 	if next, ok := win.blink(gtx.Now); ok {
 		gtx.Execute(op.InvalidateCmd{At: next}) // one wake per phase, only while blinking
@@ -752,6 +749,9 @@ func (win *window) frame(gtx layout.Context) error {
 		gtx.Execute(op.InvalidateCmd{At: at})
 	}
 	var panes []paneView
+	if win.set.shown || win.board.open || win.docs.shown != 0 || active != nil {
+		win.empty.shown = false
+	}
 	if win.set.shown {
 		win.drawSettings(gtx, termRect) // the renderer is not laid out
 		win.wsr.hits = win.wsr.hits[:0]
@@ -760,6 +760,9 @@ func (win *window) frame(gtx layout.Context) error {
 		win.wsr.hits = win.wsr.hits[:0]
 	} else if d := win.shownDoc(); d != nil {
 		win.drawDoc(gtx, d, termRect)
+		win.wsr.hits = win.wsr.hits[:0]
+	} else if active == nil {
+		win.drawEmpty(gtx, termRect)
 		win.wsr.hits = win.wsr.hits[:0]
 	} else {
 		win.rend.SetFocused(win.viewFocused(0))
@@ -869,11 +872,14 @@ func (win *window) switchedTo(t *tabs.Tab) {
 	} else if win.lastTab != nil && win.focused {
 		sendFocus(win.lastTab, false) // a no-op once that tab is closed
 	}
-	if win.focused {
-		sendFocus(t, true)
+	if t != nil {
+		if win.focused {
+			sendFocus(t, true)
+		}
+		win.staleBranch(t)
 	}
 	win.lastTab = t
-	win.staleBranch(t)
+	win.wantFocus = true
 	win.endGesture()
 	// One renderer serves every tab: dropping its strips frees the hidden tab's
 	// buffers and makes the shown tab draw in full.
@@ -884,7 +890,10 @@ func (win *window) switchedTo(t *tabs.Tab) {
 }
 
 func (win *window) updateTitle(t *tabs.Tab) {
-	title := "kaze · " + tabLabel(t, win.defTitle)
+	title := "kaze"
+	if t != nil {
+		title += " · " + tabLabel(t, win.defTitle)
+	}
 	if d := win.shownDoc(); d != nil {
 		title = "kaze · " + d.name
 	}
@@ -1004,6 +1013,9 @@ func (win *window) focusTarget() event.Tag {
 	}
 	if v, ok := win.paneKeyView(); ok {
 		return v.tag
+	}
+	if win.mgr != nil && win.mgr.Empty() {
+		return &win.empty.newSession
 	}
 	return win.termTag
 }

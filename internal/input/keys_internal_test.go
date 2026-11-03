@@ -64,3 +64,27 @@ func TestSetReservedReplacesThePlatformTable(t *testing.T) {
 		t.Fatal("IsReserved does not see the new table")
 	}
 }
+
+// Shift+Enter aliases Alt/Option+Enter for programs with multiline prompts.
+// Both Return and keypad Enter must stay distinct from ordinary submission.
+func TestShiftEnterUsesMultilineSequence(t *testing.T) {
+	for _, goos := range []string{"windows", "darwin"} {
+		for _, name := range []key.Name{key.NameReturn, key.NameEnter} {
+			for _, tc := range []struct {
+				mods key.Modifiers
+				want string
+			}{
+				{0, "\r"},
+				{key.ModShift, "\x1b\r"},
+				{key.ModAlt, "\x1b\r"},
+				{key.ModShift | key.ModAlt, "\x1b\r"},
+				{key.ModCtrl, "\r"},
+				{key.ModCtrl | key.ModShift, "\r"},
+				{key.ModCommand, "\r"},
+				{key.ModCommand | key.ModShift, "\r"},
+			} {
+				ek(t, goos, name, tc.mods, tc.want)
+			}
+		}
+	}
+}

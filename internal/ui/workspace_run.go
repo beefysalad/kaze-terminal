@@ -69,13 +69,6 @@ func (win *window) wsNow() time.Time {
 	return time.Now()
 }
 
-// shouldClose is true once the last tab closed. The loop asks only after a
-// frame, and a run opens all its tabs within one, so it never sees a run half open.
-func (win *window) shouldClose() bool {
-	w := &win.side.launch.work
-	return win.mgr != nil && win.mgr.Empty() && !w.busy && !win.worktreeDialogShown() && !win.side.launch.busy
-}
-
 func (win *window) wsNotice(msg string) {
 	win.notice = msg
 	win.noticeUntil = time.Now().Add(noticeFor)

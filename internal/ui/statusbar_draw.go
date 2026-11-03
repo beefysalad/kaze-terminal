@@ -152,7 +152,7 @@ func (win *window) drawStatus(gtx layout.Context, y int, now time.Time) {
 			if m.Waiting > 0 {
 				paint.FillShape(ops, col, clip.Ellipse(dot).Op(ops))
 			} else {
-				paint.FillShape(ops, col, runningRing(gtx, dot.Inset(-gtx.Dp(1))))
+				c.runningMark(gtx, centeredMarkBox(dot, gtx.Dp(12)))
 			}
 			text(dot.Max.X+gap, agentsPill(m, l.Compact.Agents), false, col)
 		case grpServers:

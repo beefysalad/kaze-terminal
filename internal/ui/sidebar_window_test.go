@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"image"
 	"os"
 	"path/filepath"
@@ -79,7 +80,9 @@ func openMember(t *testing.T, win *window, title string) *tabs.Tab {
 	}
 	run := win.runs[1]
 	if run == nil {
-		run = &wsRun{id: 1, workspace: "w1", name: "samurai"}
+		ctx, cancel := context.WithCancel(context.Background())
+		t.Cleanup(cancel)
+		run = &wsRun{id: 1, workspace: "w1", name: "samurai", ctx: ctx, cancel: cancel}
 		win.runs[1] = run
 	}
 	tab, err := win.mgr.NewOpts(tabs.StartOpts{Title: title, Color: "cyan",

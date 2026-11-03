@@ -448,8 +448,8 @@ func TestClosingTheLastMemberCancelsTheProbes(t *testing.T) {
 	if len(f.win.runs) != 0 {
 		t.Fatal("the run is still tracked after its last member closed")
 	}
-	if !f.win.shouldClose() {
-		t.Fatal("an empty window with no run being created stays open")
+	if f.win.shouldClose() {
+		t.Fatal("empty window requested shutdown after its last workspace closed")
 	}
 }
 
@@ -594,7 +594,7 @@ func TestPreflightFailuresOpenNoTabs(t *testing.T) {
 	}
 }
 
-// The loop asks shouldClose only after a frame; by then a startup run has opened its tabs.
+// Starting a workspace leaves the window open with all recipe tabs.
 func TestWindowStaysOpenAfterAStartupWorkspace(t *testing.T) {
 	f := newRunFixture(t)
 	f.win.opt.Config.StartupWorkspace = "ws_samurai"

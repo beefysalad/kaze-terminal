@@ -175,14 +175,13 @@ func TestClickingSearchOpensThePalette(t *testing.T) {
 	}
 }
 
-// The running ring is drawn past its dot; the crumb clips, so the dot must sit
-// far enough inside it for the whole ring to show.
+// The closed running mark must fit the crumb clip at each supported scale.
 func TestCrumbRunningRingFitsInTheCrumb(t *testing.T) {
 	gtx := barContext(1000)
 	for _, scale := range []float32{1, 1.5, 2} {
 		gtx.Metric = unit.Metric{PxPerDp: scale, PxPerSp: scale}
 		r := image.Rect(300, 0, 700, gtx.Dp(42))
-		ring := crumbDot(gtx, r).Inset(-ringOverflow(gtx))
+		ring := centeredMarkBox(crumbDot(gtx, r), gtx.Dp(14))
 		if !ring.In(r) {
 			t.Fatalf("scale %v: ring %v leaves the crumb %v", scale, ring, r)
 		}

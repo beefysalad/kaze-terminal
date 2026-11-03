@@ -80,8 +80,8 @@ func TestCleanupRefusalRemainsVisibleAfterLastTab(t *testing.T) {
 	}
 	r.Queue(key.Event{Name: key.NameEscape, State: key.Press})
 	sideFrame(t, win, &r)
-	if !win.shouldClose() {
-		t.Fatal("could not close after reading refusal")
+	if win.shouldClose() || win.worktreeDialogShown() {
+		t.Fatal("refusal dismissal did not return to the open empty window")
 	}
 }
 
@@ -97,7 +97,7 @@ func TestDeferredCloseCheckKeepsWindowUntilAnswered(t *testing.T) {
 		t.Fatal("deferred cleanup was lost")
 	}
 	win.keepWorktrees()
-	if win.worktreeDialogShown() || !win.shouldClose() {
+	if win.worktreeDialogShown() || win.shouldClose() {
 		t.Fatal("Keep did not cancel pending cleanup")
 	}
 	if _, ok = win.worktreeTick(time.Now().Add(2 * time.Minute)); ok {
