@@ -13,7 +13,7 @@ param(
   [int]$LaunchRuns = 5,
   # A Go temp dir outside %TEMP% helps when Smart App Control blocks test binaries; empty keeps Go's default.
   [string]$GoTmp = $env:GOTMPDIR,
-  # Run only these scenarios: launch, keys, flood, claude, idle, full.
+  # Run only these scenarios: launch, keys, flood, emoji, claude, idle, full.
   [string[]]$Only = @()
 )
 $ErrorActionPreference = 'Stop'
@@ -171,6 +171,11 @@ if (Want 'flood') {
 Write-Host 'flood 10000 colored lines, then scroll through history'
 # 10100 lines so history (capped at 10000) is full once the screen's rows are subtracted.
 $res.flood = Run-Kaze 'flood-scroll' @{ KAZE_BENCH_TYPE = "& '$flood' -lines 10100"; KAZE_BENCH_SCROLL = '10000' } 60
+
+}
+if (Want 'emoji') {
+Write-Host 'emoji 10000 status-table rows with colour emoji, then scroll through history'
+$res.emoji = Run-Kaze 'emoji-scroll' @{ KAZE_BENCH_TYPE = "& '$flood' -emoji -lines 10100"; KAZE_BENCH_SCROLL = '10000' } 60
 
 }
 if (Want 'claude') {

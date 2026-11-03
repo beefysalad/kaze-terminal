@@ -13,7 +13,8 @@ sh bench/run.sh [out-dir] [claude-capture]
 
 Scenarios: `launch` (5 runs with the default shell, 3 with cmd.exe), `keys`
 (200 synthetic keys), `flood` (10,100 colored lines, then a scroll through
-10,000 lines of history), `claude` (the Claude Code capture plus a streamed
+10,000 lines of history), `emoji` (the same with 10,100 status-table rows
+holding colour emoji, `flood -emoji`), `claude` (the Claude Code capture plus a streamed
 response), `idle` (1 and 4 idle tabs: memory, CPU, growth over 60s) and `full`
 (1 and 4 tabs with full history: per-tab cost).
 

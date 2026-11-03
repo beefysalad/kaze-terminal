@@ -41,7 +41,7 @@ func TestEmojiTables(t *testing.T) {
 }
 
 // segoeEmoji skips unless Segoe UI Emoji is installed (Windows).
-func segoeEmoji(t *testing.T) {
+func segoeEmoji(t testing.TB) {
 	t.Helper()
 	if runtime.GOOS != "windows" {
 		t.Skip("uses Segoe UI Emoji")
@@ -54,7 +54,7 @@ func segoeEmoji(t *testing.T) {
 // swapEmojiOpen makes the shared emoji source load through open from now on,
 // and restores it (and its loaded font) when the test ends. Tests that use it
 // must ask for a pixel size no other test uses, so their glyph cache starts fresh.
-func swapEmojiOpen(t *testing.T, open func(path string) *emojiFont) {
+func swapEmojiOpen(t testing.TB, open func(path string) *emojiFont) {
 	t.Helper()
 	s := emojiFonts
 	s.mu.Lock()
@@ -192,7 +192,7 @@ func TestSelectionAndInverseShowBehindEmoji(t *testing.T) {
 }
 
 // realEmojiFont loads the installed emoji font, failing the test if it does not load.
-func realEmojiFont(t *testing.T) *emojiFont {
+func realEmojiFont(t testing.TB) *emojiFont {
 	t.Helper()
 	e := loadEmojiFont(emojiFontPath())
 	if e == nil {
