@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func fixtureLine(kind string, blocks ...map[string]any) string {
@@ -104,5 +105,25 @@ func TestTranscriptPath(t *testing.T) {
 		if TranscriptPath(main, id) != "" {
 			t.Fatal(id)
 		}
+	}
+}
+
+func TestTranscriptMessageTime(t *testing.T) {
+	var tr Transcript
+	tr.feed([]byte(`{"type":"assistant","timestamp":"2026-11-03T05:02:03.123Z","message":{"content":[{"type":"text","text":"hi"}]}}` + "\n" +
+		`{"type":"assistant","message":{"content":[{"type":"text","text":"no time"}]}}` + "\n" +
+		`{"type":"assistant","timestamp":"2026-11-03T05:02:09Z","message":{"content":[{"type":"tool_use","name":"Grep"}]}}` + "\n" +
+		`{"type":"assistant","timestamp":"2026-11-03T05:02:10Z","message":{"content":[{"type":"tool_use","name":"Read"}]}}` + "\n"))
+	if len(tr.Messages) != 3 {
+		t.Fatalf("messages %+v", tr.Messages)
+	}
+	if want := time.Date(2026, 11, 3, 5, 2, 3, 123e6, time.UTC); !tr.Messages[0].At.Equal(want) {
+		t.Fatalf("at %v", tr.Messages[0].At)
+	}
+	if !tr.Messages[1].At.IsZero() {
+		t.Fatalf("untimed got %v", tr.Messages[1].At)
+	}
+	if want := time.Date(2026, 11, 3, 5, 2, 9, 0, time.UTC); !tr.Messages[2].At.Equal(want) {
+		t.Fatalf("merged tools keep the first time, got %v", tr.Messages[2].At)
 	}
 }
