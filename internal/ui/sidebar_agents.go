@@ -172,7 +172,7 @@ func rowSpan(gtx layout.Context, r sideRow) int {
 
 // agentLines draws a row's subagent lines from y down, inside x0..x1.
 func (c *chrome) agentLines(gtx layout.Context, h *sideHits, r sideRow, x0, x1, y int, open subagents.Key) {
-	ops, th := gtx.Ops, c.th
+	ops, th := gtx.Ops, c.sideTheme()
 	gap, dot := gtx.Dp(8), gtx.Dp(6)
 	mag := c.memberColor("magenta")
 	for _, a := range r.Agents {
@@ -233,7 +233,7 @@ func (c *chrome) agentChipAt(gtx layout.Context, n int, band image.Rectangle) in
 	if s == "" {
 		return 0
 	}
-	ops, th := gtx.Ops, c.th
+	ops, th := gtx.Ops, c.sideTheme()
 	call, sz := c.label(gtx, s, 10, th.Accent)
 	pad := gtx.Dp(6)
 	w := sz.X + 2*pad
