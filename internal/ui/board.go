@@ -176,16 +176,23 @@ func (win *window) toggleBoard() {
 
 // sessionName is a session's title as the sidebar shows it, and its repo.
 func (win *window) sessionName(id tabs.TabID) (title, repo string) {
+	title, repo, _ = win.sessionMeta(id)
+	return title, repo
+}
+
+// sessionMeta is a session's title as the sidebar shows it, its repo and branch;
+// all "" for a session that is gone.
+func (win *window) sessionMeta(id tabs.TabID) (title, repo, branch string) {
 	t := win.mgr.Lookup(id)
 	if t == nil {
-		return "", ""
+		return "", "", ""
 	}
 	loc := win.locOf(t)
 	title = win.sideIn().label(t, loc, win.rowAgent(id)) // use the sidebar's title priority and detected agent
 	if title == "" {
 		title = "session"
 	}
-	return title, loc.repoName
+	return title, loc.repoName, loc.branch
 }
 
 // boardColumns is the board's cards: running, waiting on you, done.
