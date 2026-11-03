@@ -7,7 +7,8 @@ Last updated: 2026-11-03, while preparing release 0.23 for #107, #113 and #114. 
 **Release 0.23 packages #107, #113 and #114.** The owner explicitly requested
 opening a PR if needed, merging this bundle and publishing its release on
 2026-11-03. This overrides the earlier release hold for this work. Feature PR
-#115 contains the approved behavior, tests, audits and development captures.
+#115 passed macOS and Windows CI and is merged, with the approved behavior,
+tests, audits and development captures.
 Version, Mac metadata, download notes, README, full changelog and lander are
 updated together on `release/0.23`. Product screenshots need native retakes as
 recorded in `docs/site-assets/SCREENSHOTS.md`; none were fabricated. Installed-app
