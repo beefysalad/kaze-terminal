@@ -40,7 +40,6 @@ type sideUI struct {
 	tabs          []*tabs.Tab
 	st            sideState
 	folded        map[string]bool     // repo groups the owner folded, by key
-	trayOpen      map[tabs.TabID]bool // sessions whose agent tray is expanded to trayMax lines
 	trayFolded    map[tabs.TabID]bool // sessions whose agent tray is folded away
 	hidden        bool                // off in the settings, or the window is too narrow
 	w             int                 // this frame's sidebar width in px, set once at the frame's start
@@ -68,11 +67,9 @@ type titleClick struct {
 
 // pruneTray forgets the tray state of closed sessions, so a reused id starts open and collapsed.
 func (win *window) pruneTray(list []*tabs.Tab) {
-	for _, m := range []map[tabs.TabID]bool{win.side.trayOpen, win.side.trayFolded} {
-		for id := range m {
-			if !slices.ContainsFunc(list, func(t *tabs.Tab) bool { return t.ID == id }) {
-				delete(m, id)
-			}
+	for id := range win.side.trayFolded {
+		if !slices.ContainsFunc(list, func(t *tabs.Tab) bool { return t.ID == id }) {
+			delete(win.side.trayFolded, id)
 		}
 	}
 }
@@ -620,15 +617,8 @@ func (win *window) sidePress(p image.Point, b pointer.Buttons, at time.Duration)
 	for _, a := range h.agents {
 		if primary && p.In(a.rect) {
 			switch a.kind {
-			case hitAgentBoard:
-				win.openBoard(a.tab)
 			case hitAgentChip:
-				if win.side.trayOpen == nil {
-					win.side.trayOpen = map[tabs.TabID]bool{}
-				}
-				win.side.trayOpen[a.tab] = true
-			case hitAgentFewer:
-				delete(win.side.trayOpen, a.tab)
+				win.openBoard(a.tab) // "+N more": the board, showing this session
 			case hitAgentLine:
 				win.showAgent(a.tab, a.key, true) // a click opens its panel, a second one closes it
 			}

@@ -91,7 +91,7 @@ type sideHits struct {
 	rename                                                                          image.Rectangle // the rename editor, empty while none is drawn
 	scrollMax                                                                       int
 	noMatches                                                                       bool      // the filter hides every session
-	chip                                                                            [3]string // the tray chip or footer parts as drawn, for tests
+	chip                                                                            [3]string // the tray chip parts as drawn, for tests
 }
 
 // fitSide draws s at size within room px, cut with a trailing "…" when it is longer.

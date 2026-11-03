@@ -41,10 +41,10 @@ func TestSidebarTrayRenders(t *testing.T) {
 	if e := os.MkdirAll(dir, 0o700); e != nil {
 		t.Fatal(e)
 	}
-	// Columns: default (3 lines and the chip), expanded (8 lines and the footer),
-	// folded, and the hovered line's tooltip. The active project shows only its bold name.
-	states := []string{"default", "expanded", "folded", "tooltip"}
-	for _, key := range []string{"sumi", "washi", "midnight"} {
+	// Columns: default (3 lines and the chip), folded, the hovered line's tooltip,
+	// and an open agent's highlighted line. The active project shows only its bold name.
+	states := []string{"default", "folded", "tooltip", "open"}
+	for _, key := range []string{"sumi", "midnight", "washi"} {
 		th, ok := theme.ByKey(key)
 		if !ok {
 			t.Fatalf("no theme %q", key)
@@ -58,9 +58,6 @@ func TestSidebarTrayRenders(t *testing.T) {
 				Running: true, Mark: markNeeds, AgentCount: 18, TrayTotal: 20, TrayWaiting: 1}
 			st := sideState{shown: 1, activeRepo: "repo"}
 			switch state {
-			case "expanded":
-				tray.Agents, tray.TrayExpanded = trayRenderAgents(trayMax), true
-				tray.Hidden = subagents.TrayCounts{Running: 10, Done: 2}
 			case "folded":
 				tray.TrayFolded = true
 			default:
@@ -70,6 +67,9 @@ func TestSidebarTrayRenders(t *testing.T) {
 			if state == "tooltip" { // also a hidden agent that waits: the chip keeps "1 needs you"
 				st.hoverAgent = tray.Agents[1].Key
 				tray.Hidden, tray.TrayWaiting = subagents.TrayCounts{Waiting: 1, Running: 14, Done: 2}, 2
+			}
+			if state == "open" {
+				st.openAgent = tray.Agents[1].Key
 			}
 			model := sideModel{Groups: []sideGroup{
 				{Key: "repo", Name: "kaze-terminal", Count: 2, Waiting: 1, Rows: []sideRow{

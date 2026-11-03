@@ -87,26 +87,27 @@ func TestAgentLineQuickClicksToggleTwice(t *testing.T) {
 	}
 }
 
-func TestTrayChipExpandsAndFewerCollapses(t *testing.T) {
+func TestTrayChipOpensBoardForSession(t *testing.T) {
 	win, _, r, a, _, _, _ := paneWindow(t)
 	startAgents(win, a.ID, 12)
 	floatFrames(t, win, r)
-	if n, chips := len(trayHits(win, a.ID, hitAgentLine)), trayHits(win, a.ID, hitAgentChip); n != trayCap || len(chips) != 1 {
-		t.Fatalf("collapsed tray: %d lines, chips %v", n, chips)
+	chips := trayHits(win, a.ID, hitAgentChip)
+	if n := len(trayHits(win, a.ID, hitAgentLine)); n != trayCap || len(chips) != 1 {
+		t.Fatalf("tray: %d lines, chips %v", n, chips)
 	}
-	sideClickAt(win, r, centre(trayHits(win, a.ID, hitAgentChip)[0].rect), pointer.ButtonPrimary, 0)
+	sideClickAt(win, r, centre(chips[0].rect), pointer.ButtonPrimary, 0)
 	floatFrames(t, win, r)
-	fewer := trayHits(win, a.ID, hitAgentFewer)
-	if n := len(trayHits(win, a.ID, hitAgentLine)); n != trayMax || len(fewer) != 1 || len(trayHits(win, a.ID, hitAgentBoard)) != 1 {
-		t.Fatalf("expanded tray: %d lines, fewer %v", n, fewer)
+	if !win.board.open || win.board.tab != a.ID {
+		t.Fatalf("the chip did not open the board for its session: open %v tab %d", win.board.open, win.board.tab)
 	}
 	if win.dockOf(a.ID) != nil {
 		t.Fatal("the chip opened a panel")
 	}
-	sideClickAt(win, r, centre(fewer[0].rect), pointer.ButtonPrimary, time.Second)
+	win.closeBoard()
 	floatFrames(t, win, r)
-	if n := len(trayHits(win, a.ID, hitAgentLine)); n != trayCap || len(trayHits(win, a.ID, hitAgentChip)) != 1 {
-		t.Fatalf("after Show fewer: %d lines", n)
+	floatFrames(t, win, r)
+	if n, chips := len(trayHits(win, a.ID, hitAgentLine)), trayHits(win, a.ID, hitAgentChip); n != trayCap || len(chips) != 1 {
+		t.Fatalf("after the board: %d lines, chips %v, want the tray unchanged", n, chips)
 	}
 }
 
@@ -249,14 +250,5 @@ func TestTrayTooltipGoneOnLeave(t *testing.T) {
 	sideFrame(t, win, &r)
 	if !win.side.hits.tip.Empty() {
 		t.Fatalf("tooltip %v after the pointer left", win.side.hits.tip)
-	}
-}
-
-func TestTrayBoardLinkOpensFilteredBoard(t *testing.T) {
-	win, id := boardWindow(t)
-	win.side.hits.agents = []sideAgentHit{{tab: id, kind: hitAgentBoard, rect: image.Rect(10, 10, 100, 30)}}
-	win.sidePress(image.Pt(20, 20), 1, 0)
-	if !win.board.open || win.board.tab != id {
-		t.Fatalf("board %+v", win.board)
 	}
 }

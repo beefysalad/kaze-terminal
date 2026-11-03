@@ -52,7 +52,6 @@ type sideCache struct {
 	docs              []sideDocInput
 	folded            map[string]bool
 	runFolded         map[uint64]bool
-	trayOpen          map[tabs.TabID]bool
 	trayFolded        map[tabs.TabID]bool
 	filter, home, def string
 	revision          uint64
@@ -109,7 +108,7 @@ func (win *window) cachedSide(now time.Time) sideModel {
 		}
 	}
 	if !maps.Equal(c.folded, s.folded) || !maps.Equal(c.runFolded, s.st.runFolded) ||
-		!maps.Equal(c.trayOpen, s.trayOpen) || !maps.Equal(c.trayFolded, s.trayFolded) {
+		!maps.Equal(c.trayFolded, s.trayFolded) {
 		dirty = true
 	}
 	runs := win.curRuns()
@@ -130,7 +129,6 @@ func (win *window) cachedSide(now time.Time) sideModel {
 		c.order = sessionOrder(c.base)
 		c.folded = maps.Clone(s.folded)
 		c.runFolded = maps.Clone(s.st.runFolded)
-		c.trayOpen = maps.Clone(s.trayOpen)
 		c.trayFolded = maps.Clone(s.trayFolded)
 		c.docs = c.docs[:0]
 		for _, d := range win.docs.list {
