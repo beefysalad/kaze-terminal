@@ -63,12 +63,6 @@ func TestTrayTexts(t *testing.T) {
 			t.Errorf("trayChip(%+v) = (%q, %q, %q), want (%q, %q, %q)", c.h, lead, needs, rest, c.lead, c.needs, c.rst)
 		}
 	}
-	if f, b := trayFooter(0); f != "Show fewer" || b != "" {
-		t.Errorf("trayFooter(0) = %q %q", f, b)
-	}
-	if f, b := trayFooter(13); f != "Show fewer" || b != " · 13 more on the board" {
-		t.Errorf("trayFooter(13) = %q %q", f, b)
-	}
 	if got := (sideRow{TrayTotal: 4, AgentCount: 2, Mark: markNeeds}).stateWord(); got != "4 agents ⌄" {
 		t.Errorf("a row with a tray reads %q, want the fold control", got)
 	}
@@ -116,10 +110,6 @@ func TestTrayStateLimits(t *testing.T) {
 	if r := trayRow(t, win, a.ID); len(r.Agents) != trayCap || r.Hidden.Total() != 9 || r.TrayTotal != 12 || r.AgentCount != 12 {
 		t.Fatalf("default tray: %d lines, hidden %+v, total %d", len(r.Agents), r.Hidden, r.TrayTotal)
 	}
-	win.side.trayOpen = map[tabs.TabID]bool{a.ID: true}
-	if r := trayRow(t, win, a.ID); len(r.Agents) != trayMax || r.Hidden.Total() != 4 || !r.TrayExpanded {
-		t.Fatalf("expanded tray: %d lines, hidden %+v", len(r.Agents), r.Hidden)
-	}
 	win.side.trayFolded = map[tabs.TabID]bool{a.ID: true}
 	if r := trayRow(t, win, a.ID); len(r.Agents) != 0 || r.Hidden.Total() != 0 || r.TrayTotal != 12 || !r.TrayFolded {
 		t.Fatalf("folded tray: %d lines, hidden %+v, total %d", len(r.Agents), r.Hidden, r.TrayTotal)
@@ -138,15 +128,10 @@ func TestTrayStateRebuildsModel(t *testing.T) {
 	if win.side.cache.builds != builds {
 		t.Fatal("an unchanged frame rebuilt the model")
 	}
-	win.side.trayOpen = map[tabs.TabID]bool{a.ID: true}
-	sideFrame(t, win, &router)
-	if win.side.cache.builds != builds+1 {
-		t.Fatalf("expanding the tray: builds %d, want %d", win.side.cache.builds, builds+1)
-	}
 	win.side.trayFolded = map[tabs.TabID]bool{a.ID: true}
 	sideFrame(t, win, &router)
-	if win.side.cache.builds != builds+2 {
-		t.Fatalf("folding the tray: builds %d, want %d", win.side.cache.builds, builds+2)
+	if win.side.cache.builds != builds+1 {
+		t.Fatalf("folding the tray: builds %d, want %d", win.side.cache.builds, builds+1)
 	}
 }
 
@@ -156,12 +141,11 @@ func TestTrayStatePrunedWithSession(t *testing.T) {
 	openIn(t, win, osPath("/code/repo/web"))
 	var router input.Router
 	sideFrame(t, win, &router)
-	win.side.trayOpen = map[tabs.TabID]bool{a.ID: true}
 	win.side.trayFolded = map[tabs.TabID]bool{a.ID: true}
 	win.closeTab(a.ID)
 	sideFrame(t, win, &router)
-	if win.side.trayOpen[a.ID] || win.side.trayFolded[a.ID] || len(win.side.trayOpen)+len(win.side.trayFolded) != 0 {
-		t.Fatalf("closed session's tray state kept: %v %v", win.side.trayOpen, win.side.trayFolded)
+	if win.side.trayFolded[a.ID] || len(win.side.trayFolded) != 0 {
+		t.Fatalf("closed session's tray state kept: %v", win.side.trayFolded)
 	}
 }
 
@@ -213,6 +197,21 @@ func TestSideAgentFromTracker(t *testing.T) {
 	if s := sideAgentOf(a, t0); s.Action != "Found it in auth.ts" {
 		t.Fatalf("done: %q", s.Action)
 	}
+	// A markdown report shows its first line of prose, without the marks.
+	for report, want := range map[string]string{
+		"## Summary\n\n**No existing binding** for `split`.\n": "No existing binding for split.",
+		"# Report\n\n- Cmd+D is free\n":                        "Cmd+D is free",
+		"> Quoted\n":                                           "Quoted",
+		"```go\nfunc x() {}\n```\nAfter the code\n":            "After the code",
+		"## Only a heading\n":                                  "Only a heading",
+		"#125 landed, tests pass\n":                            "#125 landed, tests pass",
+		"#\n\n#7 is next\n":                                    "#7 is next",
+	} {
+		a.Report = report
+		if s := sideAgentOf(a, t0); s.Action != want {
+			t.Fatalf("report %q: %q, want %q", report, s.Action, want)
+		}
+	}
 }
 
 // trayAgents is n tray lines with keys a0, a1, ...
@@ -245,8 +244,8 @@ func TestSidebarDrawsTray(t *testing.T) {
 		if a.kind != hitAgentLine || a.key.ID != fmt.Sprintf("a%d", i) || a.rect.Dy() != gtx.Dp(sideAgentH) {
 			t.Fatalf("line %d %+v, want a %ddp agent line", i, a, sideAgentH)
 		}
-		if !a.btn.In(a.rect) || a.btn.Max.X != a.rect.Max.X || a.btn.Empty() || a.btn.Dx() >= a.rect.Dx()/3 {
-			t.Fatalf("line %d button %v not at the right end of %v", i, a.btn, a.rect)
+		if a.rect.Max.X != h.rows[0].rect.Max.X {
+			t.Fatalf("line %d %v does not reach the row's right edge %v", i, a.rect, h.rows[0].rect)
 		}
 		if i > 0 && a.rect.Min.Y != h.agents[i-1].rect.Max.Y {
 			t.Fatalf("line %d does not follow line %d", i, i-1)
@@ -263,31 +262,6 @@ func TestSidebarDrawsTray(t *testing.T) {
 	}
 	if c := h.agents[3]; c.kind != hitAgentChip || c.rect.Min.Y < h.agents[2].rect.Max.Y {
 		t.Fatalf("chip %+v", c)
-	}
-}
-
-func TestSidebarDrawsTrayFooter(t *testing.T) {
-	rows := sideRows(1, 2, "s")
-	rows[0].Agents = trayAgents(trayMax)
-	rows[0].Hidden, rows[0].TrayTotal, rows[0].TrayExpanded = subagents.TrayCounts{Running: 13}, 21, true
-	h, _ := sideDraw(t, sideModel{Loose: rows}, sideState{}, 900)
-	if len(h.agents) != trayMax+2 {
-		t.Fatalf("agent hits %d, want %d lines, Show fewer and the board link", len(h.agents), trayMax)
-	}
-	fewer, board := h.agents[trayMax], h.agents[trayMax+1]
-	if fewer.kind != hitAgentFewer || board.kind != hitAgentBoard || board.rect.Min.X < fewer.rect.Max.X ||
-		fewer.rect.Min.Y != board.rect.Min.Y || fewer.rect.Min.Y < h.agents[trayMax-1].rect.Max.Y {
-		t.Fatalf("footer %+v %+v", fewer, board)
-	}
-	rows[0].Hidden, rows[0].TrayTotal = subagents.TrayCounts{}, trayMax
-	h, _ = sideDraw(t, sideModel{Loose: rows}, sideState{}, 900)
-	if len(h.agents) != trayMax+1 || h.agents[trayMax].kind != hitAgentFewer {
-		t.Fatalf("with nothing beyond, hits %+v, want only Show fewer after the lines", h.agents[trayMax:])
-	}
-	rows[0].Agents, rows[0].TrayTotal = trayAgents(2), 2
-	h, _ = sideDraw(t, sideModel{Loose: rows}, sideState{}, 900)
-	if len(h.agents) != 2 {
-		t.Fatalf("an expanded tray of two shows %d hits, want just the lines", len(h.agents))
 	}
 }
 
@@ -356,16 +330,5 @@ func TestTrayChipKeepsCaretAtDefaultWidth(t *testing.T) {
 		if c.needs != "" && !strings.Contains(h.chip[1], c.needs) {
 			t.Errorf("%s: chip drew %q, want %q kept in its amber part", c.name, got, c.needs)
 		}
-	}
-}
-
-func TestTrayFooterKeepsBoardLinkAtDefaultWidth(t *testing.T) {
-	rows := sideRows(1, 2, "s")
-	rows[0].Agents = trayAgents(trayMax)
-	rows[0].Hidden, rows[0].TrayTotal, rows[0].TrayExpanded = subagents.TrayCounts{Running: 10, Done: 2}, 20, true
-	h, _ := sideDraw(t, sideModel{Loose: rows}, sideState{}, 900)
-	got := chipText(h)
-	if h.chip[0] != "Show fewer" || !strings.Contains(h.chip[1], "12") || !strings.HasSuffix(got, "board") || strings.Contains(got, "…") {
-		t.Errorf("footer drew %q, want \"Show fewer\" and the whole board link with its count", got)
 	}
 }

@@ -182,10 +182,9 @@ func TestSidebarCacheTrayAllocatesNothing(t *testing.T) {
 	for i := range 4 {
 		startAgent(win, c.ID, "sc", fmt.Sprintf("c%02d", i))
 	}
-	win.side.trayOpen = map[tabs.TabID]bool{b.ID: true}
 	win.side.trayFolded = map[tabs.TabID]bool{c.ID: true}
 	sizedFrame(t, win, &router, 1000, 900)
-	if n := len(win.side.hits.agents); n < trayCap+1+trayMax+2 {
+	if n := len(win.side.hits.agents); n < trayCap+1+trayCap+1 {
 		t.Fatalf("tray hits %d: fixture did not draw the trays", n)
 	}
 	var ops op.Ops

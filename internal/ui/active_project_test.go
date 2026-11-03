@@ -97,39 +97,6 @@ func TestSidebarTextContrast(t *testing.T) {
 	}
 }
 
-// railFixture is two groups, the second active with two rows; its first row has two tray lines.
-func railFixture() sideModel {
-	m := sideModel{Groups: []sideGroup{
-		{Key: "a", Name: "alpha", Rows: sideRows(1, 1, "a"), Count: 1},
-		{Key: "b", Name: "beta", Rows: sideRows(10, 2, "b"), Count: 2},
-	}}
-	m.Groups[1].Rows[0].Agents = []sideAgent{{Type: "Explore", Task: "one"}, {Type: "Plan", Task: "two"}}
-	m.Groups[1].Rows[0].TrayTotal = 2
-	return m
-}
-
-func TestActiveProjectRail(t *testing.T) {
-	m := railFixture()
-	gtx := pageContext(sidebarW, 700)
-	h, _ := sideDraw(t, m, sideState{activeRepo: "b"}, 700)
-	hd := h.groups[1].rect
-	last := h.rows[len(h.rows)-1].rect
-	if h.rail.Min.Y != hd.Min.Y || h.rail.Max.Y != last.Min.Y+rowSpan(gtx, m.Groups[1].Rows[1]) || h.rail.Dx() != gtx.Dp(2) {
-		t.Fatalf("rail %v, want from header %v to the last row's span below %v, 2dp wide", h.rail, hd, last)
-	}
-	if h.rail.Min.X >= hd.Min.X {
-		t.Fatalf("rail %v is not left of the header %v", h.rail, hd)
-	}
-	m.Groups[1].Folded = true
-	h, _ = sideDraw(t, m, sideState{activeRepo: "b"}, 700)
-	if hd := h.groups[1].rect; h.rail.Min.Y != hd.Min.Y || h.rail.Max.Y != hd.Max.Y {
-		t.Fatalf("folded rail %v, want the header %v", h.rail, hd)
-	}
-	if h, _ := sideDraw(t, m, sideState{}, 700); !h.rail.Empty() {
-		t.Fatalf("no active project, rail %v", h.rail)
-	}
-}
-
 func TestActiveProjectNameStyle(t *testing.T) {
 	for _, th := range theme.All() {
 		c := newChrome()

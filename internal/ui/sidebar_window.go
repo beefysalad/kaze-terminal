@@ -40,13 +40,12 @@ type sideUI struct {
 	tabs          []*tabs.Tab
 	st            sideState
 	folded        map[string]bool     // repo groups the owner folded, by key
-	trayOpen      map[tabs.TabID]bool // sessions whose agent tray is expanded to trayMax lines
 	trayFolded    map[tabs.TabID]bool // sessions whose agent tray is folded away
 	hidden        bool                // off in the settings, or the window is too narrow
 	w             int                 // this frame's sidebar width in px, set once at the frame's start
 	hits          sideHits            // sidebar-local, like the pointer events on tag
 	at            image.Point         // the sidebar's top-left in the window
-	tag           int                 // pointer events on the sidebar or the rail
+	tag           int                 // pointer events on the sidebar
 	reveal        bool                // scroll the shown row into view next frame
 	redraws       int                 // frames the sidebar's pointer input asked for; tests count them
 	ed            widget.Editor       // the filter field
@@ -58,13 +57,6 @@ type sideUI struct {
 	renFrom       string              // the text the rename started with
 	renKeys       []event.Filter      // the rename editor's own keys, built once
 	lastClick     titleClick          // the last press on a row's title, for a double click
-	lastAgent     agentClick          // the last press on an agent line, for a double click
-}
-
-// agentClick is a press on an agent's tray line.
-type agentClick struct {
-	key subagents.Key
-	at  time.Duration
 }
 
 // titleClick is a press on a session row's title.
@@ -75,11 +67,9 @@ type titleClick struct {
 
 // pruneTray forgets the tray state of closed sessions, so a reused id starts open and collapsed.
 func (win *window) pruneTray(list []*tabs.Tab) {
-	for _, m := range []map[tabs.TabID]bool{win.side.trayOpen, win.side.trayFolded} {
-		for id := range m {
-			if !slices.ContainsFunc(list, func(t *tabs.Tab) bool { return t.ID == id }) {
-				delete(m, id)
-			}
+	for id := range win.side.trayFolded {
+		if !slices.ContainsFunc(list, func(t *tabs.Tab) bool { return t.ID == id }) {
+			delete(win.side.trayFolded, id)
 		}
 	}
 }
@@ -546,7 +536,7 @@ func (win *window) sidePointer(e pointer.Event) {
 		if r, ok := s.hits.lineAt(p); ok && e.Kind != pointer.Leave {
 			hover = r.id
 		}
-		var hoverAgent subagents.Key // the tray line under the pointer, › included
+		var hoverAgent subagents.Key // the tray line under the pointer
 		for _, a := range s.hits.agents {
 			if a.kind == hitAgentLine && p.In(a.rect) && e.Kind != pointer.Leave {
 				hoverAgent = a.key
@@ -579,8 +569,9 @@ func (win *window) sidePointer(e pointer.Event) {
 }
 
 // sidePress handles a click: a row or member line shows its tab, its × or a middle
-// click closes it, a double click on a row's title renames it; headers fold; + opens
-// a session. A click off the rename editor saves the rename.
+// click closes it, a double click on a row's title renames it; an agent line opens
+// or closes its panel; headers fold; + opens a session. A click off the rename
+// editor saves the rename.
 func (win *window) sidePress(p image.Point, b pointer.Buttons, at time.Duration) {
 	primary, middle := b.Contain(pointer.ButtonPrimary), b.Contain(pointer.ButtonTertiary)
 	if !primary && !middle {
@@ -591,8 +582,8 @@ func (win *window) sidePress(p image.Point, b pointer.Buttons, at time.Duration)
 		return // a click inside the editor keeps renaming
 	}
 	win.endRename(true)
-	last, lastAgent := win.side.lastClick, win.side.lastAgent
-	win.side.lastClick, win.side.lastAgent = titleClick{}, agentClick{}
+	last := win.side.lastClick
+	win.side.lastClick = titleClick{}
 	win.wantFocus = true
 	win.side.filtering = primary && p.In(h.filter) // any other click leaves the field
 	defer win.sideRedraw()
@@ -626,26 +617,10 @@ func (win *window) sidePress(p image.Point, b pointer.Buttons, at time.Duration)
 	for _, a := range h.agents {
 		if primary && p.In(a.rect) {
 			switch a.kind {
-			case hitAgentBoard:
-				win.openBoard(a.tab)
 			case hitAgentChip:
-				if win.side.trayOpen == nil {
-					win.side.trayOpen = map[tabs.TabID]bool{}
-				}
-				win.side.trayOpen[a.tab] = true
-			case hitAgentFewer:
-				delete(win.side.trayOpen, a.tab)
+				win.openBoard(a.tab) // "+N more": the board, showing this session
 			case hitAgentLine:
-				switch {
-				case p.In(a.btn):
-					win.showAgent(a.tab, a.key, true) // › toggles the panel
-				case lastAgent.key == a.key && at >= lastAgent.at && at-lastAgent.at < doubleClick:
-					win.showAgent(a.tab, a.key, false) // a double-click opens it, never closes it
-				default:
-					// Safe click: the line stands for its session, like the row above it.
-					win.clickRow(a.tab)
-					win.side.lastAgent = agentClick{a.key, at}
-				}
+				win.showAgent(a.tab, a.key, true) // a click opens its panel, a second one closes it
 			}
 			return
 		}

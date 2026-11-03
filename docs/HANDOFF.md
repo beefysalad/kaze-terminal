@@ -1,8 +1,22 @@
 # kaze handoff
 
-Last updated: 2026-11-03, sidebar agent tray, project rail, title symbols and colour emoji (#125, #124, #127) built on `feat/sidebar-tray-emoji`; 0.24 released before it. Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-03, agents board redesign and sidebar follow-ups built on `feat/agents-board`; 0.25 released before it. Read this first when you pick up kaze on another machine.
 
 ## Where things stand
+
+**Agents board redesign and sidebar follow-ups (2026-11-03) are built on `feat/agents-board`, not yet
+pushed or released. Release 0.26 is next.** The owner approved the clickable mockup
+(`docs/design/agents-board-mockup.html`) and the sidebar highlight choice (option 3, "Session bar
+only") on 2026-11-03. The sidebar drops 0.25's project rail; a click on an agent line opens its panel
+again (a second click closes it), and "+N more" opens the board filtered to that session (the `›`,
+safe click, the expand to 8 and "Show fewer" are gone). The board is now a list of session cards
+(All / Needs you / Running / Done, search with `/` and Esc, a "<session> ×" token, an amber Needs you
+card, a state meter per card, folded finished rows) with a live preview of the selected agent that
+reuses the docked panel's timeline and report. Built in two parallel worktree lanes, then merged and
+audited. 50 agents: about the same time per frame as 0.25, 244 allocations per frame instead of 636,
+and still frames read no transcript. Tests, frame numbers, contrast, captures and rulings:
+`docs/audits/2026-11-03-agents-board.md`. Lander and README screenshots need retaking per
+`docs/site-assets/SCREENSHOTS.md`; real-session checks of the preview remain owner checks.
 
 **Release 0.25 ships PR #129: #125 (slim capped subagent tray with safe click, fold and tooltip;
 project rail; sidebar contrast), #124 (leading status symbols stripped, no missing-glyph boxes in

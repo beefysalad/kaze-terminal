@@ -336,17 +336,15 @@ Codex starts helpers, kaze shows what each one is doing. Hooks provide their sta
 subagent's panel is shown, kaze also reads its transcript for live messages.
 
 - **In the sidebar:** each session's subagents sit in a slim tray under its row, behind a thin
-  tree line. Each agent is one line: its state mark, type, task, how long it has run and a small
-  `›` at the end. A dot inside a ring means running, an amber dot means it is waiting for your
-  approval, a green dot means done. Hover a line to see the step it is on now (for example
-  `Grep authMiddleware in src`). Finished ones leave the list at your next prompt.
-  - **Safe click:** clicking an agent line shows its session, the same as clicking the row. Only
-    the `›` (or a double-click on the line) opens the agent's panel; `›` again closes it.
+  tree line. Each agent is one line: its state mark, type, task and how long it has run. A dot
+  inside a ring means running, an amber dot means it is waiting for your approval, a green dot
+  means done. Hover a line to see the step it is on now (for example `Grep authMiddleware in src`).
+  Finished ones leave the list at your next prompt.
+  - **Click a line** to open that agent's panel; click it again to close it.
   - **Three lines, then a chip:** a tray shows at most 3 agents, waiting ones first. The rest are
     summed up in a chip such as "+17 more · 15 running, 2 done ⌄", with "N need you" in amber when
     a hidden agent waits. When the sidebar is narrow the chip keeps "+N more" and its `⌄` and drops
-    the counts first. Click it to show up to 8 agents; "Show fewer" folds it back, and past 8
-    "N more on the board" opens the board.
+    the counts first. Click it to open the board filtered to that session.
   - **Fold:** the row's "N agents ⌄" folds the whole tray ("N agents ›" brings it back). The count
     turns amber when a folded tray holds an agent waiting on you.
 - **Agent panel:** click a subagent to open its panel docked under the terminal (click it again
@@ -366,11 +364,25 @@ subagent's panel is shown, kaze also reads its transcript for live messages.
     then Esc closes it and ↑/↓ move to the previous or next subagent.
   - Cmd+click (Ctrl+click on Windows) a web link or `.md` path in the panel to open it. Missing
     transcripts and Codex helpers show the tool steps without notes.
-- **The board:** every subagent in every session in three columns: running, waiting on you, and
-  done. Open it with the Agents button in the sidebar, the "N agents running" text in the status
-  bar, "Show agents" in the palette, or Ctrl+Shift+A (Cmd+Shift+A on macOS). Click a card to go to
-  that session with the subagent's panel open; Esc or "Back to ..." returns you. A done card's ×
-  removes it, and **Clear** empties the Done column (only the shown session's while filtered).
+- **The board:** every subagent in every session, as a list of session cards with a preview
+  beside it. Open it with the Agents button in the sidebar, the "N agents running" text in the
+  status bar, "Show agents" in the palette, or Ctrl+Shift+A (Cmd+Shift+A on macOS). Esc or
+  "Back to ..." returns you.
+  - **Filter and search:** All, Needs you, Running and Done, each with its count. The search
+    matches type, task, session title and repo; `/` jumps to it and Esc clears it (Esc on an empty
+    search closes the board). Opened from a session's "+N more", the board shows only that
+    session, with a "<session> ×" token to show all again.
+  - **Cards:** agents waiting on you sit in an amber "Needs you" card on top. Then one card per
+    session, in sidebar order, with its repo and branch, "Go to session ›" and a thin bar that
+    splits its agents into waiting, running and done. Each row shows the type, task, time and the
+    current step (or the report's first line once done). Finished agents fold into
+    "✓ N finished ›"; "Hide finished" folds them back. A done row's × removes it, and **Clear**
+    removes a session's finished agents.
+  - **Preview:** click a row to see that agent on the right: its state, task and session, its
+    Activity timeline or its report, and **Open in session** (plus **Copy report** and **Open in
+    reader** when done). The first agent waiting on you is picked when the board opens.
+  - **Keys:** ↑/↓ move the selection, Enter or a double-click opens the agent in its session with
+    its panel. In a narrow window there is no preview, and a click opens the agent in its session.
 - **Setup:** it needs three more Claude Code hooks (SubagentStart, SubagentStop and a PreToolUse
   hook). Settings > Agents lists them in the setup check, and **Fix** adds them. In the main
   conversation the tool hook exits at once unless Claude starts a subagent.
@@ -944,6 +956,7 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 Done:
 
+- Agents board redesign (built on `feat/agents-board`, release 0.26 next): session cards with filters, search and a live preview; a click on a tray line opens its panel again, and "+N more" opens the board for that session; the project rail is gone.
 - 0.25: a slim, capped subagent tray with safe clicks, a rail for the project you’re in (#125), clean session titles (#124) and colour emoji on Windows and macOS (#127).
 - 0.24: subagents open in a panel docked under the terminal with an Activity timeline and formatted reports (#106, #103); Ctrl+C/Ctrl+V copy and paste on Windows, screenshots included (#117); finished workspace setup tabs read Ready (#118).
 - 0.23: active-project header emphasis, still ring-and-core running marks, a reusable empty window and Shift+Enter multiline input (#107, #113, #114).

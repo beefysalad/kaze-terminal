@@ -19,7 +19,7 @@ import (
 )
 
 // Tray sizes in dp (spec 3, mockup .tray): an agent line, the gap above a tray, the
-// padding below it and its chip or footer line; sideMoreH is the "finished worktrees" line.
+// padding below it and its chip line; sideMoreH is the "finished worktrees" line.
 const sideAgentH, sideTrayGap, sideTrayPad, sideChipH, sideMoreH = 22, 3, 4, 22, 20
 
 // sideTrayIndent is the tray's tree line from a row's left edge: 30dp from the sidebar's.
@@ -37,20 +37,18 @@ type sideAgent struct {
 type agentHitKind uint8
 
 const (
-	hitAgentLine  agentHitKind = iota // an agent's line; btn is its › button
-	hitAgentChip                      // "+N more ⌄": expands the tray
-	hitAgentFewer                     // "Show fewer": collapses it
-	hitAgentBoard                     // "N more on the board": opens the board
+	hitAgentLine agentHitKind = iota // an agent's line: a click toggles its panel
+	hitAgentChip                     // "+N more ⌄": opens the board for its session
 )
 
-// sideAgentHit is where a tray line, its chip or a footer link was drawn.
+// sideAgentHit is where a tray line or its chip was drawn.
 type sideAgentHit struct {
-	key       subagents.Key
-	tab       tabs.TabID
-	kind      agentHitKind
-	open      bool            // its panel is the one shown
-	rect, btn image.Rectangle // btn: the › box, full line height
-	tip       string          // the current step, for the hover tooltip
+	key  subagents.Key
+	tab  tabs.TabID
+	kind agentHitKind
+	open bool // its panel is the one shown
+	rect image.Rectangle
+	tip  string // the current step, for the hover tooltip
 }
 
 // sideAgentOf is a tracker subagent as its sidebar line at now.
@@ -58,7 +56,7 @@ func sideAgentOf(a *subagents.Agent, now time.Time) sideAgent {
 	s := sideAgent{Key: a.Key, Type: a.Type, Task: a.Task, State: a.State, Depth: a.Depth, Elapsed: agentElapsed(a, now)}
 	switch {
 	case a.State == subagents.Done:
-		s.Action, _, _ = strings.Cut(a.Report, "\n")
+		s.Action = reportLine(a.Report)
 	case len(a.Steps) > 0:
 		st := a.Steps[len(a.Steps)-1]
 		s.Action = strings.TrimSpace(st.Tool + " " + st.Summary)
@@ -66,6 +64,45 @@ func sideAgentOf(a *subagents.Agent, now time.Time) sideAgent {
 		s.Action = "Starting"
 	}
 	return s
+}
+
+// reportMarks drops inline markdown marks from a report line.
+var reportMarks = strings.NewReplacer("**", "", "__", "", "`", "")
+
+// reportLine is a report's first line of prose for a one-line summary: it
+// skips headings, code blocks, tables and rules, drops list and quote marks
+// and inline marks; a report of headings only gives its first heading.
+func reportLine(report string) string {
+	heading, fence := "", false
+	for rest := report; rest != ""; {
+		var line string
+		line, rest, _ = strings.Cut(rest, "\n")
+		line = strings.TrimSpace(line)
+		switch {
+		case strings.HasPrefix(line, "```"):
+			fence = !fence
+			continue
+		case fence || line == "" || strings.HasPrefix(line, "|") || strings.Trim(line, "-*_ ") == "":
+			continue
+		case isHeading(line):
+			if heading == "" {
+				heading = strings.TrimSpace(strings.TrimLeft(line, "#"))
+			}
+			continue
+		}
+		for _, m := range [...]string{"> ", "- ", "* ", "+ "} {
+			line = strings.TrimPrefix(line, m)
+		}
+		return reportMarks.Replace(line)
+	}
+	return reportMarks.Replace(heading)
+}
+
+// isHeading reports whether a trimmed line is a markdown heading: #s then a
+// space or tab, or #s alone; "#125 landed" is prose.
+func isHeading(line string) bool {
+	rest := strings.TrimLeft(line, "#")
+	return len(rest) < len(line) && (rest == "" || rest[0] == ' ' || rest[0] == '	')
 }
 
 // agentElapsed is "<1m" or "4m" while it runs, "took 6m" once done.
@@ -94,29 +131,25 @@ func agentChip(n int) string {
 	return fmt.Sprintf("%d agents", n)
 }
 
-// trayCap and trayMax are a tray's agent lines collapsed and expanded (spec 3).
-const trayCap, trayMax = 3, 8
+// trayCap is a tray's most agent lines; the rest are counted in its "+N more" chip.
+const trayCap = 3
 
 // The fold control's carets: open, and folded.
 const trayOpenCaret, trayShutCaret = "⌄", "›"
 
 // sideTray is one session's subagent tray as the sidebar model sees it.
 type sideTray struct {
-	Shown            []sideAgent          // the lines to draw; nil while folded
-	Hidden           subagents.TrayCounts // agents past the lines, by state; zero while folded
-	Total, Waiting   int                  // every agent in the tray, and those waiting
-	Active           int                  // running and waiting, for the group chip
-	Expanded, Folded bool
+	Shown          []sideAgent          // the lines to draw; nil while folded
+	Hidden         subagents.TrayCounts // agents past the lines, by state; zero while folded
+	Total, Waiting int                  // every agent in the tray, and those waiting
+	Active         int                  // running and waiting, for the group chip
+	Folded         bool
 }
 
 // sideAgents is the sidebar input's view of the tracker for one session.
 func (win *window) sideAgents(id tabs.TabID) sideTray {
-	tr := sideTray{Expanded: win.side.trayOpen[id], Folded: win.side.trayFolded[id], Active: win.subs.Active(int(id))}
-	limit := trayCap
-	if tr.Expanded {
-		limit = trayMax
-	}
-	shown, hidden := win.subs.Tray(int(id), limit)
+	tr := sideTray{Folded: win.side.trayFolded[id], Active: win.subs.Active(int(id))}
+	shown, hidden := win.subs.Tray(int(id), trayCap)
 	tr.Total, tr.Waiting = len(shown)+hidden.Total(), hidden.Waiting
 	for _, a := range shown {
 		if a.State == subagents.Waiting {
@@ -170,25 +203,10 @@ func trayChip(h subagents.TrayCounts) (lead, needs, rest string) {
 	return lead, needs, rest + " " + trayOpenCaret
 }
 
-// trayFooter is an expanded tray's last line: "Show fewer", and past trayMax
-// " · N more on the board".
-func trayFooter(beyond int) (fewer, board string) {
-	if beyond > 0 {
-		board = " · " + strconv.Itoa(beyond) + " more on the board"
-	}
-	return "Show fewer", board
-}
-
-// trayChipLine reports whether r's tray ends in a chip or footer line: a collapsed
-// tray with agents past its lines, or an expanded one holding more than trayCap.
+// trayChipLine reports whether r's tray ends in a chip line: an open tray with
+// agents past its lines.
 func (r sideRow) trayChipLine() bool {
-	switch {
-	case r.TrayFolded:
-		return false
-	case r.TrayExpanded:
-		return r.TrayTotal > trayCap
-	}
-	return r.Hidden.Total() > 0
+	return !r.TrayFolded && r.Hidden.Total() > 0
 }
 
 // trayHeight is the room r's tray takes under its row and documents; 0 for none.
@@ -210,7 +228,7 @@ func rowSpan(gtx layout.Context, r sideRow) int {
 }
 
 // trayLines draws r's agent tray from y down under row: a thin tree line, one line
-// per agent (mark, type, task, elapsed, ›) and the chip or footer.
+// per agent (mark, type, task, elapsed) and the chip.
 func (c *chrome) trayLines(gtx layout.Context, h *sideHits, r sideRow, row image.Rectangle, y int, open subagents.Key, ink sideInk) {
 	if trayHeight(gtx, r) == 0 {
 		return
@@ -248,11 +266,8 @@ func (c *chrome) trayLines(gtx layout.Context, h *sideHits, r sideRow, row image
 			mk = markDone
 		}
 		c.stateDot(gtx, image.Rect(mx, mid-dot/2, mx+dot, mid-dot/2+dot), mk, a.State == subagents.Running, false)
-		box := image.Rect(x1-gtx.Dp(16), band.Min.Y, x1, band.Max.Y)
-		bCall, bSize := c.label(gtx, "›", 12, ink.muted)
-		place(ops, bCall, image.Pt(box.Min.X+(box.Dx()-bSize.X)/2, mid-bSize.Y/2))
 		eCall, eSize := c.label(gtx, a.Elapsed, 10, ink.muted)
-		right := box.Min.X - gtx.Dp(2) - eSize.X
+		right := x1 - gtx.Dp(6) - eSize.X
 		place(ops, eCall, image.Pt(right, mid-eSize.Y/2))
 		tx := mx + dot + gap
 		tCall, tSize := c.fitSide(gtx, a.Type, 11, max(right-gap-tx, 0)/2, ink.kind)
@@ -267,9 +282,8 @@ func (c *chrome) trayLines(gtx layout.Context, h *sideHits, r sideRow, row image
 		kx := tx + tSize.X + gap
 		kCall, kSize := c.fitSide(gtx, a.Task, 11, max(right-gap-kx, 0), col)
 		place(ops, kCall, image.Pt(kx, mid-kSize.Y/2))
-		btn := image.Rect(box.Min.X-gtx.Dp(4), band.Min.Y, x1, band.Max.Y)
 		h.agents = append(h.agents, sideAgentHit{key: a.Key, tab: r.ID, kind: hitAgentLine, open: isOpen,
-			rect: band.Intersect(h.list), btn: btn.Intersect(h.list), tip: a.Action})
+			rect: band.Intersect(h.list), tip: a.Action})
 	}
 	if r.trayChipLine() {
 		if band := image.Rect(tree, y, x1, y+gtx.Dp(sideChipH)); band.Overlaps(h.list) {
@@ -278,32 +292,21 @@ func (c *chrome) trayLines(gtx layout.Context, h *sideHits, r sideRow, row image
 	}
 }
 
-// trayChip draws the chip ("+17 more · 15 running, 2 done ⌄") or, on an expanded
-// tray, the footer ("Show fewer · 13 more on the board") as a pill in band.
+// trayChip draws the chip ("+17 more · 15 running, 2 done ⌄") as a pill in band;
+// a click on it opens the board for r's session.
 func (c *chrome) trayChip(gtx layout.Context, h *sideHits, r sideRow, band image.Rectangle, ink sideInk) {
 	ops := gtx.Ops
 	type part struct {
-		s    string
-		col  color.NRGBA
-		kind agentHitKind
+		s   string
+		col color.NRGBA
 	}
-	var parts [3]part
-	if r.TrayExpanded {
-		fewer, board := trayFooter(r.Hidden.Total())
-		parts[0], parts[1] = part{fewer, ink.chipLead, hitAgentFewer}, part{board, ink.muted, hitAgentBoard}
-	} else {
-		lead, needs, rest := trayChip(r.Hidden)
-		parts = [3]part{{lead, ink.chipLead, hitAgentChip}, {needs, ink.needs, hitAgentChip}, {rest, ink.muted, hitAgentChip}}
-	}
+	lead, needs, rest := trayChip(r.Hidden)
+	parts := [3]part{{lead, ink.chipLead}, {needs, ink.needs}, {rest, ink.muted}}
 	padX, rad := gtx.Dp(8), gtx.Dp(9)
 	mid := band.Min.Y + band.Dy()/2
 	pill := image.Rect(band.Min.X+gtx.Dp(10), mid-rad, band.Max.X, mid+rad)
 	room := pill.Dx() - 2*padX
-	if r.TrayExpanded {
-		c.narrowFooter(gtx, &parts[1].s, parts[0].s, r.Hidden.Total(), room)
-	} else {
-		c.narrowChip(gtx, &parts[1].s, &parts[2].s, parts[0].s, room)
-	}
+	c.narrowChip(gtx, &parts[1].s, &parts[2].s, parts[0].s, room)
 	var calls [3]op.CallOp
 	var sizes [3]image.Point
 	w := 0
@@ -321,19 +324,8 @@ func (c *chrome) trayChip(gtx layout.Context, h *sideHits, r sideRow, band image
 		place(ops, calls[i], image.Pt(x, mid-sizes[i].Y/2))
 		x += sizes[i].X
 	}
-	hit := func(kind agentHitKind, x0, x1 int) {
-		h.agents = append(h.agents, sideAgentHit{tab: r.ID, kind: kind, rect: image.Rect(x0, band.Min.Y, x1, band.Max.Y).Intersect(h.list)})
-	}
-	switch {
-	case !r.TrayExpanded:
-		hit(hitAgentChip, pill.Min.X, pill.Max.X)
-	case sizes[1].X > 0:
-		split := pill.Min.X + padX + sizes[0].X
-		hit(hitAgentFewer, pill.Min.X, split)
-		hit(hitAgentBoard, split, pill.Max.X)
-	default:
-		hit(hitAgentFewer, pill.Min.X, pill.Max.X)
-	}
+	h.agents = append(h.agents, sideAgentHit{tab: r.ID, kind: hitAgentChip,
+		rect: image.Rect(pill.Min.X, band.Min.Y, pill.Max.X, band.Max.Y).Intersect(h.list)})
 }
 
 // narrowChip shortens a chip that does not fit in room px so it never loses
@@ -347,15 +339,6 @@ func (c *chrome) narrowChip(gtx layout.Context, needs, rest *string, lead string
 	if *needs != "" && lw+c.chipWidth(gtx, *needs)+c.chipWidth(gtx, *rest) > room {
 		*needs = ""
 	}
-}
-
-// narrowFooter shortens an expanded tray's board link to " · N on the board" when
-// "Show fewer · N more on the board" does not fit in room px.
-func (c *chrome) narrowFooter(gtx layout.Context, board *string, fewer string, beyond, room int) {
-	if *board == "" || c.chipWidth(gtx, fewer)+c.chipWidth(gtx, *board) <= room {
-		return
-	}
-	*board = " · " + strconv.Itoa(beyond) + " on the board"
 }
 
 // chipWidth is s's width in px in the chip's 11 sp text; 0 for "".

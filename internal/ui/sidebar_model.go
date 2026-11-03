@@ -26,7 +26,6 @@ type sideRow struct {
 	AgentCount            int                  // running and waiting, for the group chip
 	TrayTotal             int                  // every agent in its tray, finished ones included
 	TrayWaiting           int                  // tray agents waiting for the owner
-	TrayExpanded          bool                 // the chip was clicked: up to trayMax lines
 	TrayFolded            bool                 // the fold control hid the tray
 }
 
@@ -161,7 +160,7 @@ func buildSide(in sideInput) sideModel {
 		if in.Agents != nil {
 			tr := in.Agents(t.ID)
 			row.Agents, row.Hidden, row.AgentCount = tr.Shown, tr.Hidden, tr.Active
-			row.TrayTotal, row.TrayWaiting, row.TrayExpanded, row.TrayFolded = tr.Total, tr.Waiting, tr.Expanded, tr.Folded
+			row.TrayTotal, row.TrayWaiting, row.TrayFolded = tr.Total, tr.Waiting, tr.Folded
 		}
 		if loc.cwd == "" || loc.repo == "" {
 			loose = append(loose, row)

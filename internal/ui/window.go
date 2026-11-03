@@ -1019,6 +1019,9 @@ func (win *window) focusTarget() event.Tag {
 		}
 		return &win.set.tag
 	}
+	if win.board.open && win.board.searching {
+		return &win.board.ed
+	}
 	if win.board.open {
 		return &win.board.tag
 	}
