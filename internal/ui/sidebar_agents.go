@@ -84,7 +84,7 @@ func reportLine(report string) string {
 			continue
 		case fence || line == "" || strings.HasPrefix(line, "|") || strings.Trim(line, "-*_ ") == "":
 			continue
-		case strings.HasPrefix(line, "#"):
+		case isHeading(line):
 			if heading == "" {
 				heading = strings.TrimSpace(strings.TrimLeft(line, "#"))
 			}
@@ -96,6 +96,13 @@ func reportLine(report string) string {
 		return reportMarks.Replace(line)
 	}
 	return reportMarks.Replace(heading)
+}
+
+// isHeading reports whether a trimmed line is a markdown heading: #s then a
+// space or tab, or #s alone; "#125 landed" is prose.
+func isHeading(line string) bool {
+	rest := strings.TrimLeft(line, "#")
+	return len(rest) < len(line) && (rest == "" || rest[0] == ' ' || rest[0] == '	')
 }
 
 // agentElapsed is "<1m" or "4m" while it runs, "took 6m" once done.

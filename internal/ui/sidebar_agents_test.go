@@ -204,6 +204,8 @@ func TestSideAgentFromTracker(t *testing.T) {
 		"> Quoted\n":                                           "Quoted",
 		"```go\nfunc x() {}\n```\nAfter the code\n":            "After the code",
 		"## Only a heading\n":                                  "Only a heading",
+		"#125 landed, tests pass\n":                            "#125 landed, tests pass",
+		"#\n\n#7 is next\n":                                    "#7 is next",
 	} {
 		a.Report = report
 		if s := sideAgentOf(a, t0); s.Action != want {
