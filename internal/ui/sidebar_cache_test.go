@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"image"
 	"testing"
 	"time"
@@ -165,4 +166,40 @@ func TestSidebarCacheChangesWithDocsRunsSizeThemeAndTitles(t *testing.T) {
 	}
 	changed("exit", func() {})
 	changed("tab close", func() { win.mgr.Close(a.ID) })
+}
+
+func TestSidebarCacheTrayAllocatesNothing(t *testing.T) {
+	win, _ := sideWindow(t, true)
+	a := openIn(t, win, osPath("/code/repo/api"))
+	b := openIn(t, win, osPath("/code/repo/web"))
+	c := openIn(t, win, osPath("/code/other/cli"))
+	var router input.Router
+	sideFrame(t, win, &router)
+	startAgents(win, a.ID, 12)
+	for i := range 12 {
+		startAgent(win, b.ID, "sb", fmt.Sprintf("b%02d", i))
+	}
+	for i := range 4 {
+		startAgent(win, c.ID, "sc", fmt.Sprintf("c%02d", i))
+	}
+	win.side.trayOpen = map[tabs.TabID]bool{b.ID: true}
+	win.side.trayFolded = map[tabs.TabID]bool{c.ID: true}
+	sizedFrame(t, win, &router, 1000, 900)
+	if n := len(win.side.hits.agents); n < trayCap+1+trayMax+2 {
+		t.Fatalf("tray hits %d: fixture did not draw the trays", n)
+	}
+	var ops op.Ops
+	g := pageContext(1000, 900)
+	g.Ops = &ops
+	draw := func() { ops.Reset(); win.drawSide(g, image.Rect(0, 42, 260, 868)) }
+	for range 10 {
+		draw()
+	}
+	builds, draws := win.side.cache.builds, win.side.cache.draws
+	if n := testing.AllocsPerRun(100, draw); n != 0 {
+		t.Fatalf("unchanged sidebar with trays allocates %g times", n)
+	}
+	if win.side.cache.builds != builds || win.side.cache.draws != draws {
+		t.Fatal("unchanged sidebar with trays rebuilt or reshaped")
+	}
 }

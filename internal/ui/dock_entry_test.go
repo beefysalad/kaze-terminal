@@ -20,7 +20,7 @@ func startAgent(win *window, tab tabs.TabID, session, id string) subagents.Key {
 func agentHit(t *testing.T, win *window, k subagents.Key) sideAgentHit {
 	t.Helper()
 	for _, h := range win.side.hits.agents {
-		if h.key == k && !h.more {
+		if h.key == k && h.kind == hitAgentLine {
 			return h
 		}
 	}

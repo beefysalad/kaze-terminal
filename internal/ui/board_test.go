@@ -192,7 +192,7 @@ func TestStatusAgentsText(t *testing.T) {
 
 func TestMoreAgentsOpensFilteredBoard(t *testing.T) {
 	win, id := boardWindow(t)
-	win.side.hits.agents = []sideAgentHit{{tab: id, more: true, rect: image.Rect(10, 10, 100, 30)}}
+	win.side.hits.agents = []sideAgentHit{{tab: id, kind: hitAgentBoard, rect: image.Rect(10, 10, 100, 30)}}
 	win.sidePress(image.Pt(20, 20), 1, 0)
 	if !win.board.open || win.board.tab != id {
 		t.Fatalf("board %+v", win.board)

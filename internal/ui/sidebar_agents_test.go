@@ -214,29 +214,98 @@ func TestSideAgentFromTracker(t *testing.T) {
 	}
 }
 
-func TestSidebarDrawsAgentLines(t *testing.T) {
-	rows := sideRows(1, 2, "s")
-	rows[0].Agents = []sideAgent{
-		{Key: subagents.Key{ID: "a1"}, Type: "Explore", Task: "Find the auth middleware", Action: "Grep auth", Elapsed: "4m"},
-		{Key: subagents.Key{ID: "a2"}, Type: "Plan", Task: "Plan it", Depth: 1, Elapsed: "<1m", State: subagents.Waiting},
+// trayAgents is n tray lines with keys a0, a1, ...
+func trayAgents(n int) []sideAgent {
+	out := make([]sideAgent, n)
+	for i := range out {
+		out[i] = sideAgent{Key: subagents.Key{ID: fmt.Sprintf("a%d", i)}, Type: "Explore", Task: "Find the auth middleware", Action: "Grep auth", Elapsed: "4m"}
 	}
-	rows[0].Hidden, rows[0].AgentCount = subagents.TrayCounts{Running: 3}, 5
+	return out
+}
+
+func TestSidebarDrawsTray(t *testing.T) {
+	rows := sideRows(1, 2, "s")
+	rows[0].Agents = trayAgents(3)
+	rows[0].Agents[1].State = subagents.Waiting
+	rows[0].Hidden, rows[0].TrayTotal, rows[0].AgentCount = subagents.TrayCounts{Running: 15, Done: 2}, 20, 18
 	m := sideModel{Loose: rows}
+	gtx := pageContext(sidebarW, 700)
 	h, size := sideDraw(t, m, sideState{}, 700)
-	if len(h.agents) != 3 {
-		t.Fatalf("agent hits %d, want 2 lines and a more line", len(h.agents))
+	if len(h.agents) != 4 {
+		t.Fatalf("agent hits %d, want 3 lines and a chip", len(h.agents))
 	}
 	first, second := h.rows[0].rect, h.rows[1].rect
 	for i, a := range h.agents {
 		if a.tab != 1 || a.rect.Min.Y < first.Max.Y || a.rect.Max.Y > second.Min.Y || a.rect.Max.X > size.X {
-			t.Fatalf("hit %d %+v between %v and %v", i, a, first, second)
+			t.Fatalf("hit %d %+v not between %v and %v", i, a, first, second)
 		}
 	}
-	if h.agents[0].key.ID != "a1" || h.agents[1].key.ID != "a2" || !h.agents[2].more {
-		t.Fatalf("hits %+v", h.agents)
+	for i, a := range h.agents[:3] {
+		if a.kind != hitAgentLine || a.key.ID != fmt.Sprintf("a%d", i) || a.rect.Dy() != gtx.Dp(sideAgentH) {
+			t.Fatalf("line %d %+v, want a %ddp agent line", i, a, sideAgentH)
+		}
+		if !a.btn.In(a.rect) || a.btn.Max.X != a.rect.Max.X || a.btn.Empty() || a.btn.Dx() >= a.rect.Dx()/3 {
+			t.Fatalf("line %d button %v not at the right end of %v", i, a.btn, a.rect)
+		}
+		if i > 0 && a.rect.Min.Y != h.agents[i-1].rect.Max.Y {
+			t.Fatalf("line %d does not follow line %d", i, i-1)
+		}
+		if a.tip != "Grep auth" {
+			t.Fatalf("line %d tip %q", i, a.tip)
+		}
 	}
-	if h.agents[1].rect.Min.Y < h.agents[0].rect.Max.Y {
-		t.Fatal("agent lines overlap")
+	if got, want := h.agents[0].rect.Min.Y, first.Max.Y+gtx.Dp(sideTrayGap); got != want {
+		t.Fatalf("first line top %d, want the row's bottom + %ddp = %d", got, sideTrayGap, want)
+	}
+	if h.agents[0].rect.Min.X <= first.Min.X+gtx.Dp(16) {
+		t.Fatalf("tray line %v is not indented under row %v", h.agents[0].rect, first)
+	}
+	if c := h.agents[3]; c.kind != hitAgentChip || c.rect.Min.Y < h.agents[2].rect.Max.Y {
+		t.Fatalf("chip %+v", c)
+	}
+}
+
+func TestSidebarDrawsTrayFooter(t *testing.T) {
+	rows := sideRows(1, 2, "s")
+	rows[0].Agents = trayAgents(trayMax)
+	rows[0].Hidden, rows[0].TrayTotal, rows[0].TrayExpanded = subagents.TrayCounts{Running: 13}, 21, true
+	h, _ := sideDraw(t, sideModel{Loose: rows}, sideState{}, 900)
+	if len(h.agents) != trayMax+2 {
+		t.Fatalf("agent hits %d, want %d lines, Show fewer and the board link", len(h.agents), trayMax)
+	}
+	fewer, board := h.agents[trayMax], h.agents[trayMax+1]
+	if fewer.kind != hitAgentFewer || board.kind != hitAgentBoard || board.rect.Min.X < fewer.rect.Max.X ||
+		fewer.rect.Min.Y != board.rect.Min.Y || fewer.rect.Min.Y < h.agents[trayMax-1].rect.Max.Y {
+		t.Fatalf("footer %+v %+v", fewer, board)
+	}
+	rows[0].Hidden, rows[0].TrayTotal = subagents.TrayCounts{}, trayMax
+	h, _ = sideDraw(t, sideModel{Loose: rows}, sideState{}, 900)
+	if len(h.agents) != trayMax+1 || h.agents[trayMax].kind != hitAgentFewer {
+		t.Fatalf("with nothing beyond, hits %+v, want only Show fewer after the lines", h.agents[trayMax:])
+	}
+	rows[0].Agents, rows[0].TrayTotal = trayAgents(2), 2
+	h, _ = sideDraw(t, sideModel{Loose: rows}, sideState{}, 900)
+	if len(h.agents) != 2 {
+		t.Fatalf("an expanded tray of two shows %d hits, want just the lines", len(h.agents))
+	}
+}
+
+func TestSidebarFoldedTrayHasNoLines(t *testing.T) {
+	rows := sideRows(1, 2, "s")
+	rows[0].TrayTotal, rows[0].TrayFolded, rows[0].AgentCount = 5, true, 5
+	gtx := pageContext(sidebarW, 700)
+	h, _ := sideDraw(t, sideModel{Loose: rows}, sideState{}, 700)
+	if len(h.agents) != 0 {
+		t.Fatalf("folded tray drew %d agent hits", len(h.agents))
+	}
+	if h.rows[0].fold.Empty() || !h.rows[0].fold.Overlaps(h.rows[0].rect) {
+		t.Fatalf("no fold control on the row: %+v", h.rows[0])
+	}
+	if span := h.rows[1].rect.Min.Y - h.rows[0].rect.Min.Y; span != gtx.Dp(sideRowH) || rowSpan(gtx, rows[0]) != gtx.Dp(sideRowH) {
+		t.Fatalf("folded row spans %d, want %d", span, gtx.Dp(sideRowH))
+	}
+	if h, _ := sideDraw(t, sideModel{Loose: sideRows(1, 1, "s")}, sideState{}, 700); !h.rows[0].fold.Empty() {
+		t.Fatal("a row without a tray has a fold control")
 	}
 }
 

@@ -55,6 +55,7 @@ type sideRowHit struct {
 	id          tabs.TabID
 	rect, close image.Rectangle
 	title       image.Rectangle // a session row's title line, where a double click renames
+	fold        image.Rectangle // its agent tray's fold control, empty when it has no tray
 	mark        mark            // the alert dot a member line drew
 }
 
@@ -291,7 +292,7 @@ func fillGlyph(ops *op.Ops, col color.NRGBA, r image.Rectangle, glyph clip.Op) {
 // sideList draws the scrolled groups and loose rows, clipped to h.list, and records hits
 // for the visible parts only.
 func (c *chrome) sideList(gtx layout.Context, h *sideHits, m sideModel, st sideState, closeCall op.CallOp, closeSize image.Point) {
-	ops, th := gtx.Ops, c.sideTheme()
+	ops, th, ink := gtx.Ops, c.sideTheme(), c.sideInk()
 	pad, gap, hitPad := gtx.Dp(8), gtx.Dp(8), gtx.Dp(4)
 	groupH, rowH := gtx.Dp(sideGroupH), gtx.Dp(sideRowH)
 	dot := gtx.Dp(7)
@@ -330,9 +331,7 @@ func (c *chrome) sideList(gtx layout.Context, h *sideHits, m sideModel, st sideS
 		rect := image.Rect(pad, y, h.list.Max.X-pad, y+rowH)
 		y += rowSpan(gtx, r)
 		c.docLines(gtx, h, r, st, rect.Min.X+gap+dot+gap, rect.Max.X-gap, rect.Max.Y, closeCall, closeSize)
-		if len(r.Agents) > 0 || r.Hidden.Total() > 0 {
-			c.agentLines(gtx, h, r, rect.Min.X+gap+dot+gap, rect.Max.X-gap, rect.Max.Y+len(r.Docs)*gtx.Dp(sideDocH), st.openAgent)
-		}
+		c.trayLines(gtx, h, r, rect, rect.Max.Y+len(r.Docs)*gtx.Dp(sideDocH), st.openAgent, ink)
 		if !rect.Overlaps(h.list) {
 			return
 		}
@@ -349,10 +348,15 @@ func (c *chrome) sideList(gtx layout.Context, h *sideHits, m sideModel, st sideS
 		titleBand := image.Rect(tx, rect.Min.Y+gtx.Dp(4), tx+max(room, 0), rect.Min.Y+gtx.Dp(24))
 		word := r.stateWord()
 		wcol := th.Accent
-		switch r.Mark {
-		case markNeeds:
+		switch {
+		case r.TrayTotal > 0:
+			// The tray's fold control: amber when the session or a folded agent waits.
+			if r.Mark == markNeeds || r.TrayFolded && r.TrayWaiting > 0 {
+				wcol = ink.needs
+			}
+		case r.Mark == markNeeds:
 			wcol = th.Needs
-		case markDone:
+		case r.Mark == markDone:
 			wcol = th.Done
 		}
 		var wCall op.CallOp
@@ -416,6 +420,10 @@ func (c *chrome) sideList(gtx layout.Context, h *sideHits, m sideModel, st sideS
 			}
 		}
 		hit := sideRowHit{id: r.ID, rect: rect.Intersect(h.list), title: titleBand.Intersect(h.list)}
+		if r.TrayTotal > 0 && word != "" {
+			wmid := rect.Min.Y + gtx.Dp(14)
+			hit.fold = image.Rect(right-wordW-hitPad, wmid-wSize.Y/2-hitPad, right+hitPad, wmid+wSize.Y/2+hitPad).Intersect(h.list)
+		}
 		if st.hover == r.ID && r.ID != 0 {
 			cx := rect.Max.X - gap - closeSize.X
 			cmid := rect.Min.Y + gtx.Dp(14)

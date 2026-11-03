@@ -610,9 +610,10 @@ func (win *window) sidePress(p image.Point, b pointer.Buttons, at time.Duration)
 	}
 	for _, a := range h.agents {
 		if primary && p.In(a.rect) {
-			if a.more {
+			switch a.kind {
+			case hitAgentBoard:
 				win.openBoard(a.tab)
-			} else {
+			case hitAgentLine:
 				win.showAgent(a.tab, a.key, true)
 			}
 			return
