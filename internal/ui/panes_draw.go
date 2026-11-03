@@ -139,8 +139,10 @@ func (win *window) paneOwner() tabs.TabID {
 // shown tab is never also a pane, gone tabs leave their sets, and an orphaned
 // scratch shell closes.
 func (win *window) paneStep(active *tabs.Tab) {
-	if active != nil {
-		win.mgr.Dock(active.ID) // a no-op unless it floated
+	if active != nil && win.fl.owner(active.ID) != 0 {
+		// It floated: back to the shared size. Only then, so the docked
+		// agent panel's smaller size for this session is not undone.
+		win.mgr.Dock(active.ID)
 		win.fl.remove(active.ID)
 	}
 	orphans, released := win.fl.prune(win.mgr.Has)

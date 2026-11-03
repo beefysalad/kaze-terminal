@@ -2,7 +2,10 @@ package ui
 
 import (
 	"image"
+	"slices"
 	"time"
+
+	"gioui.org/layout"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
@@ -154,3 +157,51 @@ type (
 	dockCache struct{}
 	dockHits  struct{}
 )
+
+// dockFit splits term for the shown session's panel and sizes PTYs: the
+// owner's session gets the grid of the area above the panel (not while the
+// handle is being dragged), and a session whose panel closed goes back to the
+// shared size. It returns the terminal's part of term.
+func (win *window) dockFit(gtx layout.Context, term image.Rectangle, cw, ch, pad int) image.Rectangle {
+	owner := win.dockOwner()
+	top, panel := term, image.Rectangle{}
+	if win.dockOf(owner) != nil {
+		top, panel = dockSplit(term, win.dockHeight(), gtx.Metric.PxPerDp, ch, pad)
+	}
+	win.dock.lastRect = panel
+	for id := range win.dock.sized {
+		if win.dockOf(id) == nil || (id == owner && panel.Empty()) {
+			win.mgr.Dock(id)
+			delete(win.dock.sized, id)
+		}
+	}
+	if panel.Empty() || win.dock.drag.on {
+		return top
+	}
+	grid := image.Rect(top.Min.X+pad, top.Min.Y+pad/2, top.Max.X-pad, top.Max.Y-pad/2)
+	cols, rows := gridSize(grid.Dx(), grid.Dy(), cw, ch)
+	win.mgr.ResizeTab(owner, cols, rows)
+	if win.dock.sized == nil {
+		win.dock.sized = map[tabs.TabID]bool{}
+	}
+	win.dock.sized[owner] = true
+	return top
+}
+
+// dockRect is the panel as laid out this frame, empty when none.
+func (win *window) dockRect() image.Rectangle { return win.dock.lastRect }
+
+// pruneDock forgets the panels of closed sessions.
+func (win *window) pruneDock(list []*tabs.Tab) {
+	for id := range win.dock.by {
+		if !slices.ContainsFunc(list, func(t *tabs.Tab) bool { return t.ID == id }) {
+			delete(win.dock.by, id)
+			delete(win.dock.sized, id)
+		}
+	}
+	for id := range win.dock.sized {
+		if !slices.ContainsFunc(list, func(t *tabs.Tab) bool { return t.ID == id }) {
+			delete(win.dock.sized, id)
+		}
+	}
+}

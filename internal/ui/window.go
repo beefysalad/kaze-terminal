@@ -624,6 +624,13 @@ func (win *window) frame(gtx layout.Context) error {
 		}
 	}
 	win.mgr.ResizeAll(cols, rows)
+	// The docked agent panel takes the bottom of the terminal area; only its
+	// session's PTY gets the smaller grid (spec 2026-11-03 agent dock).
+	if top := win.dockFit(gtx, termRect, cw, ch, pad); top != termRect {
+		termRect = top
+		grid = image.Rect(termRect.Min.X+pad, termRect.Min.Y+pad/2, termRect.Max.X-pad, termRect.Max.Y-pad/2)
+		win.gridMin, win.gridRect = grid.Min, grid
+	}
 	win.closeExitedFinalSession()
 
 	var active *tabs.Tab
@@ -667,6 +674,7 @@ func (win *window) frame(gtx layout.Context) error {
 	win.switchedTo(active)
 	list := win.mgr.Tabs()
 	win.pruneDocs(list)
+	win.pruneDock(list)
 	win.pruneSels(list)
 	win.pruneLocs(list)
 	win.drainLocations()
