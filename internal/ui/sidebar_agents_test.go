@@ -197,6 +197,19 @@ func TestSideAgentFromTracker(t *testing.T) {
 	if s := sideAgentOf(a, t0); s.Action != "Found it in auth.ts" {
 		t.Fatalf("done: %q", s.Action)
 	}
+	// A markdown report shows its first line of prose, without the marks.
+	for report, want := range map[string]string{
+		"## Summary\n\n**No existing binding** for `split`.\n": "No existing binding for split.",
+		"# Report\n\n- Cmd+D is free\n":                        "Cmd+D is free",
+		"> Quoted\n":                                           "Quoted",
+		"```go\nfunc x() {}\n```\nAfter the code\n":            "After the code",
+		"## Only a heading\n":                                  "Only a heading",
+	} {
+		a.Report = report
+		if s := sideAgentOf(a, t0); s.Action != want {
+			t.Fatalf("report %q: %q, want %q", report, s.Action, want)
+		}
+	}
 }
 
 // trayAgents is n tray lines with keys a0, a1, ...

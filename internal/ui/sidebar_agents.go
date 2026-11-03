@@ -56,7 +56,7 @@ func sideAgentOf(a *subagents.Agent, now time.Time) sideAgent {
 	s := sideAgent{Key: a.Key, Type: a.Type, Task: a.Task, State: a.State, Depth: a.Depth, Elapsed: agentElapsed(a, now)}
 	switch {
 	case a.State == subagents.Done:
-		s.Action, _, _ = strings.Cut(a.Report, "\n")
+		s.Action = reportLine(a.Report)
 	case len(a.Steps) > 0:
 		st := a.Steps[len(a.Steps)-1]
 		s.Action = strings.TrimSpace(st.Tool + " " + st.Summary)
@@ -64,6 +64,38 @@ func sideAgentOf(a *subagents.Agent, now time.Time) sideAgent {
 		s.Action = "Starting"
 	}
 	return s
+}
+
+// reportMarks drops inline markdown marks from a report line.
+var reportMarks = strings.NewReplacer("**", "", "__", "", "`", "")
+
+// reportLine is a report's first line of prose for a one-line summary: it
+// skips headings, code blocks, tables and rules, drops list and quote marks
+// and inline marks; a report of headings only gives its first heading.
+func reportLine(report string) string {
+	heading, fence := "", false
+	for rest := report; rest != ""; {
+		var line string
+		line, rest, _ = strings.Cut(rest, "\n")
+		line = strings.TrimSpace(line)
+		switch {
+		case strings.HasPrefix(line, "```"):
+			fence = !fence
+			continue
+		case fence || line == "" || strings.HasPrefix(line, "|") || strings.Trim(line, "-*_ ") == "":
+			continue
+		case strings.HasPrefix(line, "#"):
+			if heading == "" {
+				heading = strings.TrimSpace(strings.TrimLeft(line, "#"))
+			}
+			continue
+		}
+		for _, m := range [...]string{"> ", "- ", "* ", "+ "} {
+			line = strings.TrimPrefix(line, m)
+		}
+		return reportMarks.Replace(line)
+	}
+	return reportMarks.Replace(heading)
 }
 
 // agentElapsed is "<1m" or "4m" while it runs, "took 6m" once done.
