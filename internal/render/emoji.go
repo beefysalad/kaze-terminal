@@ -5,9 +5,11 @@ import (
 	"image/color"
 	"image/draw"
 	"io"
+	"math"
 	"os"
 	"sync"
 
+	xdraw "golang.org/x/image/draw"
 	xfont "golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/font/sfnt"
@@ -106,7 +108,7 @@ const (
 // loadEmojiFont opens path. Tables that fail to parse are left nil, so a broken
 // colour table costs colour only; a font with nothing drawable, or a parser panic,
 // gives nil and the old fallback order.
-func loadEmojiFont(path string) (e *emojiFont) {
+func loadEmojiFont(path string) *emojiFont {
 	if path == "" {
 		return nil
 	}
@@ -114,19 +116,25 @@ func loadEmojiFont(path string) (e *emojiFont) {
 	if err != nil {
 		return nil
 	}
+	st, err := f.Stat()
+	var e *emojiFont
+	if err == nil {
+		e = parseEmojiFont(f, st.Size())
+	}
+	if e == nil {
+		f.Close()
+	}
+	return e
+}
+
+// parseEmojiFont reads an emoji font of size bytes from f, which it keeps.
+func parseEmojiFont(f io.ReaderAt, size int64) (e *emojiFont) {
 	defer func() {
 		if recover() != nil {
 			e = nil
 		}
-		if e == nil {
-			f.Close()
-		}
 	}()
-	st, err := f.Stat()
-	if err != nil {
-		return nil
-	}
-	d, err := colorfont.ReadDirectory(f, st.Size(), 0)
+	d, err := colorfont.ReadDirectory(f, size, 0)
 	if err != nil {
 		return nil
 	}
@@ -326,5 +334,36 @@ func (fs *fontSet) drawColor(r rune, w int) *image.RGBA {
 			return fs.drawCOLR(e, gid, layers, w)
 		}
 	}
+	if e.sbix != nil {
+		return fs.drawSbix(e, gid, w)
+	}
 	return nil
+}
+
+// drawSbix draws gid's PNG from the strike nearest the cell height, scaled with its
+// aspect kept into the largest rectangle that fits w×cellH, centred. The PNG may be at
+// most twice the strike's size on each side. It returns nil on any error or panic.
+func (fs *fontSet) drawSbix(e *emojiFont, gid uint16, w int) (img *image.RGBA) {
+	defer func() {
+		if recover() != nil {
+			img = nil
+		}
+	}()
+	st, ppem := e.sbix.Nearest(fs.cellH)
+	data, err := e.sbix.PNG(e.src, st, gid)
+	if err != nil {
+		return nil
+	}
+	src, err := colorfont.DecodePNG(data, 2*ppem)
+	if err != nil {
+		return nil
+	}
+	h := fs.cellH
+	sw, sh := src.Bounds().Dx(), src.Bounds().Dy()
+	s := min(float64(w)/float64(sw), float64(h)/float64(sh))
+	dw, dh := max(int(math.Round(float64(sw)*s)), 1), max(int(math.Round(float64(sh)*s)), 1)
+	x, y := (w-dw)/2, (h-dh)/2
+	img = image.NewRGBA(image.Rect(0, 0, w, h))
+	xdraw.CatmullRom.Scale(img, image.Rect(x, y, x+dw, y+dh), src, src.Bounds(), xdraw.Src, nil)
+	return img
 }

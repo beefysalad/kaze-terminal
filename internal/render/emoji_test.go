@@ -1,6 +1,7 @@
 package render
 
 import (
+	"bytes"
 	"image"
 	"image/color"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/colorfont"
+	cft "github.com/patrick-gogo/kaze-terminal/internal/colorfont/colorfonttest"
 )
 
 func TestEmojiTables(t *testing.T) {
@@ -263,5 +265,54 @@ func TestColourGlyphRasterizedOnce(t *testing.T) {
 	}
 	if n := h.frame(); n != 0 {
 		t.Fatalf("an unchanged frame redrew %d rows, want 0", n)
+	}
+}
+
+// sbixEmojiFont is a synthetic sbix-only emoji font (no outlines): U+1F534 is glyph 3,
+// whose PNG in the one strike (64 ppem) is png.
+func sbixEmojiFont(t *testing.T, png []byte) *emojiFont {
+	t.Helper()
+	b := cft.Sfnt(map[string][]byte{
+		"maxp": cft.Maxp(8),
+		"cmap": cft.Cmap12(cft.Group{Start: 0x1F534, End: 0x1F534, Glyph: 3}),
+		"sbix": cft.Sbix(8, cft.Strike{PPEM: 64, Glyphs: map[uint16]cft.Glyph{3: {Type: "png ", Data: png}}}),
+	})
+	e := parseEmojiFont(bytes.NewReader(b), int64(len(b)))
+	if e == nil || e.sbix == nil || e.sf != nil {
+		t.Fatalf("synthetic sbix font: %+v", e)
+	}
+	return e
+}
+
+func TestSbixGlyphScaledIntoSpan(t *testing.T) {
+	e := sbixEmojiFont(t, cft.PNG(64, 64, color.NRGBA{R: 255, A: 255}))
+	swapEmojiOpen(t, func(string) *emojiFont { return e })
+	c := &glyphCache{fs: newFontSet(16.25, 1), m: make(map[glyphKey]*glyph)}
+	w, h := 2*c.fs.cellW, c.fs.cellH
+	g := c.get('🔴', false, true)
+	if g.face != faceEmoji || g.color == nil {
+		t.Fatalf("🔴: face %d colour %v, want a faceEmoji colour glyph", g.face, g.color != nil)
+	}
+	if dx, dy := g.color.Rect.Dx(), g.color.Rect.Dy(); dx != w || dy != h {
+		t.Fatalf("colour image %dx%d, want %dx%d", dx, dy, w, h)
+	}
+	if got := g.color.RGBAAt(w/2, h/2); got != (color.RGBA{R: 255, A: 255}) {
+		t.Fatalf("centre pixel %v, want opaque red", got)
+	}
+	if w == h {
+		t.Fatalf("the span is square (%dx%d); pick a size where the aspect check means something", w, h)
+	}
+	if a := g.color.RGBAAt(0, 0).A; a != 0 {
+		t.Fatalf("corner alpha %d: a square bitmap was stretched to fill a %dx%d span", a, w, h)
+	}
+}
+
+func TestSbixHugePNGDrawsBlank(t *testing.T) {
+	e := sbixEmojiFont(t, cft.PNGHeader(60000, 60000))
+	swapEmojiOpen(t, func(string) *emojiFont { return e })
+	c := &glyphCache{fs: newFontSet(16.5, 1), m: make(map[glyphKey]*glyph)}
+	g := c.get('🔴', false, true)
+	if g.color != nil || !g.empty || g.face == faceMissing {
+		t.Fatalf("🔴 with a 60000x60000 PNG: face %d colour %v empty %v; want blank, not .notdef", g.face, g.color != nil, g.empty)
 	}
 }
