@@ -93,3 +93,10 @@ Retake sidebar captures (`kaze-sessions.png`, `kaze-agents.png`): subagents are 
 header. Terminal captures with Claude's status tables now show colour emoji. The headless renders in
 `docs/audits/sidebar-tray-emoji/` are development evidence, not product captures. No product
 screenshot was fabricated or retouched.
+
+## 0.26 agents board
+
+Retake `kaze-agents.png` (the board now has filters, session cards and a preview pane) and
+`kaze-sessions.png` (no project rail; agent lines have no ›). The headless renders in
+`docs/audits/agents-board/` are development evidence, not product captures. No product screenshot
+was fabricated or retouched.

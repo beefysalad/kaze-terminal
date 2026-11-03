@@ -1,10 +1,10 @@
-## What’s new in Kaze 0.25
+## What’s new in Kaze 0.26
 
-- **A tidier agent tray:** each subagent takes one line under its session. At most three show, waiting first; the rest sit behind “+N more”, and “N agents” folds the whole tray. Hover a line to see what the agent is doing.
-- **Safe clicks:** clicking an agent line shows its session, so a stray click lands on your terminal. Open an agent’s panel with the › at the end of the line, or a double-click.
-- **Find your project:** a thin accent rail marks the project you’re in, instead of a tinted box. Sidebar text stays readable in every theme.
-- **Colour emoji:** ✅ ❌ 🔄 ⏳ and friends draw in full colour on Windows and macOS, like your other terminals. Each one is drawn once and reused.
-- **Fixed: title symbols:** Claude’s status symbols no longer show as an empty box in the title bar or the sidebar.
+- **A new agents board:** filter by All, Needs you, Running or Done, and search by type, task, session or repo (press /). Waiting agents sit in a pinned Needs you card; the rest are grouped under their session, with a bar showing what’s waiting, running and done. Finished agents fold away.
+- **Preview without leaving:** pick an agent to see its steps and messages, or its formatted report, beside the list. Double-click it, press Enter or use Open in session to jump to it.
+- **One click opens an agent:** clicking an agent line in the sidebar opens its panel again, and a second click closes it. “+N more” opens the board for that session.
+- **A quieter highlight:** the project rail is gone. The project you’re in keeps its bold name and your session keeps its own bar.
+- **Fixed: report summaries:** a finished agent shows the first sentence of its report, not its heading.
 
 ## Download
 
