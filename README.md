@@ -320,26 +320,33 @@ Claude Code alerts from a scratch shell count on its session's row.
 
 When Claude Code hands work to subagents (Explore, Plan, general-purpose or your own agents), or
 Codex starts helpers, kaze shows what each one is doing. Hooks provide their state. While a Claude
-subagent pane is visible, kaze also reads its transcript for live messages.
+subagent's panel is shown, kaze also reads its transcript for live messages.
 
 - **In the sidebar:** each session lists its subagents under its row: the type, the task, how long
   it has run and the step it is on now (for example `Grep authMiddleware in src`). A dot inside a ring means
   running, an amber dot means it is waiting for your approval, a green dot means done. The row
   shows a "3 agents" chip. Finished ones leave the list at your next prompt.
-- **Live pane:** click a subagent to open a read-only floating pane that reads like a conversation:
-  the prompt it was given, its assistant messages as they arrive, and folded tool counts between
-  messages ("Searched for 13 patterns, ran 15 shell commands"). Thinking blocks and individual
-  tool calls/output stay hidden. It follows new messages at the bottom; scrolling up keeps your
-  place. When done, it shows the report, recovering a `SubagentHandback` report when the hook
-  has no final text; **Copy report** copies the same text. If no report exists it says "No report".
-  The pane keeps a bounded tail and marks earlier messages that were hidden. Missing transcripts
-  and Codex helpers keep the prompt/count/report view. The keyboard stays with your session.
-  Cmd+click (Ctrl+click on Windows) a web link or `.md` path in a pane's text to open it. Paths
-  split across wrapped lines are not detected there. A missed Agent call shows no prompt.
+- **Agent panel:** click a subagent to open its panel docked under the terminal (click it again
+  to close). Nothing covers the terminal; only that session's terminal gets shorter. Drag the line
+  between them to any height; Kaze remembers it (`agent_panel_height` in `config.toml`). The
+  header shows the state, type, task and time, an **Activity / Report** switch, and, once done,
+  **Copy report** and **Open in reader**. The prompt sits folded in one line; click it to read it all.
+  - **Activity** is a timeline: each tool step with its time, tool and target, and the agent's own
+    messages between them as notes. It follows new rows unless you scroll up. A waiting agent shows
+    what it wants to run; a finished one says "Finished in Nm · read the report".
+  - **Report** shows the report as formatted markdown (bold, code, lists, headings, tables). The
+    panel switches to it when the agent finishes, unless you picked a tab yourself. **Copy report**
+    copies the original markdown.
+  - Each session remembers its open panel: switch away and back and it is still there. A "needs
+    you" toast's **Go** opens the waiting subagent's panel.
+  - The keyboard stays with your session, so Esc still reaches Claude. Click into the panel first;
+    then Esc closes it and ↑/↓ move to the previous or next subagent.
+  - Cmd+click (Ctrl+click on Windows) a web link or `.md` path in the panel to open it. Missing
+    transcripts and Codex helpers show the tool steps without notes.
 - **The board:** every subagent in every session in three columns: running, waiting on you, and
   done. Open it with the Agents button in the sidebar, the "N agents running" text in the status
   bar, "Show agents" in the palette, or Ctrl+Shift+A (Cmd+Shift+A on macOS). Click a card to go to
-  that session with the subagent's pane open; Esc or "Back to ..." returns you. A done card's ×
+  that session with the subagent's panel open; Esc or "Back to ..." returns you. A done card's ×
   removes it, and **Clear** empties the Done column (only the shown session's while filtered).
 - **Setup:** it needs three more Claude Code hooks (SubagentStart, SubagentStop and a PreToolUse
   hook). Settings > Agents lists them in the setup check, and **Fix** adds them. In the main

@@ -9,6 +9,9 @@ import (
 const docPoll = time.Second
 
 func (win *window) refreshDoc(d *docView, now time.Time) {
+	if d.path == "" {
+		return // an agent report held in memory: no file to check
+	}
 	stamp, e := mdoc.StatFile(d.path)
 	if e != nil {
 		if os.IsNotExist(e) {
@@ -29,7 +32,7 @@ func (win *window) refreshDoc(d *docView, now time.Time) {
 }
 func (win *window) docTick(now time.Time) (time.Time, bool) {
 	d := win.shownDoc()
-	if d == nil {
+	if d == nil || d.path == "" {
 		return time.Time{}, false
 	}
 	if !now.Before(win.docs.checked.Add(docPoll)) {

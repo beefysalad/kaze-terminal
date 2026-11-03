@@ -1,8 +1,18 @@
 # kaze handoff
 
-Last updated: 2026-11-03, while preparing release 0.23 for #107, #113 and #114. Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-03, after building the docked agent panel (#106, #103) on `feat/agent-dock`. Read this first when you pick up kaze on another machine.
 
 ## Where things stand
+
+**Docked agent panel (#106, includes #103) is built on `feat/agent-dock`.** The owner approved
+the mockups (2026-11-02), the three open details and five builder calls, then the plan
+(2026-11-03). Subagents open in one panel under the terminal (Activity timeline with markdown
+notes, Report tab with rendered markdown, Copy report, Open in reader); floating agent cards are
+removed. Height drags freely and is saved as `agent_panel_height`; each session remembers its
+panel; Esc/↑/↓ reach the panel only after a click into it. Links in the panel are web and `.md`
+like the terminal. Tests, vet, headless captures and timings: `docs/audits/2026-11-03-agent-dock.md`.
+**Release:** the owner asked for ONE release that bundles this with #117 (PR #119), and #118
+(PR #120) from another session, which were told not to release. Native checks remain open.
 
 **Release 0.23 packages #107, #113 and #114.** The owner explicitly requested
 opening a PR if needed, merging this bundle and publishing its release on

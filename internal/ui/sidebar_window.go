@@ -17,6 +17,7 @@ import (
 	"gioui.org/widget"
 
 	kinput "github.com/patrick-gogo/kaze-terminal/internal/input"
+	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 )
 
@@ -208,6 +209,10 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 			s.st.shown = a.ID
 			s.st.activeRepo = win.locOf(a).repo
 		}
+		s.st.openAgent = subagents.Key{}
+		if d := win.dockOf(win.dockOwner()); d != nil {
+			s.st.openAgent = d.agent
+		}
 		s.st.doc = win.docs.shown
 		s.st.settings, s.st.settingsOn = win.set.open, win.set.shown
 		s.st.floating = 0
@@ -216,7 +221,7 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 				s.st.floating = f.id
 			}
 		}
-		key := sideDrawKey{activeRepo: s.st.activeRepo, size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, floating: s.st.floating, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds, launchVersion: s.launch.version, launcher: s.launch.shown, renaming: s.renaming}
+		key := sideDrawKey{activeRepo: s.st.activeRepo, openAgent: s.st.openAgent, size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, floating: s.st.floating, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds, launchVersion: s.launch.version, launcher: s.launch.shown, renaming: s.renaming}
 		if !s.cache.drawValid || s.cache.drawKey != key || s.reveal {
 			s.cache.ops.Reset()
 			cg := sg
@@ -595,7 +600,7 @@ func (win *window) sidePress(p image.Point, b pointer.Buttons, at time.Duration)
 			if a.more {
 				win.openBoard(a.tab)
 			} else {
-				win.openAgentPane(a.tab, a.key)
+				win.showAgent(a.tab, a.key, true)
 			}
 			return
 		}

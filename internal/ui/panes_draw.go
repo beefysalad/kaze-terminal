@@ -26,7 +26,6 @@ type paneLook struct {
 	mark          mark   // alert mark of the pane's tab
 	front         bool
 	expand        bool   // members only
-	copyBtn       bool   // live panes of finished subagents: copy the report
 	folder        string // scratch only: the session's folder, ~-shortened
 	key           string // scratch only: the scratch_shell key text
 	bg            color.NRGBA
@@ -71,13 +70,6 @@ func (c *chrome) layoutPane(gtx layout.Context, r image.Rectangle, lk paneLook) 
 	call, sz := c.label(gtx, "×", 14, th.Muted)
 	place(ops, call, image.Pt(h.close.Min.X+(btnW-sz.X)/2, mid-sz.Y/2))
 	right = h.close.Min.X
-	if lk.copyBtn {
-		call, sz = c.label(gtx, "Copy report", 11, th.Muted)
-		w := sz.X + 2*gtx.Dp(8)
-		h.copy = image.Rect(right-w, h.header.Min.Y, right, h.header.Max.Y)
-		place(ops, call, image.Pt(h.copy.Min.X+gtx.Dp(8), mid-sz.Y/2))
-		right = h.copy.Min.X
-	}
 	if lk.expand {
 		call, sz = c.label(gtx, "Expand", 11, th.Muted)
 		w := sz.X + 2*gtx.Dp(8)
@@ -139,12 +131,13 @@ func (win *window) paneOwner() tabs.TabID {
 // shown tab is never also a pane, gone tabs leave their sets, and an orphaned
 // scratch shell closes.
 func (win *window) paneStep(active *tabs.Tab) {
-	if active != nil {
-		win.mgr.Dock(active.ID) // a no-op unless it floated
+	if active != nil && win.fl.owner(active.ID) != 0 {
+		// It floated: back to the shared size. Only then, so the docked
+		// agent panel's smaller size for this session is not undone.
+		win.mgr.Dock(active.ID)
 		win.fl.remove(active.ID)
 	}
 	orphans, released := win.fl.prune(win.mgr.Has)
-	win.dropGoneAgents()
 	for _, id := range orphans {
 		win.mgr.Close(id)
 	}
@@ -183,17 +176,12 @@ func (win *window) paneViews(gtx layout.Context, termRect image.Rectangle, cw, c
 	var out []paneView
 	for _, p := range s.visible() {
 		t := win.mgr.Lookup(p.id)
-		if t == nil && p.kind != paneAgent {
+		if t == nil {
 			continue
 		}
 		f := fitPane(p.r, area, paneMinDp)
 		p.fit = f
 		outer := image.Rect(toPx(f.Min.X), toPx(f.Min.Y), toPx(f.Max.X), toPx(f.Max.Y)).Add(termRect.Min).Intersect(termRect)
-		if p.kind == paneAgent {
-			p.hits = paneHits{outer: outer}
-			out = append(out, paneView{p: p})
-			continue
-		}
 		body := image.Rect(outer.Min.X+line, outer.Min.Y+line+headH, outer.Max.X-line, outer.Max.Y-line)
 		grid := image.Rect(body.Min.X+padX, body.Min.Y+padY, body.Max.X-padX, body.Max.Y-padY)
 		cols, rows := gridSize(grid.Dx(), grid.Dy(), cw, ch)
@@ -243,13 +231,6 @@ func (win *window) drawPanes(gtx layout.Context, views []paneView) {
 	ops := gtx.Ops
 	for i, pv := range views {
 		p, v := pv.p, pv.v
-		if p.kind == paneAgent {
-			if a := win.subs.Get(p.agent); a != nil {
-				win.drawAgentPane(gtx, p, a, i == len(views)-1)
-				win.paneFrameOps(gtx, p)
-			}
-			continue
-		}
 		if !slices.Contains(win.fl.shown, p.id) {
 			// Register a newly shown pane's keyboard filters before moving
 			// focus to it, so following input is not left at the old view
@@ -288,7 +269,7 @@ func (win *window) paneFrameOps(gtx layout.Context, p *pane) {
 	pointer.CursorGrab.Add(ops)
 	event.Op(ops, &p.frame)
 	area.Pop()
-	for _, b := range []image.Rectangle{p.hits.close, p.hits.expand, p.hits.copy} {
+	for _, b := range []image.Rectangle{p.hits.close, p.hits.expand} {
 		if !b.Empty() {
 			area = clip.Rect(b).Push(ops)
 			pointer.CursorPointer.Add(ops)
@@ -324,9 +305,7 @@ func (win *window) paneRend(id tabs.TabID) *render.Renderer {
 func (win *window) syncVisible(views []paneView) {
 	now := make([]tabs.TabID, 0, len(views))
 	for _, pv := range views {
-		if pv.p.kind != paneAgent { // no tab behind a live pane
-			now = append(now, pv.p.id)
-		}
+		now = append(now, pv.p.id)
 	}
 	for _, id := range win.fl.shown {
 		if !slices.Contains(now, id) {

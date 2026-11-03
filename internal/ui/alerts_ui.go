@@ -252,8 +252,7 @@ func (win *window) toastEvent(e pointer.Event) {
 			win.w.Invalidate()
 			return
 		case p.In(h.goRect):
-			win.selectTab(h.id)
-			win.w.Invalidate()
+			win.toastGo(h.id)
 			return
 		case p.In(h.rect):
 			return

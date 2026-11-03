@@ -210,6 +210,7 @@ type window struct {
 	skillCache *skills.Cache
 	skillsFn   func(skills.Sources) []skills.Skill // nil reads through skillCache; tests fake it
 	fl         floats                              // floating panes per session; UI goroutine only
+	dock       dockState                           // the docked agent panel; UI goroutine only
 	side       sideUI                              // the sidebar; UI goroutine only
 	wsp        wsPage                              // the Workspaces section: its list and the open draft; UI goroutine only
 }
@@ -623,6 +624,13 @@ func (win *window) frame(gtx layout.Context) error {
 		}
 	}
 	win.mgr.ResizeAll(cols, rows)
+	// The docked agent panel takes the bottom of the terminal area; only its
+	// session's PTY gets the smaller grid (spec 2026-11-03 agent dock).
+	if top := win.dockFit(gtx, termRect, cw, ch, pad); top != termRect {
+		termRect = top
+		grid = image.Rect(termRect.Min.X+pad, termRect.Min.Y+pad/2, termRect.Max.X-pad, termRect.Max.Y-pad/2)
+		win.gridMin, win.gridRect = grid.Min, grid
+	}
 	win.closeExitedFinalSession()
 
 	var active *tabs.Tab
@@ -649,6 +657,7 @@ func (win *window) frame(gtx layout.Context) error {
 		} else if win.docs.shown != 0 {
 			win.docEvents(gtx)
 		} else if active != nil {
+			win.dockEvents(gtx, cw, ch)
 			win.paneEvents(gtx, cw, ch) // before the session: a pane sits over it
 			if win.fl.refocus {
 				win.fl.refocus, win.wantFocus = false, true // its filters are up now
@@ -666,6 +675,7 @@ func (win *window) frame(gtx layout.Context) error {
 	win.switchedTo(active)
 	list := win.mgr.Tabs()
 	win.pruneDocs(list)
+	win.pruneDock(list)
 	win.pruneSels(list)
 	win.pruneLocs(list)
 	win.drainLocations()
@@ -679,6 +689,7 @@ func (win *window) frame(gtx layout.Context) error {
 	win.publish(win.shownTab(), win.focused)
 	win.drainAlerts(gtx.Now)
 	win.drainSubs(gtx.Now)
+	win.dropGoneAgents() // after the drain, so a panel never closes on an agent not applied yet
 	if at, ok := win.subTimer(gtx.Now); ok {
 		gtx.Execute(op.InvalidateCmd{At: at}) // the elapsed minutes, only while a subagent runs
 	}
@@ -770,6 +781,7 @@ func (win *window) frame(gtx layout.Context) error {
 		win.drawWsBanner(gtx, active, termRect) // after the terminal, so it takes the clicks it covers
 		panes = win.paneViews(gtx, termRect, cw, ch)
 		win.drawPanes(gtx, panes) // over the session and its banner, front pane last
+		win.drawShownDock(gtx)
 	}
 	win.syncVisible(panes)
 
@@ -862,6 +874,7 @@ func (win *window) switchedTo(t *tabs.Tab) {
 		win.updateTitle(t)
 		return
 	}
+	win.dropDockKeys() // a panel's keyboard never follows a tab switch
 	if k := win.fl.keys; k != 0 {
 		// The keyboard was in a pane of the old session: it leaves with it.
 		win.fl.keys = 0
@@ -1011,6 +1024,9 @@ func (win *window) focusTarget() event.Tag {
 	if win.docs.shown != 0 {
 		return &win.docs.tag
 	}
+	if win.dock.keys && !win.dock.hits.panel.Empty() {
+		return &win.dock.body
+	}
 	if v, ok := win.paneKeyView(); ok {
 		return v.tag
 	}
@@ -1107,6 +1123,7 @@ func (win *window) termEvents(gtx layout.Context, v termView, cw, ch int) {
 		if e, ok := ev.(pointer.Event); ok && e.Kind == pointer.Press && !win.bench.IgnoreInput() {
 			// A press in a pane takes the keyboard there; one in the session takes it back.
 			if v.tag == win.termTag {
+				win.dropDockKeys() // the terminal takes the keyboard back from the panel
 				if win.fl.keys != 0 {
 					win.focusSession()
 				}

@@ -185,3 +185,7 @@ func (r *Renderer) selectedFG(c screen.Cell) color.NRGBA {
 	fg, _ := cellColors(r.pal, c)
 	return r.readableCached(fg, r.pal.Selection)
 }
+
+// Readable is fg moved just far enough toward black or white to reach the
+// minimum contrast on bg, for chrome text drawn outside the grid.
+func Readable(fg, bg color.NRGBA) color.NRGBA { return readable(fg, bg, hex(0x000000)) }

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const (
@@ -35,6 +36,7 @@ type Transcript struct {
 type TranscriptMessage struct {
 	Text  string
 	Tools ToolCounts
+	At    time.Time // when the record was written; zero when it had no usable timestamp
 }
 type ToolCounts struct{ Searches, Reads, Directories, Commands, Edits, Web, Other int }
 
@@ -161,8 +163,9 @@ func (tr *Transcript) feed(data []byte) {
 }
 func (tr *Transcript) record(line []byte) {
 	var entry struct {
-		Type    string `json:"type"`
-		Message struct {
+		Type      string `json:"type"`
+		Timestamp string `json:"timestamp"`
+		Message   struct {
 			Content []struct {
 				Type, Text, Name string
 				Input            struct {
@@ -174,6 +177,7 @@ func (tr *Transcript) record(line []byte) {
 	if json.Unmarshal(line, &entry) != nil || entry.Type != "assistant" {
 		return
 	}
+	at, _ := time.Parse(time.RFC3339Nano, entry.Timestamp)
 	for _, b := range entry.Message.Content {
 		switch b.Type {
 		case "text":
@@ -182,7 +186,7 @@ func (tr *Transcript) record(line []byte) {
 				continue
 			}
 			tr.lastText = s
-			tr.append(TranscriptMessage{Text: s})
+			tr.append(TranscriptMessage{Text: s, At: at})
 		case "tool_use":
 			if b.Name == "SubagentHandback" {
 				s := notify.CleanReport(b.Input.Message, notify.MaxReport)
@@ -196,7 +200,7 @@ func (tr *Transcript) record(line []byte) {
 				tr.Messages[len(tr.Messages)-1].Tools.add(b.Name)
 				tr.Version++
 			} else {
-				m := TranscriptMessage{}
+				m := TranscriptMessage{At: at}
 				m.Tools.add(b.Name)
 				tr.append(m)
 			}
@@ -227,3 +231,6 @@ func (tr *Transcript) Report(hook string) string {
 	}
 	return "No report"
 }
+
+// AtEnd reports whether the last Read reached the end of the file it saw.
+func (tr *Transcript) AtEnd() bool { return tr.info != nil && tr.Offset >= tr.info.Size() }

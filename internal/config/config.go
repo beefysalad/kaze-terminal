@@ -33,23 +33,24 @@ type Config struct {
 	// Shell empty means "use the platform default shell"; the caller
 	// resolves it at startup.
 	Shell            []string          `toml:"shell"`
-	ScrollbackLines  int               `toml:"scrollback_lines"`  // default 10000, max 100000
-	Colors           map[string]string `toml:"colors"`            // "fg", "bg", "cursor", "selection", "color0".."color15": "#rrggbb"
-	Keys             map[string]string `toml:"keys"`              // action -> shortcut text; parsed by the caller
-	CopyOnSelect     bool              `toml:"copy_on_select"`    // copy a selection when the mouse is released
-	ChimeNeeds       bool              `toml:"chime_needs"`       // chime when Claude needs you; default true
-	ChimeDone        bool              `toml:"chime_done"`        // chime when Claude is done; default false
-	ChimeFile        string            `toml:"chime_file"`        // custom WAV; ~ expands to home, other relative paths use the working dir; empty = bundled chime
-	Theme            string            `toml:"theme"`             // midnight|sumi|tide|washi|sakura
-	LineSpacing      string            `toml:"line_spacing"`      // tight|normal|roomy
-	CursorStyle      string            `toml:"cursor_style"`      // block|bar|underline
-	CursorBlink      bool              `toml:"cursor_blink"`      // default false
-	TaskbarFlash     bool              `toml:"taskbar_flash"`     // flash the taskbar button on alerts; default true
-	DoneToast        string            `toml:"done_toast"`        // 3s|6s|10s|until_seen
-	ShowUsage        bool              `toml:"show_usage"`        // usage readout in the status bar; default true
-	Sidebar          bool              `toml:"sidebar"`           // agent sidebar beside the terminal; default true
-	StartupWorkspace string            `toml:"startup_workspace"` // workspace ID to run at startup; "" opens a home tab
-	CheckUpdates     bool              `toml:"check_updates"`     // ask GitHub for a newer release once a day; default true
+	ScrollbackLines  int               `toml:"scrollback_lines"`   // default 10000, max 100000
+	AgentPanelHeight int               `toml:"agent_panel_height"` // docked agent panel height in dp; 0 = 40% of the terminal area
+	Colors           map[string]string `toml:"colors"`             // "fg", "bg", "cursor", "selection", "color0".."color15": "#rrggbb"
+	Keys             map[string]string `toml:"keys"`               // action -> shortcut text; parsed by the caller
+	CopyOnSelect     bool              `toml:"copy_on_select"`     // copy a selection when the mouse is released
+	ChimeNeeds       bool              `toml:"chime_needs"`        // chime when Claude needs you; default true
+	ChimeDone        bool              `toml:"chime_done"`         // chime when Claude is done; default false
+	ChimeFile        string            `toml:"chime_file"`         // custom WAV; ~ expands to home, other relative paths use the working dir; empty = bundled chime
+	Theme            string            `toml:"theme"`              // midnight|sumi|tide|washi|sakura
+	LineSpacing      string            `toml:"line_spacing"`       // tight|normal|roomy
+	CursorStyle      string            `toml:"cursor_style"`       // block|bar|underline
+	CursorBlink      bool              `toml:"cursor_blink"`       // default false
+	TaskbarFlash     bool              `toml:"taskbar_flash"`      // flash the taskbar button on alerts; default true
+	DoneToast        string            `toml:"done_toast"`         // 3s|6s|10s|until_seen
+	ShowUsage        bool              `toml:"show_usage"`         // usage readout in the status bar; default true
+	Sidebar          bool              `toml:"sidebar"`            // agent sidebar beside the terminal; default true
+	StartupWorkspace string            `toml:"startup_workspace"`  // workspace ID to run at startup; "" opens a home tab
+	CheckUpdates     bool              `toml:"check_updates"`      // ask GitHub for a newer release once a day; default true
 }
 
 // KnownActions are the action names accepted under [keys]; the window binds each one.
@@ -175,6 +176,12 @@ func Load(path string) (Config, []string, error) {
 				cfg.ScrollbackLines = maxScrollback
 			default:
 				cfg.ScrollbackLines = int(n)
+			}
+		case "agent_panel_height":
+			if n, ok := v.(int64); ok && n > 0 && n <= 10000 {
+				cfg.AgentPanelHeight = int(n)
+			} else {
+				warn("agent_panel_height must be a positive number of dp, got %v; using the default", v)
 			}
 		case "copy_on_select":
 			b, ok := v.(bool)
