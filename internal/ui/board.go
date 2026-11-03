@@ -16,6 +16,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
+	"gioui.org/widget"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/claudesetup"
 	kinput "github.com/patrick-gogo/kaze-terminal/internal/input"
@@ -37,6 +38,35 @@ type boardState struct {
 	scroll  int
 	missing bool // the subagent hooks are not all set up
 	tag     int
+
+	filter    boardFilter
+	ed        widget.Editor // the search field
+	searching bool          // the search field has the keyboard
+	edKeys    []event.Filter
+	sel       subagents.Key // the previewed agent
+	hover     subagents.Key
+	showDone  map[tabs.TabID]bool // sessions whose finished rows are unfolded
+	lastRow   boardClick          // the last row press, for double clicks
+	prev      dockSession         // the preview's own panel state
+	prevHits  dockHits
+	wide      bool // the preview pane fits beside the list
+	redraws   int
+}
+
+// boardFilter is the board's segment; the values index [4] arrays.
+type boardFilter uint8
+
+const (
+	boardAll boardFilter = iota
+	boardNeeds
+	boardRunning
+	boardDone
+)
+
+// boardClick is a press on a board row.
+type boardClick struct {
+	key subagents.Key
+	at  time.Duration
 }
 
 type boardCard struct {
@@ -70,6 +100,16 @@ func (win *window) openBoard(tab tabs.TabID) {
 	win.hideSettings()
 	b := &win.board
 	b.open, b.tab, b.scroll = true, tab, 0
+	b.filter, b.searching = boardAll, false
+	b.ed.SetText("")
+	b.prev, b.lastRow = dockSession{}, boardClick{}
+	for id := range b.showDone {
+		if win.mgr.Lookup(id) == nil {
+			delete(b.showDone, id)
+		}
+	}
+	b.sel = subagents.Key{}
+	win.boardSelect(win.firstWaiting(tab))
 	b.missing = true
 	if win.claudePath != "" {
 		if _, r, err := win.readClaude(); err == nil {
@@ -84,6 +124,35 @@ func (win *window) openBoard(tab tabs.TabID) {
 	if win.w != nil {
 		win.w.Invalidate()
 	}
+}
+
+// clearBoardSession drops the board's session token: it shows all sessions.
+func (win *window) clearBoardSession() {
+	win.board.tab = 0
+	if win.w != nil {
+		win.w.Invalidate()
+	}
+}
+
+// boardSelect previews k; a new agent starts a fresh preview that follows.
+func (win *window) boardSelect(k subagents.Key) {
+	b := &win.board
+	b.sel = k
+	if k != b.prev.agent {
+		b.prev = dockSession{agent: k, follow: true}
+	}
+}
+
+// firstWaiting is the first subagent waiting on you, in start order, in tab
+// (any tab when tab is 0); zero when none is.
+func (win *window) firstWaiting(tab tabs.TabID) subagents.Key {
+	_, wait, _ := win.subs.Board()
+	for _, a := range wait {
+		if tab == 0 || tabs.TabID(a.Tab) == tab {
+			return a.Key
+		}
+	}
+	return subagents.Key{}
 }
 
 func (win *window) closeBoard() {

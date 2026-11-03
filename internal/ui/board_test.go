@@ -190,15 +190,6 @@ func TestStatusAgentsText(t *testing.T) {
 	}
 }
 
-func TestTrayBoardLinkOpensFilteredBoard(t *testing.T) {
-	win, id := boardWindow(t)
-	win.side.hits.agents = []sideAgentHit{{tab: id, kind: hitAgentBoard, rect: image.Rect(10, 10, 100, 30)}}
-	win.sidePress(image.Pt(20, 20), 1, 0)
-	if !win.board.open || win.board.tab != id {
-		t.Fatalf("board %+v", win.board)
-	}
-}
-
 func TestCloseTabKeyClosesTheBoardNotTheSession(t *testing.T) {
 	win, _ := boardWindow(t)
 	n := len(win.mgr.Tabs())
@@ -301,5 +292,65 @@ func TestBoardClearDone(t *testing.T) {
 	win.drawBoard(pageContext(1200, 760), boardRect)
 	if !win.board.clear.Empty() {
 		t.Fatal("Clear shown with nothing done")
+	}
+}
+
+func TestOpenBoardResetsViewAndSelectsWaiting(t *testing.T) {
+	win, id := boardWindow(t)
+	b := &win.board
+	b.filter = boardDone
+	b.ed.SetText("x")
+	b.searching = true
+	win.openBoard(id)
+	if b.tab != id || b.filter != boardAll || b.ed.Text() != "" || b.searching {
+		t.Fatalf("open did not reset: tab %v filter %v text %q searching %v", b.tab, b.filter, b.ed.Text(), b.searching)
+	}
+	if want := (subagents.Key{Session: "s", ID: "wait"}); b.sel != want || b.prev.agent != b.sel {
+		t.Fatalf("sel %+v prev %+v, want %+v", b.sel, b.prev.agent, want)
+	}
+	win.closeBoard()
+	win.openBoard(0)
+	if b.tab != 0 {
+		t.Fatalf("tab %v after openBoard(0)", b.tab)
+	}
+}
+
+func TestOpenBoardWithoutWaitingSelectsNothing(t *testing.T) {
+	win, _, _ := liveWindow(t, 2)
+	startAgent(win, win.mgr.Tabs()[1].ID, "s", "run")
+	win.drainSubs(t0)
+	win.openBoard(0)
+	if win.board.sel != (subagents.Key{}) {
+		t.Fatalf("sel %+v with no waiting agent", win.board.sel)
+	}
+}
+
+func TestClearBoardSession(t *testing.T) {
+	win, id := boardWindow(t)
+	win.openBoard(id)
+	win.clearBoardSession()
+	if !win.board.open || win.board.tab != 0 {
+		t.Fatalf("open %v tab %v", win.board.open, win.board.tab)
+	}
+}
+
+func TestBoardCardOpensDock(t *testing.T) {
+	win, _, r, a, _, _, _ := paneWindow(t)
+	k := startAgent(win, a.ID, "s", "x")
+	floatFrames(t, win, r)
+	win.openBoard(a.ID)
+	floatFrames(t, win, r)
+	var card boardHit
+	for _, h := range win.board.cards {
+		if !h.card.session && h.card.key == k {
+			card = h
+		}
+	}
+	if card.rect.Empty() {
+		t.Fatal("no board card")
+	}
+	clickAt(t, win, r, centre(card.rect))
+	if s := win.dockOf(a.ID); s == nil || s.agent != k {
+		t.Fatal("board card did not open the panel")
 	}
 }

@@ -92,27 +92,6 @@ func TestToastGoOpensWaitingAgent(t *testing.T) {
 	}
 }
 
-func TestBoardCardOpensDock(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
-	k := startAgent(win, a.ID, "s", "x")
-	floatFrames(t, win, r)
-	win.openBoard(a.ID)
-	floatFrames(t, win, r)
-	var card boardHit
-	for _, h := range win.board.cards {
-		if !h.card.session && h.card.key == k {
-			card = h
-		}
-	}
-	if card.rect.Empty() {
-		t.Fatal("no board card")
-	}
-	clickAt(t, win, r, centre(card.rect))
-	if s := win.dockOf(a.ID); s == nil || s.agent != k {
-		t.Fatal("board card did not open the panel")
-	}
-}
-
 func TestDockForgetsGoneAgent(t *testing.T) {
 	win, _, r, a, _, _, _ := paneWindow(t)
 	k := startAgent(win, a.ID, "s", "x")
