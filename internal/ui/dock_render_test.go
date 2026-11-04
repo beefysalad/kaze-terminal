@@ -15,6 +15,7 @@ import (
 	"github.com/patrick-gogo/kaze-terminal/internal/notify"
 	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
 	"github.com/patrick-gogo/kaze-terminal/internal/theme"
+	"github.com/patrick-gogo/kaze-terminal/internal/workspaces"
 )
 
 const dockSampleReport = "## Summary\n\n**No existing binding** for split panes.\n\n- Cmd+D and Cmd+Shift+D are free on macOS.\n- `panes.go` keeps panels per session.\n\n1. **Existing panes ignored.** See `docs/notes.md`.\n2. Tests pass.\n\n| Key | Action |\n|---|---|\n| Cmd+D | split right |\n| Cmd+Shift+D | split down |\n\n```go\nfunc split() {}\n```\n"
@@ -213,6 +214,7 @@ func TestDockTabsRender(t *testing.T) {
 				frame()
 				win.closeDock(a.ID)
 			}
+			launchMembers(win)
 			frame()
 			frame()
 			g := pageContext(size.X, size.Y)
@@ -221,6 +223,20 @@ func TestDockTabsRender(t *testing.T) {
 				t.Fatal(err)
 			}
 			writeRender(t, g.Ops, size, filepath.Join(dir, "dock-"+key+"-"+state+".png"))
+		}
+	}
+}
+
+// launchMembers gives every fixture member a launched run, so the sidebar
+// and the status bar read "Running" and count the servers up, as a real run.
+func launchMembers(win *window) {
+	lines := map[string]string{
+		"api": "uvicorn app.main:app --reload --port 8000", "web": "npm run dev",
+		"worker": "celery -A app worker", "scheduler": "celery -A app beat", "storybook": "npm run storybook",
+	}
+	for _, r := range win.runs {
+		for _, m := range r.members {
+			m.run = workspaces.TabRun{Line: lines[m.title], State: workspaces.Launched, ShellReady: true}
 		}
 	}
 }
