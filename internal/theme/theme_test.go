@@ -100,9 +100,9 @@ func TestMatchTokensInEveryTheme(t *testing.T) {
 				t.Errorf("%s: %s unset", th.Key, name)
 			}
 		}
-		// Midnight's tint is the approved mockup's #3d3566, a lighter step of its
-		// violet selection; the others are picked well apart.
-		if d := dist(p.Match, p.Selection); th.Key != "midnight" && d < 60 {
+		// Every theme, Midnight included (owner, 2026-11-04): a selection over a
+		// match must stay easy to tell apart.
+		if d := dist(p.Match, p.Selection); d < 60 {
 			t.Errorf("%s: Match is %.0f from Selection, want >= 60", th.Key, d)
 		}
 		if d := dist(p.Match, p.MatchCur); d < 60 {
