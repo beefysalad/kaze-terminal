@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"os"
 	"strings"
 	"sync"
 )
@@ -18,13 +17,9 @@ var promptBufs = sync.Pool{New: func() any { return new([maxPromptRead]byte) }}
 
 // openPrompt opens a regular file for FirstPrompt; tests count what it reads.
 var openPrompt = func(path string) (io.ReadCloser, error) {
-	f, err := os.Open(path)
+	f, _, err := openRegular(path)
 	if err != nil {
 		return nil, err
-	}
-	if st, err := f.Stat(); err != nil || !st.Mode().IsRegular() {
-		f.Close()
-		return nil, errors.New("not a regular file")
 	}
 	return f, nil
 }
