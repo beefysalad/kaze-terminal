@@ -30,21 +30,21 @@ type sideDocInput struct {
 	doc     sideDoc
 }
 type sideDrawKey struct {
-	activeRepo             string
-	openAgent, hoverAgent  subagents.Key
-	launchVersion          uint64
-	launcher               bool
-	size                   image.Point
-	metric                 unit.Metric
-	locale                 system.Locale
-	shown, hover, docked tabs.TabID
-	renaming               tabs.TabID
-	doc, hoverDoc          docID
-	scroll                 int
-	settings, settingsOn   bool
-	theme                  theme.Chrome
-	shaper                 *text.Shaper
-	generation             uint64
+	activeRepo            string
+	openAgent, hoverAgent subagents.Key
+	launchVersion         uint64
+	launcher              bool
+	size                  image.Point
+	metric                unit.Metric
+	locale                system.Locale
+	shown, hover, docked  tabs.TabID
+	renaming              tabs.TabID
+	doc, hoverDoc         docID
+	scroll                int
+	settings, settingsOn  bool
+	theme                 theme.Chrome
+	shaper                *text.Shaper
+	generation            uint64
 }
 type sideCache struct {
 	valid             bool
