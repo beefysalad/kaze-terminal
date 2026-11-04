@@ -199,6 +199,12 @@ func (c *chrome) label(gtx layout.Context, s string, size unit.Sp, col color.NRG
 
 // labelW is label at weight w.
 func (c *chrome) labelW(gtx layout.Context, s string, size unit.Sp, col color.NRGBA, w font.Weight) (op.CallOp, image.Point) {
+	call, d := c.labelDims(gtx, s, size, col, w)
+	return call, d.Size
+}
+
+// labelDims is labelW with the full dimensions, baseline included.
+func (c *chrome) labelDims(gtx layout.Context, s string, size unit.Sp, col color.NRGBA, w font.Weight) (op.CallOp, layout.Dimensions) {
 	s = c.fit(s)
 	m := op.Record(gtx.Ops)
 	mat := op.Record(gtx.Ops)
@@ -207,7 +213,7 @@ func (c *chrome) labelW(gtx layout.Context, s string, size unit.Sp, col color.NR
 	lg := gtx
 	lg.Constraints = layout.Constraints{Max: image.Pt(1<<16, 1<<16)}
 	d := widget.Label{MaxLines: 1}.Layout(lg, c.shaper, font.Font{Typeface: chromeFace, Weight: w}, size, s, matc)
-	return m.Stop(), d.Size
+	return m.Stop(), d
 }
 
 // sans is label in the settings page's UI font at weight.

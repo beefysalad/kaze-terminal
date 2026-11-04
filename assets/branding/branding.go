@@ -8,6 +8,12 @@ import _ "embed"
 //go:embed kaze-mark-512.png
 var Mark []byte
 
+// Lockup is the approved logo: the wind K, the outlined "kaze" wordmark and
+// an outlined byline, as SVG paths (docs/design/logo-premium).
+//
+//go:embed kaze-lockup.svg
+var Lockup []byte
+
 // ClaudeLogo and OpenAILogo are the agents' marks, white on transparent,
 // 96x96 (see agents/SOURCES.txt); kaze tints them when it draws them.
 //

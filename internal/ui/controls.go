@@ -50,6 +50,7 @@ type ctrl struct {
 	arg             int  // button, swatch, color
 	dead            bool // button: drawn dim and does nothing (Save while the draft is invalid)
 	ghost           bool // button: an outline only, for quiet actions
+	solid           bool // button: filled with the title colour, for the one main action
 	cursorChips     bool // segmented: options drawn as cursor-shape chips instead of words
 
 	// Text field: val is its value, placed in the editor when the field first shows
@@ -84,7 +85,7 @@ func (p *page) ctrl(k ctrl, w int) (op.CallOp, image.Point, int) {
 	var size image.Point
 	switch k.kind {
 	case ctlButton:
-		size = p.button(k)
+		size = p.button(k, w)
 	case ctlToggle:
 		size = p.toggle(k)
 	case ctlSegmented:
@@ -116,7 +117,8 @@ func stroke(ops *op.Ops, r image.Rectangle, radius int, col color.NRGBA) {
 	paint.FillShape(ops, col, clip.Stroke{Path: clip.UniformRRect(r, radius).Path(ops), Width: 1}.Op())
 }
 
-func (p *page) button(k ctrl) image.Point {
+// button draws k at least w pixels wide (0 for its natural width).
+func (p *page) button(k ctrl, w int) image.Point {
 	gtx, ops, col := p.gtx, p.gtx.Ops, p.col
 	fg := col.title
 	switch {
@@ -124,15 +126,19 @@ func (p *page) button(k ctrl) image.Point {
 		fg = col.dim
 	case k.strong:
 		fg = color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
+	case k.solid:
+		fg = col.bg
 	}
 	call, size := p.textW(k.text, 12.5, fg, font.SemiBold)
-	r := image.Rect(0, 0, size.X+2*gtx.Dp(14), gtx.Dp(30))
+	r := image.Rect(0, 0, max(size.X+2*gtx.Dp(14), w), gtx.Dp(30))
 	radius := gtx.Dp(8)
 	switch {
 	case k.strong && k.dead:
 		paint.FillShape(ops, tint(col.accent, 0x40), clip.UniformRRect(r, radius).Op(ops))
 	case k.strong:
 		paint.FillShape(ops, col.accent, clip.UniformRRect(r, radius).Op(ops))
+	case k.solid:
+		paint.FillShape(ops, col.title, clip.UniformRRect(r, radius).Op(ops))
 	case k.ghost:
 		stroke(ops, r, radius, col.line2)
 	default:

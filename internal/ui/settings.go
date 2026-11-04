@@ -44,6 +44,7 @@ type settingsState struct {
 	nav      []navHit
 	texts    []string          // every string drawn, so tests can read the page
 	cards    []image.Rectangle // every card drawn this frame, for tests
+	about    aboutGeom         // the About page's layout this frame, for tests
 	// memberFolderX is where each list member's folder starts, so tests can check the columns.
 	memberFolderX []int
 
