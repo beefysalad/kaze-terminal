@@ -68,3 +68,24 @@ func TestContrastRatio(t *testing.T) {
 		t.Fatalf("white/white contrast = %.2f, want 1", c)
 	}
 }
+
+// Exported for contrast_theme_test.go, which needs theme.All() and so lives in
+// package render_test (theme imports render).
+var (
+	MatchTextForTest = matchText
+	CurTextForTest   = curText
+	InkOfForTest     = inkOf
+	ContrastForTest  = contrast
+)
+
+func TestZeroMatchTokensFallBack(t *testing.T) {
+	x, y := hex(0x123456), hex(0x654321)
+	m, c, k := Palette{Selection: x, Cursor: y}.matchColors()
+	if m != x || c != y || k != y {
+		t.Fatalf("matchColors() = %v %v %v, want %v %v %v", m, c, k, x, y, y)
+	}
+	p := DefaultPalette()
+	if m, c, k := p.matchColors(); m != hex(0x3d3566) || c != hex(0xf2b84b) || k != hex(0x6457c0) {
+		t.Fatalf("Midnight matchColors() = %v %v %v", m, c, k)
+	}
+}

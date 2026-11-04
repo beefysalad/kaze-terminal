@@ -11,6 +11,25 @@ import (
 type Palette struct {
 	FG, BG, Cursor, Selection color.NRGBA
 	ANSI                      [16]color.NRGBA
+	// Find: a match's tint, the current match, and the scroll marks on the pane's edge.
+	Match, MatchCur, MatchMark color.NRGBA
+}
+
+// matchColors are the find colours; a palette without them (a test, a future
+// theme) falls back to the selection and cursor colours, so it still draws.
+func (p Palette) matchColors() (match, cur, mark color.NRGBA) {
+	match, cur, mark = p.Match, p.MatchCur, p.MatchMark
+	var zero color.NRGBA
+	if match == zero {
+		match = p.Selection
+	}
+	if cur == zero {
+		cur = p.Cursor
+	}
+	if mark == zero {
+		mark = p.Cursor
+	}
+	return match, cur, mark
 }
 
 func hex(v uint32) color.NRGBA {
@@ -30,6 +49,8 @@ func DefaultPalette() Palette {
 			hex(0x5d6273), hex(0xff8b92), hex(0x8be3b4), hex(0xffd27a),
 			hex(0xa9c7ff), hex(0xcdbfff), hex(0x95e6f0), hex(0xffffff),
 		},
+		// From the find mockup; its mark #5a4fb0 is 2.85:1 on BG, nudged to 3.3:1.
+		Match: hex(0x3d3566), MatchCur: hex(0xf2b84b), MatchMark: hex(0x6457c0),
 	}
 }
 
@@ -155,6 +176,26 @@ func readable(fg, bg, ink color.NRGBA) color.NRGBA {
 		}
 	}
 	return blend(fg, to, hi)
+}
+
+// matchText is readable for text on a find highlight. Text in the highlight's own
+// colour (yellow text on the yellow current match) is not hidden on purpose
+// there, so it starts from the ink instead of staying invisible.
+func matchText(fg, bg, ink color.NRGBA) color.NRGBA {
+	if fg == bg {
+		fg = ink
+	}
+	return readable(fg, bg, ink)
+}
+
+// curText is the text colour on the current find match: one solid colour for
+// every cell, as the mockup draws it, the theme's ink or white, whichever
+// contrasts more with the highlight.
+func curText(bg, ink color.NRGBA) color.NRGBA {
+	if white := hex(0xffffff); contrast(white, bg) > contrast(ink, bg) {
+		return white
+	}
+	return ink
 }
 
 // readableCached is readable memoized per (fg, bg), so the float math runs once per pair.
