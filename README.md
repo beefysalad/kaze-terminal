@@ -270,10 +270,19 @@ Sessions are listed down the left side, in place of a tab strip.
 Along the bottom, left to right: the folder and branch of the session in front (with its lines
 added and removed), then an **Update** pill when a newer kaze is out, the running subagents
 (amber when one waits on you), workspace dots with how many members are up, CPU and memory
-for Kaze and its sessions, Claude usage as small meters, and the tab count.
-Clicking the update, agents, workspace dots or Claude usage
-opens what they point at. In a narrow window the least important parts give way first: the tab
-count, then the resource label and meter, then other labels, so nothing overlaps.
+for Kaze and its sessions, Claude usage as small meters, the tab count and, on a laptop, the
+battery. Clicking the update, agents, workspace dots or Claude usage
+opens what they point at. In a narrow window the least important parts give way first: the
+battery, then the tab count, then the resource label and meter, then other labels, so nothing
+overlaps.
+
+**Battery (Windows only for now):** at the far right, a small battery that fills to the level and
+the percent. A green bolt shows while it charges below 100% (a full battery shows no bolt, even
+plugged in). It turns amber at 20% or less and red at 10% or less. A desktop shows nothing, and
+Kaze stops asking after the first check. Kaze hears about changes from Windows instead of polling;
+if that is not available it reads at most once a minute, only on frames that are drawn anyway.
+Nothing is read while the window is minimised, or in bench mode. It is not clickable and has no
+tooltip. macOS shows no battery yet (#139).
 
 Hover **CPU · memory** for **Kaze resource usage**: Kaze itself first, followed by
 session totals for its observable child processes, including shells, agents and
@@ -337,6 +346,11 @@ When Claude Code hands work to subagents (Explore, Plan, general-purpose or your
 Codex starts helpers, kaze shows what each one is doing. Hooks provide their state. While a Claude
 subagent's panel is shown, kaze also reads its transcript for live messages.
 
+Several agents of one type started together each keep their own name and task. When the order is
+in doubt, kaze matches each agent to its own prompt (the first message of its transcript, read at
+most 3 times and 64 KiB at a time, and only when two agents could be mixed up). A wrong early
+guess swaps; a name that has settled never moves.
+
 - **In the sidebar:** each session's subagents sit in a slim tray under its row, behind a thin
   tree line. Each agent is one line: its state mark, type, task and how long it has run. A dot
   inside a ring means running, an amber dot means it is waiting for your approval, a green dot
@@ -354,9 +368,19 @@ subagent's panel is shown, kaze also reads its transcript for live messages.
   between them to any height; Kaze remembers it (`agent_panel_height` in `config.toml`). Under
   the tab row, a line shows the state, type, task and time, an **Activity / Report** switch and,
   once done, **Copy report**; **Open in reader** sits at the right of the tab row. The prompt sits folded in one line; click it to read it all.
-  - **Activity** is a timeline: each tool step with its time, tool and target, and the agent's own
-    messages between them as notes. It follows new rows unless you scroll up. A waiting agent shows
-    what it wants to run; a finished one says "Finished in Nm · read the report".
+  - **Activity** reads like Claude Code's own transcript view. The agent's messages lead, with the
+    coral bar and their time. Each step is one sentence: a shell command uses Claude's own
+    description in the past tense ("Ran go vet and the ui tests") with **passed**, **failed · N
+    tests** or **done**; an edit says "Edited `<path>` +N −M"; a commit says "Committed "<subject>""
+    with its short hash. Runs of small steps fold ("Read 3 files", "Searched the code 4 times"),
+    and housekeeping tools such as ToolSearch, Monitor and TaskStop are left out. Click a step to
+    open its diff, or the command and the last lines of its output. It follows new rows unless you
+    scroll up. A waiting agent shows what it wants to run; a finished one says "Finished in Nm ·
+    read the report".
+  - **Readable | Every step:** the switch at the top of Activity. **Every step** shows the full
+    list, each tool step with its time, tool and target. The choice is for the whole window (the
+    panel and the board preview) and is not saved; Kaze starts in Readable. Codex helpers have no
+    transcript, so their steps come from the hook summaries.
   - **Report** shows the report as formatted markdown (bold, code, lists, headings, tables). The
     panel switches to it when the agent finishes, unless you picked a tab yourself. **Copy report**
     copies the original markdown.
@@ -384,7 +408,7 @@ subagent's panel is shown, kaze also reads its transcript for live messages.
     "✓ N finished ›"; "Hide finished" folds them back. A done row's × removes it, and **Clear**
     removes a session's finished agents.
   - **Preview:** click a row to see that agent on the right: its state, task and session, its
-    Activity timeline or its report, and **Open in session** (plus **Copy report** and **Open in
+    Activity (readable, as in the panel, with the same Readable | Every step switch) or its report, and **Open in session** (plus **Copy report** and **Open in
     reader** when done). The first agent waiting on you is picked when the board opens.
   - **Keys:** ↑/↓ move the selection, Enter or a double-click opens the agent in its session with
     its panel. In a narrow window there is no preview, and a click opens the agent in its session.

@@ -122,3 +122,21 @@ the scratch shell are gone. Alerts are cards at the bottom right.
 
 The headless renders in `docs/audits/dock-alerts-links/` are development evidence, not product
 captures. No product screenshot was fabricated or retouched.
+
+## 0.28 battery, readable agent activity and agent names
+
+- Retake `kaze-agents.png` and `kaze-board.png`: both show the old step list. The panel and the
+  board preview now read like Claude Code's own transcript (the agent's words first with the coral
+  bar, one sentence per step, folded reads and searches, a **Readable | Every step** switch). A good
+  take shows a running agent with a note, a folded "Read 3 files", a Bash step with "passed" or
+  "failed · 1 test", and ideally one Edit opened to its diff. Use a real Claude session (or demo
+  transcripts written in Claude's format); hook-only demo agents fall back to hook summaries and
+  won't show the readable view.
+- New, Windows only: a status bar shot with the battery at the far right. It needs a real Windows
+  laptop (desktops show nothing, and macOS shows nothing until #139). Charging (green bolt) and a low
+  state (amber at 20% or less) are both worth a take. Don't fake one with a fake battery source.
+- The existing status bar captures are macOS shots, so they stay true until #139 lands.
+
+The headless renders in `docs/audits/battery-activity-names/` (`battery-*.png` from a fake battery
+source, `activity-*.png` from fixture transcripts) are development evidence, not product captures.
+No product screenshot was fabricated or retouched.
