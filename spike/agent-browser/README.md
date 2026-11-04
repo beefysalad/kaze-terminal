@@ -40,14 +40,39 @@ The fixtures use deliberately fake cookies, console errors, and broken requests.
 The isolation test expects to demonstrate cross-session access through an
 unrestricted endpoint. A passing experiment is not a passing isolation design.
 
-## Windows gate
+## Run on Windows
 
-Windows has not been run. The Node runner has an executable override and a Windows
-launch path, but its `windowsHide` option does not prove Chrome stays unfocused.
-There is no Windows foreground-window monitor in this spike. Before a product
-plan can claim Windows feasibility, run the scenarios with installed Edge/Chrome
-and instrument foreground-window changes, background window creation, popup
-behavior, reconnect, and process cleanup on a Windows machine.
+Requires Node 22.12+, PowerShell 7 (`pwsh`) and an installed Edge or Chrome. Run from this directory
+(Git Bash syntax; nothing to compile, the helpers use `Add-Type` in memory):
+
+```sh
+PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 PUPPETEER_SKIP_DOWNLOAD=1 npm ci --ignore-scripts --no-audit --no-fund
+npm test
+npm run dryrun:win          # observer baseline and helper requests, no browser
+npm run probe > artifacts/windows-edge.log 2>&1                                   # Edge, default launch
+KAZE_SPIKE_LAUNCH=shownoactivate npm run probe > artifacts/windows-edge-sna.log 2>&1
+KAZE_SPIKE_CHROME=chrome npm run probe > artifacts/windows-chrome.log 2>&1
+```
+
+- `focus-monitor-win.ps1` is the Windows counterpart of `focus-monitor.m`: it only listens to
+  `EVENT_SYSTEM_FOREGROUND` and `EVENT_OBJECT_SHOW` (out of context) and prints JSON lines with the
+  window's PID, exe name and ancestor PIDs, plus a baseline line. It never activates anything or sends input.
+- `win-tools.ps1` launches the browser for the STARTUPINFO variants, lists this run's browser process tree
+  (memory) and windows, and finds browser processes whose command line names this run's profile root.
+- `KAZE_SPIKE_CHROME` is `edge` (Windows default), `chrome` or an executable path. `KAZE_SPIKE_LAUNCH` is
+  `node-default` (plain spawn, what Go's `os/exec` does; default), `node-hidden` (SW_HIDE),
+  `shownoactivate` or `showminnoactive` (CreateProcess with that show command). The report records both.
+- Phases: `--isolation`, `--mcp`, `--popup` (tab, popup window, popup without a gesture, `window.focus()`),
+  `--dialogs` (alert, confirm, prompt), `--download` (into the temporary profile) and `--memory` (one and
+  three instances). No flag runs all of them on Windows.
+- Activation events count only foreground changes to this run's browser PIDs or their descendants, and
+  are also split per scenario. The report adds window snapshots, per-instance memory, and a cleanup check
+  (no browser process with this run's profile root in its command line after `finally`).
+- Results go to `results/windows-x64.json` (Edge, default launch, all phases) or
+  `results/windows-x64-<browser>-<variant>[-<phases>].json`.
+
+Keep the terminal running the probe in front and do not click the test browser windows during a run: a
+click would count as an activation.
 
 ## Limits
 

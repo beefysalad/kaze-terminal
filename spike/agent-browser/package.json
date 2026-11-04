@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "test": "node --test protocol.test.mjs",
-    "probe": "node probe.mjs"
+    "probe": "node probe.mjs",
+    "dryrun:win": "node dryrun-win.mjs"
   },
   "dependencies": {
     "@playwright/mcp": "0.0.84",
