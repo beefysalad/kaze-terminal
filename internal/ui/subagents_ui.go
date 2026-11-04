@@ -164,6 +164,9 @@ func eventsOf(m notify.Msg, src int, now time.Time) []subagents.Event {
 	return append(out, e)
 }
 
+// firstPrompt reads a subagent transcript's prompt; tests count the reads.
+var firstPrompt = subagents.FirstPrompt
+
 // drainSubs applies the queued subagent events; UI goroutine only.
 func (win *window) drainSubs(now time.Time) {
 	for _, e := range win.subIn.take() {
@@ -178,7 +181,26 @@ func (win *window) drainSubs(now time.Time) {
 		}
 		win.subTabs[e.Tab], win.subTabs[e.Src] = true, true
 		win.subs.Apply(e)
+		if (e.Kind == subagents.EvTool || e.Kind == subagents.EvStop) && e.AgentID != "" {
+			// By its first step the agent has written its prompt (#135).
+			if k := (subagents.Key{Session: e.Session, ID: e.AgentID}); win.subs.PromptCheck(k) {
+				win.settlePairing(k)
+			}
+		}
 	}
+}
+
+// settlePairing settles a contested agent by the prompt its transcript starts
+// with. No transcript (Codex, or a main transcript kaze never learned) counts
+// as a miss, like an unreadable file; the tracker gives up after a few.
+func (win *window) settlePairing(k subagents.Key) {
+	path := win.agentTranscriptPath(win.subs.Get(k))
+	if path == "" {
+		win.subs.SettlePrompt(k, "")
+		return
+	}
+	p, _ := firstPrompt(path)
+	win.subs.SettlePrompt(k, p)
 }
 
 // subTimer is the next whole minute while a subagent runs, for the elapsed
