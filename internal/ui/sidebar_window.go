@@ -129,7 +129,7 @@ func (win *window) closeTab(id tabs.TabID) {
 		win.worktreeClosing(dir)
 	}
 	win.closeSessionDocs(id)
-	win.closeScratch(id)
+	win.closeSessionDock(id)
 	if a := win.mgr.Active(); a != nil && a.ID == id {
 		if next := win.afterClose(id); next != 0 {
 			win.mgr.SetActive(next)
@@ -152,7 +152,7 @@ func (win *window) afterClose(id tabs.TabID) tabs.TabID {
 		return order[0]
 	}
 	for _, t := range win.mgr.Tabs() {
-		if _, ok := win.isMember(t); ok && t.ID != id && t.Parent == 0 {
+		if _, ok := win.isMember(t); ok && t.ID != id {
 			return t.ID
 		}
 	}
@@ -225,13 +225,8 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 		}
 		s.st.doc = win.docs.shown
 		s.st.settings, s.st.settingsOn = win.set.open, win.set.shown
-		s.st.floating = 0
-		if set := win.fl.sets[win.paneOwner()]; set != nil {
-			if f := set.front(); f != nil && f.kind == paneMember {
-				s.st.floating = f.id
-			}
-		}
-		key := sideDrawKey{activeRepo: s.st.activeRepo, openAgent: s.st.openAgent, hoverAgent: s.st.hoverAgent, size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, floating: s.st.floating, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds, launchVersion: s.launch.version, launcher: s.launch.shown, renaming: s.renaming}
+		s.st.docked = win.shownMember()
+		key := sideDrawKey{activeRepo: s.st.activeRepo, openAgent: s.st.openAgent, hoverAgent: s.st.hoverAgent, size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, docked: s.st.docked, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds, launchVersion: s.launch.version, launcher: s.launch.shown, renaming: s.renaming}
 		if !s.cache.drawValid || s.cache.drawKey != key || s.reveal {
 			s.cache.ops.Reset()
 			cg := sg
@@ -673,12 +668,13 @@ func (win *window) sidePress(p image.Point, b pointer.Buttons, at time.Duration)
 	}
 }
 
-// clickRow is a click on a session row or a workspace member line: a member floats
-// over its session, a session is shown. It reports whether id was a session.
+// clickRow is a click on a session row or a workspace member line: a member
+// docks as a tab under its session (a second click hides it), a session is
+// shown. It reports whether id was a session.
 func (win *window) clickRow(id tabs.TabID) bool {
 	if t := win.mgr.Lookup(id); t != nil {
 		if _, member := win.isMember(t); member {
-			win.floatMember(id)
+			win.dockMember(id, true)
 			return false
 		}
 	}
@@ -710,11 +706,22 @@ func flip[K comparable](m map[K]bool, k K) {
 // nextWaiting shows the next session after the shown one that needs the owner,
 // wrapping; with none it only says so in the status bar.
 func (win *window) nextWaiting() {
-	order := win.sessionIDs()
-	from := -1
+	var shown tabs.TabID
 	if a := win.mgr.Active(); a != nil {
-		from = slices.Index(order, a.ID)
+		shown = a.ID
 	}
+	// With alert cards showing, the key opens the newest card's session, as
+	// the card's key caps say (issue #9). A card on the shown tab (a run
+	// summary, which visiting keeps) is skipped, so the key moves on.
+	for i := len(win.alerts.toasts) - 1; i >= 0; i-- {
+		if t := win.alerts.toasts[i].Tab; t != shown {
+			win.toastGo(t)
+			win.side.reveal = true
+			return
+		}
+	}
+	order := win.sessionIDs()
+	from := slices.Index(order, shown)
 	for i := 1; i <= len(order); i++ {
 		id := order[(from+i+len(order))%len(order)]
 		if win.alerts.markOf(id) == markNeeds {

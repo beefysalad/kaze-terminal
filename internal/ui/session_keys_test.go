@@ -9,13 +9,13 @@ import (
 )
 
 func TestMacSessionKeysThroughRouter(t *testing.T) {
-	for _, front := range []string{"terminal", "board", "settings", "scratch"} {
+	for _, front := range []string{"terminal", "board", "settings", "docked member"} {
 		t.Run(front, func(t *testing.T) {
 			win, _ := sideWindow(t, true)
 			win.km, _ = buildKeymap("darwin", nil)
 			win.binds, _ = resolveBindings("darwin", nil)
 			a, b, c := openIn(t, win, ""), openIn(t, win, ""), openIn(t, win, "")
-			openMember(t, win, "server")
+			m := openMember(t, win, "server")
 			win.mgr.SetActive(a.ID)
 			win.wantFocus = true
 			r := new(input.Router)
@@ -26,8 +26,8 @@ func TestMacSessionKeysThroughRouter(t *testing.T) {
 				win.openBoard(0)
 			case "settings":
 				win.openSettings()
-			case "scratch":
-				win.toggleScratch()
+			case "docked member":
+				win.dockMember(m.ID, false) // it has the keyboard; the keys still switch sessions
 			}
 			sideFrame(t, win, r)
 			sideFrame(t, win, r)
@@ -40,7 +40,7 @@ func TestMacSessionKeysThroughRouter(t *testing.T) {
 				t.Fatalf("Ctrl+Tab from %s: active %d, want %d", front, win.mgr.Active().ID, first)
 			}
 			// Start at a again and test both directions through the real router,
-			// including wraparound. Workspace members and scratch are skipped.
+			// including wraparound. Workspace members are skipped.
 			win.closeSettings()
 			win.selectSession(a.ID)
 			sideFrame(t, win, r)

@@ -4,7 +4,9 @@ import (
 	"github.com/patrick-gogo/kaze-terminal/internal/gitinfo"
 	"github.com/patrick-gogo/kaze-terminal/internal/mdoc"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"os"
 	"path/filepath"
+	"strings"
 )
 
 func (win *window) termFolder(t *tabs.Tab) string {
@@ -24,16 +26,13 @@ func (win *window) termFolder(t *tabs.Tab) string {
 	}
 	return win.home
 }
-func (win *window) docParent(t *tabs.Tab, inPane bool) tabs.TabID {
+func (win *window) docParent(t *tabs.Tab, docked bool) tabs.TabID {
 	if t == nil {
 		return 0
 	}
-	if t.Parent != 0 {
-		return t.Parent
-	}
 	if _, member := win.isMember(t); member {
-		if inPane {
-			return win.paneOwner()
+		if docked {
+			return win.dockOwner() // a docked member's docs belong to the session it is docked under
 		}
 		if ids := win.sessionIDs(); len(ids) > 0 {
 			return ids[0]
@@ -42,20 +41,70 @@ func (win *window) docParent(t *tabs.Tab, inPane bool) tabs.TabID {
 	}
 	return t.ID
 }
-func (win *window) openDocRef(t *tabs.Tab, inPane bool, ref string) {
-	id := win.docParent(t, inPane)
+func (win *window) openDocRef(t *tabs.Tab, docked bool, ref string) {
+	win.openDocRefs(t, docked, []string{ref})
+}
+
+// openDocRefs opens the first of refs (best first, see render.Links.RefsAt) that
+// is a file. Absolute refs are tried first, in order, then relative ones against
+// the session folder and its git top, so a folder printed earlier on the line
+// wins over a same-named file in the session folder. A miss names the folder of
+// the last absolute ref tried that reads as one (see noteFolder), else the
+// session folder.
+func (win *window) openDocRefs(t *tabs.Tab, docked bool, refs []string) {
+	if len(refs) == 0 {
+		return
+	}
+	name := filepath.Base(filepath.FromSlash(refs[0]))
+	id := win.docParent(t, docked)
 	if id == 0 {
-		win.note("Open a session to read " + filepath.Base(ref))
+		win.note(cleanText("Open a session to read " + name))
 		return
 	}
 	top := gitinfo.Top
 	if win.topFn != nil {
 		top = win.topFn
 	}
-	p, e := mdoc.Resolve(ref, mdoc.Roots{Dir: win.termFolder(t), Home: win.home, Top: top})
-	if e != nil {
-		win.note("Can't find " + ref)
-		return
+	dir := win.termFolder(t)
+	roots := mdoc.Roots{Dir: dir, Home: win.home, Top: top}
+	where := ""
+	for _, abs := range []bool{true, false} {
+		for _, ref := range refs {
+			full, isAbs := win.absRef(ref)
+			if isAbs != abs {
+				continue
+			}
+			if abs && noteFolder(full) {
+				where = filepath.Dir(full)
+			}
+			if p, e := mdoc.Resolve(ref, roots); e == nil {
+				win.openDoc(id, p)
+				return
+			}
+		}
 	}
-	win.openDoc(id, p)
+	if where == "" {
+		where = dir
+	}
+	win.note(cleanText("Can't find " + name + " in " + tildeHome(where, win.home)))
+}
+
+// noteFolder reports whether full's folder can name a miss: a path without
+// spaces, or one whose folder exists. "/tmp then edit docs/notes.md" is a
+// command line, not a folder.
+func noteFolder(full string) bool {
+	if !strings.Contains(full, " ") {
+		return true
+	}
+	fi, err := os.Stat(filepath.Dir(full))
+	return err == nil && fi.IsDir()
+}
+
+// absRef is ref as a full path, with ~ expanded, and whether it is absolute.
+func (win *window) absRef(ref string) (string, bool) {
+	ref = filepath.FromSlash(ref)
+	if win.home != "" && (strings.HasPrefix(ref, "~/") || strings.HasPrefix(ref, `~\`)) {
+		return filepath.Join(win.home, ref[2:]), true
+	}
+	return ref, filepath.IsAbs(ref)
 }

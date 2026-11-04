@@ -237,11 +237,11 @@ func TestBoardCardOpensPane(t *testing.T) {
 }
 
 func TestBoardCardOpensDock(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	k := startAgent(win, a.ID, "s", "x")
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	win.openBoard(a.ID)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	h := mustRow(t, win, "x")
 	clickAt(t, win, r, centre(h.rect))
 	if s := win.dockOf(a.ID); s == nil || s.agent != k {

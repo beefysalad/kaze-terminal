@@ -10,18 +10,13 @@ import (
 	"github.com/patrick-gogo/kaze-terminal/internal/branchsession"
 )
 
-func TestWorktreeOpenIncludesScratchAndWorkspaceFolders(t *testing.T) {
+func TestWorktreeOpenIncludesWorkspaceFolders(t *testing.T) {
 	win, _ := sideWindow(t, true)
 	root := filepath.Join(t.TempDir(), "repo-task")
 	tab := openIn(t, win, filepath.Join(root, "src"))
 	if !win.worktreeOpen(root) {
 		t.Fatal("nested cwd not counted")
 	}
-	tab.Parent = 123
-	if !win.worktreeOpen(root) {
-		t.Fatal("scratch ignored")
-	}
-	tab.Parent = 0
 	openMember(t, win, "server")
 	win.mgr.Close(tab.ID)
 	member := win.mgr.Tabs()[0]

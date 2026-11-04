@@ -117,15 +117,15 @@ func TestBoardSlashFocusesSearch(t *testing.T) {
 }
 
 func TestBoardSlashTypesInSearch(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	startAgent(win, a.ID, "s", "x")
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	win.openBoard(0)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	win.boardKey(keyPress("/"))
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	r.Queue(key.EditEvent{Text: "/"})
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if win.board.ed.Text() != "/" || !win.board.searching {
 		t.Fatalf("text %q searching %v", win.board.ed.Text(), win.board.searching)
 	}
@@ -157,16 +157,16 @@ func TestBoardEscClearsSearchFirst(t *testing.T) {
 }
 
 func TestBoardSearchSubmitKeepsText(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	startAgent(win, a.ID, "s", "x")
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	win.openBoard(0)
 	win.boardKey(keyPress("/"))
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	r.Queue(key.EditEvent{Text: "ex"})
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	r.Queue(key.Event{Name: key.NameReturn, State: key.Press})
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if win.board.ed.Text() != "ex" || win.board.searching || !win.board.open {
 		t.Fatalf("text %q searching %v open %v", win.board.ed.Text(), win.board.searching, win.board.open)
 	}
@@ -216,12 +216,12 @@ func TestBoardTokenDropsWithSession(t *testing.T) {
 }
 
 func TestBoardHoverRedrawsOnlyOnChange(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	startAgent(win, a.ID, "s", "x")
 	startAgent(win, a.ID, "s", "y")
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	win.openBoard(0)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	x, y := mustRow(t, win, "x").rect, mustRow(t, win, "y").rect
 	win.board.redraws = 0
 	move := func(p image.Point) {
@@ -255,13 +255,13 @@ func TestBoardPressElsewhereLeavesSearch(t *testing.T) {
 // keyboard back to the board: the field still reports focus in that frame, but
 // only a newly focused field counts as a click into it.
 func TestBoardChipLeavesSearch(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	startAgents(win, a.ID, 12)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	win.openBoard(a.ID)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	win.boardKey(keyPress("/"))
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if !win.board.searching || !r.Source().Focused(&win.board.ed) {
 		t.Fatalf("fixture: searching %v", win.board.searching)
 	}
@@ -270,13 +270,13 @@ func TestBoardChipLeavesSearch(t *testing.T) {
 		t.Fatalf("chips %v", chips)
 	}
 	sideClickAt(win, r, centre(chips[0].rect), pointer.ButtonPrimary, 0)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if win.board.searching || win.focusTarget() != &win.board.tag || r.Source().Focused(&win.board.ed) {
 		t.Fatalf("after the chip: searching %v, field focused %v", win.board.searching, r.Source().Focused(&win.board.ed))
 	}
 	// A click straight into the field still gives it the keyboard.
 	win.boardKey(keyPress("/"))
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if !win.board.searching || !r.Source().Focused(&win.board.ed) {
 		t.Fatalf("/ after the chip: searching %v", win.board.searching)
 	}

@@ -278,8 +278,8 @@ func TestReadyTabsGetExactlyTheirLineOnce(t *testing.T) {
 		}
 	}
 	tst := f.runToast()
-	if got := tst.Title + tst.Text; got != "samurai: started 4 of 4 tabs" {
-		t.Fatalf("summary %q", got)
+	if got := tst.Title + tst.Text; got != "samurai: started 4 of 4 tabs" || tst.Agent != "workspace" {
+		t.Fatalf("summary %q agent %q", got, tst.Agent)
 	}
 	run := f.theRun()
 	if label, needs := f.win.runState(run.id); label != "Running" || needs {
@@ -1021,15 +1021,15 @@ func TestServerDotsClickShowsTheDownMember(t *testing.T) {
 		sideFrame(t, win, &r)
 		sideFrame(t, win, &r)
 	}
-	// Spec 7: the member floats over the session rather than replacing it.
+	// The member docks as a tab under the session rather than replacing it (#133).
 	click()
-	if win.mgr.Active().ID != a.ID || win.fl.owner(m2.ID) != a.ID {
-		t.Fatalf("click: active %d, m2 floats over %d; want the down member %d over %d", win.mgr.Active().ID, win.fl.owner(m2.ID), m2.ID, a.ID)
+	if win.mgr.Active().ID != a.ID || win.memberDeck(m2.ID) != a.ID {
+		t.Fatalf("click: active %d, m2 docked in %d; want the down member %d in %d", win.mgr.Active().ID, win.memberDeck(m2.ID), m2.ID, a.ID)
 	}
 	run.members[1].run = workspaces.TabRun{Line: "x", State: workspaces.Launched}
 	click()
-	if win.fl.owner(m1.ID) != a.ID {
-		t.Fatalf("m1 floats over %d, want the first member over %d when none is down", win.fl.owner(m1.ID), a.ID)
+	if win.memberDeck(m1.ID) != a.ID {
+		t.Fatalf("m1 docked in %d, want the first member in %d when none is down", win.memberDeck(m1.ID), a.ID)
 	}
 }
 

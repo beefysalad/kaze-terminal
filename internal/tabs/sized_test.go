@@ -8,21 +8,6 @@ import (
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 )
 
-func TestParentTabIsNotMadeActive(t *testing.T) {
-	m, _ := newManager(t)
-	a := mustNew(t, m)
-	s, err := m.NewOpts(tabs.StartOpts{Parent: a.ID})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := m.Active(); got == nil || got.ID != a.ID {
-		t.Fatalf("active %v, want the session %d", got, a.ID)
-	}
-	if s.Parent != a.ID || a.Parent != 0 {
-		t.Fatalf("parents %d %d", s.Parent, a.Parent)
-	}
-}
-
 func TestTabKeepsItsStartFolder(t *testing.T) {
 	m, _ := newManager(t)
 	d, err := m.NewOpts(tabs.StartOpts{Dir: `C:\x`})
@@ -76,7 +61,7 @@ func TestResizeTabIsSkippedByResizeAll(t *testing.T) {
 	m.ResizeTab(b.ID, 40, 10)
 	m.ResizeAll(100, 30)
 	if got := st.fakes[1].lastSize(); got != [2]int{40, 10} {
-		t.Fatalf("pane pty %v, want [40 10]", got)
+		t.Fatalf("sized pty %v, want [40 10]", got)
 	}
 	if got := st.fakes[0].lastSize(); got != [2]int{100, 30} {
 		t.Fatalf("session pty %v, want [100 30]", got)

@@ -49,7 +49,7 @@ type sideState struct {
 	ren           *widget.Editor  // the rename editor
 	static        bool            // editors are drawn live over the retained chrome
 	runFolded     map[uint64]bool // workspace runs whose header is folded
-	floating      tabs.TabID      // the front member pane over the shown session, highlighted like shown
+	docked        tabs.TabID      // the member tab the shown panel draws, highlighted like shown
 }
 
 type sideRowHit struct {
@@ -648,7 +648,7 @@ func (c *chrome) sideRuns(gtx layout.Context, h *sideHits, m sideModel, st sideS
 				hidden++
 				continue
 			}
-			on := mem.ID != 0 && (mem.ID == st.shown || mem.ID == st.floating) && !st.settingsOn
+			on := mem.ID != 0 && (mem.ID == st.shown || mem.ID == st.docked) && !st.settingsOn
 			if on {
 				paint.FillShape(ops, th.Active, clip.UniformRRect(r, gtx.Dp(6)).Op(ops))
 			}

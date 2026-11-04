@@ -147,7 +147,7 @@ func TestAgentLineUnderActiveRowClosesTheBoard(t *testing.T) {
 	win.openBoard(0)
 	win.showAgent(id, subagents.Key{Session: "s", ID: "run"}, false)
 	if win.board.open {
-		t.Fatal("the pane opened behind the board")
+		t.Fatal("the panel opened behind the board")
 	}
 }
 

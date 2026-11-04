@@ -53,7 +53,7 @@ func TestBoardRenders(t *testing.T) {
 	}
 	for _, key := range []string{"sumi", "midnight"} {
 		for _, state := range []string{"all", "done", "search", "empty", "narrow"} {
-			win, _, r, a, b, _, _ := paneWindow(t)
+			win, _, r, a, b, _, _ := memberWindow(t)
 			win.km, _ = buildKeymap(runtime.GOOS, nil)
 			win.binds, _ = resolveBindings(runtime.GOOS, nil)
 			th, ok := theme.ByKey(key)
@@ -66,7 +66,7 @@ func TestBoardRenders(t *testing.T) {
 				xState = "report"
 			}
 			k := boardScene(t, win, a.ID, b.ID, xState)
-			floatFrames(t, win, r)
+			twoFrames(t, win, r)
 			size := image.Pt(1400, 860)
 			switch state {
 			case "all", "narrow":

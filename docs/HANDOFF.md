@@ -1,8 +1,39 @@
 # kaze handoff
 
-Last updated: 2026-11-03, release 0.26 (agents board redesign and sidebar follow-ups, PR #131). Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-04, dock tabs, alert cards and path links built on `feat/dock-alerts-links` (release 0.27 next). Read this first when you pick up kaze on another machine.
 
 ## Where things stand
+
+**Dock tabs, alert cards and path links (2026-11-04) are built on `feat/dock-alerts-links`, not yet
+released. Release 0.27 is next** (version bump and changelog in their own PR). Three issues in one
+bundle, built in three worktree lanes (L, A, D) from `docs/superpowers/plans/2026-11-04-kaze-dock-alerts-links.md`:
+
+- **#133 dock tabs:** workspace members open as tabs in the panel docked under the terminal, the
+  same panel as subagents. One panel per session, one tab shown, shared height, up to 6 tabs (a
+  seventh replaces the oldest not showing), × closes a tab (the member keeps running), Hide folds
+  the panel, Expand makes a member the main view. A click on a member tab gives it the keyboard,
+  with a 2 dp accent line; a click on the terminal takes it back. Sidebar Workspaces rows, status bar
+  server dots and the palette all open members as tabs. **The scratch shell and the floating panes
+  are removed** (`scratch.go`, `panes*.go`, `win.fl`, `Tab.Parent`, the title bar button); an old
+  `scratch_shell` line under `[keys]` is ignored with a warning.
+- **#9 alert cards:** cards at the bottom right above the status bar (above the dock panel when it
+  shows), newest nearest the corner, at most 3, one per session. Mark with a `!` or `✓` badge, branch
+  and slash command, the sidebar row name as title (fixes "zsh needs you"), two lines (needs:
+  Claude's message; done: the start of Claude's last reply), a status line ("Needs your permission",
+  "Waiting for your answer", "Done · ran 6m 40s"), "Open session". Ctrl+Shift+J / Cmd+J opens the
+  newest card's session. × closes a card and keeps the dot; done cards hide after `done_toast`.
+- **#128 path links:** `.md` links stay whole across single spaces ("Patrick Obsidian") and when the
+  folder was printed earlier on the line; quoted paths are taken whole. A click tries the longest
+  candidate that exists; a miss says "Can't find X in <folder>". OSC 8 is still out of scope.
+- **Frame timing** (headless 1000×600, Windows): no panel about 114-128 µs and 56 allocations, agent
+  tab 188-198 µs and 86, member tab 117-142 µs and 63; the old floating pane was about 131 µs and 70.
+
+Audit with tests, numbers, captures and rulings: `docs/audits/2026-11-04-dock-alerts-links.md`.
+README and lander are updated (no "What's new" or changelog yet: the release PR does that).
+`kaze-sessions.png` still shows a floating pane and must be retaken; `kaze-scratch.png` was removed
+(`docs/site-assets/SCREENSHOTS.md`). Owner checks: a member tab with a real server, typing into it
+and taking the keyboard back, the cards with real Claude alerts, and Ctrl+click on a spaced path, on
+Windows and the Mac.
 
 **Release 0.26 ships PR #131: the agents board redesign (filters with counts, search, session token,
 pinned Needs you card, per-session cards with a state meter, finished-agent folds, a preview pane with
@@ -88,7 +119,7 @@ The owner approved the project-header design on 2026-11-03 after reviewing its
 localhost mockup. The selected main session's common repository gets a soft
 accent-tinted header, accent name/arrow and retained count or amber waiting count.
 Context stays through Settings, documents, folded/filtered views and focused
-floating panes; empty/plain-no-repo sessions highlight no group. The draw cache
+floating panes (docked member tabs since 0.27); empty/plain-no-repo sessions highlight no group. The draw cache
 includes the repo key; selection changes do not rebuild the model and unchanged
 sidebar drawing still allocates zero times. Name/count/waiting text contrast is
 at least 4.5:1 across all five themes, with local contrast adjustments on the tint.
@@ -125,7 +156,7 @@ alias, not kitty keyboard protocol support; programs use their own bindings for
 that sequence. Plain Enter and Ctrl/Cmd combinations keep their existing behavior,
 and configured Kaze actions take precedence. Regression tests cover both platform
 encoders, shortcut overrides, and delivery to the focused main terminal or floating
-pane. The new tests failed before the fix and pass afterward. Full `go test ./...`,
+pane (a docked member tab since 0.27). The new tests failed before the fix and pass afterward. Full `go test ./...`,
 `go vet ./...`, native macOS build and Windows amd64 cross-build pass. README
 shortcuts are updated. Native installed-app checks remain open. The owner
 explicitly requested no release and will bundle this with later issues.
@@ -204,7 +235,7 @@ handles; unknown/reused PIDs cannot retain a closed session's row. Native Window
 **Resource usage (#92) is implemented locally** after owner approval of the
 mockup and plan. The status group shows whole-machine CPU share and summed
 process memory for Kaze plus observed descendants. Hover shows Kaze and session
-rows, core count, units, scope and unavailable readings; scratch shells count
+rows, core count, units, scope and unavailable readings; scratch shells (removed in 0.27) counted
 under their parent and workspace members have stable independent rows. Collection
 runs off the UI thread, at most every 2 s on activity, without a new timer, and
 pauses while minimized. No GPU measurement. macOS CPU Mach tick conversion is
@@ -247,7 +278,7 @@ existing attachment now owns a window-scoped local key monitor that forwards onl
 those combinations to Gio's normal key path, once, retaining configured actions.
 It detaches with the view/window. The native regression uses hidden, unfocused
 windows and no global input; router tests cover both directions, wraparound,
-workspace/scratch exclusion, Settings/board and overrides. Native CI runs the probe.
+workspace/scratch exclusion (no scratch shell since 0.27), Settings/board and overrides. Native CI runs the probe.
 
 **Agent browser feasibility (issue #30) has macOS results**, with the report at
 `docs/audits/2026-11-01-agent-browser-feasibility.md` and reproducible scripts plus
@@ -276,8 +307,8 @@ Default-on `restore_sessions` has a Startup toggle in Settings > Workspaces, eve
 there are no workspaces or their file is broken. `internal/sessionstate` saves bounded,
 versioned metadata beside config.toml, with atomic replacement, an OS lifetime lock,
 coalesced event-driven writes and a final pre-teardown flush. Background cwd and
-origin-terminal hooks update it while minimized; scratch hooks cannot replace the
-main identity. Restore maps names/order/selection and workspace grouping to fresh tabs,
+origin-terminal hooks update it while minimized; scratch hooks could not replace the
+main identity (the scratch shell is gone since 0.27). Restore maps names/order/selection and workspace grouping to fresh tabs,
 queues exact UUID resume commands after shell readiness, and never replays prompts or
 workspace recipes. Explicit --workspace wins; otherwise restoration precedes the
 startup workspace. Ordinary extra instances neither restore nor write the owner snapshot.
@@ -372,6 +403,7 @@ setup notes are historical; use the current status above and Next below for work
 
 **Plan 6d (floating panes and the scratch shell) is built** on `feat/floating-panes` (plan `docs/superpowers/plans/2026-10-30-kaze-plan-6d-floating-panes.md`, spec sections 7, 8, 11). Version 0.10:
 
+- **Replaced in 0.27:** dock tabs (#133, `feat/dock-alerts-links`) took the place of the floating panes and the scratch shell; `panes*.go`, `scratch.go` and `Tab.Parent` are deleted.
 - **Floating panes** (`internal/ui/panes*.go`): a workspace member opens over the shown session from its sidebar line, the server dots or the palette (`floatMember`). Drag the header, resize from edges and corners (6 dp bands, 14 dp corners, 280x140 dp minimum), click to raise and take the keyboard, Expand to make it the main view, × to hide it (the member keeps running). Up to 4 panes per session, the oldest member replaced first; one session at a time per member. Geometry is kept in dp relative to the terminal area and fitted to it every frame.
 - **Own renderer and size per pane:** each visible pane has its own `render.Renderer` (a renderer keeps one tab's strips and dirty rows) and its own PTY size (`tabs.Manager.ResizeTab`, `Dock`; `ResizeAll` skips floated tabs). `SetVisible` makes a pane's output ask for frames. Hidden panes and other sessions' panes cost nothing.
 - **Input through views** (`termView`): the session and every pane use the same key, paste, mouse and selection code. Esc goes to the program in a pane. Focus reports move with the keyboard.
@@ -515,6 +547,8 @@ setup/checklist is historical; unresolved platform checks are listed above.
 - `font_family` is accepted but not supported yet (kaze warns).
 - Glyph cache is safe only with one window / one UI goroutine (add a mutex before multi-window).
 - Closing a tab whose ConPTY close times out can keep that screen in memory until ConPTY lets go.
+- Links set with OSC 8 (hidden link targets) are not read (#128 item 3; needs its own design).
+- Accepted link false positive (Ruling 21 of the 0.27 plan): in "cd /tmp then edit docs/notes.md" the underline starts at `/tmp`; the click still opens `docs/notes.md` through the shorter candidates.
 - Smaller items: the full later-fix backlog is below, and every "minor (deferred)" line is in `docs/history/plan-1-ledger.md`.
 
 ## Where kaze came from

@@ -19,6 +19,7 @@ const (
 	stdinWait      = 300 * time.Millisecond
 	notifyTotal    = time.Second // Claude Code waits on its hooks, so never take longer
 	reasonMaxRunes = 120
+	doneMaxRunes   = 160 // the start of Claude's last reply on a done alert's card
 )
 
 // codexSpawn is Codex's tool that starts a helper; codexDefaultRole is the
@@ -120,6 +121,9 @@ func runNotifyOutput(args []string, stdin io.Reader, env func(string) string, st
 				return 0
 			}
 			msg.Reason = trimRunes(hook.Message, reasonMaxRunes)
+			if kind == notify.KindDone && hook.Message == "" {
+				msg.Reason = replyStart(hook.Last, doneMaxRunes)
+			}
 		}
 	} else if kind == notify.KindTool || kind == notify.KindAgentStart || kind == notify.KindAgentStop {
 		return 0
@@ -188,6 +192,31 @@ func readStdinLimited(r io.Reader, wait time.Duration) []byte {
 	mu.Lock()
 	defer mu.Unlock()
 	return append([]byte(nil), buf...)
+}
+
+// replyStart is the plain start of a reply for a card: markdown marks dropped
+// (bold, italic and code marks anywhere, a heading's #s before a space, a
+// quote or list mark at the start of a line), every whitespace run one space,
+// at most n runes.
+func replyStart(s string, n int) string {
+	s = trimRunes(s, 4*n+64) // the card shows n runes; a long reply costs no more
+	var b strings.Builder
+	for _, line := range strings.Split(s, "\n") {
+		line = strings.TrimSpace(line)
+		if h := strings.TrimLeft(line, "#"); h != line && (h == "" || h[0] == ' ' || h[0] == '\t') {
+			line = strings.TrimSpace(h) // a heading's marks, not "#123"
+		}
+		for _, m := range []string{"> ", "- ", "* "} {
+			if strings.HasPrefix(line+" ", m) {
+				line = line[min(len(m), len(line)):]
+				break
+			}
+		}
+		b.WriteString(line)
+		b.WriteByte(' ')
+	}
+	s = strings.NewReplacer("**", "", "__", "", "`", "").Replace(b.String())
+	return trimRunes(strings.Join(strings.Fields(s), " "), n)
 }
 
 func trimRunes(s string, n int) string {

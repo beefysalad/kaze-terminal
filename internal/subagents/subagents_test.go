@@ -228,22 +228,24 @@ func TestNewSessionResets(t *testing.T) {
 	}
 }
 
-func TestScratchSessionKeptApart(t *testing.T) {
+// Session resets are kept per source tab: a new session from another source
+// on the same row resets only that source's agents.
+func TestSessionResetKeyedBySourceTab(t *testing.T) {
 	var tr Tracker
 	main := ev(EvSession, "", "")
 	tr.Apply(main)
 	tr.Apply(ev(EvStart, "a1", "Explore"))
-	scratch := Event{Kind: EvSession, Tab: 1, Src: 9, Session: "x1", At: t0}
-	tr.Apply(scratch)
+	other := Event{Kind: EvSession, Tab: 1, Src: 9, Session: "x1", At: t0}
+	tr.Apply(other)
 	tr.Apply(Event{Kind: EvStart, Tab: 1, Src: 9, Session: "x1", AgentID: "b1", AgentType: "Plan", At: t0})
-	scratch.Session = "x2"
-	tr.Apply(scratch)
+	other.Session = "x2"
+	tr.Apply(other)
 	if tr.Get(Key{"s1", "a1"}) == nil || tr.Get(Key{"x1", "b1"}) != nil {
-		t.Fatal("the scratch shell's new session must reset only its own agents")
+		t.Fatal("the other source's new session must reset only its own agents")
 	}
 	tr.Apply(main) // the main session again: not new
 	if tr.Get(Key{"s1", "a1"}) == nil {
-		t.Fatal("main reset by the scratch shell's session")
+		t.Fatal("main reset by the other source's session")
 	}
 }
 
@@ -320,7 +322,7 @@ func TestCloseTab(t *testing.T) {
 	if tr.Get(Key{"s1", "a1"}) != nil || tr.Active(0) != 2 {
 		t.Fatal("tab 1 not closed")
 	}
-	tr.CloseTab(5) // the scratch shell closes alone
+	tr.CloseTab(5) // another source tab closes alone
 	if tr.Get(Key{"s5", "c1"}) != nil || tr.Get(Key{"s2", "b1"}) == nil {
 		t.Fatal("closing a source tab")
 	}

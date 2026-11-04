@@ -18,12 +18,11 @@ const (
 	capMinimize
 	capMaximize // shows "restore" when maximized
 	capClose
-	capGear    // opens settings; sits left of minimize, outside Buttons
-	capToggle  // shows or hides the sidebar; at the bar's left end
-	capSearch  // opens the palette; centred between the mark and the gear
-	capScratch // shows or hides the session's scratch shell; left of the gear
-	capPlus    // opens a new session; at the lead strip's right end
-	capAgents  // opens or closes the agents board; left of the gear
+	capGear   // opens settings; sits left of minimize, outside Buttons
+	capToggle // shows or hides the sidebar; at the bar's left end
+	capSearch // opens the palette; centred between the mark and the gear
+	capPlus   // opens a new session; at the lead strip's right end
+	capAgents // opens or closes the agents board; left of the gear
 )
 
 // captionState tracks hover/press for the caption buttons across pointer events.
@@ -103,7 +102,7 @@ type titleLayout struct {
 	Search             image.Rectangle
 	SearchIconOnly     bool // the compact search: an icon, and the key cap when SearchKey
 	SearchKey          bool
-	Scratch, Agents    image.Rectangle
+	Agents             image.Rectangle
 	Gear               image.Rectangle
 	Buttons            [3]image.Rectangle // Windows only: minimize, maximize, close
 	Drag               []image.Rectangle  // empty bar space, the crumb included
@@ -178,7 +177,7 @@ func layoutTitle(in titleIn) titleLayout {
 		l.Lead = image.Rect(0, 0, l.Toggle.Max.X+d.LeadPad, h)
 	}
 
-	// Right: the window buttons, then gear, agents and scratch, right to left.
+	// Right: the window buttons, then gear and agents, right to left.
 	r := in.Size.X
 	if !in.Mac {
 		for i := range l.Buttons {
@@ -190,10 +189,9 @@ func layoutTitle(in titleIn) titleLayout {
 	r -= d.LeadPad
 	l.Gear = btn(r - d.Btn)
 	l.Agents = btn(l.Gear.Min.X - 2 - d.Btn)
-	l.Scratch = btn(l.Agents.Min.X - 2 - d.Btn)
 
 	// The middle: the crumb and the search field share what is left.
-	lo, hi := l.Lead.Max.X+d.Pad, l.Scratch.Min.X-d.Gap
+	lo, hi := l.Lead.Max.X+d.Pad, l.Agents.Min.X-d.Gap
 	avail := max(hi-lo, 0)
 	keyW := in.Measure(in.Key, true) + 2*d.KeyPad
 	iconKey := d.Btn + keyW
@@ -231,7 +229,7 @@ func layoutTitle(in titleIn) titleLayout {
 	}
 
 	// Drag: every full-height gap between the controls, minus the traffic lights.
-	cols := []image.Rectangle{l.Toggle, l.Plus, l.Search, l.Scratch, l.Agents, l.Gear, l.Buttons[0], l.Buttons[1], l.Buttons[2]}
+	cols := []image.Rectangle{l.Toggle, l.Plus, l.Search, l.Agents, l.Gear, l.Buttons[0], l.Buttons[1], l.Buttons[2]}
 	from := 0
 	if in.Mac {
 		from = in.LightsW
@@ -260,7 +258,7 @@ func (l titleLayout) at(p image.Point) captionButton {
 		c captionButton
 		r image.Rectangle
 	}{
-		{capToggle, l.Toggle}, {capPlus, l.Plus}, {capSearch, l.Search}, {capScratch, l.Scratch},
+		{capToggle, l.Toggle}, {capPlus, l.Plus}, {capSearch, l.Search},
 		{capAgents, l.Agents}, {capGear, l.Gear},
 		{capMinimize, l.Buttons[0]}, {capMaximize, l.Buttons[1]}, {capClose, l.Buttons[2]},
 	} {

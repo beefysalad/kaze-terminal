@@ -151,9 +151,8 @@ and flags, and colour emoji on Linux.
 | Next session | Ctrl+Tab | Ctrl+Tab |
 | Previous session | Ctrl+Shift+Tab | Ctrl+Shift+Tab |
 | Hide or show the sidebar | Ctrl+Shift+B | Cmd+B |
-| Jump to the next session that needs you | Ctrl+Shift+J | Cmd+J |
+| Jump to the newest alert card, or the next session that needs you | Ctrl+Shift+J | Cmd+J |
 | Open the palette | Ctrl+Shift+K | Cmd+K |
-| Show or hide the scratch shell | Ctrl+Shift+` | Ctrl+` |
 | Show or hide the agents board | Ctrl+Shift+A | Cmd+Shift+A |
 | Copy the selection | Ctrl+C (with a selection) or Ctrl+Shift+C | Cmd+C |
 | Paste | Ctrl+V or Ctrl+Shift+V | Cmd+V |
@@ -165,8 +164,8 @@ button or your configured shortcut. Settings and Workspaces stay available. Exit
 plain shell shows the same empty state; stopped workspace members keep their output.
 Use the window close button or the system Quit command to exit Kaze.
 
-Session switching follows sidebar order, skips workspace members and scratch shells, and works
-from a focused floating terminal too. If a busy terminal cannot accept more input, Kaze shows
+Session switching follows sidebar order, skips workspace members, and works while a docked
+member has the keyboard too. If a busy terminal cannot accept more input, Kaze shows
 "Input not sent"; wait for it to respond before trying again.
 
 Pasting with an image on the clipboard (a screenshot, say) puts it into Claude Code or Codex:
@@ -180,7 +179,7 @@ pastes, so it can no longer send a literal Ctrl+V to a program (such as Vim's bl
 the clipboard holds both text and an image, the text is pasted. On macOS, plain Ctrl+C always goes to the shell. Shift+Enter sends the same sequence as
 Alt+Enter (Option+Enter on macOS), adding a new line in Claude Code while plain Enter submits.
 Other terminal programs handle that sequence according to their own keybindings. The session, copy,
-paste, sidebar, next-waiting, palette, scratch shell, agents board and settings shortcuts can be changed under `[keys]` in the
+paste, sidebar, next-waiting, palette, agents board and settings shortcuts can be changed under `[keys]` in the
 config. Settings, Shortcuts lists every shortcut as this machine has it.
 
 ## Mouse
@@ -207,7 +206,7 @@ Sessions are listed down the left side, in place of a tab strip.
   same repo. The project you are in is marked by a thin accent rail down the left edge, from its
   header to its last row and agent tray, with its name in bold, alongside the selected session's
   highlight. That project context stays visible
-  in Settings, documents and floating panes. Groups start open. Click a header to fold or unfold
+  in Settings, documents and while a docked member has the keyboard. Groups start open. Click a header to fold or unfold
   it. A folded header shows an amber "N waiting" when a session in it needs you.
 - **Rows:** two lines: state dot, agent logo and name with status on the right;
   branch and `+N −M` below. Linked worktrees show their folder and branch unless
@@ -249,11 +248,11 @@ Sessions are listed down the left side, in place of a tab strip.
   Keep skips the pending check. The final window stays open until answered.
   Merged worktrees with commits made since creation show a quiet cleanup line
   under their repo. Removal always asks, uses plain `git worktree remove`,
-  preserves branches, and reports folders Git refused. Scratch shells and
-  workspace members count as open terminals. There is no recurring cleanup timer.
-- **Next waiting:** Cmd+J / Ctrl+Shift+J and its palette action still jump to the
-  next session that needs you, wrapping around. With none, the status bar says
-  "Nothing is waiting on you."
+  preserves branches, and reports folders Git refused. Workspace members count
+  as open terminals. There is no recurring cleanup timer.
+- **Next waiting:** Cmd+J / Ctrl+Shift+J and its palette action open the newest alert
+  card's session while cards are showing. Without cards they jump to the next session
+  that needs you, wrapping around. With none, the status bar says "Nothing is waiting on you."
 - **Workspaces:** a section at the bottom lists each running workspace (see Workspaces below).
 - **Hiding it:** the sidebar toggle (Ctrl+Shift+B, Cmd+B on macOS) hides or shows it, and kaze
   remembers the choice as `sidebar` in the config. Below 560 dp of window width it also hides
@@ -261,8 +260,8 @@ Sessions are listed down the left side, in place of a tab strip.
 - **Title bar:** Kaze draws one title bar, laid out the same on macOS and Windows. On the left,
   over the sidebar: the window buttons on macOS (the real traffic lights) or the K mark on Windows,
   the sidebar toggle and **+** for a new session. Then the session you're in (repo, title, command
-  and its state), a search field that opens the palette, and on the right the scratch shell,
-  Agents (with a badge) and Settings; on Windows, minimize, maximize and close follow. Drag any
+  and its state), a search field that opens the palette, and on the right Agents
+  (with a badge) and Settings; on Windows, minimize, maximize and close follow. Drag any
   empty part of it to move the window; double-click it to zoom (macOS follows your setting) or
   maximize. Hiding the sidebar leaves the title bar's buttons where they are.
 
@@ -278,9 +277,9 @@ count, then the resource label and meter, then other labels, so nothing overlaps
 
 Hover **CPU · memory** for **Kaze resource usage**: Kaze itself first, followed by
 session totals for its observable child processes, including shells, agents and
-local servers. Scratch shells count under their parent session. Workspace members
-have their own stable rows, labeled by workspace and member; moving a floating
-pane does not change ownership. Observed processes still alive after a tab closes
+local servers. Workspace members have their own stable rows, labeled by workspace
+and member; opening a member as a tab under another session does not change
+ownership. Observed processes still alive after a tab closes
 keep a row marked closed. Unassigned Kaze children appear separately. External
 shared services and remote processes are excluded; processes that detach before
 Kaze first observes them may be missed.
@@ -303,31 +302,34 @@ process baselines. Sampling pauses while
 minimized and resets CPU baselines on return. The card scrolls for many sessions;
 in very short windows its whole content scrolls so the details remain reachable.
 
-## Floating panes
+## Workspace members in the panel
 
-A workspace member opens as a floating pane over the session you are in, so you can watch a
-server's log without leaving your Claude session. Click its line in the sidebar, the server dots
-in the status bar, or pick it in the palette.
+A workspace member opens as a tab in the panel docked under your session's terminal, the same
+panel subagents use, so you can watch a server's log without leaving your Claude session. Click
+its line in the sidebar, the server dots in the status bar, or pick it in the palette.
 
-- **Move and resize:** drag the header to move a pane, drag an edge or corner to resize it. The
-  shell inside gets the new size. Panes stay inside the terminal area and shrink with the window,
-  then come back to their size when it grows again.
-- **Keyboard:** click a pane to bring it to the front and type into it (its border turns to the
-  accent color). Click your session to take the keyboard back. Every key goes to the program in
-  the pane, Esc and Ctrl+C included; kaze's own shortcuts still work.
-- **Expand** makes the member the main view; pick any session to go back. **×** hides the pane;
-  the member keeps running.
-- **Per session:** each session remembers its own panes while kaze runs (they are not kept across
-  restarts), up to 4 per session. A fifth replaces the oldest member pane. A member floats over
-  one session at a time.
+- **One panel per session:** each session has its own panel with its own tabs. One tab shows at
+  a time; click a tab to switch. Members and subagents share the tab row and the panel's height
+  (drag the line above it, as for subagents).
+- **Up to 6 tabs** per session. A seventh replaces the oldest tab that isn't showing. Long names
+  get shorter tabs first, then are cut with "…".
+- **×** on a tab closes it; the member keeps running. **Hide ⌄** (or a second click on the shown
+  tab, or on its line in the sidebar) folds the panel and keeps its tabs.
+- **Expand** makes the member the main view; pick any session to go back.
+- **Keyboard:** opening a member gives it the keyboard, and so does clicking it. A thin accent
+  line marks whichever terminal has the keyboard while a member tab shows. Every key goes to the
+  member, Esc and Ctrl+C included; kaze's own shortcuts still work. Click your session's terminal
+  to take the keyboard back.
+- **Size:** the member's shell gets the panel's size while its tab is open, even when the panel
+  is hidden, so hiding doesn't reflow its output. Closing the tab or Expand gives it the shared
+  size again.
+- **One session at a time:** opening a member under another session moves its tab there.
+- A member that has stopped keeps its tab, with a red dot and its last output. To start it again,
+  run the workspace from the sidebar.
+- Tabs live while kaze runs; they are not kept across restarts.
 
-### The scratch shell
-
-Ctrl+Shift+` (Ctrl+` on macOS) or the terminal button in the title bar shows a quick shell for the session in front, in
-that session's folder, as a floating pane. The key hides it again; it keeps running with its
-screen. Each session has its own. It is not listed in the sidebar and Ctrl+Tab skips it. If its
-shell has exited, the next toggle starts a fresh one. Closing the session closes its scratch shell.
-Claude Code alerts from a scratch shell count on its session's row.
+Members no longer float over the session, and the scratch shell is gone. An old `scratch_shell`
+line under `[keys]` in `config.toml` is ignored, with a warning in the first tab.
 
 ## Subagents
 
@@ -340,18 +342,18 @@ subagent's panel is shown, kaze also reads its transcript for live messages.
   inside a ring means running, an amber dot means it is waiting for your approval, a green dot
   means done. Hover a line to see the step it is on now (for example `Grep authMiddleware in src`).
   Finished ones leave the list at your next prompt.
-  - **Click a line** to open that agent's panel; click it again to close it.
+  - **Click a line** to open that agent's tab in the panel; click it again to hide the panel.
   - **Three lines, then a chip:** a tray shows at most 3 agents, waiting ones first. The rest are
     summed up in a chip such as "+17 more · 15 running, 2 done ⌄", with "N need you" in amber when
     a hidden agent waits. When the sidebar is narrow the chip keeps "+N more" and its `⌄` and drops
     the counts first. Click it to open the board filtered to that session.
   - **Fold:** the row's "N agents ⌄" folds the whole tray ("N agents ›" brings it back). The count
     turns amber when a folded tray holds an agent waiting on you.
-- **Agent panel:** click a subagent to open its panel docked under the terminal (click it again
-  to close). Nothing covers the terminal; only that session's terminal gets shorter. Drag the line
-  between them to any height; Kaze remembers it (`agent_panel_height` in `config.toml`). The
-  header shows the state, type, task and time, an **Activity / Report** switch, and, once done,
-  **Copy report** and **Open in reader**. The prompt sits folded in one line; click it to read it all.
+- **Agent panel:** click a subagent to open it as a tab in the panel docked under the terminal
+  (click it again to hide the panel). Nothing covers the terminal; only that session's terminal gets shorter. Drag the line
+  between them to any height; Kaze remembers it (`agent_panel_height` in `config.toml`). Under
+  the tab row, a line shows the state, type, task and time, an **Activity / Report** switch and,
+  once done, **Copy report**; **Open in reader** sits at the right of the tab row. The prompt sits folded in one line; click it to read it all.
   - **Activity** is a timeline: each tool step with its time, tool and target, and the agent's own
     messages between them as notes. It follows new rows unless you scroll up. A waiting agent shows
     what it wants to run; a finished one says "Finished in Nm · read the report".
@@ -359,9 +361,12 @@ subagent's panel is shown, kaze also reads its transcript for live messages.
     panel switches to it when the agent finishes, unless you picked a tab yourself. **Copy report**
     copies the original markdown.
   - Each session remembers its open panel: switch away and back and it is still there. A "needs
-    you" toast's **Go** opens the waiting subagent's panel.
+    you" card's **Open session** opens the waiting subagent's tab.
+  - Each subagent you open gets a tab in the panel, next to any workspace members (see Workspace
+    members in the panel). Click a tab to switch, × to close it, **Hide ⌄** to fold the panel and
+    keep its tabs.
   - The keyboard stays with your session, so Esc still reaches Claude. Click into the panel first;
-    then Esc closes it and ↑/↓ move to the previous or next subagent.
+    then Esc hides it and ↑/↓ move to the previous or next subagent.
   - Cmd+click (Ctrl+click on Windows) a web link or `.md` path in the panel to open it. Missing
     transcripts and Codex helpers show the tool steps without notes.
 - **The board:** every subagent in every session, as a list of session cards with a preview
@@ -390,8 +395,16 @@ subagent's panel is shown, kaze also reads its transcript for live messages.
 ## Reading docs
 
 Cmd+click an `.md` path in terminal output (Ctrl+click on Windows) to read it in kaze.
-Relative paths use that terminal's folder, then its Git repo root. Paths with spaces
-are not detected in terminal output.
+Relative paths use that terminal's folder, then its Git repo root.
+
+- **Spaces:** a path with single spaces in it, such as
+  `C:/Users/you/Documents/My Notes/plan.md`, is underlined whole. So is a path in quotes.
+- **Folder printed earlier:** when a line names a folder and then a `.md` file in it, the click
+  tries that folder plus the file name.
+- **On a click** kaze tries the longest candidate first, then shorter ones, then the terminal's
+  folder and Git root, and opens the first that exists. If none does, it says
+  "Can't find plan.md in <folder>", naming the last folder it tried.
+- Links set with OSC 8 (hidden link targets) are not read yet.
 
 Each doc gets a temporary row under its session. Click a heading in the outline to
 jump there, or scroll with the wheel, arrows, Page Up/Down and Home/End. The outline
@@ -589,7 +602,8 @@ which wins). Click the header to fold it.
   `docker compose up -d` or activating a venv. It reads `stopped` in red when its shell exited
   or was closed, and `Failed` in red when its run failed. A member's line shows an amber dot when it needs you and a green dot when it is done;
   a folded header shows the amber one if any member needs you, else the green one. Click a
-  member to float it over your session (see Floating panes below).
+  member to open it as a tab under your session (see Workspace members in the panel above);
+  click it again to hide the panel. Its line is highlighted while its tab shows.
 - The Workspaces list in Settings shows how far each member got: Starting, Waiting for Docker
   (or a port), Confirm to run, Running, Finished, Failed, Cancelled or No commands. Finished means
   the shell came back to its prompt (it needs the snippet from "Folder and branch in the status
@@ -597,7 +611,7 @@ which wins). Click the header to fold it.
 - Running a workspace keeps your current session in front.
 - The status bar shows one dot per workspace member (green running, red down, muted otherwise)
   and a count such as "1/2 up". A closed member shows stopped and counts as down while the
-  workspace still has an open tab. Click the dots to float the open member that is down, or the first open member
+  workspace still has an open tab. Click the dots to open the member that is down as a tab, or the first open member
   if none is.
 - Ctrl+Tab and Ctrl+Shift+Tab step through sessions in sidebar order and skip workspace members.
 - Close a member with your close-session shortcut (Ctrl+Shift+W, Cmd+W on macOS), the × that
@@ -677,7 +691,7 @@ files when Kaze opens from Finder or restarts after an update. Missing commands 
 errors appear in that tab as shell or agent output. The allowlisted agent command
 is unquoted so shell aliases, functions and PATH installs all resolve normally.
 
-Running commands, servers, shell variables, scrollback, scratch shells, floating layout and
+Running commands, servers, shell variables, scrollback, panel tabs and
 live helpers do not survive exit. Workspace members reopen without replaying their recipe
 commands. Kaze saves small metadata snapshots on changes, including while minimized, so it
 can recover the last saved set after a crash. Changes in the last 250 ms may be lost.
@@ -713,7 +727,7 @@ error makes kaze use all defaults.
 | `cursor_style` | `block`, `bar` or `underline` | `block` |
 | `cursor_blink` | Blink the cursor (off keeps idle CPU at zero) | `false` |
 | `taskbar_flash` | Flash the taskbar button on alerts (Windows) | `true` |
-| `done_toast` | How long the "done" toast stays: `3s`, `6s`, `10s` or `until_seen` | `6s` |
+| `done_toast` | How long a "done" alert card stays: `3s`, `6s`, `10s` or `until_seen` | `6s` |
 | `show_usage` | Show the Claude usage readout in the status bar | `true` |
 | `check_updates` | Ask GitHub once a day whether a newer kaze is out (see Updates) | `true` |
 | `start_dir` | Start folder for fresh plain sessions and new plain tabs; `~` expands to home | empty, home folder |
@@ -723,7 +737,7 @@ error makes kaze use all defaults.
 | `sidebar` | Show the session sidebar (the toggle saves it here) | `true` |
 | `sidebar_launcher` | Expand the sidebar branch launcher | `true` |
 | `sidebar_launcher_agent` | Last launcher choice: `claude`, `codex`, `shell` | `"claude"` |
-| `[keys]` | `new_tab`, `new_branch_session`, `close_tab`, `next_tab`, `prev_tab`, `copy`, `paste`, `toggle_sidebar`, `next_waiting`, `palette`, `scratch_shell`, `open_settings` | the shortcuts above |
+| `[keys]` | `new_tab`, `new_branch_session`, `close_tab`, `next_tab`, `prev_tab`, `copy`, `paste`, `toggle_sidebar`, `next_waiting`, `palette`, `agents_board`, `open_settings` (an old `scratch_shell` line is ignored with a warning) | the shortcuts above |
 | `font_family` | **Not supported yet.** Setting it only adds a warning; kaze always uses its bundled font. | |
 
 Shortcuts are written like `"ctrl+shift+t"`. Modifiers: `ctrl`, `shift`, `alt` (or `option`),
@@ -848,8 +862,24 @@ Without this the folder and branch stay hidden. UNC paths (`\\server\share`) are
 
 ## Alerts (Claude Code hooks)
 
-kaze marks a tab and shows a small toast, over the terminal to the right of the sidebar, when
-Claude Code in that tab needs you (a permission prompt or a question) or has finished its turn. Click "Go ›" on the toast to switch to the tab.
+kaze marks a tab and shows an alert card when Claude Code in that tab needs you (a permission
+prompt or a question) or has finished its turn.
+
+- **Where:** at the bottom right, above the status bar, or above the agent panel when it is
+  open. The newest card sits nearest the corner. At most 3 show, one per session; in a short
+  window the oldest are left out.
+- **What a card shows:** the Claude, Codex or workspace mark with a `!` (needs you) or `✓` (done)
+  badge; a small line with the branch and the session's slash command (`⎇ feature/x · /review-pr`);
+  the session's name as it reads in the sidebar; two lines of text, cut with "…"; and a status
+  line: "Needs your permission", "Waiting for your answer" or "Done · ran 6m 40s".
+- **The text:** for "needs you" it is Claude's message. For "done" it is the start of Claude's
+  last reply (Codex too), so you can see what it finished without switching.
+- **Open session** (or a click anywhere on the card) switches to that session. Ctrl+Shift+J
+  (Cmd+J on macOS) opens the newest card's session; its key caps show on that card.
+- **×** closes a card and keeps the session's dot in the sidebar. "Needs you" cards stay until
+  you visit the session; "done" cards hide after `done_toast`.
+- A workspace run's summary uses the same card, with the workspace mark.
+
 "Needs you" plays a chime (unless you're already looking at that tab); "done" is silent
 unless you turn on `chime_done`. While kaze is minimized, its taskbar button flashes (Windows).
 

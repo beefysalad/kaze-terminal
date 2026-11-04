@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/notify"
 )
@@ -314,5 +315,55 @@ func TestNotifySessionSends(t *testing.T) {
 	}
 	if m := wait(t, got); m.Tab != 5 || m.Kind != notify.KindSession || m.Agent != "" {
 		t.Fatalf("claude: got %+v", m)
+	}
+}
+
+func TestNotifyDoneSendsReplyStart(t *testing.T) {
+	srv, got := startServer(t)
+	in := strings.NewReader(`{"last_assistant_message":"## Done\n\nFixed **the link** split.\n- 214 tests pass"}`)
+	runNotify([]string{"done"}, in, envOf(srv, "2"))
+	if m := wait(t, got); m.Kind != notify.KindDone || m.Reason != "Done Fixed the link split. 214 tests pass" {
+		t.Fatalf("got %+v", m)
+	}
+}
+
+func TestNotifyDoneCodexSendsReplyStart(t *testing.T) {
+	srv, got := startServer(t)
+	in := strings.NewReader(`{"last_assistant_message":"All ` + "`go test`" + ` runs pass."}`)
+	runNotifyOutput([]string{"done", "--agent", "codex"}, in, envOf(srv, "2"), io.Discard)
+	if m := wait(t, got); m.Reason != "All go test runs pass." {
+		t.Fatalf("got %+v", m)
+	}
+}
+
+func TestNotifyDoneReplyCappedTo160Runes(t *testing.T) {
+	srv, got := startServer(t)
+	in := strings.NewReader(`{"last_assistant_message":"` + strings.Repeat("あ", 10000) + `"}`)
+	runNotify([]string{"done"}, in, envOf(srv, "2"))
+	if n := utf8.RuneCountInString(wait(t, got).Reason); n != 160 {
+		t.Fatalf("reason has %d runes, want 160", n)
+	}
+}
+
+func TestReplyStart(t *testing.T) {
+	for _, c := range []struct{ in, want string }{
+		{"", ""},
+		{"**  ** `` __", ""},
+		{"# \n> \n- \n* ", ""},
+		{"## Title\n\nbody", "Title body"},
+		{"> quoted\n* item one\n- item two", "quoted item one item two"},
+		{"use `go test` and __bold__", "use go test and bold"},
+		{"  a \t\r\n  b  ", "a b"},
+		{"3 * 4 - 2", "3 * 4 - 2"},
+		{"#123 fixed", "#123 fixed"},
+		{"##no space", "##no space"},
+		{"###\tTabbed", "Tabbed"},
+	} {
+		if got := replyStart(c.in, 160); got != c.want {
+			t.Errorf("replyStart(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+	if got := replyStart("abcdef", 3); got != "abc" {
+		t.Errorf("cut: %q", got)
 	}
 }

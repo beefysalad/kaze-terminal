@@ -12,13 +12,16 @@ import (
 	"github.com/patrick-gogo/kaze-terminal/internal/term"
 )
 
-// linkUnder is the web link or .md path at grid pixel p in t, if any.
-func (win *window) linkUnder(t *tabs.Tab, p image.Point, cw, ch int) (string, bool) {
+// linkUnder is what the web link or .md path at grid pixel p in t may mean,
+// best first (see render.Links.RefsAt), if there is one. It holds the session
+// lock only to read the grid; the disk is checked later, by openDocRefs.
+func (win *window) linkUnder(t *tabs.Tab, p image.Point, cw, ch int) ([]string, bool) {
 	s := t.Session
 	s.Lock()
-	defer s.Unlock()
 	scr := s.Screen()
-	return win.links.At(scr, win.pointAt(scr, p, cw, ch))
+	refs := win.links.RefsAt(scr, win.pointAt(scr, p, cw, ch))
+	s.Unlock()
+	return refs, len(refs) > 0
 }
 
 // open hands a clicked link to the system browser. Only http and https links

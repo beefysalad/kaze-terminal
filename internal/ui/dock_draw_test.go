@@ -27,13 +27,13 @@ func stopAgent(win *window, tab int, report string) {
 }
 
 func TestDockDrawsReportMarkdown(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	k := dockAgent(t, win, int(a.ID), "")
 	stopAgent(win, int(a.ID), "**No binding** in `docs/notes.md`.")
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	win.openDock(a.ID, k)
 	win.dockOf(a.ID).tab = dockReport
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	all := strings.Join(win.dock.texts, "")
 	if !strings.Contains(all, "No binding") || strings.Contains(all, "**") {
 		t.Fatalf("report not rendered: %q", all)
@@ -61,14 +61,14 @@ func fixtureAssistant(text string) string {
 }
 
 func TestDockNotesParseOnce(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	main := filepath.Join(t.TempDir(), "s.jsonl")
 	path := subagents.TranscriptPath(main, "x")
 	writeTranscript(t, path, "one **a**", "two", "three")
 	k := dockAgent(t, win, int(a.ID), main)
 	win.openDock(a.ID, k)
 	for range 3 {
-		floatFrames(t, win, r)
+		twoFrames(t, win, r)
 	}
 	s := win.dockOf(a.ID)
 	if s.cache.parses != 3 {
@@ -76,19 +76,19 @@ func TestDockNotesParseOnce(t *testing.T) {
 	}
 	writeTranscript(t, path, "four")
 	win.dockTick(s, win.subs.Get(k), time.Now().Add(2*time.Second))
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if s.cache.parses != 4 {
 		t.Fatalf("parses %d after one new note, want 4", s.cache.parses)
 	}
 }
 
 func TestDockIdleNoWake(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	main := filepath.Join(t.TempDir(), "s.jsonl")
 	writeTranscript(t, subagents.TranscriptPath(main, "x"), "done")
 	k := dockAgent(t, win, int(a.ID), main)
 	stopAgent(win, int(a.ID), "ok")
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	win.openDock(a.ID, k)
 	s := win.dockOf(a.ID)
 	ag := win.subs.Get(k)
@@ -102,12 +102,12 @@ func TestDockIdleNoWake(t *testing.T) {
 }
 
 func TestDockCodexNeverRead(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	win.liveMgr.Store(win.mgr)
 	win.onNotify(notify.Msg{Tab: int(a.ID), Kind: notify.KindAgentStart, Session: "s", AgentID: "x", Agent: "codex", Transcript: filepath.Join(t.TempDir(), "s.jsonl")})
 	k := subagents.Key{Session: "s", ID: "x"}
 	win.openDock(a.ID, k)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	s := win.dockOf(a.ID)
 	if _, wake := win.dockTick(s, win.subs.Get(k), time.Now()); wake || s.tr != nil {
 		t.Fatal("a Codex helper's transcript was read")
@@ -115,12 +115,12 @@ func TestDockCodexNeverRead(t *testing.T) {
 }
 
 func TestDockReportCopyIsMarkdown(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	k := dockAgent(t, win, int(a.ID), "")
 	stopAgent(win, int(a.ID), "**raw** report")
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	win.openDock(a.ID, k)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	var copied string
 	win.toClipboard = func(s string) { copied = s }
 	win.copyReport(pageContext(1000, 600), win.subs.Get(k))
@@ -138,6 +138,24 @@ func TestDockContrast(t *testing.T) {
 			for label, fg := range map[string]color.NRGBA{"text": cols.text, "muted": cols.muted, "accent": cols.accent, "needs": cols.needs, "done": cols.done, "type": cols.kind} {
 				if got := contrast(fg, bg); got < 4.5 {
 					t.Errorf("%s %s %s contrast %.2f", th.Key, where, label, got)
+				}
+			}
+		}
+	}
+}
+
+// A member tab's dot uses the sidebar's state colours (down, needs you, up)
+// and stands out at 3:1 on the tab row and on the shown tab, in every theme.
+func TestDockMemberDotContrast(t *testing.T) {
+	for _, th := range theme.All() {
+		c := newChrome()
+		c.setTheme(th)
+		for name, l := range map[string]dockTabLabel{
+			"down": {member: true, down: true}, "needs": {member: true, mk: markNeeds}, "up": {member: true},
+		} {
+			for bgName, bg := range map[string]color.NRGBA{"row": th.UI.Chrome, "shown tab": th.Term.BG} {
+				if got := contrast(c.memberDot(l), bg); got < 3 {
+					t.Errorf("%s: %s dot on %s contrast %.2f, want at least 3", th.Key, name, bgName, got)
 				}
 			}
 		}

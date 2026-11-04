@@ -79,26 +79,6 @@ func TestSessionIdentityStored(t *testing.T) {
 	}
 }
 
-func TestScratchMessagesUseSourceSession(t *testing.T) {
-	win, _, _ := liveWindow(t, 1)
-	main := win.mgr.Tabs()[0]
-	s, err := win.mgr.NewOpts(tabs.StartOpts{Parent: main.ID})
-	if err != nil {
-		t.Fatal(err)
-	}
-	win.onNotify(notify.Msg{Tab: int(main.ID), Kind: notify.KindAgentStart, Session: "m1", AgentID: "a1", AgentType: "X"})
-	win.onNotify(notify.Msg{Tab: int(s.ID), Kind: notify.KindAgentStart, Session: "x1", AgentID: "b1", AgentType: "Y"})
-	win.drainSubs(t0)
-	if shown, _ := win.subs.Tree(int(main.ID)); len(shown) != 2 {
-		t.Fatalf("both should show on the session row, got %d", len(shown))
-	}
-	win.onNotify(notify.Msg{Tab: int(s.ID), Kind: notify.KindDone, Session: "x2"}) // /clear in the scratch shell
-	win.drainSubs(t0)
-	if win.subs.Get(subagents.Key{Session: "m1", ID: "a1"}) == nil || win.subs.Get(subagents.Key{Session: "x1", ID: "b1"}) != nil {
-		t.Fatal("the scratch shell's new session reset the wrong agents")
-	}
-}
-
 func TestTimerOnlyWhileActive(t *testing.T) {
 	win, _, _ := liveWindow(t, 1)
 	id := int(win.mgr.Tabs()[0].ID)

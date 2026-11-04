@@ -32,8 +32,7 @@ type Tab struct {
 	Group      *Group // nil for a tab that no workspace run opened
 
 	// Set once at creation, so safe to read from any goroutine.
-	Parent TabID  // the session a scratch shell belongs to; 0 for every other tab
-	Dir    string // the folder it was started in, "" for the window's default
+	Dir string // the folder it was started in, "" for the window's default
 }
 
 // Group says which workspace run opened a tab and which of its tabs it is.
@@ -48,7 +47,6 @@ type StartOpts struct {
 	Dir, Title, Color string // an empty Dir starts the shell in the window's default folder
 	Group             *Group
 	Prefeed           func(*term.Session) // writes into the tab before its shell's output, as NewWith does
-	Parent            TabID               // non-zero: a scratch shell of that session, never made active here
 }
 
 // entry holds what the session's notifier goroutine needs without taking the manager lock.
@@ -57,8 +55,8 @@ type entry struct {
 	sess    atomic.Pointer[term.Session]
 	removed atomic.Bool
 	watched atomic.Bool // a background tab that asks for frames on output too
-	visible atomic.Bool // drawn as a floating pane: asks for frames on output, separate from watched
-	// Guarded by Manager.mu: a tab sized on its own (a floating pane) that ResizeAll skips.
+	visible atomic.Bool // drawn as a docked member tab: asks for frames on output, separate from watched
+	// Guarded by Manager.mu: a tab sized on its own (a docked member or session) that ResizeAll skips.
 	own              bool
 	ownCols, ownRows int
 	// Touched only by this session's single notifier goroutine.
@@ -157,7 +155,7 @@ func (m *Manager) newTab(o StartOpts, prefeed func(*term.Session)) (*Tab, error)
 	if err != nil {
 		return nil, err
 	}
-	e := &entry{tab: &Tab{ID: id, Title: o.Title, FixedTitle: o.Title, Color: o.Color, Group: o.Group, Parent: o.Parent, Dir: o.Dir}}
+	e := &entry{tab: &Tab{ID: id, Title: o.Title, FixedTitle: o.Title, Color: o.Color, Group: o.Group, Dir: o.Dir}}
 	s := term.NewSessionOpts(p, cols, rows, term.Opts{Scrollback: sb, Prefeed: prefeed}, func() { m.notify(e) })
 	e.sess.Store(s)
 	e.tab.Session = s
@@ -165,9 +163,7 @@ func (m *Manager) newTab(o StartOpts, prefeed func(*term.Session)) (*Tab, error)
 	m.mu.Lock()
 	m.entries = append(m.entries, e)
 	m.mu.Unlock()
-	if o.Parent == 0 {
-		m.active.Store(int64(id))
-	}
+	m.active.Store(int64(id))
 	m.stateChanged()
 	return e.tab, nil
 }
@@ -292,7 +288,7 @@ func (m *Manager) Watch(id TabID, on bool) {
 	}
 }
 
-// SetVisible marks a background tab as drawn (a floating pane), so it asks for
+// SetVisible marks a background tab as drawn (a docked member), so it asks for
 // a frame on every output while on; an unknown id is ignored.
 func (m *Manager) SetVisible(id TabID, on bool) {
 	m.mu.Lock()
