@@ -7,106 +7,170 @@
   <title>Kaze | Light, fast, and out of the way.</title>
   <meta name="description" content="A lightweight, open-source terminal for Claude Code and Codex on macOS and Windows. Keep sessions in view, see what needs you, and keep your servers close.">
   <link rel="icon" href="site-assets/kaze-icon.svg">
-  <link rel="stylesheet" href="site-assets/site.css">
+  <link rel="stylesheet" href="site-assets/lander.css">
 </head>
-<body class="site-page">
+<body>
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site-header">
   <div class="header-inner wrap">
-    <a class="brand" href="#main" aria-label="Kaze by Patrick home"><img src="site-assets/kaze-icon.svg" alt="" width="32" height="32"><span class="brand-lockup"><span>kaze</span><span class="brand-byline">by Patrick</span></span></a>
-    <nav aria-label="Main navigation"><a href="#sessions">Features</a><a href="#workspaces">Workspaces</a><a href="changelog.html">Changelog</a><a href="#install">Download</a><a class="source-link" href="https://github.com/patrick-gogo/kaze-terminal"><svg class="github-icon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg> GitHub</a></nav>
+    <a class="brand" href="#main" aria-label="Kaze by Patrick home"><img src="site-assets/kaze-icon.svg" alt="" width="28" height="28"><span>kaze<small>by Patrick</small></span></a>
+    <nav class="nav" aria-label="Main navigation"><a href="#sessions">Features</a><a href="#workspaces">Workspaces</a><a href="#changelog">What’s new</a><a href="#faq">FAQ</a></nav>
+    <div class="header-cta"><a class="ghost" href="https://github.com/patrick-gogo/kaze-terminal"><svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>GitHub</a><a class="pill" href="#install">Download</a></div>
   </div>
 </header>
+
 <main id="main">
-  <section class="hero hero-concept wrap" aria-labelledby="hero-title">
-    <div class="hero-intro">
-      <h1 id="hero-title"><span class="agents-line">Light, fast,</span><span class="quiet-line">and out of the way.</span></h1>
-      <p class="hero-copy">A lightweight terminal for Claude Code and Codex. Keep sessions in view, see when an agent needs you, and keep your servers close.</p>
-    <div class="hero-actions"><a class="button primary" href="https://github.com/patrick-gogo/kaze-terminal/releases/latest/download/Kaze-macOS.zip" data-download="mac"><svg class="os-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg>Download for macOS</a><a class="button secondary" href="https://github.com/patrick-gogo/kaze-terminal/releases/latest/download/Kaze-Windows-x64.zip" data-download="windows"><svg class="os-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M0 0h11.377v11.372H0zm12.623 0H24v11.372H12.623zM0 12.623h11.377V24H0zm12.623 0H24V24H12.623z"/></svg>Download for Windows</a></div>
-      <p class="hero-meta">Free and open source. Built for macOS and Windows.<span class="hero-downloads" id="download-count" aria-live="polite" title="ZIP downloads across all GitHub releases, including app updates" hidden></span></p>
-      <a class="hero-install-link" href="#first-launch">First time installing? <span>Here’s how</span> <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="wrap">
+      <div class="hero-inner">
+        <h1 id="hero-title">Light, fast,<span class="q">and out of the way.</span></h1>
+        <p class="lede">A terminal for running Claude Code and Codex all day. <b>Every window here is Kaze.</b> Keep your sessions in view, see when an agent needs you, and keep your servers one click away.</p>
+        <div class="actions">
+          <a class="button primary" href="https://github.com/patrick-gogo/kaze-terminal/releases/latest/download/Kaze-macOS.zip" data-download="mac"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg>Download for macOS</a>
+          <a class="button secondary" href="https://github.com/patrick-gogo/kaze-terminal/releases/latest/download/Kaze-Windows-x64.zip" data-download="windows"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M0 0h11.377v11.372H0zm12.623 0H24v11.372H12.623zM0 12.623h11.377V24H0zm12.623 0H24V24H12.623z"/></svg>Download for Windows</a>
+        </div>
+        <div class="facts">
+          <div><b>0%</b><span>CPU while idle</span></div>
+          <div><b>~14 MB</b><span>the whole app</span></div>
+          <div id="download-fact" hidden><b id="download-count">0</b><span>downloads</span></div>
+        </div>
+        <p class="first-time">Free and open source, for macOS and Windows. First time installing? <a href="#first-launch">Here’s how</a></p>
+      </div>
     </div>
-    <figure class="hero-proof product" id="product" role="region" aria-roledescription="carousel" aria-label="Kaze product screenshots">
-      <a class="screenshot hero-screenshot" id="full-capture" href="site-assets/kaze-sessions.png" target="_blank" rel="noopener" aria-label="Open the full-size Kaze screenshot in a new tab"><img id="product-shot" src="site-assets/kaze-sessions.png" alt="Kaze on macOS: a sidebar of sessions marked needs you, running and done, with the todo-api session and its API server log" width="2200" height="1440" fetchpriority="high"></a>
-      <div class="gallery-footer"><div class="capture-switcher" role="group" aria-label="Product screenshots"><button type="button" data-shot="sessions" aria-pressed="true">Sessions</button><button type="button" data-shot="agents" aria-pressed="false">Subagents</button><button type="button" data-shot="board" aria-pressed="false">Agents board</button><button type="button" data-shot="palette" aria-pressed="false">Palette</button><button type="button" data-shot="workspaces" aria-pressed="false">Workspaces</button><button type="button" data-shot="settings" aria-pressed="false">Settings</button><button type="button" data-shot="about" aria-pressed="false">About</button></div></div>
-      <figcaption><span id="capture-description" aria-live="polite">The session sidebar with a workspace server log</span></figcaption>
-    </figure>
+    <div class="wall" aria-label="Kaze screenshots">
+      <div class="wall-plane">
+        <div class="wall-col">
+          <button class="tile" type="button" data-shot="sessions"><img src="site-assets/kaze-sessions.png" alt="" width="2200" height="1440" fetchpriority="high"></button>
+          <button class="tile" type="button" data-shot="palette"><img src="site-assets/kaze-palette.png" alt="" width="2200" height="1440" loading="lazy"></button>
+          <button class="tile" type="button" data-shot="about"><img src="site-assets/kaze-about.png" alt="" width="2200" height="1440" loading="lazy"></button>
+        </div>
+        <div class="wall-col">
+          <button class="tile" type="button" data-shot="settings"><img src="site-assets/kaze-settings.png" alt="" width="2200" height="1440" loading="lazy"></button>
+          <button class="tile" type="button" data-shot="board"><img src="site-assets/kaze-board.png" alt="" width="2200" height="1440"></button>
+          <button class="tile" type="button" data-shot="agents"><img src="site-assets/kaze-agents.png" alt="" width="2200" height="1440" loading="lazy"></button>
+        </div>
+        <div class="wall-col">
+          <button class="tile" type="button" data-shot="workspaces"><img src="site-assets/kaze-workspaces.png" alt="" width="2200" height="1440"></button>
+          <button class="tile" type="button" data-shot="agents"><img src="site-assets/kaze-agents.png" alt="" width="2200" height="1440" loading="lazy"></button>
+          <button class="tile" type="button" data-shot="sessions"><img src="site-assets/kaze-sessions.png" alt="" width="2200" height="1440" loading="lazy"></button>
+        </div>
+      </div>
+    </div>
+    <span class="wall-hint" aria-hidden="true">Click any window ↗</span>
   </section>
-  <div class="hero-transition wrap"><p>A little less checking.<br><span>A lot more room to focus.</span></p><a href="#sessions">Meet Kaze <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M4 9l4 4 4-4"/></svg></a></div>
+  <div class="wrap news"><span class="tag">0.27</span><a href="#changelog">New: servers docked under the terminal, and alert cards you can read <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
 
-  <section class="feature-section wrap" id="sessions" aria-labelledby="sessions-title">
-    <div class="section-intro"><h2 id="sessions-title">Built around the agent.<br><span>Still just a terminal.</span></h2><p>Run Claude Code or Codex in as many sessions as you like. Kaze keeps track,<br class="desktop-break"> so you only look when something needs you.</p></div>
-    <div class="feature-grid">
-      <article>
-        <svg class="feature-symbol" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M6 8h0M6 12h0M6 16h0"/></svg>
-        <h3>A sidebar of sessions.</h3>
-        <p>Sessions group by repo, worktrees included, with a bold name for the project you’re in. Two-line rows show the agent logo, name and status above the branch and lines changed. See what <b class="state needs">needs you</b>, what is <b class="state running">running</b> and what is <b class="state done">done</b>.</p>
-        <button type="button" class="show-shot" data-show="sessions">See the sidebar <svg class="inline-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M8 13V3M4 7l4-4 4 4"/></svg></button>
-      </article>
-      <article>
-        <svg class="feature-symbol" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="7" r="2"/><path d="M6 7v10M8 15h4a6 6 0 0 0 6-6"/></svg>
-        <h3>A session for every branch.</h3>
-        <p>Choose a repo, branch and agent. Kaze reuses its worktree or creates a sibling folder, then opens the session there. Clean up Kaze-created worktrees when you finish, with your confirmation. The branches stay.</p>
-        <a href="https://github.com/patrick-gogo/kaze-terminal#the-sidebar">Meet the branch launcher <svg class="inline-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 12 12 4M4 4h8v8"/></svg></a>
-      </article>
-      <article>
-        <svg class="feature-symbol" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h12m-5-5 5 5-5 5M20 5v14"/></svg>
-        <h3>Jump to what’s waiting.</h3>
-        <p>An alert card at the bottom right tells you when Claude asks or finishes: the session, its branch and command, what Claude said, and how long it ran. An optional chime too. Press <kbd>⌘</kbd> <kbd>J</kbd> to open the newest card’s session, or the next one that needs an answer.</p>
-        <a href="https://github.com/patrick-gogo/kaze-terminal#alerts-claude-code-hooks">Set up the hooks <svg class="inline-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M4 12 12 4M4 4h8v8"/></svg></a>
-      </article>
-      <article>
-        <svg class="feature-symbol" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
-        <h3>Servers in the panel.</h3>
-        <p>Watch a server’s log without leaving your Claude session. Click a workspace member and it opens as a tab in the panel under Claude’s terminal, next to your subagents: click it to type, hide the panel, or expand it to the main view.</p>
-        <a href="https://github.com/patrick-gogo/kaze-terminal#workspace-members-in-the-panel">See how the panel works <svg class="inline-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M4 12 12 4M4 4h8v8"/></svg></a>
-      </article>
-      <article>
-        <svg class="feature-symbol" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/><rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4m-6 4v-4h12v4"/></svg>
-        <h3>See every subagent.</h3>
-        <p>When Claude Code or Codex hands work to subagents, each one gets a slim line under its session: waiting first, the rest behind “+N more”. Click one to open its panel under the terminal: every step with the agent’s own messages, then a formatted report. Or press <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>A</kbd> for the agents board: filter and search every subagent, grouped by session, and preview its steps or report without leaving the list.</p>
-        <button type="button" class="show-shot" data-show="agents">See the subagents <svg class="inline-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M8 13V3M4 7l4-4 4 4"/></svg></button>
-      </article>
-      <article>
-        <svg class="feature-symbol" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 3h8l5 5v13H6zM14 3v5h5M9 13h7M9 17h7"/></svg>
-        <h3>Read the plan, right here.</h3>
-        <p>Cmd+click an .md path to read it in Kaze, with a heading outline and links. The doc sits under its session and reloads when the agent edits it. Click the session to return to your terminal.</p>
-        <a href="https://github.com/patrick-gogo/kaze-terminal#reading-docs">How the reader works <svg class="inline-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M4 12 12 4M4 4h8v8"/></svg></a>
-      </article>
-      <article>
-        <svg class="feature-symbol" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
-        <h3>One key finds everything.</h3>
-        <p><kbd>⌘</kbd> <kbd>K</kbd> opens the palette: waiting sessions first, then every session and server, your Claude Code skills and slash commands, and Kaze’s own actions.</p>
-        <button type="button" class="show-shot" data-show="palette">See the palette <svg class="inline-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M8 13V3M4 7l4-4 4 4"/></svg></button>
-      </article>
+  <section class="section wrap" aria-labelledby="demo-title">
+    <div class="head">
+      <h2 id="demo-title">See what needs you.<span class="q">Skip the rest.</span></h2>
+      <p>Run as many agents as you like. Kaze watches them through Claude Code’s and Codex’s own hooks and only asks for your attention when there’s something to answer or read.</p>
+    </div>
+    <div class="chips" role="group" aria-label="Show a moment in Kaze">
+      <span class="label">Pick a moment:</span>
+      <button class="chip" type="button" data-moment="needs" aria-pressed="true">Claude needs you <i>1</i></button>
+      <button class="chip" type="button" data-moment="servers" aria-pressed="false">Your servers <i>2</i></button>
+      <button class="chip" type="button" data-moment="agents" aria-pressed="false">A subagent working <i>3</i></button>
+      <button class="chip" type="button" data-moment="done" aria-pressed="false">Done <i>4</i></button>
+    </div>
+    <div class="kz" role="img" aria-label="A Kaze window drawn in HTML, showing the moment picked above">
+      <div class="kz-bar"><span class="k">K</span><span>todo-api / <b>auth-tokens</b></span><span class="search">Search sessions, skills, commands</span><span>⚙</span></div>
+      <div class="kz-side">
+        <div class="kz-grp here">todo-api <span class="w" data-side-wait>1 waiting</span></div>
+        <div class="kz-row on"><div class="l1"><span class="mk">✳</span><span class="t">auth-tokens · /review-pr</span><span class="s needs" data-side-state>needs you</span></div><div class="l2">feature/V3-3149 +42 −7</div></div>
+        <div class="kz-tray"><span class="ty">Explore</span> Find the auth middleware</div>
+        <div class="kz-row"><div class="l1"><span class="mk">✳</span><span class="t">login-form</span><span class="s run">running</span></div><div class="l2">feat/login +118 −20</div></div>
+        <div class="kz-grp">web-app <span class="n">1</span></div>
+        <div class="kz-row"><div class="l1"><span class="mk cx">›</span><span class="t">dark-mode</span><span class="s done">done</span></div><div class="l2">dark-mode +12 −3</div></div>
+        <div class="kz-grp">notes-cli <span class="n">1</span></div>
+        <div class="kz-row"><div class="l1"><span class="mk">✳</span><span class="t">search-index</span><span class="s run">running</span></div><div class="l2">main</div></div>
+        <div class="kz-ws">WORKSPACES <span>all up</span></div>
+        <div class="kz-mem"><span class="bar-l"></span>API<span class="st">Running</span></div>
+        <div class="kz-mem"><span class="bar-l"></span>Web<span class="st">Running</span></div>
+      </div>
+      <div class="kz-main">
+        <div class="kz-term" data-term></div>
+        <div class="kz-dock" data-dock hidden>
+          <div class="kz-tabs"><span class="kz-tab" data-tab="agent"><span class="ty">Explore</span>Find the auth middleware</span><span class="kz-tab" data-tab="api"><span class="dot"></span>API</span><span class="r"><span data-expand>Expand</span><span>Hide ⌄</span></span></div>
+          <div class="kz-body" data-body></div>
+        </div>
+        <div class="card" data-card hidden></div>
+      </div>
+      <div class="kz-status"><span>~/projects/todo-api</span><span class="g">⎇ feature/V3-3149 +42 −7</span><span class="sp pill2">1 agent</span><span><span class="g">●●</span> 2/2 up</span><span>Claude 42%</span></div>
+    </div>
+    <p class="demo-cap" data-cap aria-live="polite"></p>
+  </section>
+
+  <section class="section wrap" aria-labelledby="hooks-title">
+    <div class="head">
+      <h2 id="hooks-title">Your agents tell Kaze.<span class="q">Kaze tells you.</span></h2>
+      <p>No polling, no plugins. A line in Claude Code’s settings is all it takes, and Settings adds it for you.</p>
+    </div>
+    <div class="trio">
+      <article><h3>The agent speaks up</h3><p>Claude Code’s hooks call Kaze when it asks for permission, finishes, or starts a subagent.</p><span class="cmd">kaze notify needs</span></article>
+      <article><h3>You jump straight there</h3><p>A card names the session and what Claude said. One key opens the newest one.</p><span class="cmd"><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>J</kbd> · <kbd>⌘</kbd> <kbd>J</kbd></span></article>
+      <article><h3>Everything else is one key</h3><p>Sessions, servers, your Claude Code skills and slash commands, and Kaze’s own actions.</p><span class="cmd"><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>K</kbd> · <kbd>⌘</kbd> <kbd>K</kbd></span></article>
     </div>
   </section>
 
-  <section class="workspace-section wrap" id="workspaces" aria-labelledby="workspace-title">
-    <div class="section-intro"><h2 id="workspace-title">Your project has a routine.<br><span>Save it once.</span></h2><p>The same folders. The same servers. The same log tail.<br>Turn your startup routine into a workspace, then run it from Settings or the palette.</p></div>
-    <div class="workspace-example">
-      <div class="example-heading"><span>Example workspace</span><span class="mono">my-project <span aria-hidden="true">/</span> 4 tabs</span></div>
-      <ol class="recipe">
-        <li><span class="recipe-index">01</span><div><h3>Code</h3><span class="folder">~/src/project</span></div><code>claude</code><span class="wait">Ready to work</span></li>
-        <li><span class="recipe-index">02</span><div><h3>API</h3><span class="folder">~/src/project/api</span></div><code>docker compose up -d</code><span class="wait">Wait for Docker</span></li>
-        <li><span class="recipe-index">03</span><div><h3>Frontend</h3><span class="folder">~/src/project/web</span></div><code>npm run dev</code><span class="wait">Wait for port 8000</span></li>
-        <li><span class="recipe-index">04</span><div><h3>Logs</h3><span class="folder">~/src/project</span></div><code>docker compose logs -f api</code><span class="wait">Wait for port 8000</span></li>
+  <section class="section wrap" id="sessions" aria-labelledby="features-title">
+    <div class="head">
+      <h2 id="features-title">Built around the agent.<span class="q">Still just a terminal.</span></h2>
+      <p>Any shell, any program. The parts below only show up when an agent is running.</p>
+    </div>
+    <div class="readme">
+      <nav class="toc" aria-label="Features">
+        <div class="file"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 1.5h5l3 3v10H4zM9 1.5v3h3"/></svg>README.md</div>
+        <ol>
+          <li><a href="#f-sidebar"><span>01</span>A sidebar of sessions</a></li>
+          <li><a href="#f-alerts"><span>02</span>Alert cards</a></li>
+          <li><a href="#f-panel"><span>03</span>Servers in the panel</a></li>
+          <li><a href="#f-agents"><span>04</span>Every subagent</a></li>
+          <li><a href="#f-branch"><span>05</span>A session per branch</a></li>
+          <li><a href="#f-reader"><span>06</span>The doc reader</a></li>
+          <li><a href="#f-status"><span>07</span>The status bar</a></li>
+          <li><a href="#f-yours"><span>08</span>Make it yours</a></li>
+        </ol>
+      </nav>
+      <div class="docs">
+        <article id="f-sidebar"><h3>A sidebar of sessions</h3><p>Sessions group by repo, worktrees included, with a bold name for the project you’re in. Each row shows the agent, its name and state above the branch and lines changed. See what <span class="state needs">needs you</span>, what is <span class="state running">running</span> and what is <span class="state done">done</span> without switching.</p><div class="more-links"><button type="button" data-open="sessions">See the sidebar</button></div></article>
+        <article id="f-alerts"><h3>Alert cards <span>new in 0.27</span></h3><p>When Claude asks or finishes, a card at the bottom right names the session the way the sidebar does, with its branch and slash command, what Claude said or the start of its reply, and how long it ran. <kbd>⌘</kbd> <kbd>J</kbd> opens the newest one. An optional chime too.</p><div class="more-links"><a href="https://github.com/patrick-gogo/kaze-terminal#alerts-claude-code-hooks">Set up the hooks ↗</a></div></article>
+        <article id="f-panel"><h3>Servers in the panel <span>new in 0.27</span></h3><p>Click a workspace member and its terminal opens as a tab in the panel under Claude, next to your subagents. Click the tab to type in it, click Claude’s terminal to take the keyboard back, hide the panel or expand a server to the main view. Nothing floats over your work.</p><div class="more-links"><a href="https://github.com/patrick-gogo/kaze-terminal#workspace-members-in-the-panel">How the panel works ↗</a></div></article>
+        <article id="f-agents"><h3>Every subagent</h3><p>When Claude Code or Codex hands work to subagents, each gets a slim line under its session, waiting first. Click one to open it in the panel: its steps, its own messages, then a formatted report. <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>A</kbd> opens the agents board: filter and search every subagent and preview it without leaving the list.</p><div class="more-links"><button type="button" data-open="agents">See the subagents</button><button type="button" data-open="board">See the board</button></div></article>
+        <article id="f-branch"><h3>A session per branch</h3><p>Choose a repo, a branch and an agent. Kaze reuses the branch’s worktree or makes a sibling folder, and opens the session there. When you’re done it cleans up the worktrees it made, after asking. Your branches stay.</p><div class="more-links"><a href="https://github.com/patrick-gogo/kaze-terminal#the-sidebar">Meet the branch launcher ↗</a></div></article>
+        <article id="f-reader"><h3>The doc reader</h3><p>Ctrl+click an .md path, even one with spaces in it, to read it in Kaze with a heading outline and links. It reloads when the agent edits it, and the session is one click away.</p><div class="more-links"><a href="https://github.com/patrick-gogo/kaze-terminal#reading-docs">How the reader works ↗</a></div></article>
+        <article id="f-status"><h3>The status bar</h3><p>Your folder and branch with its line changes, your servers and subagents at a glance, CPU and RAM for your sessions, and Claude usage as small meters. Hover for details and when each limit resets.</p><div class="more-links"><a href="https://github.com/patrick-gogo/kaze-terminal#claude-usage-in-the-status-bar">See the usage setup ↗</a></div></article>
+        <article id="f-yours"><h3>Make it yours</h3><p>Five themes, live font, spacing and cursor controls, and every shortcut in your config. Sessions reopen after a restart with the same folders and agent conversations. Settings checks your Claude Code hooks and adds the missing ones, after showing you the change.</p><div class="more-links"><button type="button" data-open="settings">See Settings</button><a href="https://github.com/patrick-gogo/kaze-terminal#shortcuts">See the shortcuts ↗</a></div></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section wrap" id="workspaces" aria-labelledby="workspace-title">
+    <div class="head">
+      <h2 id="workspace-title">Your project has a routine.<span class="q">Save it once.</span></h2>
+      <p>The same folders, the same servers, the same log tail. Turn your startup routine into a workspace and run it from Settings or the palette.</p>
+    </div>
+    <div class="recipe">
+      <div class="recipe-head"><span>Example workspace</span><span>my-project · 4 tabs</span></div>
+      <ol>
+        <li><div><h3>Code</h3><span class="folder">~/src/project</span></div><code>claude</code><span class="wait">Ready to work</span></li>
+        <li><div><h3>API</h3><span class="folder">~/src/project/api</span></div><code>docker compose up -d</code><span class="wait">Waits for Docker</span></li>
+        <li><div><h3>Frontend</h3><span class="folder">~/src/project/web</span></div><code>npm run dev</code><span class="wait">Waits for port 8000</span></li>
+        <li><div><h3>Logs</h3><span class="folder">~/src/project</span></div><code>docker compose logs -f api</code><span class="wait">Waits for port 8000</span></li>
       </ol>
-      <p class="example-foot">Each member gets a line in the sidebar and a dot in the status bar. Click one to open it as a tab under your session.</p>
     </div>
+    <p class="recipe-foot">Each member gets a line in the sidebar and a dot in the status bar. Click one to open it as a tab under your session.</p>
   </section>
 
-  <section class="details wrap" aria-label="More features">
-    <article><svg class="feature-symbol" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 15h18m-12 0v5m6-5v5"/></svg><h3>Context in the status bar.</h3><p>Your folder and branch with its line changes, your servers and subagents at a glance, CPU and RAM for your sessions, and Claude usage as small meters. Hover them for details by session and when each limit resets.</p><a href="https://github.com/patrick-gogo/kaze-terminal#claude-usage-in-the-status-bar">See the usage setup <svg class="inline-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M4 12 12 4M4 4h8v8"/></svg></a></article>
-    <article><svg class="feature-symbol" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m14 4 6 6M4 20l4-1 12-12a2.8 2.8 0 0 0-4-4L4 15zM14 20h7"/></svg><h3>Make it feel like yours.</h3><p>Five themes. Live font, spacing and cursor controls. Your sessions reopen after a restart, with the same folders and agent conversations.</p><a href="https://github.com/patrick-gogo/kaze-terminal#settings">Explore Settings <svg class="inline-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M4 12 12 4M4 4h8v8"/></svg></a></article>
-    <article><svg class="feature-symbol" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m9 12 2 2 4-4"/><path d="M12 3 4 6v6c0 4 4 7 8 9 4-2 8-5 8-9V6z"/></svg><h3>Checks your Claude setup.</h3><p>Settings shows which Claude Code hooks are missing and adds them for you, after showing the change and backing up your file.</p><a href="https://github.com/patrick-gogo/kaze-terminal#claude-code-setup-check">See the setup check <svg class="inline-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M4 12 12 4M4 4h8v8"/></svg></a></article>
-    <article><svg class="feature-symbol" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h0m4 0h0m4 0h0m4 0h0M6 13h0m4 0h0m4 0h0m4 0h0M8 16h8"/></svg><h3>Your keys, your way.</h3><p>Every shortcut can be changed in the config, and Settings lists the commands so far with their keys.</p><a href="https://github.com/patrick-gogo/kaze-terminal#shortcuts">See the shortcuts <svg class="inline-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M4 12 12 4M4 4h8v8"/></svg></a></article>
-  </section>
+  <div class="wrap quiet">
+    <div><h2>Quiet, down to the renderer.</h2><p>Kaze redraws only the cells that changed and caches its glyphs. Nothing ticks while you’re away, so an idle Kaze uses no CPU.</p></div>
+    <div class="tags"><span><b>Go + Gio</b>macOS and Windows</span><span><b>MIT</b>small enough to make your own</span></div>
+  </div>
 
-  <section class="engineering wrap" aria-labelledby="engineering-title"><div><h2 id="engineering-title">Quiet, down to the renderer.</h2><p>Kaze redraws the cells that changed and caches its glyphs. Your terminal stays quiet while idle; open docs and Claude subagent panes stay up to date while you read.</p></div><div class="engineering-facts"><span><b>Go + Gio</b>macOS and Windows</span><span><b>Open source</b>Small enough to make your own</span></div></section>
-
-  <section class="changelog wrap" id="changelog" aria-labelledby="changelog-title">
-    <div class="section-intro"><h2 id="changelog-title">What’s new.<br><span>The latest releases.</span></h2><p>Kaze checks for new versions by itself and updates in place from Settings, Updates.</p></div>
+  <section class="section wrap" id="changelog" aria-labelledby="changelog-title">
+    <div class="head">
+      <h2 id="changelog-title">What’s new.<span class="q">The latest releases.</span></h2>
+      <p>Kaze checks for new versions by itself and updates in place from Settings, Updates.</p>
+    </div>
     <ol class="releases">
       <li class="release">
         <div class="release-meta"><span class="version">0.27</span><span class="badge">Latest</span><time datetime="2026-11-04">Nov 4, 2026</time></div>
@@ -148,24 +212,28 @@
           </ul>
         </div>
       </li>
-            <li><b>Formatted reports:</b> bold, code, lists, headings and tables render in the panel. Copy report copies the original markdown, and Open in reader shows it in the doc reader.</li>
-            <li><b>Copy and paste on Windows:</b> Ctrl+C copies a selection and otherwise still interrupts; Ctrl+V pastes text and screenshots. Typing clears an old selection, so Ctrl+C always stops Claude after you type.</li>
-            <li><b>Fixed: workspace setup tabs:</b> a member whose commands finished reads Ready instead of stopped, and the workspace header no longer counts it as down.</li>
-          </ul>
-        </div>
-      </li>
-            <li><b>Clear running marks:</b> a still dot inside a closed ring replaces the frozen-looking spinner in session rows, subagents, the title bar and the agents pill. No animation frames.</li>
-            <li><b>Kaze stays open:</b> closing the final session leaves a New session button and your shortcut ready. Settings, Workspaces and cleanup dialogs stay available.</li>
-            <li><b>Shift+Enter:</b> add a new line in Claude Code without sending. Plain Enter still submits; Alt/Option+Enter continues to work.</li>
-          </ul>
-        </div>
-      </li>
     </ol>
-    <a class="all-releases" href="changelog.html">View all releases <svg class="inline-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
+    <a class="all-releases" href="changelog.html">View all releases <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
   </section>
 
-  <section class="install wrap" id="install" aria-labelledby="install-title">
-    <div class="install-intro"><h2 id="install-title">Make room for<br><span>your next project.</span></h2><p>Download Kaze for macOS 13 or newer (Apple Silicon and Intel) or Windows 10 and 11. Or build it from source with Go 1.27 or newer.</p><p class="release-note">Kaze isn’t signed by Apple or Microsoft yet, so the first launch asks you to confirm it once.</p><a class="inline-link" href="https://github.com/patrick-gogo/kaze-terminal/releases">All releases <svg class="inline-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path d="M4 12 12 4M4 4h8v8"/></svg></a></div>
+  <section class="section wrap" id="faq" aria-labelledby="faq-title">
+    <div class="head solo"><h2 id="faq-title">Questions.</h2></div>
+    <div class="faq">
+      <details><summary>What is Kaze?</summary><p>A terminal for macOS and Windows, built for running Claude Code and Codex all day. Underneath it’s a plain terminal: any shell, any program. The sidebar, alert cards, subagent panel and workspaces only come into play when an agent is running.</p></details>
+      <details><summary>Which agents does it work with?</summary><p>Claude Code and Codex, through their own hooks. Settings checks your Claude Code setup and adds what’s missing. Any other tool runs fine as a normal terminal program, just without the alerts.</p></details>
+      <details><summary>Is it free?</summary><p>Yes. Kaze is free and open source under the MIT license. The code is on <a href="https://github.com/patrick-gogo/kaze-terminal">GitHub</a>.</p></details>
+      <details><summary>Why does my computer warn me when I open it?</summary><p>Kaze isn’t signed by Apple or Microsoft yet, so the first launch asks you to confirm it once. <a href="#first-launch">The step-by-step guide</a> shows exactly what to click. Updates don’t ask again.</p></details>
+      <details><summary>How does it update?</summary><p>Kaze checks for new versions by itself. Open Settings, Updates and it replaces itself in place, keeping your config and sessions.</p></details>
+      <details><summary>Will it slow my machine down?</summary><p>It’s built not to. Kaze is about 14 MB, draws on the CPU and redraws only what changed, and runs no timers while idle. It shows its own CPU and RAM in the status bar so you can check.</p></details>
+    </div>
+  </section>
+
+  <section class="wrap install" id="install" aria-labelledby="install-title">
+    <div>
+      <h2 id="install-title">Light, fast,<span class="q">and out of the way.</span></h2>
+      <p>Download Kaze for macOS 13 or newer (Apple Silicon and Intel) or Windows 10 and 11. Or build it from source with Go 1.27 or newer.</p>
+      <p class="note">Kaze isn’t signed by Apple or Microsoft yet, so the first launch asks you to confirm it once.</p>
+    </div>
     <div class="installer">
       <div class="platform-tabs" role="tablist" aria-label="Platform"><button id="tab-mac" type="button" role="tab" aria-selected="true" aria-controls="panel-mac" tabindex="0">macOS</button><button id="tab-windows" type="button" role="tab" aria-selected="false" aria-controls="panel-windows" tabindex="-1">Windows</button></div>
       <div id="panel-mac" role="tabpanel" aria-labelledby="tab-mac">
@@ -186,8 +254,11 @@ go build -ldflags "-H=windowsgui" -o kaze.exe ./cmd/kaze
     </div>
   </section>
 
-  <section class="guide wrap" id="first-launch" aria-labelledby="guide-title">
-    <div class="section-intro"><h2 id="guide-title">Opening Kaze<br><span>the first time.</span></h2><p>Kaze isn’t signed by Apple or Microsoft yet, so your computer asks you to confirm it once.<br class="desktop-break"> It takes a minute, and you won’t see it again, updates included.</p></div>
+  <section class="section wrap" id="first-launch" aria-labelledby="guide-title">
+    <div class="head">
+      <h2 id="guide-title">Opening Kaze<span class="q">the first time.</span></h2>
+      <p>Your computer asks you to confirm Kaze once. It takes a minute, and you won’t see it again, updates included.</p>
+    </div>
     <div class="guide-grid">
       <article class="guide-card" aria-labelledby="guide-mac">
         <h3 id="guide-mac"><svg class="os-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg>macOS</h3>
@@ -214,8 +285,23 @@ go build -ldflags "-H=windowsgui" -o kaze.exe ./cmd/kaze
     <p class="guide-foot">Still stuck? <a href="https://github.com/patrick-gogo/kaze-terminal/issues">Open an issue</a> and say what you see.</p>
   </section>
 </main>
-<footer class="wrap"><a class="brand" href="#main"><img src="site-assets/kaze-icon.svg" alt="" width="28" height="28"><span>kaze</span></a><p>Made for the long session.</p><div><a href="https://github.com/patrick-gogo/kaze-terminal">GitHub</a><a href="https://github.com/patrick-gogo/kaze-terminal/blob/main/LICENSE">MIT License</a></div></footer>
+
+<footer>
+  <div class="wrap foot">
+    <div><a class="brand" href="#main"><img src="site-assets/kaze-icon.svg" alt="" width="26" height="26"><span>kaze</span></a><p>Made for the long session.</p></div>
+    <div><h4>Product</h4><ul><li><a href="#install">Download</a></li><li><a href="#changelog">What’s new</a></li><li><a href="changelog.html">All releases</a></li></ul></div>
+    <div><h4>Learn</h4><ul><li><a href="#sessions">Features</a></li><li><a href="#first-launch">First launch</a></li><li><a href="#faq">FAQ</a></li></ul></div>
+    <div><h4>Source</h4><ul><li><a href="https://github.com/patrick-gogo/kaze-terminal">GitHub</a></li><li><a href="https://github.com/patrick-gogo/kaze-terminal/issues">Issues</a></li><li><a href="https://github.com/patrick-gogo/kaze-terminal/blob/main/LICENSE">MIT License</a></li></ul></div>
+  </div>
+</footer>
+
+<dialog class="lightbox" id="lightbox" aria-label="Kaze screenshot">
+  <button class="close" type="button" data-close>Close · Esc</button>
+  <button class="nav-btn prev" type="button" data-step="-1" aria-label="Previous screenshot">‹</button>
+  <figure><img id="lightbox-img" src="" alt=""><figcaption><span id="lightbox-cap"></span><span class="keys">← → to browse</span></figcaption></figure>
+  <button class="nav-btn next" type="button" data-step="1" aria-label="Next screenshot">›</button>
+</dialog>
 <div id="copy-status" class="sr-only" role="status" aria-live="polite"></div>
-<script src="site-assets/site.js"></script>
+<script src="site-assets/lander.js"></script>
 </body>
 </html>
