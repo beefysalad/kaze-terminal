@@ -4,6 +4,17 @@ Last updated: 2026-11-04, release 0.28.2 (.md links open the file the agent touc
 
 ## Where things stand
 
+**Find (#155) is in progress on `feat/find` (draft PR), paused 2026-11-04.** Plan:
+`docs/superpowers/plans/2026-11-04-kaze-find.md`; mockup `docs/design/find-mockup.html`.
+- Done: Lane S (`internal/find`, search engine, step budget 1,000,000 cells, ~2 to 4 ms per step), Lane R
+  (render match tint, current match, scroll marks, theme tokens; Midnight match #1c5080 and marks #4f8fd6,
+  owner-approved so matches stand apart from the selection), Lane U tasks U1 to U5 (shortcut, open and
+  close on the pane with the keyboard, keys in the bar, findWork, drawing the bar).
+- Left: U6 (window captures in `docs/audits/find/` and the frame allocation check; it may be partly done on
+  branch `find/u`, so merge `origin/find/u` again first), the full test run, a fresh whole-branch review and
+  fixes, F1 docs (README shortcut table, Find section, `[keys]` row, lander feature line, SCREENSHOTS, audit),
+  then mark the PR ready. Release after merge per CLAUDE.md. Delete the `kaze-find*` worktrees when done.
+
 **The repo moved to `beefysalad/kaze-terminal` (2026-11-04).** GitHub redirects the old repo, git and API
 addresses, but not the website: it is now https://beefysalad.github.io/kaze-terminal/. The Go module, the
 update checker (`internal/update.LatestURL`), the lander, README and release notes name the new owner.
