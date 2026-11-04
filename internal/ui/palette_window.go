@@ -392,7 +392,7 @@ func (win *window) palAct(gtx layout.Context, it palItem, shift bool) {
 			return
 		}
 		if it.Member {
-			win.floatMember(it.Tab)
+			win.dockMember(it.Tab, false)
 		} else {
 			win.selectSession(it.Tab)
 		}

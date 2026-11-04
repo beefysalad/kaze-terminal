@@ -161,7 +161,7 @@ func TestShellRejectsEmptyProgram(t *testing.T) {
 }
 
 func TestKnownActionsAreTheRealOnes(t *testing.T) {
-	want := []string{"agents_board", "close_tab", "copy", "new_branch_session", "new_tab", "next_tab", "next_waiting", "open_settings", "palette", "paste", "prev_tab", "scratch_shell", "toggle_sidebar"}
+	want := []string{"agents_board", "close_tab", "copy", "new_branch_session", "new_tab", "next_tab", "next_waiting", "open_settings", "palette", "paste", "prev_tab", "toggle_sidebar"}
 	var got []string
 	for k := range KnownActions {
 		got = append(got, k)
@@ -357,5 +357,20 @@ func TestAgentPanelHeight(t *testing.T) {
 	cfg, warns, _ = Load(write(t, "agent_panel_height = \"tall\"\n"))
 	if cfg.AgentPanelHeight != 0 || len(warns) != 1 {
 		t.Fatalf("string: height %d warns %v", cfg.AgentPanelHeight, warns)
+	}
+}
+
+// The scratch shell was removed (#133): an old scratch_shell line loads with
+// a warning, binds nothing and is not an error.
+func TestScratchShellKeyWarns(t *testing.T) {
+	cfg, warns, err := Load(write(t, "[keys]\nscratch_shell = \"ctrl+shift+`\"\n"))
+	if err != nil {
+		t.Fatalf("err %v", err)
+	}
+	if len(warns) != 1 || !strings.Contains(warns[0], "scratch_shell") || !strings.Contains(warns[0], "no longer used") {
+		t.Fatalf("warnings %q", warns)
+	}
+	if _, ok := cfg.Keys["scratch_shell"]; ok {
+		t.Fatalf("keys %v", cfg.Keys)
 	}
 }

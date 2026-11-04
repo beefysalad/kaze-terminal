@@ -38,11 +38,11 @@ func (win *window) shouldClose() bool {
 // Keep exited workspace members: their stopped state and output remain useful.
 func (win *window) closeExitedFinalSession() {
 	final := win.mgr.Active()
-	if final == nil || !final.Exited || final.Group != nil || final.Parent != 0 {
+	if final == nil || !final.Exited || final.Group != nil {
 		return
 	}
 	for _, t := range win.mgr.Tabs() {
-		if t.Parent == 0 && t.ID != final.ID {
+		if t.ID != final.ID {
 			return
 		}
 	}

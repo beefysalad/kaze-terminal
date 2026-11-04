@@ -209,7 +209,6 @@ type window struct {
 	// skillCache keeps parsed skill files between palette opens; only the scan goroutine uses it.
 	skillCache *skills.Cache
 	skillsFn   func(skills.Sources) []skills.Skill // nil reads through skillCache; tests fake it
-	fl         floats                              // floating panes per session; UI goroutine only
 	dock       dockState                           // the docked agent panel; UI goroutine only
 	side       sideUI                              // the sidebar; UI goroutine only
 	wsp        wsPage                              // the Workspaces section: its list and the open draft; UI goroutine only
@@ -585,7 +584,7 @@ func (win *window) frame(gtx layout.Context) error {
 		win.rend = render.NewRenderer(px, win.pal, rendOptions(win.opt.Config))
 		win.rend.SetFocused(win.focused)
 		win.rendPx, win.rendStale = px, false
-		win.fl.rends = nil // the panes' renderers follow the main one
+		win.dock.rend = nil // the docked member's renderer follows the main one
 	}
 	cw, ch := win.rend.CellSize()
 	size := gtx.Constraints.Max
@@ -658,10 +657,6 @@ func (win *window) frame(gtx layout.Context) error {
 			win.docEvents(gtx)
 		} else if active != nil {
 			win.dockEvents(gtx, cw, ch)
-			win.paneEvents(gtx, cw, ch) // before the session: a pane sits over it
-			if win.fl.refocus {
-				win.fl.refocus, win.wantFocus = false, true // its filters are up now
-			}
 			if win.docs.shown == 0 {
 				win.termEvents(gtx, win.mainView(active), cw, ch)
 			}
@@ -670,8 +665,6 @@ func (win *window) frame(gtx layout.Context) error {
 		}
 	}
 	active = win.mgr.Active()
-	win.paneStep(active)
-	active = win.mgr.Active() // pane pruning may have removed the final orphan
 	win.switchedTo(active)
 	list := win.mgr.Tabs()
 	win.pruneDocs(list)
@@ -700,8 +693,8 @@ func (win *window) frame(gtx layout.Context) error {
 		gtx.Execute(op.InvalidateCmd{At: wake}) // a tab printed during the last check's second
 	}
 	win.visit(win.shownTab())
-	if v, ok := win.paneKeyView(); ok {
-		win.visit(v.tab) // the pane being typed into is seen too
+	if v, ok := win.keyView(); ok && v.tag != win.termTag {
+		win.visit(v.tab) // the pane or docked member being typed into is seen too
 	}
 	win.autoScrollSelection(gtx, active, cw, ch)
 	win.drainUpdates()
@@ -741,7 +734,7 @@ func (win *window) frame(gtx layout.Context) error {
 		area.Pop()
 	}
 	b := win.bar
-	for _, r := range []image.Rectangle{b.Toggle, b.Plus, b.Search, b.Scratch, b.Agents, b.Gear, b.Buttons[0], b.Buttons[1], b.Buttons[2]} {
+	for _, r := range []image.Rectangle{b.Toggle, b.Plus, b.Search, b.Agents, b.Gear, b.Buttons[0], b.Buttons[1], b.Buttons[2]} {
 		if r.Empty() {
 			continue
 		}
@@ -760,7 +753,6 @@ func (win *window) frame(gtx layout.Context) error {
 	if at, ok := win.docTick(gtx.Now); ok {
 		gtx.Execute(op.InvalidateCmd{At: at})
 	}
-	var panes []paneView
 	if win.set.shown || win.board.open || win.docs.shown != 0 || active != nil {
 		win.empty.shown = false
 	}
@@ -777,14 +769,12 @@ func (win *window) frame(gtx layout.Context) error {
 		win.drawEmpty(gtx, termRect)
 		win.wsr.hits = win.wsr.hits[:0]
 	} else {
-		win.rend.SetFocused(win.viewFocused(0))
+		win.rend.SetFocused(win.focused && !win.dockMemberKeys())
 		win.drawTerminal(gtx, active, termRect, grid, &sel)
 		win.drawWsBanner(gtx, active, termRect) // after the terminal, so it takes the clicks it covers
-		panes = win.paneViews(gtx, termRect, cw, ch)
-		win.drawPanes(gtx, panes) // over the session and its banner, front pane last
 		win.drawShownDock(gtx)
 	}
-	win.syncVisible(panes)
+	win.syncDockMember()
 
 	// Status bar.
 	sg := gtx
@@ -875,15 +865,11 @@ func (win *window) switchedTo(t *tabs.Tab) {
 		win.updateTitle(t)
 		return
 	}
-	win.dropDockKeys() // a panel's keyboard never follows a tab switch
-	if k := win.fl.keys; k != 0 {
-		// The keyboard was in a pane of the old session: it leaves with it.
-		win.fl.keys = 0
-		if pt := win.mgr.Lookup(k); pt != nil && win.focused {
-			sendFocus(pt, false)
-		}
-		win.wantFocus = true
-	} else if win.lastTab != nil && win.focused {
+	// A panel's keyboard never follows a tab switch. A docked member that had
+	// it gets the focus-out; the old session already had one then.
+	memberKeys := win.dock.keysMember != 0
+	win.dropDockKeys()
+	if !memberKeys && win.lastTab != nil && win.focused {
 		sendFocus(win.lastTab, false) // a no-op once that tab is closed
 	}
 	if t != nil {
@@ -968,8 +954,6 @@ func (win *window) captionEvent(e pointer.Event) {
 		win.toggleSidebar()
 	case capSearch:
 		win.openPalette()
-	case capScratch:
-		win.toggleScratch()
 	case capPlus:
 		win.newTab()
 	case capAgents:
@@ -1029,10 +1013,10 @@ func (win *window) focusTarget() event.Tag {
 		return &win.docs.tag
 	}
 	if win.dock.keys && !win.dock.hits.panel.Empty() {
+		if win.dockMemberKeys() {
+			return &win.dock.term
+		}
 		return &win.dock.body
-	}
-	if v, ok := win.paneKeyView(); ok {
-		return v.tag
 	}
 	if win.mgr != nil && win.mgr.Empty() {
 		return &win.empty.newSession
@@ -1052,7 +1036,7 @@ func (win *window) toastEvents(gtx layout.Context) {
 	}
 }
 
-// termView is one terminal on screen: the shown session or a floating pane.
+// termView is one terminal on screen: the shown session or a docked member.
 type termView struct {
 	tab        *tabs.Tab
 	tag        event.Tag       // keys, paste and pointer input
@@ -1072,16 +1056,9 @@ func (win *window) mainView(t *tabs.Tab) termView {
 
 // keyView is the view with the keyboard; ok is false while none is shown.
 func (win *window) keyView() (termView, bool) {
-	if v, ok := win.paneKeyView(); ok {
-		return v, true
-	}
-	// A scratch shortcut can start a pane before its first frame. Keyboard
-	// input following that shortcut already belongs to its terminal, even
-	// though its grid and renderer will be laid out later this frame.
-	if owner := win.fl.owner(win.fl.keys); owner != 0 && owner == win.paneOwner() {
-		p := win.fl.sets[owner].find(win.fl.keys)
-		if t := win.mgr.Lookup(p.id); t != nil && !p.hidden {
-			return termView{tab: t, tag: &p.body}, true
+	if win.dockMemberKeys() {
+		if v, ok := win.dockMemberView(); ok {
+			return v, true
 		}
 	}
 	t := win.shownTab()
@@ -1125,14 +1102,12 @@ func (win *window) termEvents(gtx layout.Context, v termView, cw, ch int) {
 	}
 	for _, ev := range batch {
 		if e, ok := ev.(pointer.Event); ok && e.Kind == pointer.Press && !win.bench.IgnoreInput() {
-			// A press in a pane takes the keyboard there; one in the session takes it back.
-			if v.tag == win.termTag {
+			// A press in a docked member takes the keyboard there; one in the session takes it back.
+			switch v.tag {
+			case win.termTag:
 				win.dropDockKeys() // the terminal takes the keyboard back from the panel
-				if win.fl.keys != 0 {
-					win.focusSession()
-				}
-			} else {
-				win.focusPane(t.ID)
+			case &win.dock.term:
+				win.dockFocusMember(true)
 			}
 			break
 		}
@@ -1181,17 +1156,7 @@ func (win *window) routeView(gtx layout.Context, v termView, batch []event.Event
 				win.blinkFrom = time.Time{} // typing shows the cursor and restarts the blink
 			}
 			before := win.mgr.Active()
-			keysBefore := win.fl.keys
 			win.onKey(gtx, t, e, m)
-			if win.fl.keys != keysBefore {
-				// Scratch toggles move the keyboard without switching the main
-				// tab. Keep the rest of this batch with its new destination.
-				if next, ok := win.keyView(); ok {
-					win.endGesture()
-					v, t, m = next, next.tab, modes(next.tab.Session)
-					main = v.tag == win.termTag
-				}
-			}
 			if win.set.shown {
 				return // the key showed settings; the rest of the frame's input is not the terminal's
 			}
@@ -1302,8 +1267,6 @@ func (win *window) runShortcut(gtx layout.Context, a action) {
 		win.nextWaiting()
 	case actPalette:
 		win.togglePalette()
-	case actScratch:
-		win.toggleScratch()
 	case actAgentsBoard:
 		win.toggleBoard()
 	case actPaste:
@@ -1666,4 +1629,15 @@ func (win *window) endGesture() {
 		}
 	}
 	win.held, win.toApp, win.gestureTab, win.linkClick = 0, false, nil, false
+}
+
+// keyTab is the tab that has the keyboard: the docked member with it, else
+// the shown tab.
+func (win *window) keyTab() *tabs.Tab {
+	if win.dockMemberKeys() {
+		if v, ok := win.dockMemberView(); ok {
+			return v.tab
+		}
+	}
+	return win.shownTab()
 }

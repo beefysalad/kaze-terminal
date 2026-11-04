@@ -46,15 +46,14 @@ func trimBlock(s string) string {
 }
 
 // showAgent opens subagent k's panel under session tab, showing that session
-// first (a floating workspace member becomes the main view, as Expand does).
-// From the sidebar, toggle closes the panel when it already shows k.
+// first (a docked workspace member becomes the main view, as Expand does).
+// From the sidebar, toggle hides the panel when it already shows k.
 func (win *window) showAgent(tab tabs.TabID, k subagents.Key, toggle bool) {
 	if win.subs.Get(k) == nil || win.mgr.Lookup(tab) == nil {
 		return
 	}
-	if win.fl.owner(tab) != 0 {
-		win.fl.remove(tab)
-		win.mgr.Dock(tab)
+	if win.memberDeck(tab) != 0 {
+		win.expandMember(tab)
 	}
 	shown := win.dockOwner() == tab
 	if !shown {
@@ -94,11 +93,13 @@ func (win *window) toastGo(tab tabs.TabID) {
 	win.invalidate()
 }
 
-// dropGoneAgents closes panels whose subagent the tracker forgot.
+// dropGoneAgents closes the tabs of subagents the tracker forgot; other tabs stay.
 func (win *window) dropGoneAgents() {
-	for id, s := range win.dock.by {
-		if win.subs.Get(s.agent) == nil {
-			win.closeDock(id)
+	for id, d := range win.dock.by {
+		for i := len(d.entries) - 1; i >= 0; i-- {
+			if v := d.entries[i].view; v != nil && win.subs.Get(v.agent) == nil {
+				win.closeDockTab(id, i)
+			}
 		}
 	}
 }

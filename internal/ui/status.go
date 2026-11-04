@@ -172,7 +172,7 @@ func (win *window) showServer() {
 		down = first
 	}
 	if down != 0 {
-		win.floatMember(down)
+		win.dockMember(down, false)
 		win.w.Invalidate()
 	}
 }

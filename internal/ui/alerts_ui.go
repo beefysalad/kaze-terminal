@@ -128,18 +128,14 @@ func (win *window) publish(active *tabs.Tab, focused bool) {
 // frames to a minimized window, which is exactly when the owner is away.
 func (win *window) onNotify(m notify.Msg) {
 	id := tabs.TabID(m.Tab)
-	src := m.Tab // the tab the hook ran in, before a scratch shell maps to its session
+	src := m.Tab // the tab the hook ran in: subagent events keep it as their source
 	var t *tabs.Tab
 	if mgr := win.liveMgr.Load(); mgr != nil {
 		if m.Kind != notify.KindUsage && !subKind(m.Kind) {
 			if st := mgr.Lookup(id); st != nil {
 				win.originIdentity(m, st)
-				win.terms.note(id, m.Agent, shellSeq(st)) // the terminal itself, scratch or not
+				win.terms.note(id, m.Agent, shellSeq(st))
 			}
-		}
-		// A scratch shell's messages count on its session's row (spec 8.3).
-		if p := hookTab(mgr, id, m.Kind); p != id {
-			id, m.Tab = p, int(p)
 		}
 		t = mgr.Lookup(id)
 	}

@@ -468,8 +468,8 @@ func TestPlusOpensASessionAndMemberClickShowsIt(t *testing.T) {
 	}
 	sideClick(win, &r, win.side.hits.members[0].rect, pointer.ButtonPrimary)
 	sideFrame(t, win, &r)
-	if win.mgr.Active().ID != a.ID || win.fl.owner(m.ID) != a.ID {
-		t.Fatalf("member click: active %d, floating over %d; want it floating over %d", win.mgr.Active().ID, win.fl.owner(m.ID), a.ID)
+	if win.mgr.Active().ID != a.ID || win.memberDeck(m.ID) != a.ID {
+		t.Fatalf("member click: active %d, docked in %d; want it docked in %d", win.mgr.Active().ID, win.memberDeck(m.ID), a.ID)
 	}
 	n := len(win.mgr.Tabs())
 	click(win, win.bar.Plus) // + moved to the title bar

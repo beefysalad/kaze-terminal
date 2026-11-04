@@ -231,7 +231,7 @@ func TestTabSwitchMidAppDragReleasesInTheOwnerTab(t *testing.T) {
 	}
 }
 
-// A floating pane's press is mapped through its own grid and size, not the main one.
+// A docked member's press is mapped through its own grid and size, not the main one.
 func TestPointerUsesTheViewsGrid(t *testing.T) {
 	st := &recStarter{}
 	win := testWindow(t, st)

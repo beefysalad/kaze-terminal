@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"image"
+
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
@@ -23,9 +25,27 @@ func (win *window) dockEvents(gtx layout.Context, cw, ch int) {
 			break
 		}
 		// A release or cancel always ends a drag, even after its panel closed.
-		if e, ok := ev.(pointer.Event); ok && !win.bench.IgnoreInput() && (s != nil || e.Kind == pointer.Release || e.Kind == pointer.Cancel) {
+		if e, ok := ev.(pointer.Event); ok && !win.bench.IgnoreInput() && (win.dockShown(owner) || e.Kind == pointer.Release || e.Kind == pointer.Cancel) {
 			win.dockHandle(gtx, e)
 		}
+	}
+	for {
+		ev, ok := gtx.Event(pointer.Filter{Target: &win.dock.row, Kinds: pointer.Press | pointer.Move | pointer.Enter | pointer.Leave})
+		if !ok {
+			break
+		}
+		e, ok := ev.(pointer.Event)
+		if !ok || win.bench.IgnoreInput() || !win.dockShown(owner) {
+			continue
+		}
+		if e.Kind == pointer.Press {
+			if e.Buttons.Contain(pointer.ButtonPrimary) {
+				win.dockRow(owner, e.Position.Round())
+				s = win.dockOf(owner)
+			}
+			continue
+		}
+		win.dockHover(e)
 	}
 	for {
 		ev, ok := gtx.Event(pointer.Filter{Target: &win.dock.head, Kinds: pointer.Press})
@@ -84,12 +104,20 @@ loop:
 	}
 	if len(pass) > 0 {
 		// Typing and shortcuts belong to whoever has the keyboard without the
-		// panel (a floating pane or the session): hand it back and deliver
+		// panel (the session): hand it back and deliver
 		// them there, so nothing typed into the panel is lost.
 		win.dropDockKeys()
 		if v, ok := win.keyView(); ok {
 			win.routeView(gtx, v, pass, cw, ch)
 		}
+	}
+	if v, ok := win.dockMemberView(); ok {
+		// A member tab's body is its terminal: typing, paste, selection and
+		// mouse reports go there, and a press there takes the keyboard.
+		win.termEvents(gtx, v, cw, ch)
+	}
+	if win.dock.refocus && win.dock.drawn != 0 {
+		win.dock.refocus, win.wantFocus = false, true // its filters are up now
 	}
 }
 
@@ -124,21 +152,78 @@ func (win *window) dockHandle(gtx layout.Context, e pointer.Event) {
 	}
 }
 
-// dockHead handles a press on the header or the prompt row.
+// dockRow handles a press on the tab row: a tab's × closes it, a tab shows
+// it, and the buttons on the right hide the panel, open the reader or expand
+// the member.
+func (win *window) dockRow(owner tabs.TabID, p image.Point) {
+	h, d := win.dock.hits, win.deckOf(owner)
+	if d == nil {
+		return
+	}
+	defer win.invalidate()
+	for _, t := range h.tabs {
+		switch {
+		case p.In(t.close) && (t.i == d.on || (win.dock.hovering && t.i == win.dock.hover)):
+			win.closeDockTab(owner, t.i)
+			return
+		case p.In(t.rect):
+			if t.i != d.on {
+				if win.dock.keysMember != 0 {
+					win.dropDockKeys() // the member leaves the front with its keyboard
+				}
+				win.showEntry(d, t.i)
+			}
+			return
+		}
+	}
+	switch {
+	case p.In(h.expand):
+		if m := win.shownMember(); m != 0 {
+			win.expandMember(m)
+		}
+	case p.In(h.hide):
+		win.closeDock(owner)
+	case p.In(h.reader):
+		if s := win.dockOf(owner); s != nil {
+			if a := win.subs.Get(s.agent); a != nil {
+				win.openReportDoc(owner, a.Type+" · "+a.Task, win.dockReport(a))
+			}
+		}
+	}
+}
+
+// dockHover follows the pointer over the tab row; it asks for a frame only
+// when the hovered tab changes.
+func (win *window) dockHover(e pointer.Event) {
+	on, i := false, 0
+	if e.Kind != pointer.Leave {
+		p := e.Position.Round()
+		for _, t := range win.dock.hits.tabs {
+			if p.In(t.rect) {
+				on, i = true, t.i
+				break
+			}
+		}
+	}
+	if on == win.dock.hovering && (!on || i == win.dock.hover) {
+		return
+	}
+	win.dock.hovering, win.dock.hover = on, i
+	win.dock.redraws++
+	win.invalidate()
+}
+
+// dockHead handles a press on an agent tab's sub-header or the prompt row.
 func (win *window) dockHead(gtx layout.Context, owner tabs.TabID, s *dockSession, e pointer.Event) {
 	p, h := e.Position.Round(), win.dock.hits
 	a := win.subs.Get(s.agent)
 	switch {
-	case p.In(h.close):
-		win.closeDock(owner)
 	case p.In(h.actTab):
 		s.tab, s.picked, s.scroll, s.follow = dockActivity, true, 0, true
 	case p.In(h.repTab):
 		s.tab, s.picked, s.scroll, s.follow = dockReport, true, 0, false
 	case p.In(h.copy) && a != nil:
 		win.copyReport(gtx, a)
-	case p.In(h.reader) && a != nil:
-		win.openReportDoc(owner, a.Type+" · "+a.Task, win.dockReport(a))
 	case p.In(h.prompt):
 		s.promptOpen = !s.promptOpen
 	}
@@ -170,6 +255,9 @@ func (win *window) dockBody(gtx layout.Context, owner tabs.TabID, s *dockSession
 			s.tab, s.picked, s.scroll = dockReport, true, 0
 		}
 		win.dropSideEdit()
+		if win.dock.keysMember != 0 {
+			win.dropDockKeys()
+		}
 		win.dock.keys, win.wantFocus = true, true
 	case pointer.Scroll:
 		s.scroll = min(max(s.scroll+int(e.Scroll.Y), 0), win.dock.hits.scrollMax)
@@ -195,4 +283,26 @@ func (win *window) dockStep(owner tabs.TabID, d int) {
 		}
 		return
 	}
+}
+
+// autoScrollSelection keeps the held selection's history moving in its own
+// visible view, the session's or the docked member's. dragPos is relative to
+// that view's grid, not the main grid.
+func (win *window) autoScrollSelection(gtx layout.Context, active *tabs.Tab, cw, ch int) bool {
+	if win.set.shown || win.palette.open {
+		return false
+	}
+	if g := win.gestureTab; g != nil {
+		if v, ok := win.dockMemberView(); ok && v.tab == g {
+			return win.autoScrollView(gtx, v, cw, ch)
+		}
+		if g == active {
+			return win.autoScrollView(gtx, win.mainView(active), cw, ch)
+		}
+		return false // the gesture's view is no longer visible
+	}
+	if v, ok := win.keyView(); ok {
+		return win.autoScrollView(gtx, v, cw, ch)
+	}
+	return false
 }

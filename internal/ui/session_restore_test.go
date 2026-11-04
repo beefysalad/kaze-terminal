@@ -9,9 +9,7 @@ import (
 	"time"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/config"
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
 	"github.com/patrick-gogo/kaze-terminal/internal/sessionstate"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 	"github.com/patrick-gogo/kaze-terminal/internal/update"
 )
 
@@ -120,30 +118,6 @@ func TestRestoreMissingFolderAndExplicitWorkspace(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-func TestScratchCannotReplaceSavedMainIdentity(t *testing.T) {
-	f, _ := restoreFixture(t)
-	f.win.initRestore()
-	t.Cleanup(f.win.closeRestore)
-	f.win.openStartup(nil)
-	main := f.win.mgr.Active()
-	scratch, err := f.win.mgr.NewOpts(tabs.StartOpts{Parent: main.ID})
-	if err != nil {
-		t.Fatal(err)
-	}
-	f.win.liveMgr.Store(f.win.mgr)
-	id := "01234567-89ab-cdef-0123-456789abcdef"
-	other := "11234567-89ab-cdef-0123-456789abcdef"
-	f.win.onNotify(notify.Msg{Tab: int(main.ID), Kind: notify.KindSession, Session: id, Agent: "claude"})
-	f.win.onNotify(notify.Msg{Tab: int(scratch.ID), Kind: notify.KindSession, Session: other, Agent: "codex"})
-	f.win.restore.Flush()
-	got, err := sessionstate.Load(f.win.restorePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(got.Entries) != 1 || got.Entries[0].Session != id {
-		t.Fatalf("%+v", got)
 	}
 }
 func TestRestoreToggleAvailableWithoutWorkspaces(t *testing.T) {

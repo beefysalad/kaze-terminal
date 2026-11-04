@@ -22,13 +22,17 @@ import (
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 )
 
-// Panel sizes in dp (mockup docs/design/agent-pane-dock-mockup.html).
+// Panel sizes in dp (mockups docs/design/agent-pane-dock-mockup.html and
+// docs/design/dock-tabs-mockup.html).
 const (
 	dockHandleDp = 6
-	dockHeadDp   = 32
 	dockPromptDp = 24
 	dockRowDp    = 20
 	dockPadDp    = 12
+	dockTabsDp   = 32  // the tab row
+	dockSubDp    = 26  // an agent tab's sub-header
+	dockTabMinDp = 72  // a tab's least width; names are cut below it
+	dockTabMaxDp = 200 // a tab's most width
 )
 
 // mdMarks drops inline markdown marks from a one-line preview.
@@ -59,11 +63,19 @@ type dockLink struct {
 	url string
 }
 
+// dockTabHit is one tab drawn in the tab row: its entry index, the tab and its ×.
+type dockTabHit struct {
+	i           int
+	rect, close image.Rectangle
+}
+
 // dockHits is where the panel's parts were drawn last frame, in window px.
+// header is an agent tab's sub-header.
 type dockHits struct {
-	panel, handle, header, actTab, repTab, copy, reader, close, prompt, finish, body image.Rectangle
-	links                                                                            []dockLink
-	scrollMax                                                                        int
+	panel, handle, row, header, actTab, repTab, copy, reader, expand, hide, prompt, finish, body image.Rectangle
+	tabs                                                                                         []dockTabHit
+	links                                                                                        []dockLink
+	scrollMax                                                                                    int
 }
 
 // dockPalette is the panel's text colors on one background, each nudged to
@@ -93,9 +105,11 @@ func (win *window) mdLayout(gtx layout.Context, cache *dockCache, c *mdCache, sr
 // (or the board preview's) transcript chain when it has one, else the hook's
 // (#85 fallback order).
 func (win *window) dockReport(a *subagents.Agent) string {
-	for _, s := range win.dock.by {
-		if s.agent == a.Key && s.tr != nil && s.tr.Available {
-			return s.tr.Report(a.Report)
+	for _, d := range win.dock.by {
+		for _, e := range d.entries {
+			if s := e.view; s != nil && s.agent == a.Key && s.tr != nil && s.tr.Available {
+				return s.tr.Report(a.Report)
+			}
 		}
 	}
 	if p := &win.board.prev; p.agent == a.Key && p.tr != nil && p.tr.Available {
@@ -126,19 +140,13 @@ func (win *window) dockTick(s *dockSession, a *subagents.Agent, now time.Time) (
 	return s.trAt.Add(agentTranscriptPoll), true
 }
 
-// drawDock draws session's panel for a in r and takes its input areas.
-func (win *window) drawDock(gtx layout.Context, session tabs.TabID, s *dockSession, a *subagents.Agent, r image.Rectangle) {
-	if at, ok := win.dockTick(s, a, gtx.Now); ok {
-		gtx.Execute(op.InvalidateCmd{At: at})
-	}
-	if a.State == subagents.Done && !s.wasDone && !s.picked {
-		s.tab = dockReport // finishing shows the report, unless the user picked a tab
-	}
-	s.wasDone = a.State == subagents.Done
-	ops, c, th := gtx.Ops, win.ui, win.ui.th
+// drawDock draws session's panel d in r: the handle, the tab row and the
+// shown tab, and takes their input areas.
+func (win *window) drawDock(gtx layout.Context, session tabs.TabID, d *dockDeck, r image.Rectangle) {
+	ops, th := gtx.Ops, win.ui.th
 	dp := gtx.Dp
 	win.dock.texts = win.dock.texts[:0]
-	h := dockHits{panel: r}
+	h := dockHits{panel: r, tabs: win.dock.hits.tabs[:0], links: win.dock.hits.links[:0]}
 	paint.FillShape(ops, win.pal.BG, clip.Rect(r).Op())
 	cl := clip.Rect(r).Push(ops)
 	defer cl.Pop()
@@ -149,11 +157,239 @@ func (win *window) drawDock(gtx layout.Context, session tabs.TabID, s *dockSessi
 	grip := image.Rect(r.Min.X+r.Dx()/2-dp(18), h.handle.Min.Y+dp(2), r.Min.X+r.Dx()/2+dp(18), h.handle.Min.Y+dp(4))
 	paint.FillShape(ops, th.Border, clip.UniformRRect(grip, dp(1)).Op(ops))
 
-	// Header.
-	h.header = image.Rect(r.Min.X, h.handle.Max.Y, r.Max.X, min(h.handle.Max.Y+dp(dockHeadDp), r.Max.Y))
-	paint.FillShape(ops, th.Chrome, clip.Rect(h.header).Op())
-	paint.FillShape(ops, th.Border, clip.Rect(image.Rect(h.header.Min.X, h.header.Max.Y-1, h.header.Max.X, h.header.Max.Y)).Op())
-	hc := c.dockColors(th.Chrome)
+	win.drawDockTabs(gtx, d, r, &h)
+	body := image.Rect(r.Min.X, min(h.row.Max.Y, r.Max.Y), r.Max.X, r.Max.Y)
+	member := false
+	if e := d.shown(); e != nil && e.view != nil {
+		if a := win.subs.Get(e.view.agent); a != nil {
+			win.drawDockAgent(gtx, e.view, a, body, &h)
+		}
+	} else if e != nil {
+		member = true
+		h.body = body
+		win.drawDockMember(gtx, e.member, body)
+	}
+	win.dock.hits = h
+
+	// Input areas: the body and prompt first, then the headers, then the handle on top.
+	area := clip.Rect(h.body).Push(ops)
+	if !member { // a member's body is its terminal's (drawDockMember)
+		event.Op(ops, &win.dock.body)
+	}
+	area.Pop()
+	for _, b := range []image.Rectangle{h.header, h.prompt} {
+		if !b.Empty() {
+			area = clip.Rect(b).Push(ops)
+			event.Op(ops, &win.dock.head)
+			area.Pop()
+		}
+	}
+	area = clip.Rect(h.row).Push(ops)
+	event.Op(ops, &win.dock.row)
+	area.Pop()
+	for _, b := range []image.Rectangle{h.actTab, h.repTab, h.copy, h.reader, h.expand, h.hide, h.prompt, h.finish} {
+		if !b.Empty() {
+			area = clip.Rect(b).Push(ops)
+			pointer.CursorPointer.Add(ops)
+			area.Pop()
+		}
+	}
+	for _, t := range h.tabs {
+		area = clip.Rect(t.rect).Push(ops)
+		pointer.CursorPointer.Add(ops)
+		area.Pop()
+	}
+	for _, l := range h.links {
+		area = clip.Rect(l.r).Push(ops)
+		pointer.CursorPointer.Add(ops)
+		area.Pop()
+	}
+	area = clip.Rect(h.handle).Push(ops)
+	pointer.CursorRowResize.Add(ops)
+	event.Op(ops, &win.dock.handle)
+	area.Pop()
+}
+
+// dockTabLabel is what a tab shows: an agent's type and task, or a member's
+// state dot and name.
+type dockTabLabel struct {
+	kind, name string
+	member     bool
+	down       bool // a member that stopped, failed or exited
+	mk         mark // a member's alert mark
+}
+
+func (win *window) dockTabLabel(e *dockEntry) dockTabLabel {
+	if e.view == nil {
+		return win.memberTabLabel(e.member)
+	}
+	l := dockTabLabel{kind: "agent", name: e.view.agent.ID}
+	if a := win.subs.Get(e.view.agent); a != nil {
+		l.kind, l.name = a.Type, a.Task
+	}
+	return l
+}
+
+// memberTabLabel is member m's tab label: its name and state as the
+// sidebar's Workspaces section shows them.
+func (win *window) memberTabLabel(m tabs.TabID) dockTabLabel {
+	l := dockTabLabel{member: true}
+	if t := win.mgr.Lookup(m); t != nil {
+		l.name = t.Title
+	}
+	for _, r := range win.curRuns() {
+		for _, mem := range r.Members {
+			if mem.ID == m {
+				l.name, l.down, l.mk = mem.Title, mem.Down, mem.Mark
+				return l
+			}
+		}
+	}
+	return l
+}
+
+// memberDot is a member tab's state colour: down, needs you, else up.
+func (c *chrome) memberDot(l dockTabLabel) color.NRGBA {
+	switch {
+	case l.down:
+		return c.th.UsageHigh
+	case l.mk == markNeeds:
+		return c.th.Needs
+	}
+	return c.th.Done
+}
+
+// drawDockTabs draws the tab row under the handle (mockup .tabs): the tabs
+// left to right, and Hide, Open in reader or Expand on the right.
+func (win *window) drawDockTabs(gtx layout.Context, d *dockDeck, r image.Rectangle, h *dockHits) {
+	ops, c, th := gtx.Ops, win.ui, win.ui.th
+	dp := gtx.Dp
+	h.row = image.Rect(r.Min.X, h.handle.Max.Y, r.Max.X, min(h.handle.Max.Y+dp(dockTabsDp), r.Max.Y))
+	paint.FillShape(ops, th.Chrome, clip.Rect(h.row).Op())
+	paint.FillShape(ops, th.Border, clip.Rect(image.Rect(h.row.Min.X, h.row.Max.Y-1, h.row.Max.X, h.row.Max.Y)).Op())
+	rc, bc := c.dockColors(th.Chrome), c.dockColors(win.pal.BG)
+	mid := h.row.Min.Y + dp(4) + (h.row.Dy()-dp(4))/2
+
+	// Buttons, right to left.
+	right := h.row.Max.X - dp(6)
+	button := func(label string) image.Rectangle {
+		call, sz := c.sans(gtx, label, 11.5, rc.muted, font.Medium)
+		b := image.Rect(right-sz.X-dp(16), mid-dp(11), right, mid+dp(11))
+		place(ops, call, image.Pt(b.Min.X+dp(8), mid-sz.Y/2))
+		win.dock.texts = append(win.dock.texts, label)
+		right = b.Min.X - dp(2)
+		return b
+	}
+	h.hide = button("Hide ⌄")
+	if e := d.shown(); e != nil {
+		if e.view == nil {
+			h.expand = button("Expand")
+		} else if a := win.subs.Get(e.view.agent); a != nil && a.State == subagents.Done {
+			h.reader = button("Open in reader")
+		}
+	}
+
+	// Widths: each tab's content clamped to [min, max]; when the row is too
+	// short they all shrink alike, down to the least, and names are cut.
+	n := len(d.entries)
+	if n == 0 {
+		return
+	}
+	left, gap := h.row.Min.X+dp(4), dp(2)
+	room := right - dp(6) - left
+	pad := dp(12) + dp(7) + dp(16) + dp(8) // left pad, gap, ×, right pad
+	var labels [dockMaxTabs + 1]dockTabLabel
+	var widths [dockMaxTabs + 1]int
+	n = min(n, len(labels))
+	sum := gap * (n - 1)
+	for i := range n {
+		l := win.dockTabLabel(&d.entries[i])
+		labels[i] = l
+		w := pad
+		if l.member {
+			_, sz := c.label(gtx, l.name, 12, rc.text)
+			w += dp(7) + dp(7) + sz.X
+		} else {
+			_, ks := c.label(gtx, l.kind, 11, rc.kind)
+			_, ns := c.label(gtx, l.name, 12, rc.text)
+			w += ks.X + dp(7) + ns.X
+		}
+		widths[i] = min(max(w, dp(dockTabMinDp)), dp(dockTabMaxDp))
+		sum += widths[i]
+	}
+	if sum > room {
+		share := max((room-gap*(n-1))/n, dp(dockTabMinDp))
+		for i := range n {
+			widths[i] = min(widths[i], share)
+		}
+	}
+	x := left
+	for i := range n {
+		w := widths[i]
+		if x+w > right-dp(6) {
+			break // no room left: the rest are not drawn
+		}
+		tab := image.Rect(x, h.row.Min.Y+dp(4), x+w, h.row.Max.Y)
+		x += w + gap
+		on, hover := i == d.on, win.dock.hovering && i == win.dock.hover
+		col := rc
+		shape := clip.RRect{Rect: tab, NW: dp(7), NE: dp(7)}
+		switch {
+		case on:
+			paint.FillShape(ops, win.pal.BG, shape.Op(ops))
+			tc := shape.Push(ops)
+			paint.FillShape(ops, th.Accent, clip.Rect(image.Rect(tab.Min.X, tab.Min.Y, tab.Max.X, tab.Min.Y+dp(2))).Op())
+			tc.Pop()
+			col = bc
+		case hover:
+			paint.FillShape(ops, tint(th.Border, 0x80), shape.Op(ops))
+		}
+		fg := col.muted
+		if on {
+			fg = col.text
+		}
+		hit := dockTabHit{i: i, rect: tab}
+		hit.close = image.Rect(tab.Max.X-dp(8)-dp(16), mid-dp(8), tab.Max.X-dp(8), mid+dp(8))
+		tx := tab.Min.X + dp(12)
+		l := labels[i]
+		if l.member {
+			dd := dp(7)
+			paint.FillShape(ops, c.memberDot(l), clip.Ellipse(image.Rect(tx, mid-dd/2, tx+dd, mid-dd/2+dd)).Op(ops))
+			tx += dd + dp(7)
+		} else {
+			call, sz := c.fitSide(gtx, l.kind, 11, max(hit.close.Min.X-dp(7)-tx, 0), col.kind)
+			place(ops, call, image.Pt(tx, mid-sz.Y/2))
+			tx += sz.X + dp(7)
+			win.dock.texts = append(win.dock.texts, l.kind)
+		}
+		call, sz := c.fitSide(gtx, l.name, 12, max(hit.close.Min.X-dp(7)-tx, 0), fg)
+		place(ops, call, image.Pt(tx, mid-sz.Y/2))
+		win.dock.texts = append(win.dock.texts, l.name)
+		if on || hover {
+			call, sz := c.label(gtx, "×", 12, col.muted)
+			place(ops, call, image.Pt(hit.close.Min.X+(hit.close.Dx()-sz.X)/2, mid-sz.Y/2))
+		}
+		h.tabs = append(h.tabs, hit)
+	}
+}
+
+// drawDockAgent draws the shown agent tab in r: its sub-header (state, type,
+// task, elapsed, the Activity/Report switch and Copy report), the prompt row
+// and the body.
+func (win *window) drawDockAgent(gtx layout.Context, s *dockSession, a *subagents.Agent, r image.Rectangle, h *dockHits) {
+	if at, ok := win.dockTick(s, a, gtx.Now); ok {
+		gtx.Execute(op.InvalidateCmd{At: at})
+	}
+	if a.State == subagents.Done && !s.wasDone && !s.picked {
+		s.tab = dockReport // finishing shows the report, unless the user picked a tab
+	}
+	s.wasDone = a.State == subagents.Done
+	ops, c, th := gtx.Ops, win.ui, win.ui.th
+	dp := gtx.Dp
+
+	// Sub-header.
+	h.header = image.Rect(r.Min.X, r.Min.Y, r.Max.X, min(r.Min.Y+dp(dockSubDp), r.Max.Y))
+	hc := c.dockColors(win.pal.BG)
 	mid := h.header.Min.Y + h.header.Dy()/2
 	text := func(call op.CallOp, sz image.Point, x int, s string) int {
 		place(ops, call, image.Pt(x, mid-sz.Y/2))
@@ -161,17 +397,11 @@ func (win *window) drawDock(gtx layout.Context, session tabs.TabID, s *dockSessi
 		return x + sz.X
 	}
 	right := h.header.Max.X - dp(6)
-	button := func(label string, size unit.Sp) image.Rectangle {
-		call, sz := c.sans(gtx, label, size, hc.muted, font.Medium)
-		b := image.Rect(right-sz.X-dp(16), h.header.Min.Y, right, h.header.Max.Y)
-		text(call, sz, b.Min.X+dp(8), label)
-		right = b.Min.X
-		return b
-	}
-	h.close = button("×", 15)
 	if a.State == subagents.Done {
-		h.reader = button("Open in reader", 11)
-		h.copy = button("Copy report", 11)
+		call, sz := c.sans(gtx, "Copy report", 11, hc.muted, font.Medium)
+		h.copy = image.Rect(right-sz.X-dp(16), h.header.Min.Y, right, h.header.Max.Y)
+		text(call, sz, h.copy.Min.X+dp(8), "Copy report")
+		right = h.copy.Min.X
 	}
 	x := h.header.Min.X + dp(dockPadDp)
 	mk := markNone
@@ -181,9 +411,9 @@ func (win *window) drawDock(gtx layout.Context, session tabs.TabID, s *dockSessi
 	case subagents.Done:
 		mk = markDone
 	}
-	d := dp(8)
-	c.stateDot(gtx, image.Rect(x, mid-d/2, x+d, mid-d/2+d), mk, a.State == subagents.Running, false)
-	x += d + dp(8)
+	dd := dp(8)
+	c.stateDot(gtx, image.Rect(x, mid-dd/2, x+dd, mid-dd/2+dd), mk, a.State == subagents.Running, false)
+	x += dd + dp(8)
 	call, sz := c.label(gtx, a.Type, 11, hc.kind)
 	x = text(call, sz, x, a.Type) + dp(8)
 	// The switch sits after the elapsed time; measure it first so the task can be cut to fit.
@@ -199,7 +429,7 @@ func (win *window) drawDock(gtx layout.Context, session tabs.TabID, s *dockSessi
 	tCall, tSize := c.fitSide(gtx, a.Task, 11, room, hc.text)
 	x = text(tCall, tSize, x, a.Task) + dp(8)
 	x = text(eCall, eSize, x, el) + dp(12)
-	seg := image.Rect(x, mid-dp(11), x+segW, mid+dp(11))
+	seg := image.Rect(x, mid-dp(10), x+segW, mid+dp(10))
 	if seg.Max.X <= right {
 		paint.FillShape(ops, tint(th.Border, 0x80), clip.UniformRRect(seg, dp(6)).Op(ops))
 		h.actTab = image.Rect(seg.Min.X+dp(2), seg.Min.Y+dp(2), seg.Min.X+dp(2)+aSize.X+dp(18), seg.Max.Y-dp(2))
@@ -235,7 +465,7 @@ func (win *window) drawDock(gtx layout.Context, session tabs.TabID, s *dockSessi
 			l := win.mdLayout(gtx, &s.cache, &s.cache.prompt, prompt, inner.Dx()-dp(10))
 			view := image.Rect(inner.Min.X+dp(10), y, inner.Max.X, min(y+l.height, r.Max.Y))
 			paint.FillShape(ops, th.Border, clip.Rect(image.Rect(inner.Min.X, y, inner.Min.X+dp(2), view.Max.Y)).Op())
-			win.drawPanelMarkdown(gtx, l, view, view.Min, 0, &h, &win.dock.texts)
+			win.drawPanelMarkdown(gtx, l, view, view.Min, 0, h, &win.dock.texts)
 			y = view.Max.Y + dp(6)
 		}
 	}
@@ -245,40 +475,11 @@ func (win *window) drawDock(gtx layout.Context, session tabs.TabID, s *dockSessi
 	inner = image.Rect(inner.Min.X, h.body.Min.Y+dp(6), inner.Max.X, h.body.Max.Y-dp(6))
 	if inner.Dx() > 0 && inner.Dy() > 0 {
 		if s.tab == dockReport {
-			win.drawDockReport(gtx, s, a, inner, bc, &h, &win.dock.texts)
+			win.drawDockReport(gtx, s, a, inner, bc, h, &win.dock.texts)
 		} else {
-			win.drawDockActivity(gtx, s, a, inner, bc, &h, &win.dock.texts)
+			win.drawDockActivity(gtx, s, a, inner, bc, h, &win.dock.texts)
 		}
 	}
-	win.dock.hits = h
-
-	// Input areas: the body and prompt first, then the header, then the handle on top.
-	area := clip.Rect(h.body).Push(ops)
-	event.Op(ops, &win.dock.body)
-	area.Pop()
-	for _, b := range []image.Rectangle{h.header, h.prompt} {
-		if !b.Empty() {
-			area = clip.Rect(b).Push(ops)
-			event.Op(ops, &win.dock.head)
-			area.Pop()
-		}
-	}
-	for _, b := range []image.Rectangle{h.actTab, h.repTab, h.copy, h.reader, h.close, h.prompt, h.finish} {
-		if !b.Empty() {
-			area = clip.Rect(b).Push(ops)
-			pointer.CursorPointer.Add(ops)
-			area.Pop()
-		}
-	}
-	for _, l := range h.links {
-		area = clip.Rect(l.r).Push(ops)
-		pointer.CursorPointer.Add(ops)
-		area.Pop()
-	}
-	area = clip.Rect(h.handle).Push(ops)
-	pointer.CursorRowResize.Add(ops)
-	event.Op(ops, &win.dock.handle)
-	area.Pop()
 }
 
 // drawPanelMarkdown draws l and keeps its links as panel hits.
@@ -393,14 +594,21 @@ func (win *window) drawDockActivity(gtx layout.Context, s *dockSession, a *subag
 // drawShownDock draws the shown session's panel in the rect dockFit laid out.
 func (win *window) drawShownDock(gtx layout.Context) {
 	owner := win.dockOwner()
-	s := win.dockOf(owner)
-	var a *subagents.Agent
-	if s != nil {
-		a = win.subs.Get(s.agent)
-	}
-	if s == nil || a == nil || win.dock.lastRect.Empty() {
-		win.dock.hits = dockHits{}
+	win.dock.focusLine = image.Rectangle{}
+	if !win.dockShown(owner) || win.dock.lastRect.Empty() {
+		win.dock.hits = dockHits{tabs: win.dock.hits.tabs[:0], links: win.dock.hits.links[:0]}
 		return
 	}
-	win.drawDock(gtx, owner, s, a, win.dock.lastRect)
+	win.drawDock(gtx, owner, win.deckOf(owner), win.dock.lastRect)
+	if win.shownMember() == 0 {
+		return
+	}
+	// Two terminals show: an accent line tops the one with the keyboard.
+	over := win.dock.top
+	if win.dockMemberKeys() {
+		over = win.dock.hits.body
+	}
+	l := image.Rect(over.Min.X, over.Min.Y, over.Max.X, over.Min.Y+gtx.Dp(2))
+	paint.FillShape(gtx.Ops, win.ui.th.Accent, clip.Rect(l).Op())
+	win.dock.focusLine = l
 }

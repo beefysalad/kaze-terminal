@@ -24,9 +24,9 @@ func drawPreview(win *window) layout.Context {
 // dockScene), with the board open on it.
 func previewScene(t *testing.T, state string) (*window, subagents.Key) {
 	t.Helper()
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	k := dockScene(t, win, int(a.ID), state)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	win.openBoard(0)
 	win.boardSelect(k)
 	drawPreview(win)
@@ -121,12 +121,12 @@ func TestBoardPreviewStopsPollingWhenDone(t *testing.T) {
 }
 
 func TestBoardCopyReportUsesPreviewTranscript(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	main := filepath.Join(t.TempDir(), "s.jsonl")
 	writeTranscript(t, subagents.TranscriptPath(main, "x"), "Transcript says done")
 	k := dockAgent(t, win, int(a.ID), main)
 	stopAgent(win, int(a.ID), "")
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	win.openBoard(0)
 	win.boardSelect(k)
 	gtx := drawPreview(win)
@@ -141,12 +141,12 @@ func TestBoardCopyReportUsesPreviewTranscript(t *testing.T) {
 // Open in reader shows the transcript's report, and closing the board lets go
 // of the preview's transcript.
 func TestBoardReaderUsesTranscriptAndCloseDropsIt(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	main := filepath.Join(t.TempDir(), "s.jsonl")
 	writeTranscript(t, subagents.TranscriptPath(main, "x"), "Transcript says done")
 	k := dockAgent(t, win, int(a.ID), main)
 	stopAgent(win, int(a.ID), "")
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	win.openBoard(0)
 	win.boardSelect(k)
 	gtx := drawPreview(win)

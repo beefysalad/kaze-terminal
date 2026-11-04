@@ -40,11 +40,11 @@ func trayHits(win *window, tab tabs.TabID, kind agentHitKind) []sideAgentHit {
 }
 
 func TestAgentLineTogglesPanel(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	k := startAgent(win, a.ID, "s", "x")
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	sideClickAt(win, r, lineSpot(t, win, k), pointer.ButtonPrimary, 0)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if s := win.dockOf(a.ID); s == nil || s.agent != k {
 		t.Fatal("a click on the line did not open its panel")
 	}
@@ -52,19 +52,19 @@ func TestAgentLineTogglesPanel(t *testing.T) {
 		t.Fatal("the open agent's line is not highlighted")
 	}
 	sideClickAt(win, r, lineSpot(t, win, k), pointer.ButtonPrimary, 2*doubleClick)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if win.dockOf(a.ID) != nil {
 		t.Fatal("a second click on the line did not close it")
 	}
 }
 
 func TestAgentLineOpensOtherSession(t *testing.T) {
-	win, _, r, a, b, _, _ := paneWindow(t)
+	win, _, r, a, b, _, _ := memberWindow(t)
 	k := startAgent(win, a.ID, "s", "x")
 	win.selectTab(b.ID)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	sideClickAt(win, r, lineSpot(t, win, k), pointer.ButtonPrimary, 0)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if win.mgr.Active().ID != a.ID {
 		t.Fatalf("active %d, want the agent's session %d", win.mgr.Active().ID, a.ID)
 	}
@@ -76,27 +76,27 @@ func TestAgentLineOpensOtherSession(t *testing.T) {
 // TestAgentLineQuickClicksToggleTwice: no double-click rule is left, so two quick
 // presses on one line open the panel and close it again.
 func TestAgentLineQuickClicksToggleTwice(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	k := startAgent(win, a.ID, "s", "x")
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	sideClickAt(win, r, lineSpot(t, win, k), pointer.ButtonPrimary, 0)
 	sideClickAt(win, r, lineSpot(t, win, k), pointer.ButtonPrimary, 100*time.Millisecond)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if win.dockOf(a.ID) != nil {
 		t.Fatal("two quick clicks left the panel open")
 	}
 }
 
 func TestTrayChipOpensBoardForSession(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	startAgents(win, a.ID, 12)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	chips := trayHits(win, a.ID, hitAgentChip)
 	if n := len(trayHits(win, a.ID, hitAgentLine)); n != trayCap || len(chips) != 1 {
 		t.Fatalf("tray: %d lines, chips %v", n, chips)
 	}
 	sideClickAt(win, r, centre(chips[0].rect), pointer.ButtonPrimary, 0)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if !win.board.open || win.board.tab != a.ID {
 		t.Fatalf("the chip did not open the board for its session: open %v tab %d", win.board.open, win.board.tab)
 	}
@@ -104,20 +104,20 @@ func TestTrayChipOpensBoardForSession(t *testing.T) {
 		t.Fatal("the chip opened a panel")
 	}
 	win.closeBoard()
-	floatFrames(t, win, r)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
+	twoFrames(t, win, r)
 	if n, chips := len(trayHits(win, a.ID, hitAgentLine)), trayHits(win, a.ID, hitAgentChip); n != trayCap || len(chips) != 1 {
 		t.Fatalf("after the board: %d lines, chips %v, want the tray unchanged", n, chips)
 	}
 }
 
 func TestTrayFoldControl(t *testing.T) {
-	win, _, r, a, b, _, _ := paneWindow(t)
+	win, _, r, a, b, _, _ := memberWindow(t)
 	startAgents(win, a.ID, 4)
 	win.selectTab(b.ID)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	sideClickAt(win, r, centre(rowHit(t, win, a.ID).fold), pointer.ButtonPrimary, 0)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if !win.side.trayFolded[a.ID] || len(trayHits(win, a.ID, hitAgentLine)) != 0 {
 		t.Fatalf("fold: folded %v, lines %d", win.side.trayFolded[a.ID], len(trayHits(win, a.ID, hitAgentLine)))
 	}
@@ -125,7 +125,7 @@ func TestTrayFoldControl(t *testing.T) {
 		t.Fatal("the fold control selected the session")
 	}
 	sideClickAt(win, r, centre(rowHit(t, win, a.ID).fold), pointer.ButtonPrimary, time.Second)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if win.side.trayFolded[a.ID] || len(trayHits(win, a.ID, hitAgentLine)) != trayCap {
 		t.Fatal("a second click did not open the tray")
 	}
@@ -134,12 +134,12 @@ func TestTrayFoldControl(t *testing.T) {
 // TestTrayFoldClearOfClose: on a hovered row the fold control and the × leave a dead
 // zone of at least 8 dp, so a near-miss on the fold never closes the session.
 func TestTrayFoldClearOfClose(t *testing.T) {
-	win, _, r, a, b, _, _ := paneWindow(t)
+	win, _, r, a, b, _, _ := memberWindow(t)
 	startAgents(win, a.ID, 4)
 	win.selectTab(b.ID)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	sideMove(win, r, pointer.Move, centre(rowHit(t, win, a.ID).fold))
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	h := rowHit(t, win, a.ID)
 	if h.close.Empty() || h.fold.Empty() {
 		t.Fatalf("hovered row: fold %v close %v, want both", h.fold, h.close)
@@ -149,7 +149,7 @@ func TestTrayFoldClearOfClose(t *testing.T) {
 	}
 	// One pixel right of the fold rect (Max is exclusive).
 	sideClickAt(win, r, image.Pt(h.fold.Max.X, centre(h.fold).Y), pointer.ButtonPrimary, 0)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if !win.mgr.Has(a.ID) {
 		t.Fatal("a press just right of the fold control closed the session")
 	}

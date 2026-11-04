@@ -32,7 +32,6 @@ const (
 	actToggleSidebar
 	actNextWaiting
 	actPalette
-	actScratch
 	actAgentsBoard
 	actNewBranchSession
 )
@@ -42,7 +41,7 @@ var actionByName = map[string]action{
 	"new_branch_session": actNewBranchSession, "new_tab": actNewTab, "close_tab": actCloseTab, "next_tab": actNextTab,
 	"prev_tab": actPrevTab, "copy": actCopy, "paste": actPaste, "open_settings": actOpenSettings,
 	"toggle_sidebar": actToggleSidebar, "next_waiting": actNextWaiting, "palette": actPalette,
-	"scratch_shell": actScratch, "agents_board": actAgentsBoard,
+	"agents_board": actAgentsBoard,
 }
 
 // maxGrid matches term's per-dimension clamp, so a huge window never asks for more.
@@ -85,7 +84,6 @@ func defaultBindings(goos string) map[string]input.Shortcut {
 			"toggle_sidebar":     {Name: "B", Mods: key.ModCommand},
 			"next_waiting":       {Name: "J", Mods: key.ModCommand},
 			"palette":            {Name: "K", Mods: key.ModCommand},
-			"scratch_shell":      {Name: "`", Mods: key.ModCtrl},
 			"agents_board":       {Name: "A", Mods: key.ModCommand | key.ModShift},
 			"new_branch_session": {Name: "N", Mods: key.ModCommand | key.ModShift},
 		}
@@ -98,7 +96,6 @@ func defaultBindings(goos string) map[string]input.Shortcut {
 		"toggle_sidebar":     {Name: "B", Mods: cs},
 		"next_waiting":       {Name: "J", Mods: cs},
 		"palette":            {Name: "K", Mods: cs},
-		"scratch_shell":      {Name: "`", Mods: cs},
 		"agents_board":       {Name: "A", Mods: cs},
 		"new_branch_session": {Name: "N", Mods: cs},
 	}

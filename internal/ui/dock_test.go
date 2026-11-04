@@ -45,7 +45,7 @@ func TestDockSplitSmallWindow(t *testing.T) {
 }
 
 func TestDockToggle(t *testing.T) {
-	win, _, _, a, _, _, _ := paneWindow(t)
+	win, _, _, a, _, _, _ := memberWindow(t)
 	k := subagents.Key{Session: "s", ID: "k"}
 	j := subagents.Key{Session: "s", ID: "j"}
 	win.toggleDock(a.ID, k)
@@ -66,7 +66,7 @@ func TestDockToggle(t *testing.T) {
 }
 
 func TestDockPerSession(t *testing.T) {
-	win, _, _, a, b, _, _ := paneWindow(t)
+	win, _, _, a, b, _, _ := memberWindow(t)
 	x := subagents.Key{Session: "s", ID: "x"}
 	y := subagents.Key{Session: "t", ID: "y"}
 	win.openDock(a.ID, x)
@@ -81,9 +81,9 @@ func TestDockPerSession(t *testing.T) {
 }
 
 func TestDockShrinksOnlyItsSession(t *testing.T) {
-	win, st, r, a, _, _, _ := paneWindow(t)
+	win, st, r, a, _, _, _ := memberWindow(t)
 	win.openDock(a.ID, startAgent(win, a.ID, "s", "x"))
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	_, rows := win.mgr.Size()
 	if got := ptyOf(st, 0).lastSize()[1]; got >= rows {
 		t.Fatalf("docked session rows %d, shared %d", got, rows)
@@ -97,9 +97,9 @@ func TestDockShrinksOnlyItsSession(t *testing.T) {
 }
 
 func TestDockNoResizeChurn(t *testing.T) {
-	win, st, r, a, _, _, _ := paneWindow(t)
+	win, st, r, a, _, _, _ := memberWindow(t)
 	win.openDock(a.ID, startAgent(win, a.ID, "s", "x"))
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	n := ptyOf(st, 0).resizeCount()
 	for range 5 {
 		sideFrame(t, win, r)
@@ -110,11 +110,11 @@ func TestDockNoResizeChurn(t *testing.T) {
 }
 
 func TestDockCloseRestoresSize(t *testing.T) {
-	win, st, r, a, _, _, _ := paneWindow(t)
+	win, st, r, a, _, _, _ := memberWindow(t)
 	win.openDock(a.ID, startAgent(win, a.ID, "s", "x"))
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	win.closeDock(a.ID)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	cols, rows := win.mgr.Size()
 	if got := ptyOf(st, 0).lastSize(); got != [2]int{cols, rows} {
 		t.Fatalf("closed dock left %v, want %v", got, [2]int{cols, rows})
@@ -125,27 +125,15 @@ func TestDockCloseRestoresSize(t *testing.T) {
 }
 
 func TestDockPrunedWithSession(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	win.openDock(a.ID, startAgent(win, a.ID, "s", "x"))
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	win.closeTab(a.ID)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if _, ok := win.dock.by[a.ID]; ok {
 		t.Fatal("closed session still has a panel")
 	}
 	if win.dock.sized[a.ID] {
 		t.Fatal("closed session still marked sized")
-	}
-}
-
-func TestDockMemberPaneStaysAbove(t *testing.T) {
-	win, _, r, a, _, m1, _ := paneWindow(t)
-	win.openDock(a.ID, startAgent(win, a.ID, "s", "x"))
-	win.fl.open(a.ID, m1.ID, paneMember)
-	p := win.fl.set(a.ID).find(m1.ID)
-	p.r = image.Rect(0, 400, 560, 900) // asks to reach far below
-	floatFrames(t, win, r)
-	if p.hits.outer.Max.Y > win.dockRect().Min.Y {
-		t.Fatalf("pane %v covers the panel %v", p.hits.outer, win.dockRect())
 	}
 }

@@ -16,7 +16,7 @@ import (
 )
 
 type sideTabInput struct {
-	id, parent                tabs.TabID
+	id                        tabs.TabID
 	title, fixed, color, name string
 	exited                    bool
 	run                       uint64
@@ -30,21 +30,21 @@ type sideDocInput struct {
 	doc     sideDoc
 }
 type sideDrawKey struct {
-	activeRepo             string
-	openAgent, hoverAgent  subagents.Key
-	launchVersion          uint64
-	launcher               bool
-	size                   image.Point
-	metric                 unit.Metric
-	locale                 system.Locale
-	shown, hover, floating tabs.TabID
-	renaming               tabs.TabID
-	doc, hoverDoc          docID
-	scroll                 int
-	settings, settingsOn   bool
-	theme                  theme.Chrome
-	shaper                 *text.Shaper
-	generation             uint64
+	activeRepo            string
+	openAgent, hoverAgent subagents.Key
+	launchVersion         uint64
+	launcher              bool
+	size                  image.Point
+	metric                unit.Metric
+	locale                system.Locale
+	shown, hover, docked  tabs.TabID
+	renaming              tabs.TabID
+	doc, hoverDoc         docID
+	scroll                int
+	settings, settingsOn  bool
+	theme                 theme.Chrome
+	shaper                *text.Shaper
+	generation            uint64
 }
 type sideCache struct {
 	valid             bool
@@ -92,7 +92,7 @@ func (win *window) cachedSide(now time.Time) sideModel {
 	for i, t := range s.tabs {
 		run, _ := win.isMember(t)
 		add, del := win.linesOf(t.ID)
-		v := sideTabInput{id: t.ID, parent: t.Parent, title: t.Title, fixed: t.FixedTitle, color: t.Color, name: win.names[t.ID], exited: t.Exited, run: run, loc: win.locOf(t), agent: win.rowAgent(t.ID), mark: win.alerts.markOf(t.ID), lines: lineCount{add, del}}
+		v := sideTabInput{id: t.ID, title: t.Title, fixed: t.FixedTitle, color: t.Color, name: win.names[t.ID], exited: t.Exited, run: run, loc: win.locOf(t), agent: win.rowAgent(t.ID), mark: win.alerts.markOf(t.ID), lines: lineCount{add, del}}
 		if i >= oldLen || c.inputs[i] != v {
 			dirty = true
 			c.inputs[i] = v
