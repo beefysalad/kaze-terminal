@@ -12,6 +12,8 @@ type Chrome struct {
 	Chrome, Active, ActiveFG, Muted, Border, Accent, StatusFG, Folder, Branch color.NRGBA
 	CapGlyph, CapHover, CapPress, CloseHover, ClosePress                      color.NRGBA
 	Needs, Done, ToastBG, ToastLine, ToastFG, ToastGo, ToastTitle, UsageHigh  color.NRGBA
+	// An edit's added and removed lines in the readable agent activity.
+	DiffAddBG, DiffAddFG, DiffDelBG, DiffDelFG color.NRGBA
 }
 
 // Theme is one selectable look.
@@ -66,6 +68,7 @@ func midnight() Theme {
 			CloseHover: closeHover, ClosePress: closePress, Needs: hex(0xf2b84b), Done: hex(0x62d39a),
 			ToastBG: hex(0x1a1f2c), ToastLine: hex(0x2a3142), ToastFG: hex(0xe7e9f0), ToastGo: hex(0xb9a6ff),
 			ToastTitle: hex(0xffffff), UsageHigh: hex(0xff6b6b),
+			DiffAddBG: hex(0x122419), DiffAddFG: hex(0x8fe0b0), DiffDelBG: hex(0x2a1418), DiffDelFG: hex(0xf3a0a8),
 		},
 	}
 }
@@ -85,6 +88,7 @@ func sumi() Theme {
 			CloseHover: closeHover, ClosePress: closePress, Needs: hex(0xd9b56a), Done: hex(0x9fbf8f),
 			ToastBG: hex(0x181818), ToastLine: hex(0x222222), ToastFG: hex(0xe4e1da), ToastGo: hex(0xe2553d),
 			ToastTitle: hex(0xffffff), UsageHigh: hex(0xff7a5c),
+			DiffAddBG: hex(0x16261a), DiffAddFG: hex(0xa9d79a), DiffDelBG: hex(0x2c1513), DiffDelFG: hex(0xf0a093),
 		},
 	}
 }
@@ -104,6 +108,7 @@ func tide() Theme {
 			CloseHover: closeHover, ClosePress: closePress, Needs: hex(0xffd27a), Done: hex(0x5fe0a8),
 			ToastBG: hex(0x0c1e30), ToastLine: hex(0x16283d), ToastFG: hex(0xcfe3ef), ToastGo: hex(0x40e0d0),
 			ToastTitle: hex(0xffffff), UsageHigh: hex(0xff9daa),
+			DiffAddBG: hex(0x12292d), DiffAddFG: hex(0x8ff0c2), DiffDelBG: hex(0x2a1c2a), DiffDelFG: hex(0xffb3bd),
 		},
 	}
 }
@@ -124,6 +129,7 @@ func washi() Theme {
 			CloseHover: closeHover, ClosePress: closePress, Needs: hex(0x9a6a00), Done: hex(0x2e7d4f),
 			ToastBG: hex(0xfffdf8), ToastLine: hex(0xddd5c6), ToastFG: hex(0x2b2a33), ToastGo: hex(0x3f51b5),
 			ToastTitle: hex(0x2b2a33), UsageHigh: hex(0xc0392b),
+			DiffAddBG: hex(0xd7dfcc), DiffAddFG: hex(0x1f5a37), DiffDelBG: hex(0xedd3c9), DiffDelFG: hex(0x962d22),
 		},
 	}
 }
@@ -143,6 +149,7 @@ func sakura() Theme {
 			CloseHover: closeHover, ClosePress: closePress, Needs: hex(0xf3c98b), Done: hex(0x9fd8a8),
 			ToastBG: hex(0x24181f), ToastLine: hex(0x2b1f28), ToastFG: hex(0xeedde6), ToastGo: hex(0xff8fb8),
 			ToastTitle: hex(0xffffff), UsageHigh: hex(0xff93ab),
+			DiffAddBG: hex(0x1c2a20), DiffAddFG: hex(0xbdeac3), DiffDelBG: hex(0x2e1820), DiffDelFG: hex(0xffb3c6),
 		},
 	}
 }

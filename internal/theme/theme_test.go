@@ -63,3 +63,23 @@ func TestAllThemes(t *testing.T) {
 		t.Error("washi BG should be light")
 	}
 }
+
+// The diff colours of the readable agent activity: set in every theme, and
+// each foreground readable on its own background before any nudge.
+func TestDiffTokensInEveryTheme(t *testing.T) {
+	for _, th := range All() {
+		u := th.UI
+		for name, c := range map[string]color.NRGBA{"DiffAddBG": u.DiffAddBG, "DiffAddFG": u.DiffAddFG, "DiffDelBG": u.DiffDelBG, "DiffDelFG": u.DiffDelFG} {
+			if c == (color.NRGBA{}) {
+				t.Errorf("%s: %s unset", th.Key, name)
+			}
+		}
+		if r := ratio(u.DiffAddFG, u.DiffAddBG); r < 4.5 {
+			t.Errorf("%s: added line contrast %.2f", th.Key, r)
+		}
+		if r := ratio(u.DiffDelFG, u.DiffDelBG); r < 4.5 {
+			t.Errorf("%s: removed line contrast %.2f", th.Key, r)
+		}
+		t.Logf("%s: add %.2f del %.2f", th.Key, ratio(u.DiffAddFG, u.DiffAddBG), ratio(u.DiffDelFG, u.DiffDelBG))
+	}
+}
