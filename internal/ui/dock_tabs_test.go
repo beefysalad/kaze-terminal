@@ -83,7 +83,6 @@ func TestDockTabsShrinkThenCut(t *testing.T) {
 	}
 }
 
-
 func TestDockTabClickSwitches(t *testing.T) {
 	win, _, r, a, _, _, _ := paneWindow(t)
 	ks := dockAgents(t, win, a.ID, 2, "task")
