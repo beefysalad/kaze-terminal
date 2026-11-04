@@ -18,14 +18,15 @@ type Pos struct{ Line, Col int }
 type Match struct{ Start, End Pos }
 
 // fold lowercases r rune by rune (simple lowercase, no full case folding: Ruling 3).
+// Small enough to inline; only non-ASCII runes pay for a call.
 func fold(r rune) rune {
-	if r < 0x80 {
-		if 'A' <= r && r <= 'Z' {
-			return r + 'a' - 'A'
-		}
-		return r
+	if r >= 0x80 {
+		return unicode.ToLower(r)
 	}
-	return unicode.ToLower(r)
+	if uint32(r-'A') < 26 {
+		r += 'a' - 'A'
+	}
+	return r
 }
 
 // needle is the query as runes plus its KMP failure table, in fixed arrays so
@@ -106,6 +107,14 @@ func (m *matcher) feed(r rune, start, end Pos) (Match, bool) {
 	}
 	if nd.fold {
 		r = fold(r)
+	}
+	if m.k == 0 {
+		// Nothing partial: no earlier cell can be part of a match, so the ring
+		// starts over here; idle cells that do not start one are never recorded.
+		if r != nd.rs[0] {
+			return Match{}, false
+		}
+		m.w = 0
 	}
 	m.at[m.w], m.ends[m.w] = start, end
 	m.w++

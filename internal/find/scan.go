@@ -5,8 +5,11 @@ import "github.com/beefysalad/kaze-terminal/internal/screen"
 // MaxMatches is how many matches are kept: the newest, nearest the live screen (Ruling 9).
 const MaxMatches = 1000
 
-// StepBudget is how many cells one Step may read under the session lock (Ruling 7).
-const StepBudget = 2_000_000
+// StepBudget is how many cells one Step may read under the session lock (Ruling 7):
+// about 3.5 to 4 ms on the owner's laptop (i7-1255U, BenchmarkStepBudget), under the
+// 5 ms a frame may spend on find. A 10,000-line history of 80-column lines settles in
+// one step; 100,000 lines of 200 columns take about twelve.
+const StepBudget = 1_000_000
 
 // Span is one match's cells on one row, From..To inclusive; Match indexes Matches().
 type Span struct{ Line, From, To, Match int }
@@ -174,7 +177,21 @@ func (s *Search) scanRow(scr *screen.Screen, abs, held int) int {
 		if wrapped && isPad(cells[n-1]) && s.nextLeadIsWide(scr, abs+1, held) {
 			n--
 		}
+		// idle, written out: almost every cell of a scan passes here.
+		first, folded := s.nd.rs[0], s.nd.fold
 		for c := s.col; c < n; c++ {
+			if s.m.k == 0 {
+				r := cells[c].Rune
+				if r == 0 {
+					r = ' '
+				}
+				if folded {
+					r = fold(r)
+				}
+				if r != first {
+					continue
+				}
+			}
 			s.feedCell(cells[c], line, c)
 		}
 		if !wrapped {
@@ -194,12 +211,29 @@ func (s *Search) scanRow(scr *screen.Screen, abs, held int) int {
 		n--
 	}
 	for c := s.col; c < n; c++ {
-		s.feedCell(scr.Cell(c, row), line, c)
+		if cell := scr.Cell(c, row); !s.idle(cell.Rune) {
+			s.feedCell(cell, line, c)
+		}
 	}
 	if !wrapped {
 		s.m.reset()
 	}
 	return cols
+}
+
+// idle reports that the matcher holds nothing partial and a cell holding r cannot
+// start a match, so the cell can be passed over: the hot path of every scan.
+func (s *Search) idle(r rune) bool {
+	if s.m.k != 0 {
+		return false
+	}
+	if r == 0 {
+		r = ' '
+	}
+	if s.nd.fold {
+		r = fold(r)
+	}
+	return r != s.nd.rs[0]
 }
 
 // isPad reports a blank left at the right edge when a wide char did not fit there.
