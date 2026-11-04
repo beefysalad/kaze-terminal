@@ -49,6 +49,18 @@ if (/Windows/.test(navigator.userAgent)) {
   selectPlatform('windows');
 }
 
+// Hero wall: copy each column's windows once so the CSS drift loops without a seam.
+// The copies are decoration: hidden from screen readers and skipped by Tab.
+document.querySelectorAll('.wall-col').forEach(col => {
+  [...col.children].forEach(tile => {
+    const copy = tile.cloneNode(true);
+    copy.setAttribute('aria-hidden', 'true');
+    copy.tabIndex = -1;
+    copy.querySelector('img')?.removeAttribute('fetchpriority');
+    col.appendChild(copy);
+  });
+});
+
 // Screenshots: every wall tile and "See ..." button opens the lightbox.
 const shots = {
   sessions: 'The session sidebar: sessions grouped by repo, marked needs you, running and done',

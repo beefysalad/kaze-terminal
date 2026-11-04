@@ -39,7 +39,7 @@ code{font:13px var(--mono)}
 .pill{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:650;background:var(--text);color:#13121a;border-radius:999px;padding:7px 15px}
 .pill:hover{background:#fff}
 
-/* Hero: words on the left, a still wall of real Kaze windows on the right. */
+/* Hero: words on the left, a slowly drifting wall of real Kaze windows on the right. */
 .hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
 .hero-inner{position:relative;z-index:2;min-height:640px;display:flex;flex-direction:column;justify-content:center;padding:72px 0 64px;max-width:520px}
 h1{font-size:clamp(52px,6.6vw,92px);font-weight:600;line-height:.98;letter-spacing:-.055em}
@@ -62,11 +62,16 @@ h1 .q{display:block;color:var(--dim)}
 .first-time a{color:var(--muted);text-decoration:underline;text-underline-offset:3px}
 .first-time a:hover{color:var(--text)}
 
-.wall{position:absolute;z-index:1;top:-40px;right:-220px;width:1180px;height:820px;perspective:1700px;pointer-events:none}
-.wall-plane{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);gap:22px;transform:rotateX(16deg) rotateY(-22deg) rotateZ(7deg);transform-origin:30% 50%;pointer-events:auto}
-.wall-col{display:flex;flex-direction:column;gap:22px}
-.wall-col:nth-child(2){margin-top:-120px}
-.wall-col:nth-child(3){margin-top:60px}
+.wall{position:absolute;z-index:1;top:-160px;right:-160px;width:1180px;height:1040px;perspective:1700px;pointer-events:none}
+.wall-plane{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);align-items:start;gap:22px;transform:rotateX(16deg) rotateY(-22deg) rotateZ(7deg);transform-origin:30% 50%;pointer-events:auto}
+/* Each column holds its windows twice (lander.js adds the copy) and slides by one copy, so the loop is seamless. */
+.wall-col{display:flex;flex-direction:column;gap:22px;animation:wall-up var(--d,90s) linear infinite;will-change:transform}
+.wall-col:nth-child(1){--d:84s}
+.wall-col:nth-child(2){--d:104s;animation-name:wall-down}
+.wall-col:nth-child(3){--d:94s;animation-delay:-30s}
+.wall-col:hover,.wall-col:focus-within{animation-play-state:paused}
+@keyframes wall-up{from{transform:translateY(0)}to{transform:translateY(calc(-50% - 11px))}}
+@keyframes wall-down{from{transform:translateY(calc(-50% - 11px))}to{transform:translateY(0)}}
 .tile{display:block;width:100%;aspect-ratio:2200/1440;border-radius:9px;overflow:hidden;border:1px solid #2c2f3d;background:#0f1117;box-shadow:0 30px 60px -30px rgba(0,0,0,.8);transition:transform .2s ease,border-color .2s ease}
 .tile img{display:block;width:100%;height:100%;object-fit:cover;object-position:left top;opacity:.88;transition:opacity .2s}
 .tile:hover,.tile:focus-visible{transform:translateZ(30px);border-color:#55597a}
@@ -276,7 +281,7 @@ footer{margin-top:130px;border-top:1px solid var(--line);padding:44px 0 56px}
 
 @media (max-width:980px){
   .nav{display:none}
-  .wall{opacity:.35;right:-420px}
+  .wall{opacity:.35;right:-360px}
   .hero::after{background:linear-gradient(0deg,var(--ink) 0%,rgba(11,12,17,.6) 100%)}
   .head,.install,.readme,.guide-grid{grid-template-columns:1fr}
   .toc{position:static}
