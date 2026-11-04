@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kaze About Page</title>
+<style>
+@font-face{font-family:Manrope;src:url(../../assets/fonts/Manrope-Regular.ttf);font-weight:400}
+@font-face{font-family:Manrope;src:url(../../assets/fonts/Manrope-Medium.ttf);font-weight:500}
+@font-face{font-family:Manrope;src:url(../../assets/fonts/Manrope-SemiBold.ttf);font-weight:600}
+@font-face{font-family:JBM;src:url(../../assets/fonts/JetBrainsMono-Regular.ttf)}
+@font-face{font-family:Noto;src:url(../../assets/fonts/NotoSansJP-Regular-subset.ttf)}
+:root{--page:#05060a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:#c9cdd8;font:14px/1.45 Manrope,system-ui,sans-serif;padding:28px 24px 60px}
+.bar{display:flex;flex-wrap:wrap;gap:18px;align-items:center;max-width:1100px;margin:0 auto 18px}
+.bar h1{font:600 15px Manrope;color:#fff;margin:0 auto 0 0}
+.seg{display:flex;gap:2px;background:#11131a;border:1px solid #1d2230;border-radius:9px;padding:3px}
+.seg button{all:unset;cursor:pointer;padding:5px 11px;border-radius:6px;font:500 12.5px Manrope;color:#8a90a2}
+.seg button[aria-pressed=true]{background:#232838;color:#fff}
+.note{max-width:1100px;margin:0 auto 26px;color:#7d8394;font-size:13px}
+
+/* theme tokens, from internal/theme and pageColors() */
+.win{--bg:#0f1117;--nav:#0b0d12;--title:#fff;--fg:#e7e9f0;--muted:#8a90a2;--dim:#7d8394;--line:#1d2230;--line2:#2a3142;--accent:#8b7bff;--done:#62d39a;--toast:#1a1f2c;
+  --mark:#c2b4eb;--word:#efedf3;--by:#aaa6b4}
+.win[data-t=sumi]{--bg:#111;--nav:#0c0c0c;--title:#fff;--fg:#e4e1da;--muted:#77736b;--dim:#77736b;--line:#222;--line2:#222;--accent:#e2553d;--done:#9fbf8f;--toast:#181818;--by:#a19c94}
+.win[data-t=tide]{--bg:#0b1626;--nav:#08111e;--title:#fff;--fg:#cfe3ef;--muted:#7fa3b8;--dim:#6e8ea2;--line:#16283d;--line2:#16283d;--accent:#40e0d0;--done:#5fe0a8;--toast:#0c1e30;--by:#9fb5c4}
+.win[data-t=washi]{--bg:#f6f2ea;--nav:#ece6da;--title:#2b2a33;--fg:#2b2a33;--muted:#7a7468;--dim:#8a8478;--line:#ddd5c6;--line2:#ddd5c6;--accent:#3f51b5;--done:#2e7d4f;--toast:#fffdf8;
+  --mark:#7563bf;--word:#2b2a33;--by:#7a7468}
+.win[data-t=sakura]{--bg:#1a1218;--nav:#140e13;--title:#fff;--fg:#eedde6;--muted:#a8909e;--dim:#9c8492;--line:#2b1f28;--line2:#2b1f28;--accent:#ff8fb8;--done:#9fd8a8;--toast:#24181f;--by:#b8a6b0}
+.win{--card:color-mix(in srgb,var(--bg) 55%,var(--toast));--raised:color-mix(in srgb,var(--card) 93%,var(--title))}
+
+.pair{display:grid;grid-template-columns:1fr;gap:34px;max-width:1100px;margin:0 auto}
+.label{font:600 11px Manrope;letter-spacing:.08em;text-transform:uppercase;color:#7d8394;margin:0 0 9px}
+.win{display:flex;height:640px;border-radius:12px;overflow:hidden;border:1px solid #1d2230;background:var(--bg);color:var(--fg);transition:width .2s;width:100%;margin:0 auto}
+.win.narrow{width:560px;max-width:100%}
+.side{width:200px;flex:none;background:var(--nav);border-right:1px solid var(--line);padding:22px 14px;display:flex;flex-direction:column}
+.side h2{font:600 17px Manrope;color:var(--title);margin:0 6px 20px}
+.side a{display:block;padding:8px 12px;border-radius:8px;color:var(--muted);font-weight:500;font-size:13.5px;margin-bottom:2px}
+.side a.on{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--title)}
+.side .foot{margin-top:auto;border-top:1px solid var(--line);padding:12px 8px 0;font:600 12.5px Manrope;color:var(--title)}
+.side .foot small{display:block;font:400 11px Manrope;color:var(--dim)}
+.narrow .side{width:150px}
+.main{flex:1;min-width:0;overflow:auto;padding:26px 34px}
+.main h3{font:600 20px Manrope;color:var(--title);margin:0 0 4px}
+.main .hint{color:var(--dim);font-size:12.5px;margin:0 0 30px}
+.narrow .main{padding:22px 18px}
+
+/* ---- proposed: centred colophon ---- */
+.about{max-width:440px;margin:0 auto;text-align:center}
+.lkbox{position:relative;width:208px;margin:6px auto 0}.lockup{width:208px;height:auto;display:block}
+.byl{position:absolute;left:84.5px;top:54.5px;font:11px/1 JBM,monospace;letter-spacing:.02em;color:var(--by);white-space:nowrap}
+.narrow .lkbox{width:168px}.narrow .byl{left:68.3px;top:43px;font-size:10px}
+.lk-mark{fill:var(--mark)} .lk-word{fill:var(--word)} .lk-by{fill:var(--by)}
+.tag{font:500 15px Manrope;color:var(--title);margin:22px 0 3px;letter-spacing:-.005em}
+.mean{font-size:12.5px;color:var(--muted);margin:0}
+.mean .jp{font-family:Noto,Manrope;margin-right:2px}
+.panel{margin:26px 0 0;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.row{display:flex;align-items:baseline;gap:12px;padding:11px 18px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0;padding-top:14px}
+.row dt{width:78px;flex:none;color:var(--dim);font-size:12.5px}
+.row dd{margin:0;flex:1;min-width:0;font:12.5px JBM,monospace;color:var(--title)}
+.row dd .sec{color:var(--muted)}
+.chip{font:500 12px Manrope;color:var(--done);white-space:nowrap;display:inline-flex;align-items:center;gap:7px}
+.chip i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.chip.new{color:var(--accent)}
+.acts{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line);background:var(--raised)}
+.acts .sp{flex:1}
+.btn{font:500 12.5px Manrope;padding:7px 13px;border-radius:7px;border:1px solid var(--line2);background:transparent;color:var(--fg);white-space:nowrap;cursor:default}
+.btn.pri{background:var(--title);color:var(--bg);border-color:transparent}
+.made{font-size:11.5px;color:var(--dim);margin:18px 0 0}
+.narrow .lockup{width:168px}
+.narrow .acts{flex-direction:column}
+.narrow .acts .sp{display:none}
+.narrow .acts .btn{text-align:center}
+.narrow .acts .pri{order:-1}
+
+/* ---- current page (for comparison) ---- */
+.cur{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:34px 18px 16px;text-align:center}
+.cur .lk{display:flex;justify-content:center;align-items:center;gap:18px}
+.cur .lk svg{width:86px;height:86px}
+.cur .w{font:64px/1 JBM,monospace;color:var(--title)} .cur .b{font:13px JBM;color:var(--muted);text-align:right}
+.cur p{color:var(--muted);margin:18px 0 14px}
+.cur .pill{display:inline-block;font:12px JBM;color:var(--title);background:var(--raised);border:1px solid var(--line2);border-radius:99px;padding:5px 12px}
+.cur .facts{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:26px -18px 16px;text-align:left}
+.cur .facts div{padding:13px 18px;border-left:1px solid var(--line);font:12.5px JBM;color:var(--title)}
+.cur .facts div:first-child{border-left:0}
+.cur .facts b{display:block;font:600 10px Manrope;color:var(--dim)}
+@media (max-width:640px){.side{display:none}.win.narrow{width:100%}}
+</style>
+</head>
+<body>
+<div class="bar">
+  <h1>Settings › About, proposed</h1>
+  <div class="seg" id="themes">
+    <button data-t="midnight" aria-pressed="true">Midnight</button><button data-t="sumi">Sumi</button><button data-t="tide">Tide</button><button data-t="washi">Washi</button><button data-t="sakura">Sakura</button>
+  </div>
+  <div class="seg" id="width"><button data-w="wide" aria-pressed="true">Normal</button><button data-w="narrow">Narrow</button></div>
+  <div class="seg" id="upd"><button data-u="ok" aria-pressed="true">Up to date</button><button data-u="new">Update out</button></div>
+</div>
+<p class="note">Mockup only. Real theme tokens and bundled fonts; the app draws the logo from the approved SVG paths.</p>
+
+<div class="pair">
+<div>
+<p class="label">Proposed</p>
+<div class="win" id="w1">
+  <nav class="side"><h2>Settings</h2><a>Appearance</a><a>Workspaces</a><a>Agents</a><a>Shortcuts</a><a>Updates</a><a class="on">About</a>
+    <div class="foot">kaze 0.29<small>Up to date</small></div></nav>
+  <main class="main">
+    <h3>About</h3><p class="hint">&nbsp;</p>
+    <section class="about">
+      <div class="lkbox"><svg xmlns="http://www.w3.org/2000/svg" viewBox="22 26 378 116" class="lockup" role="img" aria-labelledby="title desc"><title id="title">Kaze by Patrick</title><desc id="desc">A tapered wind K in muted lilac beside a carefully spaced lowercase wordmark.</desc><g class="lk-mark" transform="translate(24 28)"><path d="M10 0H24L14 112H0Z"/>
+<path d="M30 59C51 49 65 16 104 5C83 22 75 43 58 58C49 66 39 70 29 71Z"/>
+<path d="M29 77C56 72 73 100 104 111C74 114 56 99 43 90L28 82Z"/></g><g class="lk-word" transform="translate(168 119)"><path d="M139 0 140 1440H320V560L773 1080H1004L527 540L1060 0H811L320 520V0Z" transform="translate(0.000 0) scale(0.056000 -0.056000)"/><path d="M447 -30Q326 -30 244.25 14.25Q162.5 58.5 121.25 131.75Q80 205 80 292Q80 377 112.25 439.25Q144.5 501.5 203.75 543.25Q263 585 345 609Q422 629.5 517.25 645.25Q612.5 661 710.5 673.75Q808.5 686.5 894 699L830 662Q832.5 805.5 772.25 874.75Q712 944 564 944Q466 944 392.25 899.25Q318.5 854.5 289 755L120 806Q158.5 948 270.75 1029.0Q383 1110 566 1110Q712.5 1110 818.0 1057.5Q923.5 1005 970 899Q993 849 999.0 790.5Q1005 732 1005 668V0H847V259L884 235Q823 103.5 713.25 36.75Q603.5 -30 447 -30ZM474 119Q570 119 640.5 153.25Q711 187.5 754.0 244.25Q797 301 810 368Q824.5 418 826.25 479.25Q828 540.5 828 574L890 547Q803 534.5 718.75 523.5Q634.5 512.5 559.5 500.25Q484.5 488 425 471Q380.5 457 342.25 434.75Q304 412.5 280.5 378.0Q257 343.5 257 293Q257 248.5 279.25 208.75Q301.5 169 349.25 144.0Q397 119 474 119Z" transform="translate(53.120 0) scale(0.056000 -0.056000)"/><path d="M40 0V32L695 918H94V1080H982V1046L328 162H948V0Z" transform="translate(112.120 0) scale(0.056000 -0.056000)"/><path d="M608 -30Q448.5 -30 330.0 40.25Q211.5 110.5 145.75 237.25Q80 364 80 533Q80 710 144.75 839.5Q209.5 969 326.25 1039.5Q443 1110 600 1110Q762.5 1110 877.0 1035.0Q991.5 960 1049.25 821.0Q1107 682 1098.5 490H919V554Q916 753 838.0 851.5Q760 950 606 950Q440.5 950 354.75 844.0Q269 738 269 540Q269 349 354.75 244.0Q440.5 139 600 139Q707 139 786.0 188.0Q865 237 910 329L1081 270Q1017.5 127 891.25 48.5Q765 -30 608 -30ZM209 490V633H1007V490Z" transform="translate(167.592 0) scale(0.056000 -0.056000)"/></g></svg><span class="byl">by Patrick</span></div>
+      <p class="tag">Light, fast, and out of the way.</p>
+      <p class="mean"><span class="jp">風</span> Kaze means “wind”.</p>
+      <div class="panel">
+        <dl style="margin:0">
+          <div class="row"><dt>Version</dt><dd>0.29</dd><span class="chip" id="chip"><i></i>Up to date</span></div>
+          <div class="row"><dt>Platform</dt><dd>macOS <span class="sec">· arm64</span></dd></div>
+          <div class="row"><dt>License</dt><dd>MIT</dd></div>
+        </dl>
+        <div class="acts">
+          <button class="btn">Copy build info</button><span class="sp"></span>
+          <button class="btn">Report an issue</button>
+          <button class="btn pri">View on GitHub</button>
+        </div>
+      </div>
+      <p class="made">Made with Go and Gio, for the long session.</p>
+    </section>
+  </main>
+</div>
+</div>
+
+<div>
+<p class="label">Current (0.29)</p>
+<div class="win" id="w2">
+  <nav class="side"><h2>Settings</h2><a>Appearance</a><a>Workspaces</a><a>Agents</a><a>Shortcuts</a><a>Updates</a><a class="on">About</a>
+    <div class="foot">kaze 0.29<small>Up to date</small></div></nav>
+  <main class="main">
+    <h3>About</h3><p class="hint">&nbsp;</p>
+    <div class="cur">
+      <div class="lk"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 136" role="img" aria-label="Kaze wind K"><g class="lk-mark" transform="translate(12 12)"><path d="M10 0H24L14 112H0Z"/>
+<path d="M30 59C51 49 65 16 104 5C83 22 75 43 58 58C49 66 39 70 29 71Z"/>
+<path d="M29 77C56 72 73 100 104 111C74 114 56 99 43 90L28 82Z"/></g></svg><div><div class="w">kaze</div><div class="b">by Patrick</div></div></div>
+      <p><span style="font-family:Noto">風</span>・"wind" &nbsp;·&nbsp; Light, fast, and out of the way.</p>
+      <span class="pill"><span style="color:var(--done)">●</span> Version 0.29 · up to date</span>
+      <div class="facts"><div><b>VERSION</b>0.29</div><div><b>PLATFORM</b>macOS</div><div><b>CHIP</b>arm64</div><div><b>LICENSE</b>MIT License</div></div>
+      <button class="btn">Copy build info</button> <button class="btn">View on GitHub</button> <button class="btn">Report an issue</button>
+    </div>
+    <p class="made" style="text-align:center">Made with Go and Gio, for the long session.</p>
+  </main>
+</div>
+</div>
+</div>
+<script>
+const wins=[...document.querySelectorAll('.win')];
+function seg(id,fn){const s=document.getElementById(id);s.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;s.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));fn(b)})}
+seg('themes',b=>wins.forEach(w=>w.dataset.t=b.dataset.t));
+seg('width',b=>wins.forEach(w=>w.classList.toggle('narrow',b.dataset.w==='narrow')));
+seg('upd',b=>{const c=document.getElementById('chip');const n=b.dataset.u==='new';c.className='chip'+(n?' new':'');c.innerHTML='<i></i>'+(n?'0.30 available':'Up to date')});
+const q=new URLSearchParams(location.search);
+if(q.get('t'))document.querySelector('#themes [data-t='+q.get('t')+']').click();
+if(q.get('w'))document.querySelector('#width [data-w='+q.get('w')+']').click();
+if(q.get('u'))document.querySelector('#upd [data-u='+q.get('u')+']').click();
+</script>
+</body>
+</html>
