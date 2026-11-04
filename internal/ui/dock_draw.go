@@ -594,9 +594,21 @@ func (win *window) drawDockActivity(gtx layout.Context, s *dockSession, a *subag
 // drawShownDock draws the shown session's panel in the rect dockFit laid out.
 func (win *window) drawShownDock(gtx layout.Context) {
 	owner := win.dockOwner()
+	win.dock.focusLine = image.Rectangle{}
 	if !win.dockShown(owner) || win.dock.lastRect.Empty() {
 		win.dock.hits = dockHits{tabs: win.dock.hits.tabs[:0], links: win.dock.hits.links[:0]}
 		return
 	}
 	win.drawDock(gtx, owner, win.deckOf(owner), win.dock.lastRect)
+	if win.shownMember() == 0 {
+		return
+	}
+	// Two terminals show: an accent line tops the one with the keyboard.
+	over := win.dock.top
+	if win.dockMemberKeys() {
+		over = win.dock.hits.body
+	}
+	l := image.Rect(over.Min.X, over.Min.Y, over.Max.X, over.Min.Y+gtx.Dp(2))
+	paint.FillShape(gtx.Ops, win.ui.th.Accent, clip.Rect(l).Op())
+	win.dock.focusLine = l
 }

@@ -101,6 +101,13 @@ type dockState struct {
 	drawn   tabs.TabID // the member drawn last frame, marked visible; 0 none
 	drewNow tabs.TabID // the member drawn this frame, until syncDockMember
 	term    int        // the member view's event tag
+
+	keysMember tabs.TabID      // the member tab that has the keyboard (with keys); 0 for an agent tab
+	grid       image.Rectangle // the member's grid in window px, as dockFit sized it
+	cols, rows int             // the member's PTY size
+	top        image.Rectangle // the terminal's part of the area while a panel shows
+	refocus    bool            // the member with the keyboard was just drawn: focus it once its filters are up
+	focusLine  image.Rectangle // the accent line over the terminal with the keyboard, while a member tab shows
 }
 
 // dockSplit divides term into the terminal (top) and the panel below it.
@@ -335,10 +342,22 @@ func (win *window) dropKeysOf(session tabs.TabID) {
 	}
 }
 
-// dropDockKeys gives the keyboard back to the terminal if the panel had it.
+// dropDockKeys gives the keyboard back to the terminal if the panel had it; a
+// member tab that had it gets a focus-out, and the shown session a focus-in.
 func (win *window) dropDockKeys() {
-	if win.dock.keys {
-		win.dock.keys, win.wantFocus = false, true
+	if !win.dock.keys {
+		return
+	}
+	m := win.dock.keysMember
+	win.dock.keys, win.dock.keysMember, win.wantFocus = false, 0, true
+	if m == 0 || !win.focused || win.mgr == nil {
+		return
+	}
+	if t := win.mgr.Lookup(m); t != nil {
+		sendFocus(t, false)
+	}
+	if s := win.shownTab(); s != nil && s == win.lastTab {
+		sendFocus(s, true) // not mid-switch: switchedTo reports the new tab itself
 	}
 }
 
@@ -367,7 +386,7 @@ func (win *window) dockFit(gtx layout.Context, term image.Rectangle, cw, ch, pad
 	if win.dockShown(owner) {
 		top, panel = dockSplit(term, win.dockHeight(), gtx.Metric.PxPerDp, ch, pad)
 	}
-	win.dock.lastRect = panel
+	win.dock.lastRect, win.dock.top = panel, top
 	if panel.Empty() {
 		win.dock.hits = dockHits{} // no panel this frame: nothing of it takes input or the keyboard
 	}
@@ -376,6 +395,9 @@ func (win *window) dockFit(gtx layout.Context, term image.Rectangle, cw, ch, pad
 			win.mgr.Dock(id)
 			delete(win.dock.sized, id)
 		}
+	}
+	if !panel.Empty() && win.shownMember() != 0 {
+		win.dock.grid = dockMemberGrid(panel, gtx.Dp, pad)
 	}
 	if panel.Empty() || win.dock.drag.on {
 		return top
@@ -390,9 +412,9 @@ func (win *window) dockFit(gtx layout.Context, term image.Rectangle, cw, ch, pad
 	if m := win.shownMember(); m != 0 {
 		// The member's own grid: the panel body. It keeps it while its tab
 		// is open, even hidden, so hiding never reflows its output.
-		g := dockMemberGrid(panel, gtx.Dp, pad)
-		cols, rows := gridSize(g.Dx(), g.Dy(), cw, ch)
-		win.mgr.ResizeTab(m, cols, rows)
+		g := win.dock.grid
+		win.dock.cols, win.dock.rows = gridSize(g.Dx(), g.Dy(), cw, ch)
+		win.mgr.ResizeTab(m, win.dock.cols, win.dock.rows)
 	}
 	return top
 }

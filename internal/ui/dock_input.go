@@ -111,6 +111,14 @@ loop:
 			win.routeView(gtx, v, pass, cw, ch)
 		}
 	}
+	if v, ok := win.dockMemberView(); ok {
+		// A member tab's body is its terminal: typing, paste, selection and
+		// mouse reports go there, and a press there takes the keyboard.
+		win.termEvents(gtx, v, cw, ch)
+	}
+	if win.dock.refocus && win.dock.drawn != 0 {
+		win.dock.refocus, win.wantFocus = false, true // its filters are up now
+	}
 }
 
 // dockHandle drags the panel's height; the setting is saved once, on release.
@@ -160,6 +168,9 @@ func (win *window) dockRow(owner tabs.TabID, p image.Point) {
 			return
 		case p.In(t.rect):
 			if t.i != d.on {
+				if win.dock.keysMember != 0 {
+					win.dropDockKeys() // the member leaves the front with its keyboard
+				}
 				win.showEntry(d, t.i)
 			}
 			return
@@ -240,6 +251,9 @@ func (win *window) dockBody(gtx layout.Context, owner tabs.TabID, s *dockSession
 			s.tab, s.picked, s.scroll = dockReport, true, 0
 		}
 		win.dropSideEdit()
+		if win.dock.keysMember != 0 {
+			win.dropDockKeys()
+		}
 		win.dock.keys, win.wantFocus = true, true
 	case pointer.Scroll:
 		s.scroll = min(max(s.scroll+int(e.Scroll.Y), 0), win.dock.hits.scrollMax)

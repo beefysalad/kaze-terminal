@@ -701,8 +701,8 @@ func (win *window) frame(gtx layout.Context) error {
 		gtx.Execute(op.InvalidateCmd{At: wake}) // a tab printed during the last check's second
 	}
 	win.visit(win.shownTab())
-	if v, ok := win.paneKeyView(); ok {
-		win.visit(v.tab) // the pane being typed into is seen too
+	if v, ok := win.keyView(); ok && v.tag != win.termTag {
+		win.visit(v.tab) // the pane or docked member being typed into is seen too
 	}
 	win.autoScrollSelection(gtx, active, cw, ch)
 	win.drainUpdates()
@@ -1031,6 +1031,9 @@ func (win *window) focusTarget() event.Tag {
 		return &win.docs.tag
 	}
 	if win.dock.keys && !win.dock.hits.panel.Empty() {
+		if win.dockMemberKeys() {
+			return &win.dock.term
+		}
 		return &win.dock.body
 	}
 	if v, ok := win.paneKeyView(); ok {
@@ -1074,6 +1077,11 @@ func (win *window) mainView(t *tabs.Tab) termView {
 
 // keyView is the view with the keyboard; ok is false while none is shown.
 func (win *window) keyView() (termView, bool) {
+	if win.dockMemberKeys() {
+		if v, ok := win.dockMemberView(); ok {
+			return v, true
+		}
+	}
 	if v, ok := win.paneKeyView(); ok {
 		return v, true
 	}
@@ -1128,12 +1136,15 @@ func (win *window) termEvents(gtx layout.Context, v termView, cw, ch int) {
 	for _, ev := range batch {
 		if e, ok := ev.(pointer.Event); ok && e.Kind == pointer.Press && !win.bench.IgnoreInput() {
 			// A press in a pane takes the keyboard there; one in the session takes it back.
-			if v.tag == win.termTag {
+			switch v.tag {
+			case win.termTag:
 				win.dropDockKeys() // the terminal takes the keyboard back from the panel
 				if win.fl.keys != 0 {
 					win.focusSession()
 				}
-			} else {
+			case &win.dock.term:
+				win.dockFocusMember(true)
+			default:
 				win.focusPane(t.ID)
 			}
 			break

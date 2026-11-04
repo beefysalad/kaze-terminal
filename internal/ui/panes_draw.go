@@ -283,6 +283,9 @@ func (win *window) paneFrameOps(gtx layout.Context, p *pane) {
 // viewFocused reports whether the view of pane id (0: the session) draws the
 // focused cursor: only the one with the keyboard, while the window has focus.
 func (win *window) viewFocused(id tabs.TabID) bool {
+	if win.dockMemberKeys() {
+		return false // the docked member draws the focused cursor
+	}
 	return win.focused && win.fl.keys == id
 }
 

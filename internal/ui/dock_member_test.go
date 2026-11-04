@@ -2,10 +2,15 @@ package ui
 
 import (
 	"image"
+	"strings"
 	"testing"
 	"time"
 
+	"gioui.org/io/input"
+	"gioui.org/io/key"
 	"gioui.org/io/pointer"
+
+	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 )
 
 // Tests for workspace members as panel tabs (issue #133, plan tasks D3 to D5).
@@ -150,4 +155,166 @@ func TestDockExitedMemberKeepsTab(t *testing.T) {
 	if win.dock.drawn != m1.ID {
 		t.Fatal("exited member's last output not drawn")
 	}
+}
+
+// dockOne docks m1 in a and gives it the keyboard with a click on its body.
+func dockOne(t *testing.T) (*window, *recStarter, *input.Router, *tabs.Tab, *tabs.Tab, *tabs.Tab) {
+	t.Helper()
+	win, st, r, a, b, m1, _ := paneWindow(t)
+	win.openDockMember(a.ID, m1.ID)
+	floatFrames(t, win, r)
+	clickAt(t, win, r, centre(win.dock.hits.body))
+	return win, st, r, a, b, m1
+}
+
+func TestDockMemberClickTakesKeys(t *testing.T) {
+	win, st, r, _, _, _ := dockOne(t)
+	if win.focusTarget() != &win.dock.term || !r.Source().Focused(&win.dock.term) {
+		t.Fatalf("focus target %v", win.focusTarget())
+	}
+	typeKeys(t, win, r, "ls\r")
+	waitSent(t, ptyOf(st, 2), "ls\r")
+	if got := ptyOf(st, 0).sent(); strings.Contains(got, "ls") {
+		t.Fatalf("the session got %q", got)
+	}
+}
+
+func TestDockTerminalClickTakesKeysBackFromMember(t *testing.T) {
+	win, st, r, _, _, _ := dockOne(t)
+	clickAt(t, win, r, image.Pt(win.gridRect.Min.X+40, win.gridRect.Min.Y+40))
+	if win.dock.keys || win.focusTarget() != win.termTag {
+		t.Fatalf("keys %v focus %v", win.dock.keys, win.focusTarget())
+	}
+	member := ptyOf(st, 2).sent()
+	typeKeys(t, win, r, "pwd")
+	waitSent(t, ptyOf(st, 0), "pwd")
+	if got := ptyOf(st, 2).sent(); got != member {
+		t.Fatalf("the member got %q", strings.TrimPrefix(got, member))
+	}
+}
+
+func TestDockMemberShortcutsWork(t *testing.T) {
+	win, _, r, _, _, _ := dockOne(t)
+	r.Queue(shortcutFor(t, win, actPalette))
+	sideFrame(t, win, r)
+	if !win.palette.open {
+		t.Fatal("the palette shortcut did nothing from the member")
+	}
+}
+
+func TestDockMemberFocusReports(t *testing.T) {
+	win, st, r, a, _, m1, _ := paneWindow(t)
+	emitTo(t, st, 0, a, "\x1b[?1004h", func() bool { return modes(a.Session).FocusEvents })
+	emitTo(t, st, 2, m1, "\x1b[?1004h", func() bool { return modes(m1.Session).FocusEvents })
+	win.openDockMember(a.ID, m1.ID)
+	floatFrames(t, win, r)
+	clickAt(t, win, r, centre(win.dock.hits.body))
+	waitSent(t, ptyOf(st, 0), "\x1b[O")
+	waitSent(t, ptyOf(st, 2), "\x1b[I")
+}
+
+// Review focus 1: the floating pane and the docked member never both have
+// the keyboard.
+func TestDockKeysAndPaneKeysExclusive(t *testing.T) {
+	win, _, r, a, _, m1, m2 := paneWindow(t)
+	p, _ := win.fl.open(a.ID, m2.ID, paneMember)
+	win.openDockMember(a.ID, m1.ID)
+	floatFrames(t, win, r)
+	win.focusPane(m2.ID)
+	floatFrames(t, win, r)
+	if win.fl.keys != m2.ID {
+		t.Fatal("pane did not take the keyboard")
+	}
+	win.dockFocusMember(true)
+	floatFrames(t, win, r)
+	if win.fl.keys != 0 || !win.dock.keys {
+		t.Fatalf("pane keys %d dock keys %v", win.fl.keys, win.dock.keys)
+	}
+	clickAt(t, win, r, centre(p.hits.body))
+	if win.dock.keys || win.fl.keys != m2.ID {
+		t.Fatalf("pane keys %d dock keys %v after a pane click", win.fl.keys, win.dock.keys)
+	}
+}
+
+func TestDockMemberKeysLeaveOnTabSwitch(t *testing.T) {
+	win, st, r, _, b, _ := dockOne(t)
+	win.selectTab(b.ID)
+	floatFrames(t, win, r)
+	if win.dock.keys || win.focusTarget() != win.termTag {
+		t.Fatalf("keys %v focus %v after switching", win.dock.keys, win.focusTarget())
+	}
+	member := ptyOf(st, 2).sent()
+	typeKeys(t, win, r, "q")
+	waitSent(t, ptyOf(st, 1), "q")
+	if ptyOf(st, 2).sent() != member {
+		t.Fatal("typing after the switch reached the member")
+	}
+}
+
+func TestShiftEnterReachesDockMember(t *testing.T) {
+	for _, name := range []key.Name{key.NameReturn, key.NameEnter} {
+		t.Run(string(name), func(t *testing.T) {
+			win, st, r, _, _, _ := dockOne(t)
+			r.Queue(key.Event{Name: name, Modifiers: key.ModShift, State: key.Press})
+			sideFrame(t, win, r)
+			waitSent(t, ptyOf(st, 2), "\x1b\r")
+			for _, other := range []int{0, 1} {
+				if ptyOf(st, other).sent() != "" {
+					t.Fatalf("input reached unfocused terminal %d", other)
+				}
+			}
+		})
+	}
+}
+
+func TestDockMemberSelectionAutoScrolls(t *testing.T) {
+	win, st, r, a, _, m1 := dockOne(t)
+	for i, tab := range []*tabs.Tab{a, m1} {
+		emitTo(t, st, []int{0, 2}[i], tab, strings.Repeat("line\r\n", 100), func() bool {
+			tab.Session.Lock()
+			defer tab.Session.Unlock()
+			return tab.Session.Screen().ScrollbackLen() > 20
+		})
+	}
+	floatFrames(t, win, r)
+	v, ok := win.dockMemberView()
+	if !ok {
+		t.Fatal("no member view")
+	}
+	cw, ch := win.rend.CellSize()
+	from := v.grid.Min.Add(image.Pt(cw/2, ch/2))
+	to := image.Pt(from.X, v.grid.Min.Y-ch)
+	win.probe = agentProbe{fg: func(*tabs.Tab) int { return 0 }, out: func(*tabs.Tab) uint64 { return 0 }, name: func(int) string { return "" }}
+	now := time.Unix(1000, 0)
+	r.Queue(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: at(from)})
+	floatFrameAt(t, win, r, now)
+	r.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: at(to)})
+	floatFrameAt(t, win, r, now)
+	before := historyOffset(m1)
+	floatFrameAt(t, win, r, now.Add(autoScrollEvery))
+	if got := historyOffset(m1); got <= before {
+		t.Fatalf("offset %d after %d: the member's selection did not auto-scroll", got, before)
+	}
+	if historyOffset(a) != 0 {
+		t.Fatal("the member's selection scrolled the session")
+	}
+}
+
+// Ruling 11: while a member tab shows, a 2 dp accent line tops whichever
+// terminal has the keyboard; with no member tab there is none.
+func TestDockFocusLineFollowsKeys(t *testing.T) {
+	win, _, r, a, _, m1 := dockOne(t)
+	if l := win.dock.focusLine; l.Empty() || l.Min.Y != win.dock.hits.body.Min.Y || l.Dy() != 2 {
+		t.Fatalf("member has the keyboard: line %v, body %v", l, win.dock.hits.body)
+	}
+	clickAt(t, win, r, image.Pt(win.gridRect.Min.X+40, win.gridRect.Min.Y+40))
+	if l := win.dock.focusLine; l.Empty() || l.Min.Y != win.dock.top.Min.Y {
+		t.Fatalf("session has the keyboard: line %v, top %v", l, win.dock.top)
+	}
+	win.openDock(a.ID, startAgent(win, a.ID, "s", "x"))
+	floatFrames(t, win, r)
+	if !win.dock.focusLine.Empty() {
+		t.Fatalf("agent tab: line %v", win.dock.focusLine)
+	}
+	_ = m1
 }

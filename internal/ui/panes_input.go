@@ -110,8 +110,14 @@ func (win *window) paneFrame(gtx layout.Context, p *pane, e pointer.Event) {
 	}
 }
 
-// keyTab is the tab that has the keyboard: the pane with it, else the shown tab.
+// keyTab is the tab that has the keyboard: the docked member or the pane with
+// it, else the shown tab.
 func (win *window) keyTab() *tabs.Tab {
+	if win.dockMemberKeys() {
+		if v, ok := win.dockMemberView(); ok {
+			return v.tab
+		}
+	}
 	if v, ok := win.paneKeyView(); ok {
 		return v.tab
 	}
@@ -134,6 +140,9 @@ func (win *window) paneKeyView() (termView, bool) {
 // moveKeys gives the keyboard to pane id (0: the session) and moves the
 // focus-in and focus-out reports with it.
 func (win *window) moveKeys(id tabs.TabID) {
+	if id != 0 && win.dock.keys {
+		win.dropDockKeys() // one keyboard at a time: the panel gives it up
+	}
 	if id == win.fl.keys {
 		win.wantFocus = true
 		return
@@ -226,6 +235,9 @@ func (win *window) autoScrollSelection(gtx layout.Context, active *tabs.Tab, cw,
 		return false
 	}
 	if g := win.gestureTab; g != nil {
+		if v, ok := win.dockMemberView(); ok && v.tab == g {
+			return win.autoScrollView(gtx, v, cw, ch)
+		}
 		if g == active {
 			return win.autoScrollView(gtx, win.mainView(active), cw, ch)
 		}
