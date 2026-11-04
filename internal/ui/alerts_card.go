@@ -41,6 +41,7 @@ func (win *window) cardOf(t toast) alertCard {
 	c.status = cardStatus(t.Kind, t.Text, t.Ran, t.Run != 0)
 	if t.Run != 0 {
 		c.title, c.ctx = t.Title, "workspace"
+		c.body = strings.TrimPrefix(t.Text, ": ") // the summary's text follows the name the title shows
 		if c.mark == "" {
 			c.mark = "workspace"
 		}

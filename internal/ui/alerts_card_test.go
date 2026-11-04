@@ -307,3 +307,13 @@ func TestNextWaitingSkipsCardOnShownTab(t *testing.T) {
 		t.Fatalf("cards %+v, want the run card kept", win.alerts.toasts)
 	}
 }
+
+// A run summary's text follows its name ("samurai: started 2 of 2 tabs"); the
+// card titles it with the name, so the body starts at "started".
+func TestRunCardBodyDropsNameColon(t *testing.T) {
+	win, tab := cardTab(t, "main")
+	c := win.cardOf(toast{Tab: tab.ID, Run: 7, Title: "samurai", Text: ": started 2 of 2 tabs", Agent: "workspace", Kind: notify.KindDone})
+	if c.title != "samurai" || c.body != "started 2 of 2 tabs" {
+		t.Fatalf("title %q body %q", c.title, c.body)
+	}
+}
