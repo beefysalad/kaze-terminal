@@ -195,15 +195,16 @@ func readStdinLimited(r io.Reader, wait time.Duration) []byte {
 }
 
 // replyStart is the plain start of a reply for a card: markdown marks dropped
-// (bold, italic and code marks anywhere, a heading, quote or list mark at the
-// start of a line), every whitespace run one space, at most n runes.
+// (bold, italic and code marks anywhere, a heading's #s before a space, a
+// quote or list mark at the start of a line), every whitespace run one space,
+// at most n runes.
 func replyStart(s string, n int) string {
 	s = trimRunes(s, 4*n+64) // the card shows n runes; a long reply costs no more
 	var b strings.Builder
 	for _, line := range strings.Split(s, "\n") {
 		line = strings.TrimSpace(line)
-		if h := strings.TrimLeft(line, "#"); h != line {
-			line = strings.TrimSpace(h)
+		if h := strings.TrimLeft(line, "#"); h != line && (h == "" || h[0] == ' ' || h[0] == '\t') {
+			line = strings.TrimSpace(h) // a heading's marks, not "#123"
 		}
 		for _, m := range []string{"> ", "- ", "* "} {
 			if strings.HasPrefix(line+" ", m) {

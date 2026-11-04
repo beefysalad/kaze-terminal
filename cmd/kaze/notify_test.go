@@ -355,6 +355,9 @@ func TestReplyStart(t *testing.T) {
 		{"use `go test` and __bold__", "use go test and bold"},
 		{"  a \t\r\n  b  ", "a b"},
 		{"3 * 4 - 2", "3 * 4 - 2"},
+		{"#123 fixed", "#123 fixed"},
+		{"##no space", "##no space"},
+		{"###\tTabbed", "Tabbed"},
 	} {
 		if got := replyStart(c.in, 160); got != c.want {
 			t.Errorf("replyStart(%q) = %q, want %q", c.in, got, c.want)
