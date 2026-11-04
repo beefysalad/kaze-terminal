@@ -710,6 +710,13 @@ func flip[K comparable](m map[K]bool, k K) {
 // nextWaiting shows the next session after the shown one that needs the owner,
 // wrapping; with none it only says so in the status bar.
 func (win *window) nextWaiting() {
+	// With alert cards showing, the key opens the newest card's session, as
+	// the card's key caps say (issue #9).
+	if n := len(win.alerts.toasts); n > 0 {
+		win.toastGo(win.alerts.toasts[n-1].Tab)
+		win.side.reveal = true
+		return
+	}
 	order := win.sessionIDs()
 	from := -1
 	if a := win.mgr.Active(); a != nil {

@@ -452,7 +452,7 @@ func (win *window) summarize(run *wsRun, now time.Time) {
 		return // nothing left to show it on
 	}
 	text, ok := workspaces.Summary(run.name, run.states(), titles)
-	t := toast{Tab: at, Run: run.id, Title: run.name, Text: text[len(run.name):], Kind: notify.KindNeeds}
+	t := toast{Tab: at, Run: run.id, Title: run.name, Text: text[len(run.name):], Kind: notify.KindNeeds, Agent: "workspace"}
 	if ok {
 		t.Kind = notify.KindDone
 		d := doneToastFor(win.opt.Config.DoneToast)
