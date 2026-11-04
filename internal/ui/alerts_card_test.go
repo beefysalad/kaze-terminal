@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"gioui.org/io/input"
+
 	"github.com/patrick-gogo/kaze-terminal/internal/notify"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 	"github.com/patrick-gogo/kaze-terminal/internal/theme"
@@ -258,5 +260,36 @@ func TestDoneCardShowsReply(t *testing.T) {
 		if !strings.Contains(all, want) {
 			t.Fatalf("texts %q lack %q", cardTexts(win), want)
 		}
+	}
+}
+
+func TestNextWaitingOpensNewestCard(t *testing.T) {
+	win, ids := needsWindow(t, 4)
+	win.alerts.apply(notify.Msg{Tab: int(ids[1]), Kind: notify.KindNeeds}, ids[0], true, win.mgr.Has, t0)
+	win.alerts.apply(notify.Msg{Tab: int(ids[2]), Kind: notify.KindDone}, ids[0], true, win.mgr.Has, t0)
+	win.nextWaiting()
+	if got := win.mgr.Active().ID; got != ids[2] {
+		t.Fatalf("active %d, want the newest card's session %d", got, ids[2])
+	}
+	if !win.side.reveal {
+		t.Fatal("the sidebar was not told to show the row")
+	}
+	var r input.Router
+	sizedFrame(t, win, &r, 1000, 700)
+	for _, o := range win.alerts.toasts {
+		if o.Tab == ids[2] {
+			t.Fatal("the opened session's card stayed after a frame")
+		}
+	}
+	if len(win.alerts.toasts) != 1 || win.alerts.toasts[0].Tab != ids[1] {
+		t.Fatalf("cards %+v, want only the needs card left", win.alerts.toasts)
+	}
+}
+
+func TestNextWaitingWithoutCardsWalksMarks(t *testing.T) {
+	win, ids := needsWindow(t, 3, 1)
+	win.nextWaiting()
+	if got := win.mgr.Active().ID; got != ids[1] {
+		t.Fatalf("active %d, want the marked %d", got, ids[1])
 	}
 }
