@@ -694,7 +694,7 @@ func (win *window) frame(gtx layout.Context) error {
 	}
 	win.visit(win.shownTab())
 	if v, ok := win.keyView(); ok && v.tag != win.termTag {
-		win.visit(v.tab) // the pane or docked member being typed into is seen too
+		win.visit(v.tab) // the docked member being typed into is seen too
 	}
 	win.autoScrollSelection(gtx, active, cw, ch)
 	win.drainUpdates()

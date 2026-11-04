@@ -20,7 +20,7 @@ const (
 
 // Transcript keeps a bounded tail. Offset counts bytes consumed, including a
 // partial record; pending holds only that record until its newline arrives.
-// The pane owns this value and calls Read only while visible.
+// The shown dock tab owns this value and calls Read only while visible.
 type Transcript struct {
 	Messages           []TranscriptMessage
 	Offset             int64

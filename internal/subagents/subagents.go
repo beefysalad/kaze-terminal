@@ -1,5 +1,5 @@
 // Package subagents folds Claude Code subagent and Codex helper hook messages into what the
-// sidebar tree, the live pane and the board show. It has no UI and reads no
+// sidebar tree, the dock panel and the board show. It has no UI and reads no
 // clock: every event carries its time.
 package subagents
 
@@ -91,8 +91,8 @@ const (
 type Event struct {
 	Engine, Transcript          string
 	Kind                        EventKind
-	Tab                         int // the row's tab (after hookTab): Tree and Board use it
-	Src                         int // the tab the hook ran in (a scratch shell's own id): session resets use it
+	Tab                         int // the row's tab: Tree and Board use it
+	Src                         int // the tab the hook ran in (today always Tab): session resets use it
 	Session, AgentID, AgentType string
 	Tool, Summary, Desc, Report string
 	Prompt                      string // an Agent call's prompt
