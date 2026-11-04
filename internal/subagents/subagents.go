@@ -5,7 +5,11 @@ package subagents
 
 import (
 	"slices"
+	"strings"
 	"time"
+	"unicode/utf8"
+
+	"github.com/patrick-gogo/kaze-terminal/internal/notify"
 )
 
 // Limits from the spec.
@@ -74,6 +78,10 @@ type Agent struct {
 
 	src     int  // the tab the hooks ran in
 	stopped bool // true only after a real stop; EndTab makes a provisional Done entry
+
+	call      call  // the Agent call it was paired with
+	contested bool  // paired while another call could have been its own; its prompt settles it
+	checks    uint8 // empty prompt reads so far
 }
 
 type EventKind uint8
@@ -118,12 +126,16 @@ type Tracker struct {
 	queues   map[queueKey][]call
 	seen     map[int]string // source tab → its last session
 	waits    map[int]bool   // row tab → waiting with no subagent named
+	// contested names the call types a queue paired while two or more were
+	// waiting, until the owner's next prompt or a new session (#135).
+	contested map[queueKey]map[string]bool
 }
 
 func (t *Tracker) init() {
 	if t.agents == nil {
 		t.agents, t.queues = map[Key]*Agent{}, map[queueKey][]call{}
 		t.seen, t.waits = map[int]string{}, map[int]bool{}
+		t.contested = map[queueKey]map[string]bool{}
 	}
 }
 
@@ -232,6 +244,7 @@ func (t *Tracker) Apply(e Event) bool {
 		// Every Agent call of the last turn has started by now; one still
 		// queued was denied and must not name a later agent.
 		delete(t.queues, queueKey{e.Src, e.Session})
+		delete(t.contested, queueKey{e.Src, e.Session})
 		changed := t.waits[e.Tab]
 		delete(t.waits, e.Tab)
 		for _, a := range t.order {
@@ -273,6 +286,7 @@ func (t *Tracker) session(e Event) bool {
 		return false
 	}
 	delete(t.queues, queueKey{e.Src, old})
+	delete(t.contested, queueKey{e.Src, old})
 	delete(t.waits, e.Tab)
 	fromOld := func(a *Agent) bool { return a.src == e.Src && a.Key.Session == old }
 	for _, a := range t.order {
@@ -289,25 +303,126 @@ const unknownTask = "subagent"
 
 // pair gives a newly typed agent the task of its waiting Agent call: one of
 // the same type first, else one that named no type. Claude Code starts an
-// untyped call as "general-purpose" and Codex as "default" (#61).
+// untyped call as "general-purpose" and Codex as "default" (#61). Agents of
+// one type can start in any order, so a pairing made while two or more calls
+// could have been taken is marked contested, and so is every later one of
+// that type in the queue; SettlePrompt checks those by prompt (#135).
 func (t *Tracker) pair(a *Agent, e Event) {
 	q := queueKey{e.Src, e.Session}
-	i := slices.IndexFunc(t.queues[q], func(c call) bool { return c.typ == e.AgentType })
+	typ := e.AgentType
+	of := func(c call) bool { return c.typ == typ }
+	i := slices.IndexFunc(t.queues[q], of)
 	if i < 0 {
-		i = slices.IndexFunc(t.queues[q], func(c call) bool { return c.typ == "" })
+		typ = ""
+		i = slices.IndexFunc(t.queues[q], of)
 	}
 	if i < 0 {
 		return
 	}
+	n := 0
+	for _, c := range t.queues[q] {
+		if of(c) {
+			n++
+		}
+	}
 	c := t.queues[q][i]
 	t.queues[q] = slices.Delete(t.queues[q], i, i+1)
-	if c.desc != "" {
+	if n > 1 || t.contested[q][typ] {
+		a.contested = true
+		if t.contested[q] == nil {
+			t.contested[q] = map[string]bool{}
+		}
+		t.contested[q][typ] = true
+	}
+	t.setCall(a, c)
+}
+
+// setCall names a after its Agent call c.
+func (t *Tracker) setCall(a *Agent, c call) {
+	a.call = c
+	switch {
+	case c.desc != "":
 		a.Task = c.desc
+	case a.Type != "":
+		a.Task = a.Type
+	default:
+		a.Task = unknownTask
 	}
 	a.Prompt = c.prompt
+	a.Parent, a.Depth = Key{}, 0
 	if p := t.agents[c.parent]; p != nil && p != a {
 		a.Parent, a.Depth = c.parent, min(p.Depth+1, 1)
 	}
+}
+
+const (
+	promptKeyBytes  = 2048 // how much of a prompt identifies it
+	maxPromptChecks = 3    // empty prompt reads before a contested pairing stands
+)
+
+// promptKey is what a hook's prompt and a transcript's first prompt share:
+// the hook's copy is cleaned and cut to notify.MaxPrompt, the transcript's is
+// whole, so only the cleaned, trimmed first promptKeyBytes count.
+func promptKey(s string) string {
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	s = strings.TrimSpace(notify.CleanReport(s, notify.MaxPrompt))
+	if len(s) <= promptKeyBytes {
+		return s
+	}
+	n := promptKeyBytes
+	for n > 0 && !utf8.RuneStart(s[n]) {
+		n--
+	}
+	return s[:n]
+}
+
+// PromptCheck reports whether k's pairing is contested and still worth
+// reading its prompt for.
+func (t *Tracker) PromptCheck(k Key) bool {
+	a := t.agents[k]
+	return a != nil && a.contested && a.checks < maxPromptChecks
+}
+
+// SettlePrompt settles a contested agent by the prompt its transcript starts
+// with, once, and reports whether any name changed. An empty prompt counts as
+// a miss; after maxPromptChecks of them the order pairing stands. A matching
+// call still queued, or the call of another agent not yet settled, becomes
+// k's, and k's old call goes where that one was. A settled name is never taken.
+func (t *Tracker) SettlePrompt(k Key, prompt string) bool {
+	t.revision++
+	if !t.PromptCheck(k) {
+		return false
+	}
+	a := t.agents[k]
+	if prompt == "" {
+		a.checks++
+		if a.checks >= maxPromptChecks {
+			a.contested = false
+		}
+		return false
+	}
+	a.contested = false
+	key := promptKey(prompt)
+	if promptKey(a.call.prompt) == key {
+		return false
+	}
+	q := queueKey{a.src, a.Key.Session}
+	for i, c := range t.queues[q] {
+		if promptKey(c.prompt) == key {
+			t.queues[q][i] = a.call
+			t.setCall(a, c)
+			return true
+		}
+	}
+	for _, b := range t.order {
+		if b != a && b.contested && b.src == a.src && b.Key.Session == a.Key.Session && promptKey(b.call.prompt) == key {
+			old := a.call
+			t.setCall(a, b.call)
+			t.setCall(b, old)
+			return true
+		}
+	}
+	return false
 }
 
 // untracked reports whether e is about an agent kaze never saw start and it
@@ -391,6 +506,11 @@ func (t *Tracker) CloseTab(tab int) {
 	for q := range t.queues {
 		if q.src == tab {
 			delete(t.queues, q)
+		}
+	}
+	for q := range t.contested {
+		if q.src == tab {
+			delete(t.contested, q)
 		}
 	}
 	delete(t.seen, tab)
