@@ -11,8 +11,8 @@ Native macOS window captures (2200 × 1440 px, Retina) retaken November 1, 2026,
   workspace running, and its API member floating over the `todo-api` session.
 - `kaze-palette.png`: the palette opened over the same session. The skills are five demo
   `SKILL.md` files in the throwaway home folder.
-- `kaze-scratch.png`: the scratch shell over the `todo-api` session, showing `git status -sb` and
-  `git diff --stat`.
+- `kaze-scratch.png` (removed in the 0.27 docs): the scratch shell over the `todo-api` session.
+  The scratch shell is gone, so the shot and its gallery tab were dropped.
 - `kaze-workspaces.png`: the redesigned Workspaces section of Settings with the Todo API workspace card
   and its API, Web and Health members running.
 - `kaze-about.png`: the redesigned About section displaying the shipped logo and byline, version 0.15,
@@ -100,3 +100,25 @@ Retake `kaze-agents.png` (the board now has filters, session cards and a preview
 `kaze-sessions.png` (no project rail; agent lines have no ›). The headless renders in
 `docs/audits/agents-board/` are development evidence, not product captures. No product screenshot
 was fabricated or retouched.
+
+## 0.27 dock tabs, alert cards and path links
+
+Workspace members now open as tabs in the panel under the terminal, and the floating panes and
+the scratch shell are gone. Alerts are cards at the bottom right.
+
+- Retake `kaze-sessions.png`: it still shows the API member floating over `todo-api`. Retake it
+  with the API member as a tab in the panel under the `todo-api` terminal (a subagent tab beside it
+  is a plus), and ideally a "needs you" alert card at the bottom right. Its alt text and caption on
+  the lander were made neutral ("with the todo-api session and its API server log") so they stay
+  true until then; once retaken, they can say the log is in the panel under the terminal.
+- `kaze-scratch.png` was deleted with its "Scratch shell" gallery tab and feature card. Nothing
+  replaces it.
+- The "Servers in the panel." card links to the README instead of showing a shot, because no
+  product shot shows a member tab yet. Point it back at the gallery (`data-show="sessions"`) once
+  `kaze-sessions.png` is retaken.
+- `kaze-agents.png` should show the panel's tab row too when it is next retaken (it was already
+  due since 0.24 to 0.26).
+- Worth adding when convenient: a native shot of an alert card with a done reply.
+
+The headless renders in `docs/audits/dock-alerts-links/` are development evidence, not product
+captures. No product screenshot was fabricated or retouched.
