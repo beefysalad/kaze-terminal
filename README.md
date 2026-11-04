@@ -414,7 +414,7 @@ guess swaps; a name that has settled never moves.
     its panel. In a narrow window there is no preview, and a click opens the agent in its session.
 - **Setup:** it needs three more Claude Code hooks (SubagentStart, SubagentStop and a PreToolUse
   hook). Settings > Agents lists them in the setup check, and **Fix** adds them. In the main
-  conversation the tool hook exits at once unless Claude starts a subagent.
+  conversation the tool hook exits at once unless Claude starts a subagent or the call touches a `.md` file.
 
 ## Reading docs
 
