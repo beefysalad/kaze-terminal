@@ -1,11 +1,11 @@
 # kaze handoff
 
-Last updated: 2026-11-04, dock tabs, alert cards and path links built on `feat/dock-alerts-links` (release 0.27 next). Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-04, release 0.27 (dock tabs, alert cards and path links, PR #136). Read this first when you pick up kaze on another machine.
 
 ## Where things stand
 
-**Dock tabs, alert cards and path links (2026-11-04) are built on `feat/dock-alerts-links`, not yet
-released. Release 0.27 is next** (version bump and changelog in their own PR). Three issues in one
+**Release 0.27 ships PR #136: dock tabs, alert cards and path links (2026-11-04).** Next: #134
+(readable agent activity, mockup approved) and #135 (subagents started together swap names). Three issues in one
 bundle, built in three worktree lanes (L, A, D) from `docs/superpowers/plans/2026-11-04-kaze-dock-alerts-links.md`:
 
 - **#133 dock tabs:** workspace members open as tabs in the panel docked under the terminal, the
