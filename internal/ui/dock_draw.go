@@ -93,9 +93,11 @@ func (win *window) mdLayout(gtx layout.Context, cache *dockCache, c *mdCache, sr
 // (or the board preview's) transcript chain when it has one, else the hook's
 // (#85 fallback order).
 func (win *window) dockReport(a *subagents.Agent) string {
-	for _, s := range win.dock.by {
-		if s.agent == a.Key && s.tr != nil && s.tr.Available {
-			return s.tr.Report(a.Report)
+	for _, d := range win.dock.by {
+		for _, e := range d.entries {
+			if s := e.view; s != nil && s.agent == a.Key && s.tr != nil && s.tr.Available {
+				return s.tr.Report(a.Report)
+			}
 		}
 	}
 	if p := &win.board.prev; p.agent == a.Key && p.tr != nil && p.tr.Available {

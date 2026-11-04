@@ -94,11 +94,13 @@ func (win *window) toastGo(tab tabs.TabID) {
 	win.invalidate()
 }
 
-// dropGoneAgents closes panels whose subagent the tracker forgot.
+// dropGoneAgents closes the tabs of subagents the tracker forgot; other tabs stay.
 func (win *window) dropGoneAgents() {
-	for id, s := range win.dock.by {
-		if win.subs.Get(s.agent) == nil {
-			win.closeDock(id)
+	for id, d := range win.dock.by {
+		for i := len(d.entries) - 1; i >= 0; i-- {
+			if v := d.entries[i].view; v != nil && win.subs.Get(v.agent) == nil {
+				win.closeDockTab(id, i)
+			}
 		}
 	}
 }

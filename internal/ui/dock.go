@@ -11,14 +11,16 @@ import (
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 )
 
-// The docked agent panel (spec 2026-11-03-kaze-agent-dock-design): one
-// subagent's Activity and Report under the terminal, remembered per session.
+// The docked panel (spec 2026-11-03-kaze-agent-dock-design, issue #133): a
+// deck of tabs under the terminal, remembered per session. A tab is one
+// subagent's Activity and Report, or a workspace member's terminal.
 
 const (
 	dockMinDp    = 120 // the panel's least height
 	dockHideDp   = 40  // below this, a squeezed panel is not drawn at all
 	dockMinRows  = 8   // the terminal keeps at least this many rows
 	dockShareDef = 0.4 // default height: this share of the terminal area
+	dockMaxTabs  = 6   // per session, members and agents together
 )
 
 type dockTab uint8
@@ -28,7 +30,8 @@ const (
 	dockReport
 )
 
-// dockSession is what one session remembers about its open panel.
+// dockSession is one agent tab's view: what it shows and how far it is read.
+// The board's preview keeps one too.
 type dockSession struct {
 	agent      subagents.Key
 	tab        dockTab
@@ -44,6 +47,29 @@ type dockSession struct {
 	cache           dockCache
 }
 
+// dockEntry is one tab of a session's panel: an agent's view, or a member.
+type dockEntry struct {
+	member tabs.TabID   // 0 for an agent
+	view   *dockSession // agent tabs only
+	opened uint64       // when it was last shown: the oldest not shown is replaced first
+}
+
+// dockDeck is one session's panel: its tabs, the one shown, and whether the
+// panel is hidden (its tabs kept).
+type dockDeck struct {
+	entries []dockEntry
+	on      int // index shown, -1 none
+	hidden  bool
+}
+
+// shown is the entry the panel shows, nil when none.
+func (d *dockDeck) shown() *dockEntry {
+	if d == nil || d.on < 0 || d.on >= len(d.entries) {
+		return nil
+	}
+	return &d.entries[d.on]
+}
+
 // dockDrag is a handle drag in progress.
 type dockDrag struct {
 	on      bool
@@ -53,7 +79,8 @@ type dockDrag struct {
 
 // dockState is the window's panel state; UI goroutine only.
 type dockState struct {
-	by                      map[tabs.TabID]*dockSession
+	by                      map[tabs.TabID]*dockDeck
+	seq                     uint64              // tab show stamps
 	sized                   map[tabs.TabID]bool // sessions whose PTY the panel shrank
 	heightDp                int                 // 0 until dragged: the config value, else the default share
 	keys                    bool                // the panel has the keyboard
@@ -110,28 +137,125 @@ func (win *window) dockOwner() tabs.TabID {
 	return t.ID
 }
 
-// dockOf is session id's open panel, nil when none.
-func (win *window) dockOf(id tabs.TabID) *dockSession { return win.dock.by[id] }
+// deckOf is session id's panel tabs, nil when it has none.
+func (win *window) deckOf(id tabs.TabID) *dockDeck { return win.dock.by[id] }
 
-// openDock shows subagent k in session's panel; another agent's panel there
-// is replaced and starts over on Activity.
-func (win *window) openDock(session tabs.TabID, k subagents.Key) {
-	if s := win.dock.by[session]; s != nil && s.agent == k {
-		return
+// dockOf is the agent view session id's panel shows now: nil when the session
+// has no tabs, its panel is hidden or a member tab shows.
+func (win *window) dockOf(id tabs.TabID) *dockSession {
+	d := win.dock.by[id]
+	if d == nil || d.hidden {
+		return nil
 	}
+	if e := d.shown(); e != nil {
+		return e.view
+	}
+	return nil
+}
+
+// dockShown reports whether session id's panel shows a tab.
+func (win *window) dockShown(id tabs.TabID) bool {
+	d := win.dock.by[id]
+	return d != nil && !d.hidden && d.shown() != nil
+}
+
+// deck is session's panel, made when missing.
+func (win *window) deck(session tabs.TabID) *dockDeck {
 	if win.dock.by == nil {
-		win.dock.by = map[tabs.TabID]*dockSession{}
+		win.dock.by = map[tabs.TabID]*dockDeck{}
 	}
-	win.dock.by[session] = &dockSession{agent: k, follow: true}
+	d := win.dock.by[session]
+	if d == nil {
+		d = &dockDeck{on: -1}
+		win.dock.by[session] = d
+	}
+	return d
+}
+
+// showEntry shows entry i of d and unhides the panel.
+func (win *window) showEntry(d *dockDeck, i int) {
+	win.dock.seq++
+	d.entries[i].opened = win.dock.seq
+	d.on, d.hidden = i, false
 	win.invalidate()
 }
 
-// closeDock closes session's panel; its height is kept.
-func (win *window) closeDock(session tabs.TabID) {
-	if _, ok := win.dock.by[session]; !ok {
+// addEntry appends e to session's panel and shows it; past dockMaxTabs the
+// tab shown longest ago (never the new one) leaves.
+func (win *window) addEntry(session tabs.TabID, e dockEntry) {
+	d := win.deck(session)
+	d.entries = append(d.entries, e)
+	win.showEntry(d, len(d.entries)-1)
+	if len(d.entries) <= dockMaxTabs {
 		return
 	}
-	delete(win.dock.by, session)
+	old := -1
+	for i, x := range d.entries {
+		if i != d.on && (old < 0 || x.opened < d.entries[old].opened) {
+			old = i
+		}
+	}
+	win.removeEntry(d, old)
+}
+
+// removeEntry takes entry i out of d; the shown index follows its tab, or
+// moves to the left neighbour (else the right) when i was the one shown.
+func (win *window) removeEntry(d *dockDeck, i int) {
+	d.entries = slices.Delete(d.entries, i, i+1)
+	switch {
+	case len(d.entries) == 0:
+		d.on = -1
+	case i < d.on:
+		d.on--
+	case i == d.on:
+		d.on = max(i-1, 0)
+	}
+}
+
+// openDock shows subagent k in session's panel: its tab when it has one, else
+// a new tab, which starts on Activity.
+func (win *window) openDock(session tabs.TabID, k subagents.Key) {
+	d := win.deck(session)
+	for i, e := range d.entries {
+		if e.view != nil && e.view.agent == k {
+			win.showEntry(d, i)
+			return
+		}
+	}
+	win.addEntry(session, dockEntry{view: &dockSession{agent: k, follow: true}})
+}
+
+// closeDockTab is a tab's ×: entry i leaves session's panel (an agent is
+// untouched); closing the last tab removes the panel.
+func (win *window) closeDockTab(session tabs.TabID, i int) {
+	d := win.dock.by[session]
+	if d == nil || i < 0 || i >= len(d.entries) {
+		return
+	}
+	shown := i == d.on
+	win.removeEntry(d, i)
+	if len(d.entries) == 0 {
+		delete(win.dock.by, session)
+	}
+	if shown {
+		win.dropKeysOf(session)
+	}
+	win.invalidate()
+}
+
+// closeDock hides session's panel; its tabs and height are kept.
+func (win *window) closeDock(session tabs.TabID) {
+	d := win.dock.by[session]
+	if d == nil || d.hidden {
+		return
+	}
+	d.hidden = true
+	win.dropKeysOf(session)
+	win.invalidate()
+}
+
+// dropKeysOf takes the keyboard from session's panel when it has it.
+func (win *window) dropKeysOf(session tabs.TabID) {
 	// The panel keyboard belongs to the active session's panel (it never
 	// follows a tab switch), even while the reader or a page covers it.
 	owns := win.dockOwner() == session
@@ -144,7 +268,6 @@ func (win *window) closeDock(session tabs.TabID) {
 		win.dropDockKeys()
 		win.dock.drag.on = false
 	}
-	win.invalidate()
 }
 
 // dropDockKeys gives the keyboard back to the terminal if the panel had it.
@@ -154,9 +277,9 @@ func (win *window) dropDockKeys() {
 	}
 }
 
-// toggleDock closes session's panel when it already shows k, else opens k.
+// toggleDock hides session's panel when it shows k, else shows k.
 func (win *window) toggleDock(session tabs.TabID, k subagents.Key) {
-	if s := win.dock.by[session]; s != nil && s.agent == k {
+	if s := win.dockOf(session); s != nil && s.agent == k {
 		win.closeDock(session)
 		return
 	}
@@ -176,7 +299,7 @@ func (win *window) invalidate() {
 func (win *window) dockFit(gtx layout.Context, term image.Rectangle, cw, ch, pad int) image.Rectangle {
 	owner := win.dockOwner()
 	top, panel := term, image.Rectangle{}
-	if win.dockOf(owner) != nil {
+	if win.dockShown(owner) {
 		top, panel = dockSplit(term, win.dockHeight(), gtx.Metric.PxPerDp, ch, pad)
 	}
 	win.dock.lastRect = panel
@@ -184,7 +307,7 @@ func (win *window) dockFit(gtx layout.Context, term image.Rectangle, cw, ch, pad
 		win.dock.hits = dockHits{} // no panel this frame: nothing of it takes input or the keyboard
 	}
 	for id := range win.dock.sized {
-		if win.dockOf(id) == nil || (id == owner && panel.Empty()) {
+		if !win.dockShown(id) || (id == owner && panel.Empty()) {
 			win.mgr.Dock(id)
 			delete(win.dock.sized, id)
 		}
