@@ -2,6 +2,7 @@ package render
 
 import (
 	"image"
+	"image/color"
 	"strings"
 	"testing"
 	"time"
@@ -159,5 +160,29 @@ func TestScrollMarksCached(t *testing.T) {
 	draw()
 	if h.r.marksRecorded != rec+1 {
 		t.Fatal("recorded again with nothing changed")
+	}
+}
+
+// The view band is the mockup's 7 % white on a dark theme; on a light one
+// (Washi) white would not show, so it is 7 % black.
+func TestScrollMarksBandShowsOnLightTheme(t *testing.T) {
+	for _, light := range []bool{false, true} {
+		h := heldLines(t, 100)
+		if light {
+			p := DefaultPalette()
+			p.FG, p.BG = hex(0x2b2a33), hex(0xf6f2ea)
+			h.r = NewRenderer(14, p, Options{})
+			h.frame()
+		}
+		h.r.SetMarks(marksOn(-1, 3))
+		h.frame()
+		h.r.DrawScrollMarks(scrollGtx(new(op.Ops)), track100)
+		want := color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0x12}
+		if light {
+			want = color.NRGBA{A: 0x12}
+		}
+		if got := h.r.scrollPaint.bandColor; got != want {
+			t.Fatalf("light %v: band colour %v, want %v", light, got, want)
+		}
 	}
 }

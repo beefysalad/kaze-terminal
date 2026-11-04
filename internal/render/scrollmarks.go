@@ -23,6 +23,7 @@ type scrollKey struct {
 // scrollPaint is what the last recording drew, read by tests.
 type scrollPaint struct {
 	band, cur image.Rectangle
+	bandColor color.NRGBA
 	curLast   bool // the current mark was the last shape drawn
 }
 
@@ -59,8 +60,12 @@ func (r *Renderer) recordScrollMarks(gtx layout.Context, m *Marks, k scrollKey) 
 	ops := &r.scrollOps
 	if k.total > k.rows { // something to scroll: show where the view is
 		band := image.Rect(t.Min.X-dp(1), y(k.view), t.Max.X+dp(1), y(k.view+k.rows))
-		paint.FillShape(ops, color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0x12}, clip.UniformRRect(band, dp(3)).Op(ops))
-		r.scrollPaint.band = band
+		c := color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0x12} // 7 %, as the mockup
+		if luminance(r.pal.BG) > 0.5 {
+			c = color.NRGBA{A: 0x12} // white would not show on a light theme
+		}
+		paint.FillShape(ops, c, clip.UniformRRect(band, dp(3)).Op(ops))
+		r.scrollPaint.band, r.scrollPaint.bandColor = band, c
 	}
 
 	// One mark per pixel row holding a match start. Spans are sorted, so the
