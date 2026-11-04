@@ -126,7 +126,7 @@ func (win *window) dockReport(a *subagents.Agent) string {
 func (win *window) dockTick(s *dockSession, a *subagents.Agent, now time.Time) (time.Time, bool) {
 	path := win.agentTranscriptPath(a)
 	if path == "" {
-		s.tr = nil
+		s.dropTranscript()
 		return time.Time{}, false
 	}
 	if s.tr == nil || s.trPath != path || s.trStarted != a.Started {

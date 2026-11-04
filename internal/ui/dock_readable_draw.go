@@ -587,3 +587,13 @@ func lastStepID(items []readItem) string {
 	}
 	return ""
 }
+
+// dropTranscript lets go of s's transcript and of the lists built from it,
+// so nothing keeps the old transcript alive.
+func (s *dockSession) dropTranscript() {
+	s.tr = nil
+	if rc := &s.read; rc.tr != nil {
+		rc.tr, rc.items, rc.every, rc.itemsOK, rc.everyOK = nil, nil, nil, false, false
+		s.pruneNotes()
+	}
+}

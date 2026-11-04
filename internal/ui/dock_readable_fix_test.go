@@ -4,6 +4,9 @@ import (
 	"image"
 	"strconv"
 	"testing"
+	"time"
+
+	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
 )
 
 // rdBashRun is n finished Bash steps, each with a "$ command" detail.
@@ -77,5 +80,37 @@ func TestStepClickEndsSidebarRename(t *testing.T) {
 	clickAt(t, win, r, rdHit(t, win.dock.hits, "e1"))
 	if win.side.renaming != 0 {
 		t.Fatalf("rename still open after a step click: renaming %d", win.side.renaming)
+	}
+}
+
+// A board too narrow for its preview holds no transcript, the read cache
+// included.
+func TestNarrowBoardDropsReadCache(t *testing.T) {
+	win, _, r, a, _, _, _ := memberWindow(t)
+	k, _ := readScene(t, win, int(a.ID), rdTranscript())
+	twoFrames(t, win, r)
+	win.openBoard(0)
+	win.boardSelect(k)
+	drawPreview(win)
+	if win.board.prev.read.tr == nil {
+		t.Fatal("the preview built nothing from its transcript")
+	}
+	gtx := pageContext(1400, 860)
+	gtx.Now = time.Now()
+	win.drawBoard(gtx, boardNarrow)
+	if p := &win.board.prev; p.tr != nil || p.read.tr != nil || p.read.items != nil || p.read.every != nil {
+		t.Fatalf("narrow board still holds the transcript: tr %v cache %v items %d", p.tr != nil, p.read.tr != nil, len(p.read.items))
+	}
+}
+
+// A dock panel whose agent has no transcript path drops the read cache too.
+func TestDockTickDropsReadCache(t *testing.T) {
+	win, _, _, _, _, _, _ := memberWindow(t)
+	tr := &subagents.Transcript{}
+	s := &dockSession{tr: tr}
+	s.read.tr, s.read.items = tr, []readItem{{kind: readNote, text: "x"}}
+	win.dockTick(s, &subagents.Agent{Engine: "codex"}, time.Now())
+	if s.tr != nil || s.read.tr != nil || s.read.items != nil {
+		t.Fatalf("tr %v cache %v items %d", s.tr != nil, s.read.tr != nil, len(s.read.items))
 	}
 }
