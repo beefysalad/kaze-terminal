@@ -463,6 +463,8 @@ func (win *window) boardPress(gtx layout.Context, p image.Point, at time.Duratio
 	if a := win.boardPreviewAgent(); a != nil {
 		tab := tabs.TabID(a.Tab)
 		switch {
+		case win.readPress(&b.prev, &b.prevHits, p):
+			return
 		case p.In(b.openIn):
 			win.boardOpenAgent(boardRow{key: a.Key, tab: tab})
 			return

@@ -539,3 +539,34 @@ func (win *window) drawEveryStep(gtx layout.Context, s *dockSession, a *subagent
 		}
 	}
 }
+
+// readPress handles a press on the Activity's mode buttons or a readable
+// step with a detail, in the dock or the board preview (h is that view's
+// hits). It reports whether it took the press.
+func (win *window) readPress(s *dockSession, h *dockHits, p image.Point) bool {
+	switch {
+	case p.In(h.modeRead), p.In(h.modeEvery):
+		if every := p.In(h.modeEvery); every != win.actEvery {
+			win.actEvery = every
+			win.invalidate()
+		}
+		return true
+	case win.actEvery:
+		return false // every step: nothing opens
+	}
+	for _, x := range h.steps {
+		if p.In(x.rect) {
+			if s.open == nil {
+				s.open = map[string]bool{}
+			}
+			if s.open[x.id] {
+				delete(s.open, x.id)
+			} else {
+				s.open[x.id] = true
+			}
+			win.invalidate()
+			return true
+		}
+	}
+	return false
+}

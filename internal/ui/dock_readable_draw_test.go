@@ -2,6 +2,7 @@ package ui
 
 import (
 	"encoding/json"
+	"image"
 	"image/color"
 	"os"
 	"path/filepath"
@@ -11,6 +12,9 @@ import (
 	"time"
 
 	"gioui.org/io/input"
+	"gioui.org/io/key"
+	"gioui.org/io/pointer"
+	"gioui.org/unit"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/notify"
 	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
@@ -224,5 +228,157 @@ func TestReadableLongDiffStaysCapped(t *testing.T) {
 	}
 	if !rdHas(win.dock.texts, "+20000") {
 		t.Fatalf("counts lost: %q", win.dock.texts)
+	}
+}
+
+// rdHit is where the readable step id was drawn in the dock.
+func rdHit(t *testing.T, h dockHits, id string) image.Point {
+	t.Helper()
+	for _, x := range h.steps {
+		if x.id == id {
+			return centre(x.rect)
+		}
+	}
+	t.Fatalf("step %q not drawn as clickable: %+v", id, h.steps)
+	return image.Point{}
+}
+
+func rdCount(texts []string, want string) int {
+	n := 0
+	for _, s := range texts {
+		if s == want {
+			n++
+		}
+	}
+	return n
+}
+
+func TestClickStepOpensDiff(t *testing.T) {
+	win, r, _, s, _ := rdDock(t, rdTranscript())
+	if rdHas(win.dock.texts, "+ ") {
+		t.Fatal("a detail is open before any click")
+	}
+	clickAt(t, win, r, rdHit(t, win.dock.hits, "e1"))
+	if !s.open["e1"] || rdCount(win.dock.texts, "+ ") == 0 || rdCount(win.dock.texts, "− ") != 5 || !rdHas(win.dock.texts, "n1") || !rdHas(win.dock.texts, "ctx1") {
+		t.Fatalf("diff not open: %q", win.dock.texts)
+	}
+	clickAt(t, win, r, rdHit(t, win.dock.hits, "e1"))
+	if s.open["e1"] || rdHas(win.dock.texts, "+ ") {
+		t.Fatalf("diff still open: %q", win.dock.texts)
+	}
+}
+
+func TestClickBashShowsCommandAndOutput(t *testing.T) {
+	win, r, _, _, _ := rdDock(t, rdTranscript())
+	clickAt(t, win, r, rdHit(t, win.dock.hits, "b1"))
+	if !rdHas(win.dock.texts, "$ "+rdBashCmd) || !rdHas(win.dock.texts, "FAIL    github.com/x/ui    4.8s") {
+		t.Fatalf("texts %q", win.dock.texts)
+	}
+}
+
+func TestClickFoldShowsFiles(t *testing.T) {
+	win, r, _, _, _ := rdDock(t, rdTranscript())
+	clickAt(t, win, r, rdHit(t, win.dock.hits, "r1"))
+	for _, p := range []string{"internal/ui/agent.go", "internal/ui/window.go"} {
+		if !rdHas(win.dock.texts, p) {
+			t.Fatalf("no %q in %q", p, win.dock.texts)
+		}
+	}
+	if rdCount(win.dock.texts, "internal/ui/scratch_gone_test.go") != 2 { // the fold list and the Edited row
+		t.Fatalf("texts %q", win.dock.texts)
+	}
+}
+
+func TestStepWithoutDetailIgnoresClick(t *testing.T) {
+	win, r, _, s, _ := rdDock(t, rdUse("t1", "TodoWrite", map[string]any{"todos": []any{}}))
+	if !rdHas(win.dock.texts, "Updated the to-do list") || len(win.dock.hits.steps) != 0 {
+		t.Fatalf("texts %q steps %+v", win.dock.texts, win.dock.hits.steps)
+	}
+	h := win.dock.hits
+	row := image.Pt(h.mode.Min.X+40, h.mode.Max.Y+gtxDp(win, 12))
+	if win.readPress(s, &h, row) {
+		t.Fatal("a step with no detail took the click")
+	}
+	clickAt(t, win, r, row)
+	if len(s.open) != 0 {
+		t.Fatalf("open %v", s.open)
+	}
+}
+
+// gtxDp is n dp in px at the test frames scale.
+func gtxDp(win *window, n int) int { return pageContext(10, 10).Dp(unit.Dp(n)) }
+
+func TestModeToggleSwitchesBothViews(t *testing.T) {
+	win, r, _, _, _ := rdDock(t, rdTranscript())
+	clickAt(t, win, r, centre(win.dock.hits.modeEvery))
+	if !win.actEvery || !rdHas(win.dock.texts, "Bash") {
+		t.Fatalf("Every step not shown: %v %q", win.actEvery, win.dock.texts)
+	}
+	win.openBoard(0)
+	win.boardSelect(subagents.Key{Session: "s", ID: "x"})
+	drawPreview(win)
+	if !boardHas(win, "Bash") || boardHas(win, "3 files") {
+		t.Fatalf("board preview kept the readable view: %q", win.board.texts)
+	}
+	win.closeBoard()
+	twoFrames(t, win, r)
+	clickAt(t, win, r, centre(win.dock.hits.modeRead))
+	if win.actEvery || !rdHas(win.dock.texts, "3 files") {
+		t.Fatalf("Readable not back: %q", win.dock.texts)
+	}
+}
+
+func TestBoardPreviewClickOpensStep(t *testing.T) {
+	win, _, r, a, _, _, _ := memberWindow(t)
+	k, _ := readScene(t, win, int(a.ID), rdTranscript())
+	twoFrames(t, win, r)
+	win.openBoard(0)
+	win.boardSelect(k)
+	win.board.prev.follow = false
+	gtx := drawPreview(win)
+	win.boardPress(gtx, rdHit(t, win.board.prevHits, "e1"), 0)
+	drawPreview(win)
+	if !win.board.prev.open["e1"] || !boardHas(win, "+ ") {
+		t.Fatalf("preview step not open: %q", win.board.texts)
+	}
+	win.boardPress(gtx, centre(win.board.prevHits.modeEvery), 0)
+	drawPreview(win)
+	if !win.actEvery || !boardHas(win, "Bash") {
+		t.Fatalf("preview mode not switched: %q", win.board.texts)
+	}
+}
+
+func TestOpenStepSurvivesNewRecords(t *testing.T) {
+	win, r, _, s, path := rdDock(t, rdTranscript())
+	clickAt(t, win, r, rdHit(t, win.dock.hits, "e1"))
+	f, _ := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0o644)
+	f.WriteString(rdUse("b2", "Bash", map[string]any{"command": "ls"}))
+	f.Close()
+	now := time.Now()
+	frameAt(t, win, r, now.Add(agentTranscriptPoll+time.Second))
+	frameAt(t, win, r, now.Add(agentTranscriptPoll+time.Second+10*time.Millisecond))
+	if s.read.builds < 2 || !s.open["e1"] || !rdHas(win.dock.texts, "o1") {
+		t.Fatalf("builds %d open %v texts %q", s.read.builds, s.open, win.dock.texts)
+	}
+}
+
+func TestNoteLinksStillOpen(t *testing.T) {
+	win, _, r, a, _, _, _ := memberWindow(t)
+	win.dock.heightDp = 440
+	dir := t.TempDir()
+	report(t, a, dir)
+	os.WriteFile(filepath.Join(dir, "notes.md"), []byte("# Notes\n"), 0o644)
+	k, _ := readScene(t, win, int(a.ID), rdLine("assistant", map[string]any{"type": "text", "text": "See notes.md now."})+rdUse("r1", "Read", map[string]any{"file_path": "/w/kaze/a.go"}))
+	win.openDock(a.ID, k)
+	twoFrames(t, win, r)
+	if len(win.dock.hits.links) == 0 {
+		t.Fatalf("no link drawn: %q", win.dock.texts)
+	}
+	p := centre(win.dock.hits.links[0].r)
+	r.Queue(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Modifiers: key.ModShortcut, Position: at(p)},
+		pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Modifiers: key.ModShortcut, Position: at(p)})
+	twoFrames(t, win, r)
+	if d := win.shownDoc(); d == nil || filepath.Base(d.path) != "notes.md" {
+		t.Fatalf("doc not opened: %+v", d)
 	}
 }

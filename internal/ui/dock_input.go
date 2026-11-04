@@ -248,6 +248,9 @@ func (win *window) dockBody(gtx layout.Context, owner tabs.TabID, s *dockSession
 				}
 			}
 		}
+		if win.readPress(s, &win.dock.hits, p) {
+			return
+		}
 		if p.In(win.dock.hits.finish) {
 			s.tab, s.picked, s.scroll = dockReport, true, 0
 		}
