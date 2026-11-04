@@ -10,7 +10,7 @@
   :root { --mono:JB,"JetBrains Mono",ui-monospace,monospace; --sans:Manrope,"Segoe UI",sans-serif;
     --chrome:#0b0d12; --active:#0f1117; --panel:#0c0e14; --raised:#151925; --raised2:#1a1f2c; --line:#1d2230; --line2:#2a3142;
     --fg:#e9ebf2; --t2:#a7adbd; --muted:#8a90a2; --dim:#6f7587; --acc:#8b7bff; --acc2:#b9a6ff; --ok:#62d39a; --cyan:#4fc3d9; --claude:#d97757;
-    --hit:#3d3566; --hitfg:#f2efff; --cur:#f2b84b; --curfg:#1a1405; }
+    --hit:#1c5080; --hitfg:#f2f6ff; --cur:#f2b84b; --curfg:#1a1405; }
   * { box-sizing:border-box; } [hidden] { display:none !important; }
   html,body { margin:0; background:#040507; }
   body { color:var(--fg); font:13px/1.5 var(--mono); display:flex; flex-direction:column; align-items:center; padding:12px; gap:10px; -webkit-font-smoothing:antialiased; }
@@ -48,7 +48,7 @@
   mark { background:var(--hit); color:var(--hitfg); border-radius:2px; }
   mark.cur { background:var(--cur); color:var(--curfg); }
   .ticks { position:absolute; right:3px; top:6px; bottom:6px; width:6px; }
-  .ticks i { position:absolute; left:0; width:6px; height:2px; border-radius:1px; background:#5a4fb0; }
+  .ticks i { position:absolute; left:0; width:6px; height:2px; border-radius:1px; background:#4f8fd6; }
   .ticks i.cur { background:var(--cur); height:3px; }
   .ticks .view { position:absolute; left:-1px; width:8px; border-radius:3px; background:rgba(255,255,255,.07); }
 

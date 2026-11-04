@@ -85,7 +85,7 @@ func TestZeroMatchTokensFallBack(t *testing.T) {
 		t.Fatalf("matchColors() = %v %v %v, want %v %v %v", m, c, k, x, y, y)
 	}
 	p := DefaultPalette()
-	if m, c, k := p.matchColors(); m != hex(0x3d3566) || c != hex(0xf2b84b) || k != hex(0x6457c0) {
+	if m, c, k := p.matchColors(); m != hex(0x1c5080) || c != hex(0xf2b84b) || k != hex(0x4f8fd6) {
 		t.Fatalf("Midnight matchColors() = %v %v %v", m, c, k)
 	}
 }

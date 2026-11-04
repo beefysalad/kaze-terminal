@@ -50,7 +50,7 @@ func DefaultPalette() Palette {
 			hex(0xa9c7ff), hex(0xcdbfff), hex(0x95e6f0), hex(0xffffff),
 		},
 		// From the find mockup; its mark #5a4fb0 is 2.85:1 on BG, nudged to 3.3:1.
-		Match: hex(0x3d3566), MatchCur: hex(0xf2b84b), MatchMark: hex(0x6457c0),
+		Match: hex(0x1c5080), MatchCur: hex(0xf2b84b), MatchMark: hex(0x4f8fd6),
 	}
 }
 
