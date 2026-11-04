@@ -1,8 +1,6 @@
-## What’s new in Kaze 0.28
+## What’s new in Kaze 0.28.1
 
-- **Read what your agents are doing:** a subagent’s panel and the agents board now read like Claude’s own transcript: the agent’s words first, then one sentence per step, like “Edited routes.ts +8 −5”, “Read 3 files” or “Ran the tests · failed · 1 test”. Click a step to see its diff or output. “Every step” brings back the full list.
-- **Battery in the status bar:** on Windows laptops, the battery level sits at the far right of the status bar, with a bolt while charging, amber at 20% and red at 10%. It updates when Windows says it changed, so it costs nothing while idle. Desktops show nothing. macOS comes later.
-- **Fixed: swapped agent names:** subagents of the same type started together keep their own task names instead of trading them.
+- **Kaze has a new home:** the project moved to beefysalad/kaze-terminal on GitHub. Kaze now checks there for updates, and the website is at beefysalad.github.io/kaze-terminal. Nothing else changes.
 
 ## Download
 

@@ -7,7 +7,7 @@ Last updated: 2026-11-04, release 0.28 (battery on Windows, readable agent activ
 **The repo moved to `beefysalad/kaze-terminal` (2026-11-04).** GitHub redirects the old repo, git and API
 addresses, but not the website: it is now https://beefysalad.github.io/kaze-terminal/. The Go module, the
 update checker (`internal/update.LatestURL`), the lander, README and release notes name the new owner.
-Installed copies older than 0.28.1 still update through the redirect; never create a new
+Released in 0.28.1. Installed copies older than 0.28.1 still update through the redirect; never create a new
 `patrick-gogo/kaze-terminal`, or that redirect breaks. Historical docs keep their old links.
 
 **Release 0.28 ships PR #140: battery on Windows, readable agent activity and agent names (#111,

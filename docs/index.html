@@ -176,7 +176,17 @@
     </div>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.28</span><span class="badge">Latest</span><time datetime="2026-11-04">Nov 4, 2026</time></div>
+        <div class="release-meta"><span class="version">0.28.1</span><span class="badge">Latest</span><time datetime="2026-11-04">Nov 4, 2026</time></div>
+        <div class="release-body">
+          <h3>A new home for Kaze</h3>
+          <ul>
+            <li><b>Kaze has a new home:</b> the project moved to beefysalad/kaze-terminal on GitHub. Kaze now checks there for updates, and the website is at beefysalad.github.io/kaze-terminal. Nothing else changes.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.28</span><time datetime="2026-11-04">Nov 4, 2026</time></div>
         <div class="release-body">
           <h3>Readable agent steps, and the battery on Windows</h3>
           <ul>
@@ -196,20 +206,6 @@
             <li><b>Richer alert cards:</b> a card at the bottom right names the session the way the sidebar does, shows its branch and slash command, Claude’s message or the start of its last reply, and how long the turn ran. Ctrl+Shift+J (⌘ J on macOS) opens the newest one.</li>
             <li><b>Links with spaces:</b> a .md path with a space in it, or one printed after its folder, is underlined whole and opens on Ctrl+click. When it can’t be found, Kaze says where it looked.</li>
             <li><b>Removed: the scratch shell and floating panes:</b> the docked panel replaces both. An old scratch_shell line in config.toml is ignored with a warning.</li>
-          </ul>
-        </div>
-      </li>
-
-      <li class="release">
-        <div class="release-meta"><span class="version">0.26</span><time datetime="2026-11-03">Nov 3, 2026</time></div>
-        <div class="release-body">
-          <h3>An agents board you can work from</h3>
-          <ul>
-            <li><b>A new agents board:</b> filter by All, Needs you, Running or Done, and search by type, task, session or repo (press /). Waiting agents sit in a pinned Needs you card; the rest are grouped under their session, with a bar showing what’s waiting, running and done. Finished agents fold away.</li>
-            <li><b>Preview without leaving:</b> pick an agent to see its steps and messages, or its formatted report, beside the list. Double-click it, press Enter or use Open in session to jump to it.</li>
-            <li><b>One click opens an agent:</b> clicking an agent line in the sidebar opens its panel again, and a second click closes it. “+N more” opens the board for that session.</li>
-            <li><b>A quieter highlight:</b> the project rail is gone. The project you’re in keeps its bold name and your session keeps its own bar.</li>
-            <li><b>Fixed: report summaries:</b> a finished agent shows the first sentence of its report, not its heading.</li>
           </ul>
         </div>
       </li>
