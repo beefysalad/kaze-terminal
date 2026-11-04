@@ -2,7 +2,10 @@ package notify
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -421,7 +424,7 @@ func TestMsgSubagentFieldsRoundTrip(t *testing.T) {
 	}
 	m := recv(t, ch)
 	in.Token = ""
-	if m != in {
+	if !reflect.DeepEqual(m, in) {
 		t.Fatalf("got %+v, want %+v", m, in)
 	}
 }
@@ -527,5 +530,73 @@ func TestSessionKindCarriesOnlyIdentity(t *testing.T) {
 	}
 	if got.Reason != "" || got.Command != "" || got.Args != "" || got.Usage != nil || got.AgentID != "" {
 		t.Fatalf("extra fields kept: %+v", got)
+	}
+}
+
+func docSend(t *testing.T, s *Server, m Msg) {
+	t.Helper()
+	if err := Send(s.Addr(), s.Token(), m, time.Second); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDocMessagePassesCleaned(t *testing.T) {
+	s, ch := start(t)
+	d := t.TempDir()
+	abs1, abs2, abs3 := filepath.Join(d, "a.md"), filepath.Join(d, "b.txt"), filepath.Join(d, "c.md")
+	docSend(t, s, Msg{Kind: KindDoc, Tab: 1, Docs: []string{abs1, "rel/x.md", abs2, abs3 + "\x1b", strings.Repeat("a", 2000) + ".md"}})
+	m := recv(t, ch)
+	if m.Kind != KindDoc || len(m.Docs) != 1 || m.Docs[0] != abs1 {
+		t.Fatalf("got %+v", m)
+	}
+}
+
+func TestDocMessageCappedAtEight(t *testing.T) {
+	s, ch := start(t)
+	d := t.TempDir()
+	var in []string
+	for i := 0; i < 12; i++ {
+		in = append(in, filepath.Join(d, fmt.Sprintf("f%d.md", i)))
+	}
+	docSend(t, s, Msg{Kind: KindDoc, Tab: 1, Docs: in})
+	m := recv(t, ch)
+	if !reflect.DeepEqual(m.Docs, in[:MaxDocs]) || MaxDocs != 8 {
+		t.Fatalf("got %v", m.Docs)
+	}
+}
+
+func TestDocMessageWithoutDocsDropped(t *testing.T) {
+	s, ch := start(t)
+	docSend(t, s, Msg{Kind: KindDoc, Tab: 1})
+	docSend(t, s, Msg{Kind: KindDoc, Tab: 1, Docs: []string{"rel.md", "x.go"}})
+	select {
+	case m := <-ch:
+		t.Fatalf("unexpected %+v", m)
+	case <-time.After(200 * time.Millisecond):
+	}
+}
+
+func TestDocsOnlyOnDocAndTool(t *testing.T) {
+	s, ch := start(t)
+	p := filepath.Join(t.TempDir(), "a.md")
+	docSend(t, s, Msg{Kind: KindDone, Tab: 1, Docs: []string{p}})
+	if m := recv(t, ch); m.Docs != nil {
+		t.Fatalf("done kept docs: %+v", m)
+	}
+	docSend(t, s, Msg{Kind: KindTool, Tab: 1, AgentID: "a1", Docs: []string{p}})
+	if m := recv(t, ch); !reflect.DeepEqual(m.Docs, []string{p}) {
+		t.Fatalf("tool lost docs: %+v", m)
+	}
+}
+
+func TestDocMessageStripsOtherFields(t *testing.T) {
+	s, ch := start(t)
+	p := filepath.Join(t.TempDir(), "a.md")
+	docSend(t, s, Msg{Kind: KindDoc, Tab: 1, Docs: []string{p}, Reason: "r", Usage: &Usage{}, Command: "/x",
+		Args: "a", AgentID: "a1", AgentType: "t", Report: "rep", TaskPrompt: "tp", Tool: "Write", Summary: "s"})
+	m := recv(t, ch)
+	if m.Reason != "" || m.Usage != nil || m.Command != "" || m.Args != "" || m.AgentID != "" ||
+		m.AgentType != "" || m.Report != "" || m.TaskPrompt != "" || m.Tool != "" || m.Summary != "" {
+		t.Fatalf("got %+v", m)
 	}
 }

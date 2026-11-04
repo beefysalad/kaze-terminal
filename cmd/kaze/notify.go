@@ -104,8 +104,17 @@ func runNotifyOutput(args []string, stdin io.Reader, env func(string) string, st
 			msg.Kind = kind
 			msg.TaskPrompt = notify.FitReport(strings.TrimSpace(hook.Prompt), notify.MaxPrompt)
 		}
+		var docs []string
+		if parsed && kind == notify.KindTool {
+			docs = docPaths(hook.ToolName, hook.ToolInput, hook.Cwd)
+		}
 		if !agentMsg(&msg, kind, parsed, hook.AgentID, hook.AgentType, hook.ToolName, hook.ToolInput, hook.Last) {
-			return 0 // nothing kaze shows: a main-conversation tool call, or unreadable
+			if len(docs) == 0 {
+				return 0 // nothing kaze shows: a main-conversation tool call, or unreadable
+			}
+			kind, msg.Kind, msg.Docs = notify.KindDoc, notify.KindDoc, docs
+		} else if msg.Kind == notify.KindTool && msg.AgentID != "" {
+			msg.Docs = docs
 		}
 		if parsed {
 			msg.Session = cut(hook.Session, notify.MaxSession)

@@ -414,12 +414,14 @@ guess swaps; a name that has settled never moves.
     its panel. In a narrow window there is no preview, and a click opens the agent in its session.
 - **Setup:** it needs three more Claude Code hooks (SubagentStart, SubagentStop and a PreToolUse
   hook). Settings > Agents lists them in the setup check, and **Fix** adds them. In the main
-  conversation the tool hook exits at once unless Claude starts a subagent.
+  conversation the tool hook exits at once unless Claude starts a subagent or the call touches a `.md` file.
 
 ## Reading docs
 
 Cmd+click an `.md` path in terminal output (Ctrl+click on Windows) to read it in kaze.
 Relative paths use that terminal's folder, then its Git repo root.
+Links to `.md` files the agent wrote or read anywhere (a vault, another repo) open too: kaze
+checks the files the agent touched in that tab before the folder, and other tabs' files last.
 
 - **Spaces:** a path with single spaces in it, such as
   `C:/Users/you/Documents/My Notes/plan.md`, is underlined whole. So is a path in quotes.

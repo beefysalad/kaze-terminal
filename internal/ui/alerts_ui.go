@@ -131,6 +131,14 @@ func (win *window) onNotify(m notify.Msg) {
 	src := m.Tab // the tab the hook ran in: subagent events keep it as their source
 	var t *tabs.Tab
 	if mgr := win.liveMgr.Load(); mgr != nil {
+		// The docs list comes first: a KindDoc is only that, never agent,
+		// restore, subagent or alert state, and needs no frame.
+		if len(m.Docs) > 0 && mgr.Lookup(id) != nil {
+			win.seen.add(id, m.Docs)
+		}
+		if m.Kind == notify.KindDoc {
+			return
+		}
 		if m.Kind != notify.KindUsage && !subKind(m.Kind) {
 			if st := mgr.Lookup(id); st != nil {
 				win.originIdentity(m, st)

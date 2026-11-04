@@ -10,6 +10,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -35,6 +36,8 @@ const (
 	KindAgentStart Kind = "agent-start"
 	KindAgentStop  Kind = "agent-stop"
 	KindTool       Kind = "tool" // a step inside a subagent, or the main conversation's Agent call
+	// KindDoc says a tool call touched markdown files; carries only Docs. Never an alert.
+	KindDoc Kind = "doc"
 )
 
 const maxArgsRunes = 120
@@ -45,6 +48,7 @@ const (
 	MaxPath       = 1024     // bytes
 	MaxAgentField = 128      // runes
 	MaxReport     = 24 << 10 // bytes
+	MaxDocs       = 8        // markdown paths per message
 	MaxPrompt     = 16 << 10 // bytes; an Agent call carries no report, so this fits the body cap
 )
 
@@ -78,7 +82,9 @@ type Msg struct {
 	Description string `json:"description,omitempty"`
 	TaskPrompt  string `json:"task_prompt,omitempty"`
 	Report      string `json:"report,omitempty"`
-	Token       string `json:"token"`
+	// Docs are absolute .md paths a tool call touched; only on KindDoc and KindTool.
+	Docs  []string `json:"docs,omitempty"`
+	Token string   `json:"token"`
 }
 
 // Window is one rate-limit window: percent used and its reset time (Unix seconds, 0 = unknown).
@@ -229,6 +235,11 @@ func (s *Server) handle(c net.Conn) {
 	if m.Kind != KindAgentStop {
 		m.Report = ""
 	}
+	if m.Kind == KindDoc || m.Kind == KindTool {
+		m.Docs = cleanDocs(m.Docs)
+	} else {
+		m.Docs = nil
+	}
 	if m.Kind != KindTool {
 		m.Tool, m.Summary, m.Description = "", "", ""
 	}
@@ -245,6 +256,11 @@ func (s *Server) handle(c net.Conn) {
 		m.Usage = nil
 		if m.Kind != KindNeeds {
 			m.AgentID, m.AgentType = "", ""
+		}
+	case KindDoc:
+		m.Usage, m.Reason, m.Command, m.Args, m.AgentID, m.AgentType, m.Report, m.TaskPrompt = nil, "", "", "", "", "", "", ""
+		if len(m.Docs) == 0 {
+			return
 		}
 	case KindSession:
 		m.Usage, m.Reason, m.Command, m.Args, m.AgentID, m.AgentType = nil, "", "", "", "", ""
@@ -267,6 +283,21 @@ func (s *Server) handle(c net.Conn) {
 	}
 	defer func() { recover() }() // a bad callback must not kill the server
 	s.onMsg(m)
+}
+
+// cleanDocs keeps only absolute, clean .md paths (up to MaxDocs); anything else is dropped.
+func cleanDocs(in []string) []string {
+	var out []string
+	for _, p := range in {
+		if len(out) == MaxDocs {
+			break
+		}
+		if len(p) > MaxPath || !filepath.IsAbs(p) || !strings.EqualFold(filepath.Ext(p), ".md") || CleanLine(p, MaxPath) != p {
+			continue
+		}
+		out = append(out, p)
+	}
+	return out
 }
 
 // ValidCommand reports whether c looks like /name with a safe charset, so a
