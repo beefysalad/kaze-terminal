@@ -131,9 +131,22 @@ func continues(scr *screen.Screen, row int) bool {
 // findLinks is appendLinks into a new slice.
 func findLinks(rs []rune) [][2]int { return appendLinks(nil, rs) }
 
-// appendLinks appends the [start, end) rune ranges of the http and https links in rs.
+// appendLinks appends the [start, end) rune ranges of the http and https links
+// and .md paths in rs. A quoted .md path is taken whole without its quotes; an
+// unquoted one reaches back across single spaces to its root (see extendBack).
 func appendLinks(out [][2]int, rs []rune) [][2]int {
+	lastEnd := 0
 	for i := 0; i < len(rs); {
+		if rs[i] == '"' || rs[i] == '\'' {
+			if end, ok := quotedAt(rs, i); ok {
+				out = append(out, [2]int{i + 1, end})
+				lastEnd = end
+				i = end + 1
+				continue
+			}
+			i++ // not a quoted path: move on one rune
+			continue
+		}
 		n := schemeLen(rs[i:])
 		if n > 0 && (i == 0 || !unicode.IsLetter(rs[i-1]) && !unicode.IsDigit(rs[i-1])) {
 			j := i + n
@@ -143,6 +156,7 @@ func appendLinks(out [][2]int, rs []rune) [][2]int {
 			end := trimURLEnd(rs, i+n, j)
 			if end > i+n {
 				out = append(out, [2]int{i, end})
+				lastEnd = end
 			}
 			i = max(j, i+1)
 			continue
@@ -153,11 +167,112 @@ func appendLinks(out [][2]int, rs []rune) [][2]int {
 		}
 		end, next := pathAt(rs, i)
 		if end > i {
-			out = append(out, [2]int{i, end})
+			out = append(out, [2]int{extendBack(rs, i, lastEnd), end})
+			lastEnd = end
 		}
 		i = max(next, i+1)
 	}
 	return out
+}
+
+// maxGaps bounds how many single spaces a .md link reaches back across to its root.
+const maxGaps = 4
+
+// maxQuoted bounds how far a quote looks for its closing quote.
+const maxQuoted = 512
+
+func asciiLetter(r rune) bool { return r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' }
+
+// driveAt reports whether rs[k:] starts with a drive: an ASCII letter, ':' and a slash.
+func driveAt(rs []rune, k int) bool {
+	return k+2 < len(rs) && asciiLetter(rs[k]) && rs[k+1] == ':' && slash(rs[k+2])
+}
+
+func slash(r rune) bool { return r == '/' || r == '\\' }
+
+// rootAt reports whether rs[k:] starts with a root: X:\, X:/, /, ~/ or ~\.
+func rootAt(rs []rune, k int) bool {
+	if k < 0 || k >= len(rs) {
+		return false
+	}
+	switch rs[k] {
+	case '/':
+		return true
+	case '~':
+		return k+1 < len(rs) && slash(rs[k+1])
+	}
+	return driveAt(rs, k)
+}
+
+// extendBack is the start of the .md link whose run starts at i: when the run is
+// not rooted, it walks back across at most maxGaps gaps, each one space with a
+// path rune on both sides, never before floor, to the first rooted run it meets.
+// That run must end in a folder (no dot extension), else the link stays at i.
+func extendBack(rs []rune, i, floor int) int {
+	if rootAt(rs, i) {
+		return i
+	}
+	start := i
+	for range maxGaps {
+		if start-2 < floor || rs[start-1] != ' ' || !pathRune(rs[start-2]) {
+			return i
+		}
+		end := start - 1 // the run before the gap is rs[k:end]
+		k := end - 1
+		for k > floor && pathRune(rs[k-1]) {
+			k--
+		}
+		if k-2 >= floor && rs[k-1] == ':' && driveAt(rs, k-2) {
+			k -= 2 // the drive's colon counts inside X:/
+		}
+		if rootAt(rs, k) {
+			if hasExt(rs[k:end]) {
+				return i
+			}
+			return k
+		}
+		start = k
+	}
+	return i
+}
+
+// hasExt reports whether the last segment of a path run has a dot extension.
+func hasExt(rs []rune) bool {
+	for k := len(rs) - 1; k > 0; k-- {
+		switch rs[k] {
+		case '/', '\\':
+			return false
+		case '.':
+			return !slash(rs[k-1])
+		}
+	}
+	return false
+}
+
+// quotedAt is the end of a quoted .md path whose quote is rs[i]: the same quote
+// within maxQuoted runes, with only path runes, spaces and a drive colon inside,
+// and a .md name at the end by pathAt's rule. The link is rs[i+1:end].
+func quotedAt(rs []rune, i int) (end int, ok bool) {
+	q := rs[i]
+	from := i + 1
+	if from >= len(rs) || rs[from] == ' ' {
+		return 0, false
+	}
+	for j := from; j < len(rs) && j <= i+maxQuoted; j++ {
+		r := rs[j]
+		switch {
+		case r == q:
+			if j-from < 4 || rs[j-3] != '.' || unicode.ToLower(rs[j-2]) != 'm' || unicode.ToLower(rs[j-1]) != 'd' || strings.ContainsRune("/\\.", rs[j-4]) {
+				return 0, false
+			}
+			return j, true
+		case r == ' ' || pathRune(r):
+		case r == ':' && j == from+1 && driveAt(rs, from):
+		default:
+			return 0, false
+		}
+	}
+	return 0, false
 }
 
 func IsWebLink(s string) bool {

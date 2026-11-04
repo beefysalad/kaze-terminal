@@ -237,3 +237,61 @@ func TestLinksInInvalidUTF8Prefix(t *testing.T) {
 		t.Fatal(ls)
 	}
 }
+
+const obsidianLine = "Write(C:/Users/john/Documents/Patrick Obsidian/Patrick/tickets/V3-3261/review-mine-2026-11-03.md)"
+const obsidianPath = "C:/Users/john/Documents/Patrick Obsidian/Patrick/tickets/V3-3261/review-mine-2026-11-03.md"
+
+func TestFindSpacedDocPaths(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{obsidianLine, obsidianPath},
+		{"/Users/pat/My Notes/Work Log/today.md", "/Users/pat/My Notes/Work Log/today.md"},
+		{"see docs/a.md", "docs/a.md"},
+		{"Read /path/x.go and docs/README.md", "docs/README.md"},
+		{`C:\a\b  c\d.md`, `c\d.md`},
+		{`edit "C:/My  Docs/x.md" now`, "C:/My  Docs/x.md"},
+		{"it's 'docs/a b.md'", "docs/a b.md"},
+		{"don't open README.md", "README.md"},
+		{"/r/x y z w v u.md", "u.md"},
+		{`~/My Notes/a.md`, `~/My Notes/a.md`},
+		{`/notes a.md b.md`, `/notes a.md b.md`},
+	}
+	for _, c := range cases {
+		var got []string
+		rs := []rune(c.in)
+		for _, sp := range findLinks(rs) {
+			got = append(got, string(rs[sp[0]:sp[1]]))
+		}
+		if strings.Join(got, " ") != c.want {
+			t.Errorf("%q: got %q, want %q", c.in, got, c.want)
+		}
+	}
+}
+
+func TestLinkAtExtendsAcrossWrappedRows(t *testing.T) {
+	s := screen.New(40, 4)
+	printAll(s, obsidianLine)
+	var l Links
+	if u, ok := l.At(s, Point{Col: 5, Row: 2}); !ok || u != obsidianPath {
+		t.Fatalf("got %q %v", u, ok)
+	}
+}
+
+func TestVisibleWithSpacedPathsAllocatesNothing(t *testing.T) {
+	s := screen.New(120, 24)
+	for i := range 23 {
+		if i%2 == 0 {
+			printAll(s, obsidianLine)
+		} else {
+			printAll(s, `it's 'docs/a b.md' and edit "C:/My  Docs/x.md" now`)
+		}
+		s.CarriageReturn()
+		s.LineFeed()
+	}
+	var l Links
+	if len(l.Visible(s, 0, 24)) != 34 {
+		t.Fatalf("setup: spans %+v", l.Visible(s, 0, 24))
+	}
+	if n := testing.AllocsPerRun(20, func() { l.Visible(s, 0, 24) }); n != 0 {
+		t.Fatalf("%v allocs per frame", n)
+	}
+}
