@@ -62,7 +62,9 @@ h1 .q{display:block;color:var(--dim)}
 .first-time a{color:var(--muted);text-decoration:underline;text-underline-offset:3px}
 .first-time a:hover{color:var(--text)}
 
-.wall{position:absolute;z-index:1;top:-160px;right:-160px;width:1180px;height:1040px;perspective:1700px;pointer-events:none}
+/* The wall hangs off the page centre, not the window edge, so it stays beside the words on wide screens
+   (at 1440px wide this is the same spot as before). It grows a little on wide screens to reach the edge. */
+.wall{--ww:clamp(1180px,calc(50vw + 460px),1640px);position:absolute;z-index:1;top:-160px;left:calc(50% - 300px);width:var(--ww);height:calc(var(--ww) * .88);perspective:1700px;pointer-events:none}
 .wall-plane{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);align-items:start;gap:22px;transform:rotateX(16deg) rotateY(-22deg) rotateZ(7deg);transform-origin:30% 50%;pointer-events:auto}
 /* Each column holds its windows twice (lander.js adds the copy) and slides by one copy, so the loop is seamless. */
 .wall-col{display:flex;flex-direction:column;gap:22px;animation:wall-up var(--d,90s) linear infinite;will-change:transform}
@@ -77,7 +79,7 @@ h1 .q{display:block;color:var(--dim)}
 .tile:hover,.tile:focus-visible{transform:translateZ(30px);border-color:#55597a}
 .tile:hover img,.tile:focus-visible img{opacity:1}
 .hero::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
-  background:linear-gradient(90deg,var(--ink) 0%,var(--ink) 34%,rgba(11,12,17,.75) 46%,rgba(11,12,17,0) 62%),linear-gradient(0deg,var(--ink) 0%,rgba(11,12,17,0) 22%)}
+  background:linear-gradient(90deg,var(--ink) 0%,var(--ink) calc(50% - 230px),rgba(11,12,17,.75) calc(50% - 58px),rgba(11,12,17,0) calc(50% + 173px)),linear-gradient(0deg,var(--ink) 0%,rgba(11,12,17,0) 22%)}
 .wall-hint{position:absolute;z-index:2;right:32px;bottom:22px;font:11.5px var(--mono);color:var(--dim)}
 .news{display:flex;align-items:center;gap:10px;padding:16px 0;font-size:13px;color:var(--muted)}
 .news .tag{font:11px var(--mono);color:var(--lilac);border:1px solid #3a3360;border-radius:999px;padding:1px 9px}
@@ -281,7 +283,7 @@ footer{margin-top:130px;border-top:1px solid var(--line);padding:44px 0 56px}
 
 @media (max-width:980px){
   .nav{display:none}
-  .wall{opacity:.35;right:-360px}
+  .wall{opacity:.35;left:auto;right:-360px;width:1180px;height:1040px}
   .hero::after{background:linear-gradient(0deg,var(--ink) 0%,rgba(11,12,17,.6) 100%)}
   .head,.install,.readme,.guide-grid{grid-template-columns:1fr}
   .toc{position:static}
