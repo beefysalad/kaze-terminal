@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"math"
@@ -13,13 +14,14 @@ import (
 	"gioui.org/io/input"
 	"gioui.org/io/pointer"
 
+	"github.com/patrick-gogo/kaze-terminal/internal/battery"
 	"github.com/patrick-gogo/kaze-terminal/internal/notify"
 	"github.com/patrick-gogo/kaze-terminal/internal/resources"
 	"github.com/patrick-gogo/kaze-terminal/internal/theme"
 	"github.com/patrick-gogo/kaze-terminal/internal/usage"
 )
 
-var statusTestDims = statusDims{H: 32, Pad: 6, ItemPad: 9, Sep: 9, Icon: 13, Gap: 6, Meter: 38, PillPad: 7, Dot: 6}
+var statusTestDims = statusDims{H: 32, Pad: 6, ItemPad: 9, Sep: 9, Icon: 13, Gap: 6, Meter: 38, PillPad: 7, Dot: 6, Battery: 22}
 
 func seven(s string, mono bool) int { return 7 * utf8.RuneCountInString(s) }
 
@@ -294,5 +296,84 @@ func TestReviewUsageAndTabsHaveSeparator(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("no separator between usage %v and tabs %v: %+v", a, b, l.Seps)
+	}
+}
+
+func batteryModel() statusModel {
+	m := busyModel()
+	m.Battery = battery.Status{Present: true, Percent: 82}
+	return m
+}
+
+func TestStatusBatteryFarRight(t *testing.T) {
+	l := statusAt(batteryModel(), 1400)
+	b, ok := l.Groups[grpBattery]
+	if !ok {
+		t.Fatalf("no battery at 1400px: %+v", l)
+	}
+	for g, r := range l.Groups {
+		if g != grpBattery && r.Max.X > b.Min.X {
+			t.Fatalf("group %d at %v is right of the battery %v", g, r, b)
+		}
+	}
+	tabs := l.Groups[grpTabs]
+	found := false
+	for _, x := range l.Seps {
+		if x >= tabs.Max.X && x <= b.Min.X {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("no separator between tabs %v and the battery %v: %v", tabs, b, l.Seps)
+	}
+}
+
+func TestStatusDropsBatteryFirst(t *testing.T) {
+	m := batteryModel()
+	var stages []string
+	note := func(s string) {
+		if len(stages) == 0 || stages[len(stages)-1] != s {
+			stages = append(stages, s)
+		}
+	}
+	for w := 1500; w >= 600; w -= 5 {
+		l := statusAt(m, w)
+		switch {
+		case shown(l, grpBattery):
+			note("full")
+		case shown(l, grpTabs):
+			note("no battery")
+		case !l.Compact.ResourcesLabel:
+			note("no tabs")
+		case !l.Compact.ResourcesMeter:
+			note("no resource label")
+		case !l.Compact.ServersLabel:
+			note("no resource meter")
+		case !l.Compact.UsageLabels:
+			note("no servers label")
+		default:
+			note("no usage labels")
+		}
+	}
+	want := []string{"full", "no battery", "no tabs", "no resource label", "no resource meter", "no servers label", "no usage labels"}
+	for i, s := range want {
+		if i >= len(stages) || stages[i] != s {
+			t.Fatalf("stages %v, want them to start %v", stages, want)
+		}
+	}
+}
+
+func TestStatusNoBatteryNoGroup(t *testing.T) {
+	for _, w := range []int{1600, 1000, 700} {
+		without := statusAt(busyModel(), w)
+		m := busyModel()
+		m.Battery = battery.Status{Percent: 0}
+		l := statusAt(m, w)
+		if shown(l, grpBattery) {
+			t.Fatalf("%dpx: a battery group without a battery", w)
+		}
+		if fmt.Sprint(l) != fmt.Sprint(without) {
+			t.Fatalf("%dpx: layout changed without a battery:\n%+v\n%+v", w, l, without)
+		}
 	}
 }
