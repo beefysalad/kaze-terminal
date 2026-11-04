@@ -293,3 +293,27 @@ func TestNextWaitingWithoutCardsWalksMarks(t *testing.T) {
 		t.Fatalf("active %d, want the marked %d", got, ids[1])
 	}
 }
+
+// A run summary card stays when its tab is visited, so the key skips a card
+// on the shown tab and goes on to the sessions that wait.
+func TestNextWaitingSkipsCardOnShownTab(t *testing.T) {
+	win, ids := needsWindow(t, 3, 2)
+	win.alerts.addRun(toast{Tab: ids[0], Kind: notify.KindNeeds, Text: "1 failed", Run: 5, Title: "web"})
+	win.nextWaiting()
+	if got := win.mgr.Active().ID; got != ids[2] {
+		t.Fatalf("active %d, want the waiting session %d", got, ids[2])
+	}
+	if len(win.alerts.toasts) != 1 {
+		t.Fatalf("cards %+v, want the run card kept", win.alerts.toasts)
+	}
+}
+
+// A run summary's text follows its name ("samurai: started 2 of 2 tabs"); the
+// card titles it with the name, so the body starts at "started".
+func TestRunCardBodyDropsNameColon(t *testing.T) {
+	win, tab := cardTab(t, "main")
+	c := win.cardOf(toast{Tab: tab.ID, Run: 7, Title: "samurai", Text: ": started 2 of 2 tabs", Agent: "workspace", Kind: notify.KindDone})
+	if c.title != "samurai" || c.body != "started 2 of 2 tabs" {
+		t.Fatalf("title %q body %q", c.title, c.body)
+	}
+}

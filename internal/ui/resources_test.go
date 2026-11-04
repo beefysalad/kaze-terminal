@@ -182,7 +182,7 @@ type resourceRootPTY struct {
 }
 
 func (p *resourceRootPTY) RootPID() int { return p.pid }
-func TestResourceRootsKeepScratchAndWorkspaceOwnership(t *testing.T) {
+func TestResourceRootsKeepSessionAndWorkspaceOwnership(t *testing.T) {
 	st := &recStarter{}
 	pid := 100
 	win := &window{defTitle: "zsh", names: map[tabs.TabID]string{}}

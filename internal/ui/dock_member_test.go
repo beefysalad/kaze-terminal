@@ -295,3 +295,74 @@ func TestDockFocusLineFollowsKeys(t *testing.T) {
 	}
 	_ = m1
 }
+
+// dockTabRect is the tab row rect of entry i in the shown panel.
+func dockTabRect(t *testing.T, win *window, i int) image.Rectangle {
+	t.Helper()
+	for _, h := range win.dock.hits.tabs {
+		if h.i == i {
+			return h.rect
+		}
+	}
+	t.Fatalf("no tab %d in the row", i)
+	return image.Rectangle{}
+}
+
+// Keys in an agent tab's body move with a click on a member tab: typing
+// reaches the member the panel now shows, not nowhere.
+func TestDockAgentKeysFollowToMemberTab(t *testing.T) {
+	win, st, r, a, _, m1, _ := memberWindow(t)
+	win.openDockMember(a.ID, m1.ID)
+	win.openDock(a.ID, startAgent(win, a.ID, "s", "x"))
+	twoFrames(t, win, r)
+	clickAt(t, win, r, centre(win.dock.hits.body))
+	if !win.dock.keys || win.dock.keysMember != 0 {
+		t.Fatalf("agent body click: keys %v member %v", win.dock.keys, win.dock.keysMember)
+	}
+	clickAt(t, win, r, centre(dockTabRect(t, win, 0)))
+	twoFrames(t, win, r)
+	if win.shownMember() != m1.ID {
+		t.Fatalf("shown member %v", win.shownMember())
+	}
+	typeKeys(t, win, r, "ls")
+	waitSent(t, ptyOf(st, 2), "ls")
+	if got := ptyOf(st, 0).sent(); got != "" {
+		t.Fatalf("the session got %q", got)
+	}
+}
+
+// A member with the keyboard that leaves the front for an agent tab (a
+// sidebar agent click or an alert card) gives the keyboard back, with its
+// focus-out.
+func TestDockMemberKeysLeaveForAgentTab(t *testing.T) {
+	win, st, r, a, _, m1, _ := memberWindow(t)
+	emitTo(t, st, 2, m1, "\x1b[?1004h", func() bool { return modes(m1.Session).FocusEvents })
+	win.openDockMember(a.ID, m1.ID)
+	twoFrames(t, win, r)
+	clickAt(t, win, r, centre(win.dock.hits.body))
+	waitSent(t, ptyOf(st, 2), "\x1b[I")
+	win.openDock(a.ID, startAgent(win, a.ID, "s", "x"))
+	twoFrames(t, win, r)
+	if win.dock.keysMember != 0 || win.dock.keys {
+		t.Fatalf("agent tab shown: keys %v member %v", win.dock.keys, win.dock.keysMember)
+	}
+	waitSent(t, ptyOf(st, 2), "\x1b[I\x1b[O")
+	typeKeys(t, win, r, "pwd")
+	waitSent(t, ptyOf(st, 0), "pwd")
+}
+
+// Filling the panel past its cap evicts the member that had the keyboard;
+// the keyboard never points at a tab the panel no longer holds.
+func TestDockEvictedMemberDropsKeys(t *testing.T) {
+	win, _, r, a, _, m1 := dockOne(t)
+	for i := range dockMaxTabs {
+		win.openDock(a.ID, startAgent(win, a.ID, "s", string(rune('a'+i))))
+	}
+	twoFrames(t, win, r)
+	if win.memberDeck(m1.ID) != 0 {
+		t.Fatal("the member was not evicted")
+	}
+	if m := win.dock.keysMember; m != 0 {
+		t.Fatalf("keys point at evicted member %v", m)
+	}
+}

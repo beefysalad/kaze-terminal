@@ -168,10 +168,7 @@ func (win *window) dockRow(owner tabs.TabID, p image.Point) {
 			return
 		case p.In(t.rect):
 			if t.i != d.on {
-				if win.dock.keysMember != 0 {
-					win.dropDockKeys() // the member leaves the front with its keyboard
-				}
-				win.showEntry(d, t.i)
+				win.showEntry(d, t.i) // the panel's keyboard follows the front
 			}
 			return
 		}

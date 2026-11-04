@@ -61,7 +61,7 @@ func TestResizeTabIsSkippedByResizeAll(t *testing.T) {
 	m.ResizeTab(b.ID, 40, 10)
 	m.ResizeAll(100, 30)
 	if got := st.fakes[1].lastSize(); got != [2]int{40, 10} {
-		t.Fatalf("pane pty %v, want [40 10]", got)
+		t.Fatalf("sized pty %v, want [40 10]", got)
 	}
 	if got := st.fakes[0].lastSize(); got != [2]int{100, 30} {
 		t.Fatalf("session pty %v, want [100 30]", got)
