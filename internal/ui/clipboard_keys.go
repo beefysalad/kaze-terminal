@@ -5,8 +5,8 @@ import (
 
 	"gioui.org/io/key"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/render"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/render"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 // warpClipKey is what plain Ctrl+C and Ctrl+V do on Windows, the way Warp and

@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"gioui.org/font"
-	"github.com/patrick-gogo/kaze-terminal/internal/update"
+	"github.com/beefysalad/kaze-terminal/internal/update"
 )
 
 func TestUpdateConfirmationWrapsInsideCard(t *testing.T) {

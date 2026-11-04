@@ -7,8 +7,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
-	"github.com/patrick-gogo/kaze-terminal/internal/usage"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/usage"
 )
 
 // statuslineTotal bounds a run: Claude Code reruns the command on every update

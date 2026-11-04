@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/render"
+	"github.com/beefysalad/kaze-terminal/internal/render"
 )
 
 func hexc(v uint32) color.NRGBA {

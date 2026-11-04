@@ -4,7 +4,7 @@ import (
 	"image/color"
 	"testing"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
 
 func paletteInks(p dockPalette) map[string]color.NRGBA {

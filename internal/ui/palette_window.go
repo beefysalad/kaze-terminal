@@ -18,10 +18,10 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/widget"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/gitinfo"
-	kinput "github.com/patrick-gogo/kaze-terminal/internal/input"
-	"github.com/patrick-gogo/kaze-terminal/internal/skills"
-	"github.com/patrick-gogo/kaze-terminal/internal/workspaces"
+	"github.com/beefysalad/kaze-terminal/internal/gitinfo"
+	kinput "github.com/beefysalad/kaze-terminal/internal/input"
+	"github.com/beefysalad/kaze-terminal/internal/skills"
+	"github.com/beefysalad/kaze-terminal/internal/workspaces"
 )
 
 // paletteUI is the palette's state; UI goroutine only, except loaded, which

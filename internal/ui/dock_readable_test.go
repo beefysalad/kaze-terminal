@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
 )
 
 // rdTr builds an available transcript from steps and messages, numbering

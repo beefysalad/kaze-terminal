@@ -17,9 +17,9 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/render"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
-	"github.com/patrick-gogo/kaze-terminal/internal/usage"
+	"github.com/beefysalad/kaze-terminal/internal/render"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/usage"
 )
 
 // grpNone is no status group: nothing hovered.

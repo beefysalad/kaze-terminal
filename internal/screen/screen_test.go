@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/screen"
+	"github.com/beefysalad/kaze-terminal/internal/screen"
 )
 
 func TestNewScreenIsBlank(t *testing.T) {

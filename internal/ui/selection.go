@@ -7,8 +7,8 @@ import (
 
 	"gioui.org/io/pointer"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/render"
-	"github.com/patrick-gogo/kaze-terminal/internal/screen"
+	"github.com/beefysalad/kaze-terminal/internal/render"
+	"github.com/beefysalad/kaze-terminal/internal/screen"
 )
 
 const (

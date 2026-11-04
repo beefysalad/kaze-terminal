@@ -4,6 +4,12 @@ Last updated: 2026-11-04, release 0.28 (battery on Windows, readable agent activ
 
 ## Where things stand
 
+**The repo moved to `beefysalad/kaze-terminal` (2026-11-04).** GitHub redirects the old repo, git and API
+addresses, but not the website: it is now https://beefysalad.github.io/kaze-terminal/. The Go module, the
+update checker (`internal/update.LatestURL`), the lander, README and release notes name the new owner.
+Installed copies older than 0.28.1 still update through the redirect; never create a new
+`patrick-gogo/kaze-terminal`, or that redirect breaks. Historical docs keep their old links.
+
 **Release 0.28 ships PR #140: battery on Windows, readable agent activity and agent names (#111,
 #134, #135).** Next: the macOS battery (#139, on the owner's MacBook). Built in three worktree lanes
 (N, B, R) from `docs/superpowers/plans/2026-11-04-kaze-battery-activity-names.md`:
@@ -551,7 +557,7 @@ Native macOS builds, tests and owner chrome checks are complete. This original
 setup/checklist is historical; unresolved platform checks are listed above.
 
 1. Install Go (version in `go.mod`) and the Xcode Command Line Tools: `xcode-select --install`.
-2. Clone and build: `git clone https://github.com/patrick-gogo/kaze-terminal && cd kaze-terminal && go build -o kaze ./cmd/kaze && ./kaze`.
+2. Clone and build: `git clone https://github.com/beefysalad/kaze-terminal && cd kaze-terminal && go build -o kaze ./cmd/kaze && ./kaze`.
 3. Run the tests: `go test ./...` and `go vet ./...`. Native macOS tests now run locally; PR CI adds macOS and Windows checks.
 4. Check by hand, in a kaze tab:
    - zsh starts; `echo $TERM $COLORTERM $TERM_PROGRAM` prints `xterm-256color truecolor kaze`.

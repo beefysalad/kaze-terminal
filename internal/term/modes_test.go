@@ -5,9 +5,9 @@ import (
 	"io"
 	"testing"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/screen"
-	"github.com/patrick-gogo/kaze-terminal/internal/term"
-	"github.com/patrick-gogo/kaze-terminal/internal/vt"
+	"github.com/beefysalad/kaze-terminal/internal/screen"
+	"github.com/beefysalad/kaze-terminal/internal/term"
+	"github.com/beefysalad/kaze-terminal/internal/vt"
 )
 
 func run(cols, rows int, input string) *screen.Screen {

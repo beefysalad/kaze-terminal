@@ -13,8 +13,8 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 // toastHit is where an alert card and its × were drawn, in window pixels.

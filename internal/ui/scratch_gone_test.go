@@ -5,7 +5,7 @@ import (
 
 	"gioui.org/io/key"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/term"
+	"github.com/beefysalad/kaze-terminal/internal/term"
 )
 
 // The scratch shell is removed (issue #133, plan task D6).

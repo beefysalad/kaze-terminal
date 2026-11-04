@@ -11,11 +11,11 @@ import (
 	"gioui.org/app"
 	"gioui.org/unit"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/bench"
-	"github.com/patrick-gogo/kaze-terminal/internal/config"
-	"github.com/patrick-gogo/kaze-terminal/internal/ptyx"
-	"github.com/patrick-gogo/kaze-terminal/internal/ui"
-	"github.com/patrick-gogo/kaze-terminal/internal/version"
+	"github.com/beefysalad/kaze-terminal/internal/bench"
+	"github.com/beefysalad/kaze-terminal/internal/config"
+	"github.com/beefysalad/kaze-terminal/internal/ptyx"
+	"github.com/beefysalad/kaze-terminal/internal/ui"
+	"github.com/beefysalad/kaze-terminal/internal/version"
 )
 
 // r is set at link time (-X main.r=...) only to give a rebuild a new hash when

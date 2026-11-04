@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/term"
+	"github.com/beefysalad/kaze-terminal/internal/term"
 )
 
 // A key's echo usually lands a fraction of a millisecond after the key is

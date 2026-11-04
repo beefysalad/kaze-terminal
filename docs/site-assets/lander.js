@@ -178,7 +178,7 @@ moment(fromHash && moments[fromHash[1]] ? fromHash[1] : 'needs');
   try {
     let total = 0;
     for (let page = 1; ; page++) {
-      const response = await fetch(`https://api.github.com/repos/patrick-gogo/kaze-terminal/releases?per_page=100&page=${page}`, { signal: AbortSignal.timeout(8000) });
+      const response = await fetch(`https://api.github.com/repos/beefysalad/kaze-terminal/releases?per_page=100&page=${page}`, { signal: AbortSignal.timeout(8000) });
       if (!response.ok) return;
       const releases = await response.json();
       for (const release of releases) for (const asset of release.assets || []) if (asset.name.endsWith('.zip')) total += asset.download_count;

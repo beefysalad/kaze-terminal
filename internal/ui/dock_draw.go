@@ -16,10 +16,10 @@ import (
 	"gioui.org/text"
 	"gioui.org/unit"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/mdoc"
-	"github.com/patrick-gogo/kaze-terminal/internal/render"
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/mdoc"
+	"github.com/beefysalad/kaze-terminal/internal/render"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 // Panel sizes in dp (mockups docs/design/agent-pane-dock-mockup.html and

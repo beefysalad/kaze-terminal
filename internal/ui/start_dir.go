@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/config"
+	"github.com/beefysalad/kaze-terminal/internal/config"
 )
 
 // plainStartDir resolves only when opening a tab, never during layout. Explicit

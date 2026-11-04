@@ -5,8 +5,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/resources"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/resources"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 type resourceResult struct {

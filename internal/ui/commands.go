@@ -5,7 +5,7 @@ import (
 
 	"gioui.org/io/key"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/input"
+	"github.com/beefysalad/kaze-terminal/internal/input"
 )
 
 // kazeCommand is one of kaze's own actions, listed in the palette's kaze

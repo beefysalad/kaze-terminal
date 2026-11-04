@@ -1,15 +1,15 @@
 package ui
 
 import (
-	"github.com/patrick-gogo/kaze-terminal/internal/render"
+	"github.com/beefysalad/kaze-terminal/internal/render"
 	"image"
 
 	"gioui.org/io/pointer"
 	"gioui.org/op"
 	"gioui.org/op/clip"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
-	"github.com/patrick-gogo/kaze-terminal/internal/term"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/term"
 )
 
 // linkUnder is what the web link or .md path at grid pixel p in t may mean,

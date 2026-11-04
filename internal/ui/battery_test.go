@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/battery"
-	"github.com/patrick-gogo/kaze-terminal/internal/bench"
-	"github.com/patrick-gogo/kaze-terminal/internal/render"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/battery"
+	"github.com/beefysalad/kaze-terminal/internal/bench"
+	"github.com/beefysalad/kaze-terminal/internal/render"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 
 	"gioui.org/io/input"
 	"gioui.org/op"

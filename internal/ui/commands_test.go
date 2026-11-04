@@ -5,8 +5,8 @@ import (
 
 	"gioui.org/io/key"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/config"
-	"github.com/patrick-gogo/kaze-terminal/internal/input"
+	"github.com/beefysalad/kaze-terminal/internal/config"
+	"github.com/beefysalad/kaze-terminal/internal/input"
 )
 
 func TestResolveBindingsKeepsOverrides(t *testing.T) {

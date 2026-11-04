@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/colorfont"
-	cft "github.com/patrick-gogo/kaze-terminal/internal/colorfont/colorfonttest"
+	"github.com/beefysalad/kaze-terminal/internal/colorfont"
+	cft "github.com/beefysalad/kaze-terminal/internal/colorfont/colorfonttest"
 )
 
 func TestEmojiTables(t *testing.T) {

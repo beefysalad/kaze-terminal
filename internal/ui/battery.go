@@ -4,7 +4,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/battery"
+	"github.com/beefysalad/kaze-terminal/internal/battery"
 )
 
 // batteryEvery is how often the battery is read when Windows' change

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/screen"
+	"github.com/beefysalad/kaze-terminal/internal/screen"
 )
 
 // maxWrapRows bounds how many rows one wrapped link may span, so a screen full

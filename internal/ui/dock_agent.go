@@ -8,8 +8,8 @@ import (
 	"gioui.org/io/clipboard"
 	"gioui.org/layout"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 // agentTranscriptPoll is how often a shown panel rereads its transcript.

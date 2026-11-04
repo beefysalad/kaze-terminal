@@ -8,7 +8,7 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 // filterWindow has three sessions in two repos, the first one shown, and the

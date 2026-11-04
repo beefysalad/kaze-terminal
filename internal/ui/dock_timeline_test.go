@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
 )
 
 var tl0 = time.Date(2026, 11, 3, 14, 2, 0, 0, time.UTC)

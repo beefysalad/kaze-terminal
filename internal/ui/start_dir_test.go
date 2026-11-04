@@ -2,7 +2,7 @@ package ui
 
 import (
 	"errors"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 	"image"
 	"os"
 	"path/filepath"
@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/config"
-	"github.com/patrick-gogo/kaze-terminal/internal/sessionstate"
+	"github.com/beefysalad/kaze-terminal/internal/config"
+	"github.com/beefysalad/kaze-terminal/internal/sessionstate"
 )
 
 func TestStartDirFreshAndNewPlainTabs(t *testing.T) {

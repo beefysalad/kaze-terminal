@@ -7,8 +7,8 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/ptyx"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/ptyx"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 // echoPTY echoes every write back, like a shell at its prompt.

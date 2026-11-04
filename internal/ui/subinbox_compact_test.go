@@ -1,7 +1,7 @@
 package ui
 
 import (
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
 	"strconv"
 	"testing"
 )

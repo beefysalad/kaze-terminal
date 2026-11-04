@@ -3,7 +3,7 @@ package ui
 import (
 	"testing"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 func TestSidebarRedesignNamePriority(t *testing.T) {

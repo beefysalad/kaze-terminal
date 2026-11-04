@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
 )
 
 // Tests for the panel's deck of tabs (issue #133, plan task D1).

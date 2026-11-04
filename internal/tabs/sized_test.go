@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 func TestTabKeepsItsStartFolder(t *testing.T) {

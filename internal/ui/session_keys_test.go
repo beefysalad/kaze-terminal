@@ -5,7 +5,7 @@ import (
 
 	"gioui.org/io/input"
 	"gioui.org/io/key"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 func TestMacSessionKeysThroughRouter(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 	"gioui.org/gpu/headless"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
 
 // Actual mark pixels: a solid core, a closed top and no paint beyond the slot.

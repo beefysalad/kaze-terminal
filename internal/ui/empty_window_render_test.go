@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"gioui.org/gpu/headless"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
 
 // Opt-in development evidence from the actual Gio frame. No native window,

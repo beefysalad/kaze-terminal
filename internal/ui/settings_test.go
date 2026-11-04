@@ -17,10 +17,10 @@ import (
 	"gioui.org/op"
 	"gioui.org/unit"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/config"
-	kinput "github.com/patrick-gogo/kaze-terminal/internal/input"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
-	"github.com/patrick-gogo/kaze-terminal/internal/version"
+	"github.com/beefysalad/kaze-terminal/internal/config"
+	kinput "github.com/beefysalad/kaze-terminal/internal/input"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/version"
 )
 
 // pageContext is a 1x-scale context for a whole window.

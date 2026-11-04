@@ -18,7 +18,7 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 
-	kinput "github.com/patrick-gogo/kaze-terminal/internal/input"
+	kinput "github.com/beefysalad/kaze-terminal/internal/input"
 )
 
 type emptyState struct {

@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/procs"
-	"github.com/patrick-gogo/kaze-terminal/internal/ptyx"
+	"github.com/beefysalad/kaze-terminal/internal/procs"
+	"github.com/beefysalad/kaze-terminal/internal/ptyx"
 )
 
 // The program in front of the pty is the one Start ran; kaze names it from its group.

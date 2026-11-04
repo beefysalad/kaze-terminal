@@ -10,7 +10,7 @@ import (
 	"gioui.org/op/paint"
 	xdraw "golang.org/x/image/draw"
 
-	"github.com/patrick-gogo/kaze-terminal/assets/branding"
+	"github.com/beefysalad/kaze-terminal/assets/branding"
 )
 
 type logoKey struct {

@@ -3,8 +3,8 @@ package ui
 import (
 	"testing"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
 )
 
 func TestSubInboxOverflowKeepsStopAndQuietAgentResume(t *testing.T) {

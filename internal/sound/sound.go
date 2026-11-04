@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/assets/sounds"
+	"github.com/beefysalad/kaze-terminal/assets/sounds"
 )
 
 // coalesce: several alerts close together should give one chime.

@@ -14,10 +14,10 @@ import (
 
 	"gioui.org/gpu/headless"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
-	"github.com/patrick-gogo/kaze-terminal/internal/workspaces"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/workspaces"
 )
 
 const dockSampleReport = "## Summary\n\n**No existing binding** for split panes.\n\n- Cmd+D and Cmd+Shift+D are free on macOS.\n- `panes.go` keeps panels per session.\n\n1. **Existing panes ignored.** See `docs/notes.md`.\n2. Tests pass.\n\n| Key | Action |\n|---|---|\n| Cmd+D | split right |\n| Cmd+Shift+D | split down |\n\n```go\nfunc split() {}\n```\n"
@@ -310,13 +310,13 @@ func act21() []any {
 			"func TestOldScratchKey(t *testing.T) {\n\t// Ctrl+Shift+` (Ctrl+` on macOS) is no kaze action any more.\n\tfor goos, mods := range map[string]key.Modifiers{\"windows\": key.ModCtrl | key.ModShift, \"darwin\": key.ModCtrl} {\n\t\tkm, _ := buildKeymap(goos, nil)\n\t\tif out := routeKey(goos, km, \"`\", mods, term.Modes{}); out.act != actNone {\n\t\t\tt.Fatalf(\"%s: the old scratch key runs %v\", goos, out.act)\n\t\t}\n\t}\n\twin, _, r, _, _, _, _ := paneWindow(t)\n\tn := len(win.mgr.Tabs())\n}"), out: "ok"},
 		act21Step{tool: "Bash", summary: "sed -i imports internal/ui/scratch_gone_test.go", input: cmd("sed -i s/x/y/ internal/ui/scratch_gone_test.go", "Fix the test imports"), out: ""},
 		act21Step{tool: "Bash", summary: "cd kaze-lane-d && gofmt -l internal cmd; go vet ./... && go test ./internal/ui/", input: cmd("cd kaze-lane-d && gofmt -l internal cmd; go vet ./... && go test ./internal/ui/", "Run go vet and the ui tests"),
-			out: "Exit code 1\n--- FAIL: TestOldScratchKeyIsTheShells (0.01s)\n    scratch_gone_test.go:26: windows: the old scratch key runs actScratch\nFAIL\tgithub.com/patrick-gogo/kaze-terminal/internal/ui\t4.812s", failed: true},
+			out: "Exit code 1\n--- FAIL: TestOldScratchKeyIsTheShells (0.01s)\n    scratch_gone_test.go:26: windows: the old scratch key runs actScratch\nFAIL\tgithub.com/beefysalad/kaze-terminal/internal/ui\t4.812s", failed: true},
 		"RED as expected: the old Ctrl+Shift+backtick key still opens the scratch shell. Next I remove `actScratch` from the keymap and keep an old `scratch_shell` line in config.toml loading with a warning.",
 		act21Step{tool: "Edit", summary: "internal/ui/commands.go", input: edit("internal/ui/commands.go", "a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nk\nl", ""), out: "ok"},
 		act21Step{tool: "Edit", summary: "internal/ui/logic.go", input: edit("internal/ui/logic.go", "a\nb\nc\nd\ne\nf\ng\nh\ni", "x\ny"), out: "ok"},
 		act21Step{tool: "Edit", summary: "internal/config/config.go", input: edit("internal/config/config.go", "a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nk\nl\nm\nn\no\np\nq\nr\ns\nt", "w\nx\ny\nz"), out: "ok"},
 		act21Step{tool: "Bash", summary: "go test ./internal/ui/ ./internal/config/", input: cmd("go test ./internal/ui/ ./internal/config/", "Run the ui and config tests"),
-			out: "ok  \tgithub.com/patrick-gogo/kaze-terminal/internal/ui\t5.102s\nok  \tgithub.com/patrick-gogo/kaze-terminal/internal/config\t0.412s"},
+			out: "ok  \tgithub.com/beefysalad/kaze-terminal/internal/ui\t5.102s\nok  \tgithub.com/beefysalad/kaze-terminal/internal/config\t0.412s"},
 		act21Step{tool: "Bash", summary: `cd kaze-lane-d && git commit -q -m "refactor(ui): Remove the scratch shell key"`, input: cmd(`cd kaze-lane-d && git commit -m "refactor(ui): Remove the scratch shell key"`, ""),
 			out: "[lane/d c3f9a12] refactor(ui): Remove the scratch shell key\n 3 files changed, 6 insertions(+), 41 deletions(-)"},
 		"D6 key part done. Now taking `Tab.Parent` out of the sidebar, Ctrl+Tab and session restore.",

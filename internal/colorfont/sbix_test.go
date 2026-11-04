@@ -7,7 +7,7 @@ import (
 	"image/color"
 	"testing"
 
-	cft "github.com/patrick-gogo/kaze-terminal/internal/colorfont/colorfonttest"
+	cft "github.com/beefysalad/kaze-terminal/internal/colorfont/colorfonttest"
 )
 
 func TestParseCmapFormat12(t *testing.T) {

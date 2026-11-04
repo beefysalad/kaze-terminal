@@ -12,8 +12,8 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/pick"
-	"github.com/patrick-gogo/kaze-terminal/internal/workspaces"
+	"github.com/beefysalad/kaze-terminal/internal/pick"
+	"github.com/beefysalad/kaze-terminal/internal/workspaces"
 )
 
 // wsColors are the recipe colors in swatch order.

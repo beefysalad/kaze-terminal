@@ -14,11 +14,11 @@ import (
 	"gioui.org/io/input"
 	"gioui.org/io/pointer"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/battery"
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
-	"github.com/patrick-gogo/kaze-terminal/internal/resources"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
-	"github.com/patrick-gogo/kaze-terminal/internal/usage"
+	"github.com/beefysalad/kaze-terminal/internal/battery"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/resources"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/usage"
 )
 
 var statusTestDims = statusDims{H: 32, Pad: 6, ItemPad: 9, Sep: 9, Icon: 13, Gap: 6, Meter: 38, PillPad: 7, Dot: 6, Battery: 22}

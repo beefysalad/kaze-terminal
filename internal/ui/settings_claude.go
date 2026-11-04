@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/claudesetup"
+	"github.com/beefysalad/kaze-terminal/internal/claudesetup"
 )
 
 var doneToasts = []string{"3s", "6s", "10s", "until_seen"}

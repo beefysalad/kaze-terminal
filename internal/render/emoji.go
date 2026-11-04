@@ -16,7 +16,7 @@ import (
 	"golang.org/x/image/math/fixed"
 	"golang.org/x/image/vector"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/colorfont"
+	"github.com/beefysalad/kaze-terminal/internal/colorfont"
 )
 
 //go:generate go run gen_emoji.go

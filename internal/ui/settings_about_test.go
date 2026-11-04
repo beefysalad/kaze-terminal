@@ -3,9 +3,9 @@ package ui
 import (
 	"golang.org/x/image/font/sfnt"
 
-	"github.com/patrick-gogo/kaze-terminal/assets/fonts"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
-	"github.com/patrick-gogo/kaze-terminal/internal/version"
+	"github.com/beefysalad/kaze-terminal/assets/fonts"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/version"
 	"image"
 	"slices"
 	"strings"

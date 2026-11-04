@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/sessionstate"
+	"github.com/beefysalad/kaze-terminal/internal/sessionstate"
 )
 
 // Reproduce an app launched with a minimal PATH while zsh adds the agent's

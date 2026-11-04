@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/mdoc"
+	"github.com/beefysalad/kaze-terminal/internal/mdoc"
 )
 
 func TestLayoutMarkdownPanelScaleIsSmaller(t *testing.T) {

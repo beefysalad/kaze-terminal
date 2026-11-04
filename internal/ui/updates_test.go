@@ -16,8 +16,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/update"
-	"github.com/patrick-gogo/kaze-terminal/internal/version"
+	"github.com/beefysalad/kaze-terminal/internal/update"
+	"github.com/beefysalad/kaze-terminal/internal/version"
 )
 
 // fakeReleases serves a release lookup for tag and, for the Windows x64 zip,

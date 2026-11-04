@@ -11,7 +11,7 @@ import (
 	"gioui.org/io/input"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
-	"github.com/patrick-gogo/kaze-terminal/internal/branchsession"
+	"github.com/beefysalad/kaze-terminal/internal/branchsession"
 )
 
 func TestBranchLauncherToggleShortcutAndCancel(t *testing.T) {

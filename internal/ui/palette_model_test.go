@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/skills"
-	"github.com/patrick-gogo/kaze-terminal/internal/workspaces"
+	"github.com/beefysalad/kaze-terminal/internal/skills"
+	"github.com/beefysalad/kaze-terminal/internal/workspaces"
 )
 
 func palNames(items []palItem) []string {

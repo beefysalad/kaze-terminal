@@ -12,8 +12,8 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/screen"
-	"github.com/patrick-gogo/kaze-terminal/internal/term"
+	"github.com/beefysalad/kaze-terminal/internal/screen"
+	"github.com/beefysalad/kaze-terminal/internal/term"
 )
 
 // fakePTY is a shell that only produces what the test writes to it.

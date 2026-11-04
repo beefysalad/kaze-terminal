@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
 )
 
 const summaryRunes = 120

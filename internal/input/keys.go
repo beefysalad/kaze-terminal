@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"gioui.org/io/key"
-	"github.com/patrick-gogo/kaze-terminal/internal/term"
+	"github.com/beefysalad/kaze-terminal/internal/term"
 )
 
 // Shortcut is a key with an exact set of modifiers.

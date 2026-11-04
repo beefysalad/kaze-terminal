@@ -9,8 +9,8 @@ import (
 
 	"gioui.org/gpu/headless"
 	"gioui.org/op"
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
 
 // Opt-in actual Gio GPU render; creates no native window and injects no input.

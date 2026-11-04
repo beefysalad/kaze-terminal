@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"testing"
 
-	cft "github.com/patrick-gogo/kaze-terminal/internal/colorfont/colorfonttest"
+	cft "github.com/beefysalad/kaze-terminal/internal/colorfont/colorfonttest"
 )
 
 func sampleTables() map[string][]byte {
