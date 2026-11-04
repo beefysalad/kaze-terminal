@@ -167,6 +167,7 @@ type window struct {
 	acct     notify.Usage              // plan limits (no Ctx); UI goroutine only
 	ctx      map[tabs.TabID]ctxEntry   // per-tab context use; UI goroutine only
 	agents   map[tabs.TabID]agentState // per-tab Claude state; UI goroutine only
+	seen     docSeen                   // per-tab docs the agent touched; any goroutine
 	probe    agentProbe                // what runs in a tab; tests replace it
 	detected map[tabs.TabID]detection  // the agent found in front of each tab; UI goroutine only
 	subs     subagents.Tracker         // every subagent the hooks reported; UI goroutine only

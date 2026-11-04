@@ -6,7 +6,10 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
+	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
@@ -142,5 +145,106 @@ func TestDocSeenConcurrent(t *testing.T) {
 		if i > 1_000_000 {
 			t.Fatal("adds never finished")
 		}
+	}
+}
+
+func TestDocMsgRecordsPath(t *testing.T) {
+	win := testWindow(t, &recStarter{})
+	a, _ := win.mgr.New()
+	win.liveMgr.Store(win.mgr)
+	p := writeDoc(t, t.TempDir(), "tickets/V3-1/plan.md", "# Plan")
+	win.onNotify(notify.Msg{Tab: int(a.ID), Kind: notify.KindDoc, Docs: []string{p}})
+	if got := win.seen.find(a.ID, filepath.Base(p)); got != p {
+		t.Fatalf("got %q, want %q", got, p)
+	}
+}
+
+func TestSubagentToolDocsRecorded(t *testing.T) {
+	win := testWindow(t, &recStarter{})
+	a, _ := win.mgr.New()
+	win.liveMgr.Store(win.mgr)
+	p := writeDoc(t, t.TempDir(), "notes.md", "n")
+	win.onNotify(notify.Msg{Tab: int(a.ID), Kind: notify.KindTool, AgentID: "a1", AgentType: "explorer", Tool: "Write", Summary: p, Docs: []string{p}})
+	if got := win.seen.find(a.ID, "notes.md"); got != p {
+		t.Fatalf("got %q, want %q", got, p)
+	}
+	evs := win.subIn.take()
+	if len(evs) != 1 || evs[0].Kind != subagents.EvTool || evs[0].AgentID != "a1" || evs[0].Tool != "Write" {
+		t.Fatalf("tracker events %+v", evs)
+	}
+}
+
+// A KindDoc only records its paths: no restore note, no terminal agent, no
+// alert, mark, toast or agent state, and nothing for the subagent tracker.
+func TestDocMsgTouchesNoAgentState(t *testing.T) {
+	f, _ := restoreFixture(t)
+	win := f.win
+	win.initRestore()
+	t.Cleanup(win.closeRestore)
+	win.openStartup(nil)
+	win.liveMgr.Store(win.mgr)
+	win.publish(win.mgr.Active(), false) // unfocused: an alert would ring here
+	played := 0
+	win.chime = func(time.Time) { played++ }
+	flashes := 0
+	win.flash = func() { flashes++ }
+	win.opt.Config.ChimeNeeds, win.opt.Config.ChimeDone, win.opt.Config.TaskbarFlash = true, true, true
+	tb := win.mgr.Active()
+	p := writeDoc(t, t.TempDir(), "plan.md", "p")
+	win.onNotify(notify.Msg{Tab: int(tb.ID), Kind: notify.KindDoc, Docs: []string{p}, Agent: "claude", Session: reviewID, Transcript: filepath.Join(t.TempDir(), "t.jsonl"), Cwd: f.dirs[1]})
+	if win.seen.find(tb.ID, "plan.md") != p {
+		t.Fatal("setup: the path was not recorded")
+	}
+	if got := loadSaved(t, f); got.Entries[0].Session != "" || got.Entries[0].Agent != "" || got.Entries[0].Cwd == f.dirs[1] {
+		t.Fatalf("restore noted the doc message: %+v", got.Entries[0])
+	}
+	if win.terms.in(tb) != "" {
+		t.Fatal("the terminal was marked as running an agent")
+	}
+	if win.inbox.size() != 0 || played != 0 || flashes != 0 {
+		t.Fatalf("inbox %d chimes %d flashes %d", win.inbox.size(), played, flashes)
+	}
+	if evs := win.subIn.take(); len(evs) != 0 {
+		t.Fatalf("tracker events %+v", evs)
+	}
+	win.drainAlerts(t0)
+	if _, ok := win.agents[tb.ID]; ok {
+		t.Fatalf("agent state %+v", win.agents[tb.ID])
+	}
+	if win.alerts.markOf(tb.ID) != markNone || len(win.alerts.list()) != 0 {
+		t.Fatal("marked or toasted")
+	}
+}
+
+func TestDocMsgUnknownTabIgnored(t *testing.T) {
+	win := testWindow(t, &recStarter{})
+	a, _ := win.mgr.New()
+	win.liveMgr.Store(win.mgr)
+	p := writeDoc(t, t.TempDir(), "plan.md", "p")
+	win.onNotify(notify.Msg{Tab: int(a.ID) + 99, Kind: notify.KindDoc, Docs: []string{p}})
+	if got := win.seen.list(a.ID + 99); len(got) != 0 {
+		t.Fatalf("recorded %v for a tab that doesn't exist", got)
+	}
+	if got := win.seen.findOthers(0, []tabs.TabID{a.ID, a.ID + 99}, "plan.md"); got != "" {
+		t.Fatalf("found %q", got)
+	}
+}
+
+func TestClosedTabForgetsDocs(t *testing.T) {
+	win := testWindow(t, &recStarter{})
+	win.ui = newChrome()
+	a, _ := win.mgr.New()
+	b, _ := win.mgr.New()
+	win.liveMgr.Store(win.mgr)
+	p := writeDoc(t, t.TempDir(), "plan.md", "p")
+	win.onNotify(notify.Msg{Tab: int(b.ID), Kind: notify.KindDoc, Docs: []string{p}})
+	order := []tabs.TabID{a.ID, b.ID}
+	if win.seen.findOthers(a.ID, order, "plan.md") != p {
+		t.Fatal("setup: not recorded")
+	}
+	win.mgr.Close(b.ID)
+	win.pruneAgents(win.mgr.Tabs())
+	if got := win.seen.findOthers(a.ID, order, "plan.md"); got != "" {
+		t.Fatalf("closed tab's doc still found: %q", got)
 	}
 }

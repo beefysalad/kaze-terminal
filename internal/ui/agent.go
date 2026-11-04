@@ -129,9 +129,10 @@ func (win *window) leaveAgents(list []*tabs.Tab) {
 	}
 }
 
-// pruneAgents forgets closed tabs, and the names the owner gave their rows.
+// pruneAgents forgets closed tabs, their docs list, and the names the owner gave their rows.
 func (win *window) pruneAgents(list []*tabs.Tab) {
 	win.terms.prune(list)
+	win.seen.prune(list)
 	for id := range win.agents {
 		if !tabIn(list, id) {
 			delete(win.agents, id)
