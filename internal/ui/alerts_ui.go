@@ -12,18 +12,16 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/op/clip"
-	"gioui.org/op/paint"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/notify"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 )
 
-// toastHit is where a toast, its text and its buttons were drawn, in window pixels.
+// toastHit is where an alert card and its × were drawn, in window pixels.
 type toastHit struct {
-	id                            tabs.TabID
-	run                           uint64
-	rect, text, goRect, closeRect image.Rectangle
+	id              tabs.TabID
+	run             uint64
+	rect, closeRect image.Rectangle
 }
 
 // inbox carries alerts from notify goroutines to the UI goroutine. It keeps
@@ -39,7 +37,8 @@ type inbox struct {
 type queued struct {
 	m     notify.Msg
 	seq   uint64
-	shell uint64 // shellSeq of the tab when the message arrived
+	shell uint64    // shellSeq of the tab when the message arrived
+	at    time.Time // when it arrived; zero means the frame's time
 }
 
 type pending struct {
@@ -61,7 +60,7 @@ func (b *inbox) put(m notify.Msg, shell uint64) {
 		p = &pending{}
 		b.byTab[id] = p
 	}
-	q := queued{m, b.seq, shell}
+	q := queued{m, b.seq, shell, time.Now()}
 	switch m.Kind {
 	case notify.KindNeeds:
 		p.needs = &q
@@ -212,16 +211,42 @@ func (win *window) deliver(q queued, now time.Time) {
 	if t := win.shownTab(); t != nil {
 		active = t.ID
 	}
+	var ran time.Duration
 	if t := win.mgr.Lookup(tabs.TabID(m.Tab)); t != nil {
 		win.noteAgent(m, t.ID, q.shell)
+		ran = win.noteTurn(t.ID, m.Kind, cmp.Or(q.at, now))
 		win.wantCount(t)
 		win.staleBranch(t) // a background row has no other reason to re-read its branch
 	}
 	win.alerts.doneToast = win.opt.Config.DoneToast
-	win.alerts.apply(m, active, win.focused, win.mgr.Has, now)
+	if _, shown := win.alerts.apply(m, active, win.focused, win.mgr.Has, now); shown && ran > 0 {
+		win.alerts.toasts[len(win.alerts.toasts)-1].Ran = ran // apply appends the tab's card last
+	}
 }
 
-// selectTab is the one tab switch for a tab click and a toast's "Go ›".
+// noteTurn keeps when the tab's turn began: a prompt starts it, a done or an
+// interrupt ends it, and a done returns how long it ran (0 when unknown).
+func (win *window) noteTurn(id tabs.TabID, k notify.Kind, at time.Time) (ran time.Duration) {
+	a, ok := win.agents[id]
+	if !ok {
+		return 0
+	}
+	switch k {
+	case notify.KindPrompt:
+		a.since = at
+	case notify.KindDone, notify.KindInterrupt:
+		if !a.since.IsZero() && at.After(a.since) && k == notify.KindDone {
+			ran = at.Sub(a.since)
+		}
+		a.since = time.Time{}
+	default:
+		return 0
+	}
+	win.agents[id] = a
+	return ran
+}
+
+// selectTab is the one tab switch for a tab click and an alert card's "Open session".
 func (win *window) selectTab(id tabs.TabID) {
 	win.hideDoc()
 	win.dropSideEdit()
@@ -238,7 +263,8 @@ func (win *window) visit(t *tabs.Tab) {
 	}
 }
 
-// toastEvent handles a press on a toast: "Go ›" switches, × dismisses.
+// toastEvent handles a press on a card: × dismisses it, anywhere else on it
+// opens the session, as its "Open session" says.
 func (win *window) toastEvent(e pointer.Event) {
 	if e.Kind != pointer.Press || !e.Buttons.Contain(pointer.ButtonPrimary) || win.bench.IgnoreInput() {
 		return
@@ -251,10 +277,8 @@ func (win *window) toastEvent(e pointer.Event) {
 			win.wantFocus = true
 			win.w.Invalidate()
 			return
-		case p.In(h.goRect):
-			win.toastGo(h.id)
-			return
 		case p.In(h.rect):
+			win.toastGo(h.id)
 			return
 		}
 	}
@@ -279,104 +303,6 @@ func (c *chrome) fitLabel(gtx layout.Context, s string, room int, col color.NRGB
 		sz.X = 0
 	}
 	return call, sz
-}
-
-// drawToasts draws the toasts bottom-right of area, the terminal's part of the window
-// right of the sidebar, newest on top, and records where they are for clicks. When the
-// room is short the oldest cards are left out; when it is too narrow, all of them.
-func (win *window) drawToasts(gtx layout.Context, area image.Rectangle) {
-	c := win.ui
-	c.toastHits = c.toastHits[:0]
-	list := win.alerts.list()
-	if len(list) == 0 {
-		return
-	}
-	titles := map[tabs.TabID]string{}
-	for _, t := range win.mgr.Tabs() {
-		titles[t.ID] = tabLabelWith(t, win.defTitle, c.fit)
-	}
-	ops := gtx.Ops
-	margin, gap := gtx.Dp(14), gtx.Dp(8)
-	padX, padY, inner := gtx.Dp(12), gtx.Dp(10), gtx.Dp(10)
-	dot, radius, line := gtx.Dp(7), gtx.Dp(10), max(gtx.Dp(1), 1)
-	maxW := max(min(gtx.Dp(460), area.Dx()-2*margin), 0)
-
-	goCall, goSz := c.label(gtx, "Go ›", 12, c.th.ToastGo)
-	xCall, xSz := c.label(gtx, "×", 12, c.th.Muted)
-	lead := padX + dot + inner
-	tail := inner + goSz.X + inner + xSz.X + padX
-	textRoom := maxW - lead - tail
-	if textRoom < gtx.Dp(24) {
-		return // too narrow for a readable card; the sidebar's marks still show
-	}
-
-	type card struct {
-		id              tabs.TabID
-		run             uint64
-		kind            notify.Kind
-		title, rest     op.CallOp
-		titleSz, restSz image.Point
-		w, h            int
-	}
-	top, bottom := area.Min.Y+gap, area.Max.Y-gtx.Dp(16)
-	var cards []card
-	total := 0
-	for _, t := range list {
-		k := card{id: t.Tab, run: t.Run, kind: t.Kind}
-		title, rest := titles[t.Tab], " is done"
-		if t.Run != 0 {
-			title, rest = t.Title, t.Text // a workspace run's summary
-		}
-		k.title, k.titleSz = c.fitLabel(gtx, title, textRoom, c.th.ToastTitle)
-		if t.Run == 0 && t.Kind == notify.KindNeeds {
-			rest = " needs you"
-			if t.Text != "" {
-				rest += " · " + t.Text
-			}
-		}
-		k.rest, k.restSz = c.fitLabel(gtx, rest, textRoom-k.titleSz.X, c.th.ToastFG)
-		k.w = lead + k.titleSz.X + k.restSz.X + tail
-		k.h = max(k.titleSz.Y, k.restSz.Y, goSz.Y) + 2*padY
-		if total+k.h > bottom-top {
-			break // newest first, so the oldest are the ones left out
-		}
-		total += k.h + gap
-		cards = append(cards, k)
-	}
-	y := bottom - (total - gap)
-	for _, k := range cards {
-		r := image.Rect(area.Max.X-margin-k.w, y, area.Max.X-margin, y+k.h)
-		paint.FillShape(ops, c.th.ToastLine, clip.UniformRRect(r, radius).Op(ops))
-		paint.FillShape(ops, c.th.ToastBG, clip.UniformRRect(r.Inset(line), max(radius-line, 0)).Op(ops))
-		mid := r.Min.Y + k.h/2
-		x := r.Min.X + padX
-		dc := c.th.Done
-		if k.kind == notify.KindNeeds {
-			dc = c.th.Needs
-		}
-		paint.FillShape(ops, dc, clip.Ellipse(image.Rect(x, mid-dot/2, x+dot, mid-dot/2+dot)).Op(ops))
-		x += dot + inner
-		// Buttons are pinned to the right edge so they stay clickable.
-		xr := r.Max.X - padX - xSz.X
-		gx := xr - inner - goSz.X
-		text := image.Rect(x, r.Min.Y, min(x+k.titleSz.X+k.restSz.X, gx-inner), r.Max.Y)
-		cl := clip.Rect(text).Push(ops) // a mismeasured label still never runs under Go
-		place(ops, k.title, image.Pt(x, mid-k.titleSz.Y/2))
-		place(ops, k.rest, image.Pt(x+k.titleSz.X, mid-k.restSz.Y/2))
-		cl.Pop()
-		place(ops, goCall, image.Pt(gx, mid-goSz.Y/2))
-		place(ops, xCall, image.Pt(xr, mid-xSz.Y/2))
-		hp := gtx.Dp(4)
-		c.toastHits = append(c.toastHits, toastHit{
-			id:        k.id,
-			run:       k.run,
-			rect:      r,
-			text:      text,
-			goRect:    image.Rect(gx-hp, r.Min.Y+line, gx+goSz.X+hp/2, r.Max.Y-line),
-			closeRect: image.Rect(xr-hp/2, r.Min.Y+line, min(xr+xSz.X+hp, r.Max.X-line), r.Max.Y-line),
-		})
-		y += k.h + gap
-	}
 }
 
 // truncateRight keeps the first max runes and ends with "…".

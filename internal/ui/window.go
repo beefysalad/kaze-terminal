@@ -1399,12 +1399,12 @@ func (win *window) pointerView(gtx layout.Context, v termView, e pointer.Event, 
 		first := win.held == 0
 		if first && e.Buttons == pointer.ButtonPrimary && e.Modifiers.Contain(key.ModShortcut) {
 			// Cmd+click (Ctrl+click on Windows) opens a link, even when the app has the mouse.
-			if u, ok := win.linkUnder(t, p, cw, ch); ok {
+			if refs, ok := win.linkUnder(t, p, cw, ch); ok {
 				win.held, win.linkClick, win.toApp, win.gestureTab = e.Buttons, true, false, t
-				if render.IsWebLink(u) {
-					win.open(u)
+				if render.IsWebLink(refs[0]) {
+					win.open(refs[0])
 				} else {
-					win.openDocRef(t, v.tag != win.termTag, u)
+					win.openDocRefs(t, v.tag != win.termTag, refs)
 				}
 				return
 			}

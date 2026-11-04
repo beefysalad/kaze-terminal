@@ -278,8 +278,8 @@ func TestReadyTabsGetExactlyTheirLineOnce(t *testing.T) {
 		}
 	}
 	tst := f.runToast()
-	if got := tst.Title + tst.Text; got != "samurai: started 4 of 4 tabs" {
-		t.Fatalf("summary %q", got)
+	if got := tst.Title + tst.Text; got != "samurai: started 4 of 4 tabs" || tst.Agent != "workspace" {
+		t.Fatalf("summary %q agent %q", got, tst.Agent)
 	}
 	run := f.theRun()
 	if label, needs := f.win.runState(run.id); label != "Running" || needs {

@@ -19,6 +19,8 @@ type agentState struct {
 	shellAt         uint64 // shellSeq(t) when the last hook message arrived
 	// The Claude session the latest message came from (issue #23 Part 1).
 	session, transcript, cwd string
+	// since is when the current turn's prompt arrived; zero once the turn ended.
+	since time.Time
 }
 
 // agentName keeps old in-memory/test states compatible with Claude-only rows.
