@@ -37,6 +37,13 @@ func (p *page) mono(s string, size unit.Sp, col color.NRGBA) (op.CallOp, image.P
 	return p.c.label(p.gtx, s, size, col)
 }
 
+// monoBase is mono text with its baseline, measured from the top.
+func (p *page) monoBase(s string, size unit.Sp, col color.NRGBA) (op.CallOp, image.Point, int) {
+	p.st.texts = append(p.st.texts, s)
+	call, d := p.c.labelDims(p.gtx, s, size, col, font.Normal)
+	return call, d.Size, d.Size.Y - d.Baseline
+}
+
 // sectionLabel draws a small uppercase label over a card and returns where the card starts.
 func (p *page) sectionLabel(r image.Rectangle, y int, s string) int {
 	call, size := p.textW(strings.ToUpper(s), 10.5, p.col.dim, font.SemiBold)
