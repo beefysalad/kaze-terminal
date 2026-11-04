@@ -105,7 +105,10 @@ func TestDockEscClosesWhenFocused(t *testing.T) {
 	sent := ptyOf(st, 0).sent()
 	dockKey(t, win, r, key.NameEscape, 0)
 	if win.dockOf(a.ID) != nil {
-		t.Fatal("Esc did not close the focused panel")
+		t.Fatal("Esc did not hide the focused panel")
+	}
+	if d := win.deckOf(a.ID); d == nil || !d.hidden || len(d.entries) != 1 {
+		t.Fatalf("Esc lost the tabs: %+v", d)
 	}
 	if ptyOf(st, 0).sent() != sent {
 		t.Fatal("Esc also reached the terminal")

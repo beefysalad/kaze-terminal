@@ -79,16 +79,19 @@ type dockDrag struct {
 
 // dockState is the window's panel state; UI goroutine only.
 type dockState struct {
-	by                      map[tabs.TabID]*dockDeck
-	seq                     uint64              // tab show stamps
-	sized                   map[tabs.TabID]bool // sessions whose PTY the panel shrank
-	heightDp                int                 // 0 until dragged: the config value, else the default share
-	keys                    bool                // the panel has the keyboard
-	tag, handle, head, body int                 // event tags
-	drag                    dockDrag
-	hits                    dockHits
-	lastRect                image.Rectangle // the panel as drawn last frame, empty when none
-	texts                   []string        // text drawn last frame; tests read it
+	by                           map[tabs.TabID]*dockDeck
+	seq                          uint64              // tab show stamps
+	sized                        map[tabs.TabID]bool // sessions whose PTY the panel shrank
+	heightDp                     int                 // 0 until dragged: the config value, else the default share
+	keys                         bool                // the panel has the keyboard
+	tag, handle, head, row, body int                 // event tags
+	hover                        int                 // the tab under the pointer, while hovering
+	hovering                     bool                // the pointer is over a tab
+	redraws                      int                 // frames hover changes asked for; tests count them
+	drag                         dockDrag
+	hits                         dockHits
+	lastRect                     image.Rectangle // the panel as drawn last frame, empty when none
+	texts                        []string        // text drawn last frame; tests read it
 }
 
 // dockSplit divides term into the terminal (top) and the panel below it.

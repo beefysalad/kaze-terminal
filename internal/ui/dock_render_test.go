@@ -51,7 +51,7 @@ func TestDockRenders(t *testing.T) {
 	}
 	os.MkdirAll(dir, 0o700)
 	for _, key := range []string{"midnight", "washi"} {
-		for _, state := range []string{"running", "waiting", "report"} {
+		for _, state := range []string{"running", "waiting", "report", "tabs"} {
 			win, _, r, a, _, _, _ := paneWindow(t)
 			win.km, _ = buildKeymap(runtime.GOOS, nil)
 			win.binds, _ = resolveBindings(runtime.GOOS, nil)
@@ -59,6 +59,12 @@ func TestDockRenders(t *testing.T) {
 			win.applyTheme(th)
 			k := dockScene(t, win, int(a.ID), state)
 			floatFrames(t, win, r)
+			if state == "tabs" {
+				// A second agent's tab beside the shown one.
+				win.onNotify(notify.Msg{Tab: int(a.ID), Session: "s", Kind: notify.KindTool, Tool: "Agent", AgentType: "Plan", Description: "Dock tabs plan"})
+				win.onNotify(notify.Msg{Tab: int(a.ID), Session: "s", Kind: notify.KindAgentStart, AgentID: "y", AgentType: "Plan"})
+				win.openDock(a.ID, subagents.Key{Session: "s", ID: "y"})
+			}
 			win.showAgent(a.ID, k, false)
 			floatFrames(t, win, r)
 			size := image.Pt(1000, 600)

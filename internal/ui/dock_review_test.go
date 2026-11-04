@@ -37,7 +37,7 @@ func TestDockCloseReturnsKeys(t *testing.T) {
 	win.openDock(a.ID, k)
 	floatFrames(t, win, r)
 	clickAt(t, win, r, centre(win.dock.hits.body))
-	clickAt(t, win, r, centre(win.dock.hits.close))
+	clickAt(t, win, r, centre(win.dock.hits.tabs[0].close)) // the only tab's ×
 	typeKeys(t, win, r, "ok")
 	sideFrame(t, win, r)
 	if win.dockOf(a.ID) != nil || !strings.Contains(ptyOf(st, 0).sent(), "ok") {
