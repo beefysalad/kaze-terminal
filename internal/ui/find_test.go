@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"image"
 	"strings"
 	"testing"
 
@@ -213,5 +214,163 @@ func TestFindEscRestoresView(t *testing.T) {
 	sideFrame(t, win, r)
 	if got := historyOffset(a); got != 0 {
 		t.Fatalf("opened at the bottom: offset %d after closing, want 0", got)
+	}
+}
+
+// typeFind types s at the end of the find field.
+func typeFind(t *testing.T, win *window, r *input.Router, s string) {
+	t.Helper()
+	n := win.find.ed.Len()
+	r.Queue(key.EditEvent{Range: key.Range{Start: n, End: n}, Text: s})
+	sideFrame(t, win, r)
+	sideFrame(t, win, r)
+}
+
+func TestFindTypingNeverReachesShell(t *testing.T) {
+	win, st, r, _, _, _, _ := memberWindow(t)
+	findKey(t, win, r)
+	typeFind(t, win, r, "warn")
+	pressKey(t, win, r, key.NameReturn, 0)
+	pressKey(t, win, r, key.NameDownArrow, 0)
+	pressKey(t, win, r, key.NameReturn, key.ModShift)
+	if got := ptyOf(st, 0).sent(); got != "" {
+		t.Fatalf("the shell got %q while the bar had the keyboard", got)
+	}
+	if win.find.text != "warn" || !win.find.open {
+		t.Fatalf("text %q open %v, want warn in an open bar", win.find.text, win.find.open)
+	}
+}
+
+func TestFindOpeningAndTypingSameFrame(t *testing.T) {
+	for _, member := range []bool{false, true} {
+		var win *window
+		var st *recStarter
+		var r *input.Router
+		pty := 0
+		if member {
+			win, st, r, _, _, _ = dockOne(t)
+			pty = 2
+		} else {
+			win, st, r, _, _, _, _ = memberWindow(t)
+		}
+		before := ptyOf(st, pty).sent()
+		r.Queue(key.Event{Name: "F", Modifiers: key.ModCtrl | key.ModShift, State: key.Press},
+			key.Event{Name: "F", Modifiers: key.ModCtrl | key.ModShift, State: key.Release},
+			key.EditEvent{Range: key.Range{}, Text: "warn"})
+		sideFrame(t, win, r)
+		sideFrame(t, win, r)
+		if got := ptyOf(st, pty).sent(); got != before {
+			t.Fatalf("member %v: typing after the shortcut reached the shell: %q", member, strings.TrimPrefix(got, before))
+		}
+		if got := win.find.ed.Text(); got != "warn" {
+			t.Fatalf("member %v: field %q, want warn", member, got)
+		}
+	}
+}
+
+func TestFindEnterAndArrowsStep(t *testing.T) {
+	win, _, r, _, _, _, _ := memberWindow(t)
+	var steps []int
+	findStepHook = func(d int) { steps = append(steps, d) }
+	t.Cleanup(func() { findStepHook = nil })
+	findKey(t, win, r)
+	pressKey(t, win, r, key.NameReturn, 0)
+	pressKey(t, win, r, key.NameReturn, key.ModShift)
+	pressKey(t, win, r, key.NameEnter, 0)
+	pressKey(t, win, r, key.NameDownArrow, 0)
+	pressKey(t, win, r, key.NameUpArrow, 0)
+	if fmt.Sprint(steps) != "[1 -1 1 1 -1]" {
+		t.Fatalf("steps %v, want [1 -1 1 1 -1]", steps)
+	}
+}
+
+func TestFindEscClosesAndGivesKeysBack(t *testing.T) {
+	win, st, r, _, _, _, _ := memberWindow(t)
+	findKey(t, win, r)
+	pressKey(t, win, r, key.NameEscape, 0)
+	if win.find.open || win.focusTarget() != win.termTag || !r.Source().Focused(win.termTag) {
+		t.Fatalf("after Esc: open %v, focus %v", win.find.open, win.focusTarget())
+	}
+	if got := ptyOf(st, 0).sent(); got != "" {
+		t.Fatalf("Esc in the bar reached the shell: %q", got)
+	}
+	typedReaches(t, win, r, ptyOf(st, 0), "ls")
+}
+
+func TestFindEscOnMemberGivesItKeysBack(t *testing.T) {
+	win, st, r, _, _, _ := dockOne(t)
+	findKey(t, win, r)
+	pressKey(t, win, r, key.NameEscape, 0)
+	if win.find.open || !win.dockMemberKeys() || !r.Source().Focused(&win.dock.term) {
+		t.Fatalf("after Esc: open %v, member keys %v", win.find.open, win.dockMemberKeys())
+	}
+	before := ptyOf(st, 2).sent()
+	typeKeys(t, win, r, "pwd")
+	waitSent(t, ptyOf(st, 2), before+"pwd")
+}
+
+func TestFindShortcutsStillWork(t *testing.T) {
+	win, _, r, _, _, _, _ := memberWindow(t)
+	findKey(t, win, r)
+	before := len(win.mgr.Tabs())
+	pressKey(t, win, r, "T", key.ModCtrl|key.ModShift)
+	if got := len(win.mgr.Tabs()); got != before+1 {
+		t.Fatalf("%d sessions after Ctrl+Shift+T in the bar, want %d", got, before+1)
+	}
+}
+
+func TestClickTerminalTakesKeysBack(t *testing.T) {
+	win, st, r, _, _, _, _ := memberWindow(t)
+	findKey(t, win, r)
+	clickAt(t, win, r, image.Pt(win.gridRect.Min.X+40, win.gridRect.Max.Y-40))
+	if win.find.keys || !win.find.open || win.focusTarget() != win.termTag {
+		t.Fatalf("keys %v open %v focus %v", win.find.keys, win.find.open, win.focusTarget())
+	}
+	typedReaches(t, win, r, ptyOf(st, 0), "ls")
+}
+
+func TestClickFieldTakesKeysAgain(t *testing.T) {
+	win, st, r, _, _, _, _ := memberWindow(t)
+	findKey(t, win, r)
+	clickAt(t, win, r, image.Pt(win.gridRect.Min.X+40, win.gridRect.Max.Y-40))
+	clickAt(t, win, r, centre(win.find.hits.field))
+	if !win.find.keys || win.focusTarget() != &win.find.ed || !r.Source().Focused(&win.find.ed) {
+		t.Fatalf("keys %v focus %v", win.find.keys, win.focusTarget())
+	}
+	typeFind(t, win, r, "x")
+	if got := ptyOf(st, 0).sent(); got != "" {
+		t.Fatalf("the shell got %q", got)
+	}
+}
+
+func TestFindCopyPrefersFieldSelection(t *testing.T) {
+	win, st, r, a, _, _, _ := memberWindow(t)
+	var clip []string
+	win.toClipboard = func(s string) { clip = append(clip, s) }
+	emitTo(t, st, 0, a, "hello", func() bool { return textShown(a, 4, 'o')() })
+	sideFrame(t, win, r)
+	cw, ch := win.rend.CellSize()
+	from := win.gridRect.Min.Add(image.Pt(cw/4, ch/2))
+	dragFrom(t, win, r, from, image.Pt(4*cw+cw/2, 0))
+	findKey(t, win, r)
+	typeFind(t, win, r, "warn")
+	pressKey(t, win, r, "C", key.ModCtrl|key.ModShift) // nothing selected in the field: the terminal's
+	win.find.ed.SetCaret(win.find.ed.Len(), 0)
+	pressKey(t, win, r, "C", key.ModCtrl|key.ModShift)
+	win.find.ed.SetCaret(win.find.ed.Len(), win.find.ed.Len())
+	pressKey(t, win, r, "C", key.ModCtrl|key.ModShift)
+	if fmt.Sprint(clip) != "[hello warn hello]" {
+		t.Fatalf("copied %q, want [hello warn hello]", clip)
+	}
+}
+
+func TestEscInTerminalGoesToShell(t *testing.T) {
+	win, st, r, _, _, _, _ := memberWindow(t)
+	findKey(t, win, r)
+	clickAt(t, win, r, image.Pt(win.gridRect.Min.X+40, win.gridRect.Max.Y-40))
+	pressKey(t, win, r, key.NameEscape, 0)
+	waitSent(t, ptyOf(st, 0), "\x1b")
+	if !win.find.open {
+		t.Fatal("Esc in the terminal closed the bar")
 	}
 }

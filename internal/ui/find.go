@@ -3,10 +3,13 @@ package ui
 import (
 	"image"
 
+	"gioui.org/io/clipboard"
 	"gioui.org/io/event"
+	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/widget"
 
+	kinput "github.com/beefysalad/kaze-terminal/internal/input"
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
@@ -135,14 +138,47 @@ func (win *window) findView() (termView, bool) {
 	return win.mainView(t), true
 }
 
-// findEvents runs the bar's field while the bar is open: it keeps the text in
-// step with the field (the search reads it once per frame).
+// findMaxText bounds the field; the search uses the first find.MaxNeedle runes.
+const findMaxText = 1024
+
+// findEvents runs the bar while it is open: Enter or Down steps to the next
+// match, Shift+Enter or Up to the previous one, Esc closes, kaze's shortcuts
+// still work, and the text is kept in step with the field (the search reads it
+// once per frame, however many keys arrived). Nothing runs while closed.
 func (win *window) findEvents(gtx layout.Context) {
 	f := &win.find
 	if !f.open {
 		return
 	}
-	f.ed.SingleLine = true
+	f.ed.SingleLine, f.ed.MaxLen = true, findMaxText
+	if f.edKeys == nil {
+		ed := &f.ed
+		f.edKeys = append(win.edKeys(ed),
+			key.Filter{Focus: ed, Name: key.NameReturn, Optional: key.ModShift},
+			key.Filter{Focus: ed, Name: key.NameEnter, Optional: key.ModShift},
+			key.Filter{Focus: ed, Name: key.NameUpArrow},
+			key.Filter{Focus: ed, Name: key.NameDownArrow},
+		)
+	}
+	// Only a field that newly has the focus is a click straight into it, as
+	// boardSearchEvents does.
+	focused := gtx.Focused(&f.ed)
+	if focused && !f.edFocused {
+		f.keys = true
+	}
+	f.edFocused = focused
+	for {
+		ev, ok := gtx.Event(f.edKeys...)
+		if !ok {
+			break
+		}
+		if e, ok := ev.(key.Event); ok && e.State == key.Press && !win.bench.IgnoreInput() {
+			win.findKey(gtx, e)
+			if !f.open {
+				return // Esc, or a shortcut that took the pane away
+			}
+		}
+	}
 	for {
 		ev, ok := f.ed.Update(gtx)
 		if !ok {
@@ -155,3 +191,56 @@ func (win *window) findEvents(gtx layout.Context) {
 		}
 	}
 }
+
+// findStepHook sees every findStep while U4 has not made it real; tests only.
+var findStepHook func(dir int)
+
+// findStep moves the current match by dir (next 1, previous -1).
+func (win *window) findStep(dir int) {
+	if findStepHook != nil {
+		findStepHook(dir)
+	}
+}
+
+// findKey handles one key the bar's filters caught.
+func (win *window) findKey(gtx layout.Context, e key.Event) {
+	f := &win.find
+	if a, ok := win.km[kinput.Shortcut{Name: e.Name, Mods: e.Modifiers}]; ok {
+		switch a {
+		case actPaste:
+			gtx.Execute(clipboard.ReadCmd{Tag: &f.ed})
+		case actCopy:
+			// The field's selection, else the terminal's under the bar, so
+			// "select in the terminal, copy" works with the bar open (Ruling 17).
+			if s := f.ed.SelectedText(); s != "" {
+				win.writeClipboard(gtx, s)
+			} else if v, ok := win.findView(); ok {
+				win.copySel(gtx, v.tab)
+			}
+		case actFind:
+			f.ed.SetCaret(f.ed.Len(), 0)
+			win.invalidate()
+		default:
+			win.runShortcut(gtx, a)
+		}
+		return
+	}
+	switch e.Name {
+	case key.NameEscape:
+		win.closeFind(true)
+	case key.NameReturn, key.NameEnter:
+		if e.Modifiers.Contain(key.ModShift) {
+			win.findStep(-1)
+		} else {
+			win.findStep(1)
+		}
+	case key.NameDownArrow:
+		win.findStep(1)
+	case key.NameUpArrow:
+		win.findStep(-1)
+	}
+}
+
+// takesKeys reports whether a opens an editor that should get the keys typed
+// right after its shortcut: the palette and the find bar.
+func takesKeys(a action) bool { return a == actPalette || a == actFind }

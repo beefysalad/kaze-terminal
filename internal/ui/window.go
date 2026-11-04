@@ -1103,10 +1103,10 @@ func (win *window) termEvents(gtx layout.Context, v termView, cw, ch int) {
 		}
 		batch = append(batch, ev)
 		if e, ok := ev.(key.Event); ok && e.State == key.Press &&
-			win.km[input.Shortcut{Name: e.Name, Mods: e.Modifiers}] == actPalette {
-			// Leave subsequent events in Gio's queue. The palette's focus
-			// command replays them to its editor, preserving fast typing and
-			// IME edits that arrived with the opening shortcut.
+			takesKeys(win.km[input.Shortcut{Name: e.Name, Mods: e.Modifiers}]) {
+			// Leave subsequent events in Gio's queue. The palette's (or the
+			// find bar's) focus command replays them to its editor, preserving
+			// fast typing and IME edits that arrived with the opening shortcut.
 			break
 		}
 	}
