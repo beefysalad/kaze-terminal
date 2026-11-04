@@ -24,8 +24,16 @@ func (win *window) followDocLink(d *docView, dest string) {
 		}
 		path, e := mdoc.Resolve(t.Path, mdoc.Roots{Dir: dir, Home: win.home, Top: top})
 		if e != nil {
-			win.note("Can't find " + t.Path)
-			return
+			// Then the docs the agent touched: this doc's session first.
+			if _, isAbs := win.absRef(t.Path); !isAbs {
+				if path = win.seen.find(d.session, t.Path); path == "" {
+					path = win.seen.findOthers(d.session, win.tabOrder(), t.Path)
+				}
+			}
+			if path == "" {
+				win.note("Can't find " + t.Path)
+				return
+			}
 		}
 		nd := win.openDoc(d.session, path)
 		if nd != nil && t.Anchor != "" {

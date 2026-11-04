@@ -46,11 +46,13 @@ func (win *window) openDocRef(t *tabs.Tab, docked bool, ref string) {
 }
 
 // openDocRefs opens the first of refs (best first, see render.Links.RefsAt) that
-// is a file. Absolute refs are tried first, in order, then relative ones against
-// the session folder and its git top, so a folder printed earlier on the line
-// wins over a same-named file in the session folder. A miss names the folder of
-// the last absolute ref tried that reads as one (see noteFolder), else the
-// session folder.
+// is a file. Each step tries every ref, in order, before the next step: absolute
+// refs; relative refs against the docs the clicked tab's agent touched; relative
+// refs against the session folder and its git top; relative refs against the
+// other tabs' touched docs. So a folder printed earlier on the line wins over a
+// same-named file in the session folder, and the file the agent touched wins
+// over a same-named repo copy. A miss names the folder of the last absolute ref
+// tried that reads as one (see noteFolder), else the session folder.
 func (win *window) openDocRefs(t *tabs.Tab, docked bool, refs []string) {
 	if len(refs) == 0 {
 		return
@@ -68,16 +70,38 @@ func (win *window) openDocRefs(t *tabs.Tab, docked bool, refs []string) {
 	dir := win.termFolder(t)
 	roots := mdoc.Roots{Dir: dir, Home: win.home, Top: top}
 	where := ""
-	for _, abs := range []bool{true, false} {
+	for _, ref := range refs {
+		full, isAbs := win.absRef(ref)
+		if !isAbs {
+			continue
+		}
+		if noteFolder(full) {
+			where = filepath.Dir(full)
+		}
+		if p, e := mdoc.Resolve(ref, roots); e == nil {
+			win.openDoc(id, p)
+			return
+		}
+	}
+	var order []tabs.TabID
+	for step := range 3 {
 		for _, ref := range refs {
-			full, isAbs := win.absRef(ref)
-			if isAbs != abs {
+			if _, isAbs := win.absRef(ref); isAbs {
 				continue
 			}
-			if abs && noteFolder(full) {
-				where = filepath.Dir(full)
+			p := ""
+			switch step {
+			case 0:
+				p = win.seen.find(t.ID, ref)
+			case 1:
+				p, _ = mdoc.Resolve(ref, roots)
+			case 2:
+				if order == nil {
+					order = win.tabOrder()
+				}
+				p = win.seen.findOthers(t.ID, order, ref)
 			}
-			if p, e := mdoc.Resolve(ref, roots); e == nil {
+			if p != "" {
 				win.openDoc(id, p)
 				return
 			}
@@ -87,6 +111,16 @@ func (win *window) openDocRefs(t *tabs.Tab, docked bool, refs []string) {
 		where = dir
 	}
 	win.note(cleanText("Can't find " + name + " in " + tildeHome(where, win.home)))
+}
+
+// tabOrder is every tab's ID, in tab order.
+func (win *window) tabOrder() []tabs.TabID {
+	list := win.mgr.Tabs()
+	ids := make([]tabs.TabID, len(list))
+	for i, t := range list {
+		ids[i] = t.ID
+	}
+	return ids
 }
 
 // noteFolder reports whether full's folder can name a miss: a path without

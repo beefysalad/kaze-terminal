@@ -616,6 +616,11 @@ setup/checklist is historical; unresolved platform checks are listed above.
   decides (Ruling 17).
 - Readable activity: a tool result more than 64 calls after its step shows no outcome; "failed · N
   tests" counts only top-level Go `--- FAIL:` lines.
+- Agent-touched `.md` links: a file written only from the shell (`echo > plan.md`, a script) is not
+  reported by the hooks, so its link falls back to guessing from the folder and Git root. The list of
+  touched files is in memory only (gone on restart, dropped with the tab). The Codex `apply_patch`
+  payload shape the hook reads is unverified against a real Codex session (it could not be captured:
+  no network in the build sandbox).
 - Smaller items: the full later-fix backlog is below, and every "minor (deferred)" line is in `docs/history/plan-1-ledger.md`.
 
 ## Where kaze came from

@@ -55,3 +55,27 @@ func TestDocLinks(t *testing.T) {
 		t.Fatal("unsafe target")
 	}
 }
+
+func TestDocLinkUsesTouchedList(t *testing.T) {
+	win, d := layoutTestDoc(t, "# A")
+	vault := t.TempDir()
+	p := writeDoc(t, vault, "tickets/V3-1/plan.md", "# Plan")
+	win.seen.add(d.session, []string{p})
+	win.followDocLink(d, "tickets/V3-1/plan.md")
+	if nd := win.shownDoc(); nd == nil || nd.path != p || nd.session != d.session {
+		t.Fatalf("doc %+v, want %s", nd, p)
+	}
+	win.showDoc(d.id)
+	b, _ := win.mgr.New()
+	q := writeDoc(t, vault, "tickets/V3-2/notes.md", "# Notes")
+	win.seen.add(b.ID, []string{q})
+	win.followDocLink(d, "tickets/V3-2/notes.md")
+	if nd := win.shownDoc(); nd == nil || nd.path != q || nd.session != d.session {
+		t.Fatalf("doc %+v, want %s from another tab's list", nd, q)
+	}
+	win.showDoc(d.id)
+	win.followDocLink(d, "tickets/V3-9/gone.md")
+	if win.notice != "Can't find tickets/V3-9/gone.md" {
+		t.Fatal(win.notice)
+	}
+}

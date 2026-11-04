@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 	"unicode/utf8"
+
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 func TestShortcutClickOpensADocPath(t *testing.T) {
@@ -170,5 +172,81 @@ func TestDocMissNamesExistingSpacedFolder(t *testing.T) {
 	win.openDocRefs(a, false, []string{filepath.Join(far, "plan.md"), "Notes/plan.md"})
 	if want := "Can't find plan.md in " + tildeHome(far, win.home); win.notice != want {
 		t.Fatalf("note %q, want %q", win.notice, want)
+	}
+}
+
+// docClickWindow is a window with tab a in a repo folder that has no git top.
+func docClickWindow(t *testing.T) (*window, *tabs.Tab, string) {
+	t.Helper()
+	win := testWindow(t, &recStarter{})
+	win.ui = newChrome()
+	a, _ := win.mgr.New()
+	repo := t.TempDir()
+	a.Dir = repo
+	win.topFn = func(string) string { return "" }
+	return win, a, repo
+}
+
+// The owner's case: the agent wrote a plan in a vault outside the repo and
+// printed its vault-relative path.
+func TestClickOpensVaultPlanTheAgentWrote(t *testing.T) {
+	win, a, _ := docClickWindow(t)
+	p := writeDoc(t, t.TempDir(), "tickets/V3-3154/plan.md", "# Plan")
+	win.openDocRefs(a, false, []string{"tickets/V3-3154/plan.md"})
+	if want := "Can't find plan.md in " + tildeHome(a.Dir, win.home); win.shownDoc() != nil || win.notice != want {
+		t.Fatalf("before the hook: doc %v notice %q", win.shownDoc(), win.notice)
+	}
+	win.seen.add(a.ID, []string{p})
+	win.openDocRefs(a, false, []string{"tickets/V3-3154/plan.md"})
+	if d := win.shownDoc(); d == nil || d.path != p {
+		t.Fatalf("doc %+v, want %s", d, p)
+	}
+}
+
+func TestClickPrefersTouchedOverRepoCopy(t *testing.T) {
+	win, a, repo := docClickWindow(t)
+	writeDoc(t, repo, "docs/plan.md", "repo")
+	p := writeDoc(t, t.TempDir(), "docs/plan.md", "vault")
+	win.seen.add(a.ID, []string{p})
+	win.openDocRefs(a, false, []string{"docs/plan.md"})
+	if d := win.shownDoc(); d == nil || d.path != p {
+		t.Fatalf("doc %+v, want %s", d, p)
+	}
+}
+
+func TestClickAbsoluteStillFirst(t *testing.T) {
+	win, a, _ := docClickWindow(t)
+	abs := writeDoc(t, t.TempDir(), "plan.md", "abs")
+	other := writeDoc(t, t.TempDir(), "plan.md", "touched")
+	win.seen.add(a.ID, []string{other})
+	win.openDocRefs(a, false, []string{"plan.md", abs})
+	if d := win.shownDoc(); d == nil || d.path != abs {
+		t.Fatalf("doc %+v, want %s", d, abs)
+	}
+}
+
+func TestClickFallsBackToRepoWhenListMisses(t *testing.T) {
+	win, a, repo := docClickWindow(t)
+	p := writeDoc(t, repo, "docs/a.md", "hi")
+	win.seen.add(a.ID, []string{writeDoc(t, t.TempDir(), "other/b.md", "b")})
+	win.openDocRefs(a, false, []string{"docs/a.md"})
+	if d := win.shownDoc(); d == nil || d.path != p {
+		t.Fatalf("doc %+v, want %s", d, p)
+	}
+}
+
+func TestClickUsesOtherTabsLast(t *testing.T) {
+	win, a, repo := docClickWindow(t)
+	b, _ := win.mgr.New()
+	p := writeDoc(t, t.TempDir(), "docs/plan.md", "b's")
+	win.seen.add(b.ID, []string{p})
+	win.openDocRefs(a, false, []string{"docs/plan.md"})
+	if d := win.shownDoc(); d == nil || d.path != p {
+		t.Fatalf("doc %+v, want %s", d, p)
+	}
+	mine := writeDoc(t, repo, "docs/plan.md", "repo")
+	win.openDocRefs(a, false, []string{"docs/plan.md"})
+	if d := win.shownDoc(); d == nil || d.path != mine {
+		t.Fatalf("doc %+v, want the repo's %s", d, mine)
 	}
 }

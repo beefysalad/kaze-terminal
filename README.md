@@ -420,6 +420,8 @@ guess swaps; a name that has settled never moves.
 
 Cmd+click an `.md` path in terminal output (Ctrl+click on Windows) to read it in kaze.
 Relative paths use that terminal's folder, then its Git repo root.
+Links to `.md` files the agent wrote or read anywhere (a vault, another repo) open too: kaze
+checks the files the agent touched in that tab before the folder, and other tabs' files last.
 
 - **Spaces:** a path with single spaces in it, such as
   `C:/Users/you/Documents/My Notes/plan.md`, is underlined whole. So is a path in quotes.
