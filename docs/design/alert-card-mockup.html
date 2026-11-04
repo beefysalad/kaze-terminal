@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alert cards, Warp style (#9): clickable mockup</title>
+<style>
+  @font-face { font-family:Manrope; src:url(../site-assets/Manrope.ttf) format('truetype'); font-weight:200 800; }
+  @font-face { font-family:JB; src:url(../site-assets/JetBrainsMono-Regular.ttf) format('truetype'); }
+  :root { --mono:JB,"JetBrains Mono",ui-monospace,monospace; --sans:Manrope,"Segoe UI",sans-serif; --claude:#d97757; }
+  /* Values are the theme tokens in internal/theme/theme.go. */
+  .midnight { --chrome:#0b0d12; --active:#0f1117; --fg:#e9ebf2; --muted:#8a90a2; --border:#1d2230; --acc:#8b7bff; --branch:#62d39a;
+    --needs:#f2b84b; --done:#62d39a; --tbg:#1a1f2c; --tline:#2a3142; --tfg:#e7e9f0; --tgo:#b9a6ff; --ttitle:#ffffff; --hover:#151925; }
+  .sumi { --chrome:#0c0c0c; --active:#111111; --fg:#e4e1da; --muted:#77736b; --border:#222222; --acc:#e2553d; --branch:#9fbf8f;
+    --needs:#d9b56a; --done:#9fbf8f; --tbg:#181818; --tline:#2a2a2a; --tfg:#e4e1da; --tgo:#e2553d; --ttitle:#ffffff; --hover:#191919; }
+  .tide { --chrome:#08111e; --active:#0b1626; --fg:#cfe3ef; --muted:#7fa3b8; --border:#16283d; --acc:#40e0d0; --branch:#5fe0a8;
+    --needs:#ffd27a; --done:#5fe0a8; --tbg:#0c1e30; --tline:#1e3550; --tfg:#cfe3ef; --tgo:#40e0d0; --ttitle:#ffffff; --hover:#101e2f; }
+  .washi { --chrome:#ece6da; --active:#f6f2ea; --fg:#2b2a33; --muted:#7a7468; --border:#ddd5c6; --acc:#3f51b5; --branch:#2e7d4f;
+    --needs:#9a6a00; --done:#2e7d4f; --tbg:#fffdf8; --tline:#ddd5c6; --tfg:#2b2a33; --tgo:#3f51b5; --ttitle:#2b2a33; --hover:#e4ddcf; }
+  .sakura { --chrome:#140e13; --active:#1a1218; --fg:#eedde6; --muted:#a8909e; --border:#2b1f28; --acc:#ff8fb8; --branch:#9fd8a8;
+    --needs:#f3c98b; --done:#9fd8a8; --tbg:#24181f; --tline:#372a34; --tfg:#eedde6; --tgo:#ff8fb8; --ttitle:#ffffff; --hover:#211720; }
+
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  html,body { margin:0; min-height:100%; background:#040507; }
+  body { color:var(--fg); font:13px/1.5 var(--mono); display:flex; flex-direction:column; align-items:center; padding:12px; gap:10px; -webkit-font-smoothing:antialiased; }
+  .hint { width:100%; max-width:1440px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; font:12px/1.5 var(--sans); color:#8a90a2; }
+  .hint b { color:#e7e9f0; font-weight:600; }
+  .seg { display:flex; gap:2px; border:1px solid #232733; border-radius:8px; padding:2px; }
+  .hint button { background:none; color:#8a90a2; border:0; border-radius:6px; padding:2px 10px; font:12px var(--sans); cursor:pointer; }
+  .hint button.on { background:#1a1f2c; color:#e7e9f0; }
+  .hint .fire button { border:1px solid #232733; }
+  .hint .fire button:hover { color:#e7e9f0; background:#141824; }
+  .grow { flex:1; }
+  button:focus-visible { outline:1px solid #b9a6ff; outline-offset:1px; }
+
+  .stage { width:100%; max-width:1440px; display:grid; grid-template-columns:1fr 310px; gap:12px; }
+  .win { position:relative; height:min(780px, calc(100vh - 80px)); min-height:560px; background:var(--active); border:1px solid var(--border); border-radius:10px; overflow:hidden;
+    display:grid; grid-template-columns:250px 1fr; grid-template-rows:36px 1fr 26px; }
+  .bar { grid-column:1 / -1; background:var(--chrome); border-bottom:1px solid var(--border); display:flex; align-items:center; padding-left:14px; }
+  .bar .k { color:var(--acc); font:700 13px var(--sans); }
+  .bar .crumb { margin-left:14px; color:var(--muted); font-size:12px; } .bar .crumb b { color:var(--fg); font-weight:400; }
+  .bar .sp { flex:1; }
+  .cap { width:46px; height:36px; display:grid; place-items:center; color:var(--muted); font:13px var(--sans); }
+
+  .side { background:var(--chrome); border-right:1px solid var(--border); padding:10px 0; overflow:hidden; }
+  .grp { padding:8px 14px 4px; font-size:11.5px; color:var(--muted); }
+  .grp.here { color:var(--fg); font-weight:700; }
+  .row { margin:0 8px; padding:6px 8px 6px 12px; border-radius:7px; font-size:12.5px; cursor:pointer; position:relative; }
+  .row:hover { background:var(--hover); }
+  .row.on { background:var(--active); }
+  .row.on::before { content:""; position:absolute; left:0; top:6px; bottom:6px; width:2px; border-radius:2px; background:var(--acc); }
+  .row .l1 { display:flex; align-items:center; gap:7px; white-space:nowrap; }
+  .row .l1 .t { flex:1; overflow:hidden; text-overflow:ellipsis; }
+  .row .l1 .c { color:var(--muted); }
+  .row .l2 { margin-left:20px; font-size:11px; color:var(--branch); }
+  .mark { width:13px; height:13px; border-radius:4px; flex:none; display:grid; place-items:center; font:700 9px var(--sans); color:#fff; }
+  .mark.claude { background:var(--claude); } .mark.codex { background:#111; border:1px solid #444; } .mark.ws { background:var(--acc); }
+  .pip { width:7px; height:7px; border-radius:50%; flex:none; }
+  .pip.needs { background:var(--needs); } .pip.done { background:var(--done); }
+
+  .term { position:relative; padding:14px 18px; color:var(--fg); font-size:12.5px; line-height:1.6; overflow:hidden; white-space:pre; }
+  .term .d { color:var(--muted); } .term .a { color:var(--acc); } .term .g { color:var(--branch); }
+  .status { grid-column:1 / -1; background:var(--chrome); border-top:1px solid var(--border); display:flex; align-items:center; gap:14px; padding:0 14px; font-size:11px; color:var(--muted); }
+  .status .g { color:var(--branch); }
+
+  /* The new card stack: bottom right, above the status bar, newest nearest the corner. */
+  .stack { position:absolute; bottom:36px; right:12px; width:380px; display:flex; flex-direction:column-reverse; gap:8px; z-index:5; }
+  .card { position:relative; display:grid; grid-template-columns:34px 1fr; gap:0 11px; padding:12px 14px 11px 12px; background:var(--tbg); border:1px solid var(--tline); border-radius:10px; cursor:pointer; color:var(--tfg); }
+  .card:hover { border-color:color-mix(in srgb, var(--tline) 50%, var(--muted)); }
+  .av { position:relative; width:30px; height:30px; border-radius:8px; display:grid; place-items:center; font:700 17px var(--sans); color:#fff; margin-top:2px; }
+  .av.claude { background:var(--claude); } .av.codex { background:#111; border:1px solid #3a3a3a; font-size:14px; } .av.ws { background:var(--acc); font-size:14px; }
+  .badge { position:absolute; right:-5px; bottom:-5px; width:15px; height:15px; border-radius:50%; display:grid; place-items:center; font:800 9px/1 var(--sans); color:var(--tbg); border:2px solid var(--tbg); box-sizing:content-box; }
+  .badge.needs { background:var(--needs); } .badge.done { background:var(--done); } .badge.run { background:var(--done); }
+  .ctx { font-size:11px; color:var(--muted); display:flex; gap:6px; white-space:nowrap; overflow:hidden; padding-right:20px; }
+  .ctx .br { color:var(--branch); } .ctx .cmd { color:var(--tgo); }
+  .ttl { font:700 13.5px/1.35 var(--sans); color:var(--ttitle); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:6px; }
+  .body { font:12.5px/1.45 var(--sans); color:var(--tfg); opacity:.86; margin-top:3px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .body code { font:11.5px var(--mono); }
+  .st { margin-top:5px; font:12px var(--sans); color:var(--muted); display:flex; align-items:center; gap:6px; }
+  .st .pip { width:6px; height:6px; }
+  .foot { margin-top:7px; padding-top:7px; border-top:1px solid var(--tline); display:flex; align-items:center; gap:6px; font:12px var(--sans); color:var(--muted); }
+  .foot .go { color:var(--tgo); font-weight:600; }
+  .foot .sp { flex:1; }
+  kbd { font:10.5px var(--mono); color:var(--tfg); background:var(--active); border:1px solid var(--tline); border-bottom-width:2px; border-radius:4px; padding:0 5px; line-height:16px; }
+  .x { position:absolute; top:7px; right:8px; width:20px; height:20px; border:0; background:none; color:var(--muted); font:14px var(--sans); border-radius:5px; cursor:pointer; display:grid; place-items:center; }
+  .x:hover { background:var(--hover); color:var(--fg); }
+  .card.full { grid-column:1 / -1; }
+
+  /* Today's toast, for the before view: bottom right, one line. */
+  .old { position:absolute; right:12px; bottom:36px; display:flex; flex-direction:column; gap:6px; z-index:5; }
+  .oldt { display:flex; align-items:center; gap:10px; padding:7px 10px 7px 12px; background:var(--tbg); border:1px solid var(--tline); border-radius:8px; font:12.5px var(--sans); color:var(--tfg); white-space:nowrap; }
+  .oldt b { color:var(--ttitle); }
+  .oldt .go { color:var(--tgo); margin-left:6px; cursor:pointer; } .oldt .ox { color:var(--muted); cursor:pointer; }
+
+  .notes { background:#0b0d12; border:1px solid #1d2230; border-radius:10px; padding:14px 16px; color:#a7adbd; font:12.5px/1.55 var(--sans); overflow:auto; height:min(780px, calc(100vh - 80px)); min-height:560px; }
+  .notes h3 { margin:14px 0 6px; color:#e9ebf2; font-size:13px; } .notes h3:first-child { margin-top:0; }
+  .notes ul { margin:0; padding-left:16px; } .notes li { margin:3px 0; }
+  .notes b { color:#e9ebf2; font-weight:600; }
+  .notes code { font:11.5px var(--mono); color:#c9cdd8; }
+  .notes .q { border:1px solid #2a3142; border-radius:8px; padding:8px 10px; margin-top:8px; }
+  .log { margin-top:8px; font:11.5px var(--mono); color:#62d39a; min-height:18px; }
+</style>
+</head>
+<body class="midnight">
+<div class="hint">
+  <b>Alert card (#9)</b>
+  <span class="seg" id="view"><button class="on" data-v="new">New card</button><button data-v="old">Today's toast</button></span>
+  <span class="fire" style="display:flex;gap:4px;flex-wrap:wrap">
+    <button data-f="auth">Claude needs you</button>
+    <button data-f="kaze">Claude is done</button>
+    <button data-f="pay">Codex needs you</button>
+    <button data-f="ws">Workspace run</button>
+    <button data-f="reset">Reset</button>
+  </span>
+  <span class="grow"></span>
+  <span class="seg" id="themes"><button class="on" data-t="midnight">Midnight</button><button data-t="sumi">Sumi</button><button data-t="tide">Tide</button><button data-t="washi">Washi</button><button data-t="sakura">Sakura</button></span>
+</div>
+
+<div class="stage">
+  <div class="win">
+    <div class="bar"><span class="k">kaze</span><span class="crumb">~/code/<b id="crumb">web</b></span><span class="sp"></span><span class="cap">─</span><span class="cap">▢</span><span class="cap">✕</span></div>
+    <div class="side" id="side"></div>
+    <div class="term" id="term"></div>
+    <div class="status"><span>~/code/web</span><span class="g">⎇ main</span><span class="grow"></span><span>Claude 42% · resets 3h</span></div>
+    <div class="stack" id="stack"></div>
+    <div class="old" id="old" hidden></div>
+  </div>
+
+  <aside class="notes">
+    <h3>Try it</h3>
+    <ul>
+      <li>Fire alerts with the buttons above. Each session gets <b>one card</b>; a new alert from it replaces its card. A fourth card drops the oldest.</li>
+      <li><b>Click a card</b> (or "Open session") to go there. The card and the sidebar dot clear.</li>
+      <li><b>×</b> closes the card but keeps the dot: you haven't seen it yet.</li>
+      <li><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>J</kbd> opens the newest card's session (click the page first).</li>
+      <li>"Done" cards hide by themselves after your <code>done_toast</code> time (8s here). "Needs you" stays until you visit.</li>
+      <li>Switch to <b>Today's toast</b> to compare, and try Washi for the light theme.</li>
+    </ul>
+
+    <h3>What's on the card</h3>
+    <ul>
+      <li><b>Mark:</b> Claude, Codex or the workspace, with a badge: <b>!</b> needs you, <b>✓</b> done.</li>
+      <li><b>Context line:</b> branch and the slash command, e.g. <code>⎇ feature/V3-3149 · /review-pr</code>.</li>
+      <li><b>Title:</b> the session's sidebar name, so no more "zsh needs you".</li>
+      <li><b>Body:</b> two lines, cut with "…". For "needs" it's Claude's own message. For "done" it's the start of Claude's last reply.</li>
+      <li><b>Status:</b> "Needs your permission" / "Waiting for your answer" / "Done · ran 6m 40s".</li>
+      <li><b>Footer:</b> "Open session" and its shortcut.</li>
+    </ul>
+
+    <h3>Rules kept</h3>
+    <ul>
+      <li>At most 3 cards, one per session. No animation, so idle CPU stays at zero.</li>
+      <li>Flat fill, 1px line, rounded corners from the theme's toast colours, so all five themes work.</li>
+      <li>Bottom right, above the status bar, where toasts are today, newest nearest the corner. With an agent or member panel open, the cards sit just above it.</li>
+    </ul>
+
+    <h3>Decided for you (say if you disagree)</h3>
+    <div class="q"><b>Shortcut:</b> reuse <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>J</kbd> (<kbd>Cmd</kbd> <kbd>J</kbd> on Mac), which already jumps to the next session that needs you, instead of adding Warp's Ctrl+Shift+G. One less key to learn.</div>
+    <div class="q"><b>Done preview:</b> today a "done" alert carries no text. Kaze would read Claude's last reply from the Stop hook (the same field subagents already use) and show its first two lines.</div>
+    <div class="q"><b>Workspace runs</b> use the same card, with the workspace's mark and its summary.</div>
+    <div class="log" id="log"></div>
+  </aside>
+</div>
+
+<script>
+const sessions = {
+  web:  { name:'web', group:'web', agent:'claude', branch:'main', cmd:'' },
+  auth: { name:'auth-tokens · /review-pr', short:'auth-tokens', group:'api', agent:'claude', branch:'feature/V3-3149', cmd:'/review-pr' },
+  kaze: { name:'kaze · #128', short:'kaze', group:'kaze', agent:'claude', branch:'fix/md-link-spaces', cmd:'/fix-issue' },
+  pay:  { name:'payments-api', group:'api', agent:'codex', branch:'feat/refunds', cmd:'' },
+  ws:   { name:'web stack', group:'web', agent:'ws', branch:'', cmd:'' },
+};
+const alertsFor = {
+  auth: { kind:'needs', body:'Claude needs your permission to use Bash: <code>npm run test -- --runInBand src/auth</code>', status:'Needs your permission' },
+  kaze: { kind:'done', body:'Fixed the link split: a path with spaces in it now opens when the folder exists, and quoted paths are taken whole. All 214 tests in ./internal/ui pass, and I added two for "Patrick Obsidian".', status:'Done · ran 6m 40s' },
+  pay:  { kind:'needs', body:'Codex wants to run <code>go test ./...</code> outside the sandbox. Approve?', status:'Waiting for your answer' },
+  ws:   { kind:'run', body:'3 of 3 members started: api on :8080, web on :5173, worker.', status:'Run finished · 12s', title:'web stack started' },
+};
+const order = ['web','auth','kaze','pay'];
+let current = 'web', cards = [], dots = {}, view = 'new', timers = {};
+const glyph = a => a === 'claude' ? '✳' : a === 'codex' ? '›_' : '▦';
+
+function side() {
+  const groups = {};
+  order.forEach(id => (groups[sessions[id].group] ||= []).push(id));
+  let h = '';
+  for (const g in groups) {
+    h += `<div class="grp ${groups[g].includes(current) ? 'here' : ''}">${g}</div>`;
+    for (const id of groups[g]) {
+      const s = sessions[id], d = dots[id];
+      h += `<div class="row ${id === current ? 'on' : ''}" data-s="${id}"><div class="l1"><span class="mark ${s.agent}">${s.agent === 'codex' ? '›' : '✳'}</span><span class="t">${s.name}</span>${d ? `<span class="pip ${d}"></span>` : ''}</div><div class="l2">⎇ ${s.branch}</div></div>`;
+    }
+  }
+  document.getElementById('side').innerHTML = h;
+  const s = sessions[current];
+  document.getElementById('crumb').textContent = s.short || s.name;
+  document.getElementById('term').innerHTML = current === 'kaze'
+    ? `<span class="d">✻ Worked for 6m 40s</span>\n\n<span class="a">●</span> Fixed the link split: a path with spaces in it now opens\n  when the folder exists, and quoted paths are taken whole.\n\n<span class="g">  ok  internal/ui  3.41s</span>\n\n<span class="d">&gt; </span>`
+    : current === 'auth'
+    ? `<span class="a">●</span> I'll run the auth tests before reviewing the diff.\n\n<span class="d">  Bash(npm run test -- --runInBand src/auth)</span>\n\n  Do you want to proceed?\n  <span class="a">❯ 1. Yes</span>\n    2. Yes, and don't ask again for npm run test\n    3. No, and tell Claude what to do differently`
+    : `<span class="d">&gt; </span>refactor the header so the search field shrinks first\n\n<span class="a">●</span> Reading src/components/Header.tsx…\n<span class="d">  ⎿ 214 lines</span>\n\n<span class="a">●</span> The search field has a fixed width of 340px. I'll make it\n  flex: 1 with a min-width so it shrinks before the buttons.\n\n<span class="d">  Update(src/components/Header.tsx)</span>\n<span class="g">  +  flex: 1 1 340px; min-width: 160px;</span>`;
+}
+
+function stack() {
+  const el = document.getElementById('stack'), old = document.getElementById('old');
+  el.hidden = view !== 'new'; old.hidden = view !== 'old';
+  const list = [...cards].reverse(); // newest first
+  el.innerHTML = list.map(id => {
+    const s = sessions[id], a = alertsFor[id];
+    const ctx = [s.branch && `<span class="br">⎇ ${s.branch}</span>`, s.cmd && `<span class="cmd">${s.cmd}</span>`].filter(Boolean).join('<span>·</span>') || '<span>workspace</span>';
+    const title = a.title || (s.short || s.name);
+    return `<div class="card" data-c="${id}" role="button" tabindex="0">
+      <div class="av ${s.agent}">${glyph(s.agent)}<span class="badge ${a.kind}">${a.kind === 'needs' ? '!' : '✓'}</span></div>
+      <div>
+        <div class="ctx">${ctx}</div>
+        <div class="ttl">${title}</div>
+        <div class="body">${a.body}</div>
+        <div class="st"><span class="pip ${a.kind === 'needs' ? 'needs' : 'done'}"></span>${a.status}</div>
+        <div class="foot"><span class="go">Open session</span><span class="sp"></span>${id === cards[cards.length-1] ? '<kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>J</kbd>' : ''}</div>
+      </div>
+      <button class="x" data-x="${id}" title="Close">×</button>
+    </div>`;
+  }).join('');
+  old.innerHTML = list.map(id => {
+    const s = sessions[id], a = alertsFor[id];
+    const shell = id === 'ws' ? s.name : (s.agent === 'codex' ? 'pwsh' : 'zsh');
+    const rest = id === 'ws' ? ' ' + a.body.replace(/<[^>]+>/g, '') : a.kind === 'needs' ? ' needs you' : ' is done';
+    return `<div class="oldt"><span><b>${shell}</b>${rest}</span><span class="go" data-c="${id}">Go ›</span><span class="ox" data-x="${id}">×</span></div>`;
+  }).join('');
+}
+
+function render() { side(); stack(); }
+function log(t) { document.getElementById('log').textContent = t; }
+
+function fire(id) {
+  const a = alertsFor[id];
+  cards = cards.filter(c => c !== id);
+  cards.push(id);
+  if (cards.length > 3) cards.shift();
+  if (id !== 'ws') dots[id] = a.kind === 'needs' ? 'needs' : 'done';
+  clearTimeout(timers[id]);
+  if (a.kind !== 'needs') timers[id] = setTimeout(() => { cards = cards.filter(c => c !== id); render(); log(`"${alertsFor[id].title || sessions[id].name}" card hid after done_toast`); }, 8000);
+  render();
+}
+function open(id) {
+  cards = cards.filter(c => c !== id);
+  if (id !== 'ws') { current = id; delete dots[id]; }
+  else current = 'web';
+  log(`Opened ${sessions[id].name}`);
+  render();
+}
+function dismiss(id) { cards = cards.filter(c => c !== id); log('Card closed; the sidebar dot stays'); render(); }
+
+document.addEventListener('click', e => {
+  const x = e.target.closest('[data-x]'); if (x) { e.stopPropagation(); return dismiss(x.dataset.x); }
+  const c = e.target.closest('[data-c]'); if (c) return open(c.dataset.c);
+  const r = e.target.closest('[data-s]'); if (r) { current = r.dataset.s; delete dots[current]; cards = cards.filter(i => i !== current); return render(); }
+  const f = e.target.closest('[data-f]');
+  if (f) { if (f.dataset.f === 'reset') { cards = []; dots = {}; current = 'web'; log(''); return render(); } return fire(f.dataset.f); }
+  const t = e.target.closest('[data-t]');
+  if (t) { document.body.className = t.dataset.t; document.querySelectorAll('#themes button').forEach(b => b.classList.toggle('on', b === t)); }
+  const v = e.target.closest('[data-v]');
+  if (v) { view = v.dataset.v; document.querySelectorAll('#view button').forEach(b => b.classList.toggle('on', b === v)); stack(); }
+});
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'j' && cards.length) { e.preventDefault(); open(cards[cards.length - 1]); }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset && e.target.dataset.c) { e.preventDefault(); open(e.target.dataset.c); }
+});
+
+const qt = new URLSearchParams(location.search).get('t');
+if (qt) document.querySelector('[data-t="' + qt + '"]')?.click();
+fire('auth'); fire('kaze'); fire('pay');
+clearTimeout(timers.kaze); // keep the first view full
+</script>
+</body>
+</html>
