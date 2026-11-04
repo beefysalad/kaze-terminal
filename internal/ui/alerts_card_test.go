@@ -1,11 +1,13 @@
 package ui
 
 import (
+	"image/color"
 	"testing"
 	"time"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/notify"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/patrick-gogo/kaze-terminal/internal/theme"
 	"github.com/patrick-gogo/kaze-terminal/internal/vt"
 )
 
@@ -131,5 +133,34 @@ func TestRunCardUsesWorkspaceMark(t *testing.T) {
 	}
 	if c.status != "Run finished" {
 		t.Fatalf("status %q", c.status)
+	}
+}
+
+func TestCardContrast(t *testing.T) {
+	for _, th := range theme.All() {
+		c := newChrome()
+		c.setTheme(th)
+		k := c.cardInk()
+		low := 99.0
+		check := func(label string, fg, bg color.NRGBA) {
+			got := contrast(fg, bg)
+			low = min(low, got)
+			if got < 4.5 {
+				t.Errorf("%s: %s contrast %.2f, want at least 4.5", th.Key, label, got)
+			}
+		}
+		for label, fg := range map[string]color.NRGBA{
+			"title": k.title, "body": k.body, "muted": k.muted, "branch": k.branch,
+			"cmd": k.cmd, "go": k.go_, "needs": k.needs, "done": k.done,
+		} {
+			check(label+" on bg", fg, k.bg)
+		}
+		check("key cap text on capBG", k.body, k.capBG)
+		check("badge on needs", k.badgeFG, k.needs)
+		check("badge on done", k.badgeFG, k.done)
+		if k.bg != th.UI.ToastBG || k.line != th.UI.ToastLine {
+			t.Errorf("%s: card surface is not the theme's toast tokens", th.Key)
+		}
+		t.Logf("%s: lowest card contrast %.2f", th.Key, low)
 	}
 }

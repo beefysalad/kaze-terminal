@@ -10,6 +10,7 @@ import (
 
 	"github.com/patrick-gogo/kaze-terminal/internal/notify"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/patrick-gogo/kaze-terminal/internal/theme"
 )
 
 // mark is a tab's attention dot.
@@ -50,6 +51,10 @@ type alerts struct {
 	marks     map[tabs.TabID]mark
 	toasts    []toast // oldest first, at most maxToasts
 	doneToast string  // the done_toast setting: how long a "done" card stays
+
+	ink   cardInk // the cards' colours for inkOf, see window.cardInk
+	inkOf theme.Chrome
+	inkOK bool
 }
 
 // doneToastFor is how long a "done" card stays for a done_toast value; 0 means

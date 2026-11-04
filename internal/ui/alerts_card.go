@@ -1,11 +1,13 @@
 package ui
 
 import (
+	"image/color"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/notify"
+	"github.com/patrick-gogo/kaze-terminal/internal/render"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 )
 
@@ -78,4 +80,49 @@ func ranText(d time.Duration) string {
 		return strconv.FormatInt(m, 10) + "m " + strconv.FormatInt(s%60, 10) + "s"
 	}
 	return strconv.FormatInt(s, 10) + "s"
+}
+
+// cardInk is the alert cards' colours for one theme: the surface from the
+// theme's toast tokens, every text nudged to at least 4.5:1 on what it sits on.
+type cardInk struct {
+	bg, line, tile, capBG, capLine                             color.NRGBA
+	title, body, muted, branch, cmd, go_, needs, done, badgeFG color.NRGBA
+}
+
+func (c *chrome) cardInk() cardInk {
+	th := c.th
+	k := cardInk{
+		bg:      th.ToastBG,
+		line:    th.ToastLine,
+		tile:    mix(th.ToastBG, th.ToastLine, 0.6),
+		capBG:   th.Active,
+		capLine: th.ToastLine,
+	}
+	on := func(fg color.NRGBA, bgs ...color.NRGBA) color.NRGBA {
+		for range 2 { // each nudge moves away from the surfaces, so a second pass settles
+			for _, bg := range bgs {
+				fg = render.Readable(fg, bg)
+			}
+		}
+		return fg
+	}
+	k.title = on(th.ToastTitle, k.bg)
+	k.body = on(th.ToastFG, k.bg, k.capBG) // also the key caps' text
+	k.muted = on(th.Muted, k.bg)
+	k.branch = on(th.Done, k.bg)
+	k.cmd = on(th.ToastGo, k.bg)
+	k.go_ = k.cmd
+	k.needs = on(th.Needs, k.bg)
+	k.done = on(th.Done, k.bg)
+	k.badgeFG = on(th.ToastBG, k.needs, k.done)
+	return k
+}
+
+// cardInk is cardInk for the current theme, worked out once per theme.
+func (win *window) cardInk() cardInk {
+	a := &win.alerts
+	if !a.inkOK || a.inkOf != win.ui.th {
+		a.ink, a.inkOf, a.inkOK = win.ui.cardInk(), win.ui.th, true
+	}
+	return a.ink
 }
