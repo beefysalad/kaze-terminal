@@ -212,6 +212,7 @@ type window struct {
 	dock       dockState                           // the docked agent panel; UI goroutine only
 	side       sideUI                              // the sidebar; UI goroutine only
 	wsp        wsPage                              // the Workspaces section: its list and the open draft; UI goroutine only
+	actEvery   bool                                // agent Activity shows every step, not the readable view (dock and board); UI goroutine only
 }
 
 // Run drives the window until it closes. It returns after every shell is closed.

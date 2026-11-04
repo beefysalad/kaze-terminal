@@ -66,6 +66,7 @@ type readItem struct {
 	detail  readDetail
 	text    string // notes and the end rows
 	msg     int    // a note's index in the transcript's Messages, else -1
+	clock   string // a note's time, "15:04", set when the list is built
 }
 
 func (it *readItem) metas() []readMeta { return it.meta[:it.nmeta] }
