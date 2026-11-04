@@ -241,7 +241,7 @@ func (win *window) drawBoard(gtx layout.Context, r image.Rectangle) {
 		win.drawBoardPreview(gtx, b.preview, ink)
 	} else {
 		b.openIn, b.copy, b.reader, b.prevHits = image.Rectangle{}, image.Rectangle{}, image.Rectangle{}, dockHits{}
-		b.prev.tr = nil // nobody sees a preview: hold no transcript
+		b.prev.dropTranscript() // nobody sees a preview: hold no transcript
 	}
 }
 
@@ -463,6 +463,8 @@ func (win *window) boardPress(gtx layout.Context, p image.Point, at time.Duratio
 	if a := win.boardPreviewAgent(); a != nil {
 		tab := tabs.TabID(a.Tab)
 		switch {
+		case win.readPress(&b.prev, &b.prevHits, p):
+			return
 		case p.In(b.openIn):
 			win.boardOpenAgent(boardRow{key: a.Key, tab: tab})
 			return

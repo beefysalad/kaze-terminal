@@ -19,11 +19,13 @@ const (
 	grpMem
 	grpTabs
 	grpNotice
+	grpBattery // last, so the groups above keep their numbers
 )
 
 // statusDims are the status bar's sizes in px.
 type statusDims struct {
 	H, Pad, ItemPad, Sep, Icon, Gap, Meter, PillPad, Dot int
+	Battery                                              int // the battery glyph's width
 }
 
 // statusLayout is where the status bar's visible groups go, and what was
@@ -70,6 +72,7 @@ func serversCount(ds []serverDot) string {
 
 // statusFit is one compaction state of the layout.
 type statusFit struct {
+	noBattery                                          bool // the first step
 	noTabs, noMem, serversLabel, usageLabels           bool
 	resourceLabel, resourceMeter                       bool
 	folderBudget, branchBudget                         int // -1: as is; 0: omitted
@@ -83,6 +86,7 @@ type statusFit struct {
 func layoutStatusBar(m statusModel, width int, measure func(s string, mono bool) int, d statusDims) statusLayout {
 	f := statusFit{folderBudget: -1, branchBudget: -1}
 	steps := []func(){
+		func() { f.noBattery = true }, // the battery goes first (issue #111)
 		func() { f.noTabs = true },
 		func() { f.resourceLabel = true },
 		func() { f.resourceMeter = true },
@@ -236,6 +240,9 @@ func statusPlace(m statusModel, width int, measure func(s string, mono bool) int
 
 	if !f.noTabs {
 		right = append(right, item{grpTabs, 2*ip + d.Icon + gap + measure(strconv.Itoa(m.Tabs)+" tabs", true), f.noMem || len(keys) > 0})
+	}
+	if m.Battery.Present && !f.noBattery {
+		right = append(right, item{grpBattery, 2*ip + d.Battery + gap + measure(batteryText(m.Battery.Percent), true), true})
 	}
 	// Separators only between visible neighbours, and none when tight.
 	if len(right) > 0 {

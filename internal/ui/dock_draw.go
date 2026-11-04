@@ -76,6 +76,8 @@ type dockHits struct {
 	tabs                                                                                         []dockTabHit
 	links                                                                                        []dockLink
 	scrollMax                                                                                    int
+	mode, modeRead, modeEvery                                                                    image.Rectangle // the Activity's mode row and its Readable / Every step buttons
+	steps                                                                                        []readHit       // readable steps with a detail to open
 }
 
 // dockPalette is the panel's text colors on one background, each nudged to
@@ -124,7 +126,7 @@ func (win *window) dockReport(a *subagents.Agent) string {
 func (win *window) dockTick(s *dockSession, a *subagents.Agent, now time.Time) (time.Time, bool) {
 	path := win.agentTranscriptPath(a)
 	if path == "" {
-		s.tr = nil
+		s.dropTranscript()
 		return time.Time{}, false
 	}
 	if s.tr == nil || s.trPath != path || s.trStarted != a.Started {
@@ -146,7 +148,7 @@ func (win *window) drawDock(gtx layout.Context, session tabs.TabID, d *dockDeck,
 	ops, th := gtx.Ops, win.ui.th
 	dp := gtx.Dp
 	win.dock.texts = win.dock.texts[:0]
-	h := dockHits{panel: r, tabs: win.dock.hits.tabs[:0], links: win.dock.hits.links[:0]}
+	h := dockHits{panel: r, tabs: win.dock.hits.tabs[:0], links: win.dock.hits.links[:0], steps: win.dock.hits.steps[:0]}
 	paint.FillShape(ops, win.pal.BG, clip.Rect(r).Op())
 	cl := clip.Rect(r).Push(ops)
 	defer cl.Pop()
@@ -507,89 +509,19 @@ func (win *window) drawDockReport(gtx layout.Context, s *dockSession, a *subagen
 	win.drawPanelMarkdown(gtx, l, inner, inner.Min, s.scroll, h, texts)
 }
 
-// drawDockActivity draws the Activity tab: rows, notes and the last row.
+// drawDockActivity draws the Activity tab: the mode row, then the readable
+// list or, with "Every step" chosen, every step as before (Ruling 19).
 func (win *window) drawDockActivity(gtx layout.Context, s *dockSession, a *subagents.Agent, inner image.Rectangle, bc dockPalette, h *dockHits, texts *[]string) {
-	ops, c, th := gtx.Ops, win.ui, win.ui.th
-	dp := gtx.Dp
-	items := dockTimeline(a, s.tr)
-	rowH := dp(dockRowDp)
-	noteW := max(inner.Dx()-dp(12), 1)
-	// Lay out the notes first (cached), dropping caches of notes that are gone.
-	keep := make(map[string]*mdCache, len(s.cache.notes))
-	heights := make([]int, len(items))
-	total := 0
-	for i, it := range items {
-		switch it.kind {
-		case itemNote:
-			mc := s.cache.notes[it.text]
-			if mc == nil {
-				mc = &mdCache{}
-			}
-			keep[it.text] = mc
-			heights[i] = win.mdLayout(gtx, &s.cache, mc, it.text, noteW).height + dp(6)
-		case itemWaiting:
-			heights[i] = dp(30)
-		default:
-			heights[i] = rowH
-		}
-		total += heights[i]
+	ink := s.inkFor(win.ui, win.pal.BG)
+	inner = win.drawActMode(gtx, s, a, inner, ink, h, texts)
+	if inner.Dy() <= 0 {
+		return
 	}
-	s.cache.notes = keep
-	h.scrollMax = max(total-inner.Dy(), 0)
-	if s.follow {
-		s.scroll = h.scrollMax
+	if win.actEvery {
+		win.drawEveryStep(gtx, s, a, inner, bc, h, texts)
+		return
 	}
-	s.scroll = min(max(s.scroll, 0), h.scrollMax)
-	cl := clip.Rect(inner).Push(ops)
-	defer cl.Pop()
-	y := inner.Min.Y - s.scroll
-	for i, it := range items {
-		top := y
-		y += heights[i]
-		if y < inner.Min.Y || top > inner.Max.Y {
-			continue
-		}
-		mid := top + rowH/2
-		put := func(s string, x int, col color.NRGBA, mono bool, room int) int {
-			var call op.CallOp
-			var sz image.Point
-			if mono {
-				call, sz = c.fitSide(gtx, s, 11, room, col)
-			} else {
-				call, sz = c.sans(gtx, s, 11, col, font.Normal)
-			}
-			place(ops, call, image.Pt(x, mid-sz.Y/2))
-			*texts = append(*texts, s)
-			return x + sz.X
-		}
-		x := inner.Min.X
-		switch it.kind {
-		case itemStep:
-			x = put(it.at.Local().Format("15:04"), x, bc.muted, true, inner.Dx()) + dp(10)
-			x = put(it.tool, x, bc.accent, true, inner.Max.X-x) + dp(10)
-			put(it.target, x, bc.text, true, inner.Max.X-x)
-		case itemNote:
-			paint.FillShape(ops, th.Accent, clip.Rect(image.Rect(x, top+dp(2), x+dp(2), y-dp(4))).Op())
-			l := &s.cache.notes[it.text].lay
-			view := image.Rect(x+dp(12), top+dp(2), inner.Max.X, y-dp(4)).Intersect(inner)
-			win.drawPanelMarkdown(gtx, l, view, image.Pt(x+dp(12), top+dp(2)), 0, h, texts)
-		case itemWaiting:
-			box := image.Rect(x, top+dp(3), inner.Max.X, y-dp(3))
-			paint.FillShape(ops, tint(th.Needs, 0x22), clip.UniformRRect(box, dp(5)).Op(ops))
-			wc := c.dockColors(mix(win.pal.BG, th.Needs, 0x22/255.0))
-			mid = box.Min.Y + box.Dy()/2
-			put("⏸ "+it.text, x+dp(10), wc.needs, false, 0)
-		case itemFinished:
-			x = put("✓ "+it.text+" · ", x, bc.done, false, 0)
-			end := put("read the report", x, bc.accent, false, 0)
-			h.finish = image.Rect(x, top, end, y).Intersect(inner)
-		case itemLive:
-			x = put(time.Now().Format("15:04"), x, bc.muted, true, inner.Dx()) + dp(10)
-			put("… "+it.text, x, bc.muted, true, inner.Max.X-x)
-		case itemDropped:
-			put(it.text, x, bc.muted, false, 0)
-		}
-	}
+	win.drawReadable(gtx, s, a, inner, ink, bc, h, texts)
 }
 
 // drawShownDock draws the shown session's panel in the rect dockFit laid out.
@@ -597,7 +529,7 @@ func (win *window) drawShownDock(gtx layout.Context) {
 	owner := win.dockOwner()
 	win.dock.focusLine = image.Rectangle{}
 	if !win.dockShown(owner) || win.dock.lastRect.Empty() {
-		win.dock.hits = dockHits{tabs: win.dock.hits.tabs[:0], links: win.dock.hits.links[:0]}
+		win.dock.hits = dockHits{tabs: win.dock.hits.tabs[:0], links: win.dock.hits.links[:0], steps: win.dock.hits.steps[:0]}
 		return
 	}
 	win.drawDock(gtx, owner, win.deckOf(owner), win.dock.lastRect)

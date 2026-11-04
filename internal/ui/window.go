@@ -111,6 +111,7 @@ type window struct {
 	docs      docsState
 	topFn     func(string) string
 	resources *resourceWork
+	battery   *batteryWork
 
 	memMB   float64
 	memRead time.Time
@@ -212,6 +213,7 @@ type window struct {
 	dock       dockState                           // the docked agent panel; UI goroutine only
 	side       sideUI                              // the sidebar; UI goroutine only
 	wsp        wsPage                              // the Workspaces section: its list and the open draft; UI goroutine only
+	actEvery   bool                                // agent Activity shows every step, not the readable view (dock and board); UI goroutine only
 }
 
 // Run drives the window until it closes. It returns after every shell is closed.
@@ -256,6 +258,7 @@ func Run(w *app.Window, opt Options) error {
 	}
 	win.initUpdates()
 	win.initResources()
+	win.initBattery()
 	if !win.custom {
 		win.lights = newMacBridge(win.nativeRunner(), win.w.Invalidate, 42, 14) // nil off macOS
 	}
@@ -381,6 +384,7 @@ func (win *window) frameOrShutdown(gtx layout.Context) error {
 // shutdown closes the alert listener and every shell, together within shutdownWait.
 func (win *window) shutdown() {
 	win.resources.close()
+	win.battery.close()
 	start := time.Now()
 	if win.restore != nil {
 		win.freezeRestore()
@@ -407,6 +411,7 @@ func (win *window) shutdown() {
 
 func (win *window) onConfig(e app.ConfigEvent) {
 	win.resources.pause(e.Config.Mode == app.Minimized)
+	win.battery.pause(e.Config.Mode == app.Minimized)
 	win.setFocused(e.Config.Focused)
 	if m := e.Config.Mode == app.Maximized; m != win.maximized {
 		win.maximized = m

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"gioui.org/f32"
 	"gioui.org/font"
 	"gioui.org/io/event"
 	"gioui.org/io/pointer"
@@ -16,6 +17,8 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 
+	"github.com/patrick-gogo/kaze-terminal/internal/render"
+	"github.com/patrick-gogo/kaze-terminal/internal/theme"
 	"github.com/patrick-gogo/kaze-terminal/internal/usage"
 )
 
@@ -32,11 +35,12 @@ type statusState struct {
 	card   resourceCardState
 	cache  statusLayoutCache
 	locale system.Locale
+	bat    batteryInkCache
 }
 
 func statusDimsFor(gtx layout.Context) statusDims {
 	return statusDims{H: gtx.Dp(32), Pad: gtx.Dp(6), ItemPad: gtx.Dp(9), Sep: gtx.Dp(9), Icon: gtx.Dp(13),
-		Gap: gtx.Dp(6), Meter: gtx.Dp(38), PillPad: gtx.Dp(7), Dot: gtx.Dp(6)}
+		Gap: gtx.Dp(6), Meter: gtx.Dp(38), PillPad: gtx.Dp(7), Dot: gtx.Dp(6), Battery: gtx.Dp(22)}
 }
 
 // clickable reports whether a status group does something when clicked (spec 6.2).
@@ -224,6 +228,10 @@ func (win *window) drawStatus(gtx layout.Context, y int, now time.Time) {
 			text(x, strconv.Itoa(m.Tabs)+unit, true, c.statusValueColor())
 		case grpNotice:
 			text(x, l.NoticeText, true, c.statusValueColor())
+		case grpBattery:
+			ink := win.stat.bat.get(c, m.Battery.Percent, m.Battery.Charging)
+			c.batteryGlyph(gtx, x, mid, m.Battery.Percent, ink)
+			text(x+d.Battery+gap, batteryText(m.Battery.Percent), true, ink.text)
 		}
 	}
 	off.Pop()
@@ -392,3 +400,110 @@ func (c *chrome) statusLabelColor() color.NRGBA { return c.th.Muted }
 
 // statusValueColor is the plain readouts' colour (memory, tabs, the notice).
 func (c *chrome) statusValueColor() color.NRGBA { return c.th.Folder }
+
+// batteryTexts are "0%" to "100%", made once so a frame never builds one.
+var batteryTexts = func() (t [101]string) {
+	for i := range t {
+		t[i] = strconv.Itoa(i) + "%"
+	}
+	return t
+}()
+
+// batteryText is the battery group's percent.
+func batteryText(pct int) string { return batteryTexts[min(max(pct, 0), 100)] }
+
+// batteryInk is the battery group's colours: the status colours normally,
+// amber at 20 % or less, red at 10 % or less, a green bolt while charging,
+// each kept readable on the bar.
+type batteryInk struct {
+	outline, fill, text, boltFill, boltEdge color.NRGBA
+	bolt                                    bool
+}
+
+func (c *chrome) batteryInk(pct int, charging bool) batteryInk {
+	th := c.th
+	val, outline := c.statusValueColor(), th.StatusFG
+	switch {
+	case pct <= 10:
+		val, outline = th.UsageHigh, th.UsageHigh
+	case pct <= 20:
+		val, outline = th.Needs, th.Needs
+	}
+	r := func(fg color.NRGBA) color.NRGBA { return render.Readable(fg, th.Chrome) }
+	v := r(val)
+	return batteryInk{outline: r(outline), fill: v, text: v, boltFill: r(th.Done), boltEdge: th.Chrome, bolt: charging}
+}
+
+// batteryInkCache keeps the last ink, so an unchanged frame does no colour math.
+type batteryInkCache struct {
+	valid    bool
+	band     int // 0 normal, 1 low, 2 very low
+	charging bool
+	th       theme.Chrome // the whole theme the ink was worked out for
+	ink      batteryInk
+}
+
+func (k *batteryInkCache) get(c *chrome, pct int, charging bool) batteryInk {
+	band := 0
+	switch {
+	case pct <= 10:
+		band = 2
+	case pct <= 20:
+		band = 1
+	}
+	if !k.valid || k.band != band || k.charging != charging || k.th != c.th {
+		k.valid, k.band, k.charging, k.th = true, band, charging, c.th
+		k.ink = c.batteryInk(pct, charging)
+	}
+	return k.ink
+}
+
+// batteryGlyph draws the mockup's 22x12 dp battery at x, centred on mid: an
+// outline, a tip, a fill to pct and, while charging, a bolt. Every path is
+// built from fixed points into the frame's ops.
+func (c *chrome) batteryGlyph(gtx layout.Context, x, mid, pct int, ink batteryInk) {
+	ops := gtx.Ops
+	s := gtx.Metric.PxPerDp
+	ox, oy := float32(x), float32(mid)-6*s
+	pt := func(px, py float32) f32.Point { return f32.Pt(ox+px*s, oy+py*s) }
+	rrect := func(x0, y0, w, h, r float32) clip.PathSpec {
+		const k = 0.5523 // cubic approximation of a quarter circle
+		r = min(r, w/2, h/2)
+		x1, y1 := x0+w, y0+h
+		var p clip.Path
+		p.Begin(ops)
+		p.MoveTo(pt(x0+r, y0))
+		p.LineTo(pt(x1-r, y0))
+		p.CubeTo(pt(x1-r+r*k, y0), pt(x1, y0+r-r*k), pt(x1, y0+r))
+		p.LineTo(pt(x1, y1-r))
+		p.CubeTo(pt(x1, y1-r+r*k), pt(x1-r+r*k, y1), pt(x1-r, y1))
+		p.LineTo(pt(x0+r, y1))
+		p.CubeTo(pt(x0+r-r*k, y1), pt(x0, y1-r+r*k), pt(x0, y1-r))
+		p.LineTo(pt(x0, y0+r))
+		p.CubeTo(pt(x0, y0+r-r*k), pt(x0+r-r*k, y0), pt(x0+r, y0))
+		p.Close()
+		return p.End()
+	}
+	paint.FillShape(ops, ink.outline, clip.Stroke{Path: rrect(0.75, 0.75, 18, 10.5, 2.6), Width: 1.3 * s}.Op())
+	paint.FillShape(ops, ink.outline, clip.Outline{Path: rrect(19.6, 3.8, 1.8, 4.4, 0.9)}.Op())
+	fill := max(1.5, 15*float32(min(max(pct, 0), 100))/100)
+	paint.FillShape(ops, ink.fill, clip.Outline{Path: rrect(2.4, 2.4, fill, 7.2, 1.4)}.Op())
+	if !ink.bolt {
+		return
+	}
+	bolt := func() clip.PathSpec {
+		var p clip.Path
+		p.Begin(ops)
+		p.MoveTo(pt(10.6, 1.6))
+		p.LineTo(pt(7.4, 6.6))
+		p.LineTo(pt(9.9, 6.6))
+		p.LineTo(pt(8.9, 10.4))
+		p.LineTo(pt(12.4, 5.2))
+		p.LineTo(pt(9.9, 5.2))
+		p.Close()
+		return p.End()
+	}
+	paint.FillShape(ops, ink.boltEdge, clip.Stroke{Path: bolt(), Width: 1.2 * s}.Op())
+	paint.FillShape(ops, ink.boltEdge, clip.Outline{Path: bolt()}.Op())
+	paint.FillShape(ops, ink.boltFill, clip.Outline{Path: bolt()}.Op())
+}

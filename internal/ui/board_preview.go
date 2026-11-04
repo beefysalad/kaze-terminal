@@ -31,6 +31,7 @@ func (win *window) boardPreviewAgent() *subagents.Agent {
 func (win *window) drawBoardPreview(gtx layout.Context, r image.Rectangle, ink boardInk) {
 	b, c, ops, dp := &win.board, win.ui, gtx.Ops, gtx.Dp
 	b.openIn, b.copy, b.reader = image.Rectangle{}, image.Rectangle{}, image.Rectangle{}
+	steps := b.prevHits.steps[:0]
 	b.prevHits = dockHits{}
 	pg := ink.page
 	rec := func(s string) { b.texts = append(b.texts, s) }
@@ -141,15 +142,15 @@ func (win *window) drawBoardPreview(gtx layout.Context, r image.Rectangle, ink b
 	body := image.Rect(r.Min.X, y, r.Max.X, r.Max.Y)
 	paint.FillShape(ops, win.pal.BG, clip.Rect(body).Op())
 	bc := c.dockColors(win.pal.BG)
-	sect := "ACTIVITY"
+	// Activity's mode row carries its own ACTIVITY label; the report gets one here.
+	inner := image.Rect(x0, body.Min.Y+dp(12), x1, body.Max.Y-dp(16))
 	if a.State == subagents.Done {
-		sect = "REPORT"
+		rec("REPORT")
+		lc, ls := c.spaced(gtx, "REPORT", 11, bc.muted, dp(1))
+		place(ops, lc, image.Pt(x0, body.Min.Y+dp(16)))
+		inner.Min.Y = body.Min.Y + dp(16) + ls.Y + dp(10)
 	}
-	rec(sect)
-	lc, ls := c.spaced(gtx, sect, 11, bc.muted, dp(1))
-	place(ops, lc, image.Pt(x0, body.Min.Y+dp(16)))
-	inner := image.Rect(x0, body.Min.Y+dp(16)+ls.Y+dp(10), x1, body.Max.Y-dp(16))
-	h := dockHits{body: body}
+	h := dockHits{body: body, steps: steps}
 	if inner.Dx() > 0 && inner.Dy() > 0 {
 		if a.State == subagents.Done {
 			win.drawDockReport(gtx, &b.prev, a, inner, bc, &h, &b.texts)

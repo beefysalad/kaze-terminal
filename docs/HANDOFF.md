@@ -1,8 +1,42 @@
 # kaze handoff
 
-Last updated: 2026-11-04, release 0.27 (dock tabs, alert cards and path links, PR #136). Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-04, battery, readable agent activity and agent names built on `feat/battery-activity-names` (0.28 next; the latest release is 0.27). Read this first when you pick up kaze on another machine.
 
 ## Where things stand
+
+**Battery, readable agent activity and agent names (#111, #134, #135) are built on
+`feat/battery-activity-names`, not yet released. Release 0.28 is next.** Built in three worktree lanes
+(N, B, R) from `docs/superpowers/plans/2026-11-04-kaze-battery-activity-names.md`:
+
+- **#111 battery (Windows only):** an icon that fills to the level and the percent at the far right of
+  the status bar, a green bolt while charging below 100% (a full battery shows no bolt even if Windows
+  says charging), amber at 20% or less, red at 10% or less, dropped first in a narrow bar, nothing on a
+  desktop after the first check. Windows change notifications, no polling; if registering fails, a read
+  at most once a minute on frames that happen anyway. Nothing while minimised, off in bench mode. One
+  read about 560 ns and 0 allocations; an unchanged status frame still 3 allocations; idle 2 minutes
+  visible = 2 wakes and 1 read, minimised = 0; the app grows about 25 KB. **macOS shows nothing until
+  #139** (IOKit source, built on the MacBook).
+- **#134 readable activity** in the dock panel and the board preview: the agent's messages lead (coral
+  bar, time), each step is one sentence (Bash uses Claude's description in the past tense with passed /
+  failed · N tests / done; "Edited <path> +N −M"; "Read 3 files"; "Searched the code N times";
+  "Committed "<subject>"" with the hash), small runs fold, ToolSearch, Monitor, TaskStop and the like
+  are hidden, a click opens a step's diff or command and output, and a window-wide **Readable | Every
+  step** switch (not saved) keeps the old list. Codex helpers fall back to hook summaries. Caps: 200
+  steps; 24 diff lines, 8 output lines and 4 KiB per step; 256 KiB in all. Frame (1000×600, 21 steps):
+  Readable about 200-207 µs and 73 allocations, Every step 182-192 µs and 78, `main` before about
+  199 µs and 91. Lowest readable contrast 4.51 (Sumi, Washi); diff colours lowest Washi add 5.95 /
+  del 5.48.
+- **#135 names:** agents of one type started together are matched to their own prompt (the first user
+  record of their transcript, at most 64 KiB read, only when two could be mixed up, at most 3 tries). A
+  wrong early guess swaps; a settled name never moves.
+
+Audit with tests, numbers, captures and rulings: `docs/audits/2026-11-04-battery-activity-names.md`.
+README and lander feature text are updated (no "What's new", changelog or version yet: the release PR
+does that). `kaze-agents.png` and `kaze-board.png` show the old step list and need retaking; a battery
+shot needs a real Windows laptop (`docs/site-assets/SCREENSHOTS.md`). Owner checks: the battery on the
+Windows laptop (unplug, plug in, low states), the readable panel and board on a real Claude session
+(click a Bash step, an Edit, a fold, switch to Every step), and three agents of one type started in one
+message keeping their own names.
 
 **Lander reworked (2026-11-04, branch `site/lander-rework`), inspired by herdr.dev:** a still, tilted wall of
 the existing screenshots (click any to open a lightbox), an HTML-drawn Kaze window with four moments (needs you,
@@ -488,6 +522,12 @@ Measured (Windows, `docs/benchmarks/2026-10-28-milestone-1.md`):
 
 ## Next
 
+- **Battery on macOS (#139):** add `internal/battery/source_darwin.go` reading IOKit
+  (`IOPSCopyPowerSourcesInfo`, with `IOPSNotificationCreateRunLoopSource` for changes) and narrow
+  `source_other.go` to `//go:build !windows && !darwin`. Build and check it on the MacBook (cgo needs
+  the Xcode Command Line Tools); the macOS CI job covers the rest. Then drop "Windows only" from the
+  README and here.
+
 - Owner: open the reader spec from terminal output, use the outline, return via the
   session row, edit the file and check reload, close with Cmd+W, and try all themes.
   On Windows verify Ctrl+click, backslash paths and drive letters. Native runtime
@@ -527,7 +567,10 @@ setup/checklist is historical; unresolved platform checks are listed above.
    - **zsh snippet:** add the OSC 7 snippet from the README to `~/.zshrc` and check folder and branch show, including a folder with spaces, `#`, `%` and Japanese. Unlike the pwsh one, the zsh snippet only escapes `%`, `#` and space and sends other characters as raw UTF-8 (kaze accepts that); it could not be run on Windows, so verify it here.
    - **Dock bounce:** alerts while kaze is in the background should bounce the Dock icon (the Windows taskbar flash has no macOS twin yet; `flashTaskbar` is a no-op off Windows).
    - **Title bar:** the native traffic lights are restored on the custom frame; owner checked the Mac behavior on 2026-10-31.
-6. Benchmarks: `bench/run.sh` (it uses a history-free shell and kaze drops real input in bench mode, so it can't type into your sessions). Add a "macOS" column to the milestone doc.
+6. **Battery (#139):** build the IOKit source on the MacBook and check the far right of the status bar
+   matches Windows: level, percent, the bolt while charging, amber at 20% or less, red at 10% or less,
+   nothing on a Mac desktop, no wakes while idle or hidden.
+7. Benchmarks: `bench/run.sh` (it uses a history-free shell and kaze drops real input in bench mode, so it can't type into your sessions). Add a "macOS" column to the milestone doc.
 
 ## Decisions so far (why the code looks the way it does)
 
@@ -559,6 +602,14 @@ setup/checklist is historical; unresolved platform checks are listed above.
 - Closing a tab whose ConPTY close times out can keep that screen in memory until ConPTY lets go.
 - Links set with OSC 8 (hidden link targets) are not read (#128 item 3; needs its own design).
 - Accepted link false positive (Ruling 21 of the 0.27 plan): in "cd /tmp then edit docs/notes.md" the underline starts at `/tmp`; the click still opens `docs/notes.md` through the shorter candidates.
+- No battery on macOS yet (#139); the 0.28 battery is Windows only.
+- No battery tooltip (time remaining), left out to keep the bar's cost unchanged (Ruling 7 of the 0.28 plan).
+- A battery plugged into a desktop after Kaze started shows only after a restart (Ruling 2). If Windows
+  notifications fail to register, an idle window may show a stale percent until something redraws (Ruling 3).
+- Agent names: two prompts identical in their first 2 KiB count as the same task, so the start order
+  decides (Ruling 17).
+- Readable activity: a tool result more than 64 calls after its step shows no outcome; "failed · N
+  tests" counts only top-level Go `--- FAIL:` lines.
 - Smaller items: the full later-fix backlog is below, and every "minor (deferred)" line is in `docs/history/plan-1-ledger.md`.
 
 ## Where kaze came from
