@@ -1,6 +1,6 @@
 # kaze handoff
 
-Last updated: 2026-11-04, release 0.28.2 (.md links open the file the agent touched, #143 / PR #153; uninstall page #112 designed and planned on `feat/uninstall`). Before that, release 0.28 (battery on Windows, readable agent activity and agent names, PR #140). Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-04, release 0.29 (battery on macOS, #139 / PR #158; the About page redesign, PR #160; the lander's `kaze-about.png` still shows the old page and needs retaking). Before that, release 0.28.2 (.md links open the file the agent touched, #143 / PR #153; uninstall page #112 designed and planned on `feat/uninstall`). Read this first when you pick up kaze on another machine.
 
 ## Where things stand
 
