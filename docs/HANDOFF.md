@@ -10,9 +10,10 @@ Last updated: 2026-11-04, release 0.28.2 (.md links open the file the agent touc
   (render match tint, current match, scroll marks, theme tokens; Midnight match #1c5080 and marks #4f8fd6,
   owner-approved so matches stand apart from the selection), Lane U tasks U1 to U5 (shortcut, open and
   close on the pane with the keyboard, keys in the bar, findWork, drawing the bar).
-- Left: U6 (window captures in `docs/audits/find/` and the frame allocation check; it may be partly done on
-  branch `find/u`, so merge `origin/find/u` again first), the full test run, a fresh whole-branch review and
-  fixes, F1 docs (README shortcut table, Find section, `[keys]` row, lander feature line, SCREENSHOTS, audit),
+- U6 done too (window captures in `docs/audits/find/window-*.png`; bar open costs +5 allocs per still frame,
+  closed bar scans nothing). Review risks noted by the builder: focus order in `focusTarget`, a dock-only
+  resize may not rescan until the next output, no current match until a long scan settles.
+- Left: the full test run, the owner's idle-CPU check by hand, a fresh whole-branch review and fixes, F1 docs (README shortcut table, Find section, `[keys]` row, lander feature line, SCREENSHOTS, audit),
   then mark the PR ready. Release after merge per CLAUDE.md. Delete the `kaze-find*` worktrees when done.
 
 **The repo moved to `beefysalad/kaze-terminal` (2026-11-04).** GitHub redirects the old repo, git and API
