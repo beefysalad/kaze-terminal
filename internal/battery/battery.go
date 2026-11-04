@@ -1,7 +1,8 @@
 // Package battery reads the laptop battery level for the status bar. It is
 // the only package that asks the OS about power. Windows reads
 // GetSystemPowerStatus and hears about changes from power-setting
-// notifications; every other OS reports no battery for now.
+// notifications; macOS reads IOKit power sources and hears about changes from
+// the system notify alerts; every other OS reports no battery.
 package battery
 
 // Status is one battery reading. It is comparable and holds no pointers, so
@@ -37,4 +38,16 @@ func fromPowerStatus(acLine, flag, percent byte) Status {
 	}
 	p := min(int(percent), 100)
 	return Status{Present: true, Percent: p, Charging: p < 100 && (flag&flagCharging != 0 || acLine == acOnline)}
+}
+
+// fromIOPS decodes macOS IOKit power-source values: whether an internal
+// battery was found, IOKit's charging flag, whether the Mac is on AC, and the
+// current and maximum capacity. Charging follows the Windows rule: the flag or
+// AC, below 100 %, so a full battery shows no bolt.
+func fromIOPS(found, charging, onAC bool, cur, full int) Status {
+	if !found || full <= 0 {
+		return Status{}
+	}
+	p := min(max(0, (cur*100+full/2)/full), 100)
+	return Status{Present: true, Percent: p, Charging: p < 100 && (charging || onAC)}
 }

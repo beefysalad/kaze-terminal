@@ -26,3 +26,27 @@ func TestFromPowerStatus(t *testing.T) {
 		}
 	}
 }
+
+func TestFromIOPS(t *testing.T) {
+	cases := []struct {
+		name             string
+		found, chg, onAC bool
+		cur, max         int
+		want             Status
+	}{
+		{"no internal battery", false, false, true, 0, 0, Status{}},
+		{"zero max capacity", true, false, false, 50, 0, Status{}},
+		{"71 on battery", true, false, false, 71, 100, Status{Present: true, Percent: 71}},
+		{"64 charging", true, true, true, 64, 100, Status{Present: true, Charging: true, Percent: 64}},
+		{"80 on AC, charging held", true, false, true, 80, 100, Status{Present: true, Charging: true, Percent: 80}},
+		{"100 on AC is not charging", true, true, true, 100, 100, Status{Present: true, Percent: 100}},
+		{"raw capacities round", true, false, false, 4245, 5103, Status{Present: true, Percent: 83}},
+		{"over max clamps", true, false, false, 120, 100, Status{Present: true, Percent: 100}},
+		{"negative clamps", true, false, false, -5, 100, Status{Present: true, Percent: 0}},
+	}
+	for _, c := range cases {
+		if got := fromIOPS(c.found, c.chg, c.onAC, c.cur, c.max); got != c.want {
+			t.Errorf("%s: got %+v, want %+v", c.name, got, c.want)
+		}
+	}
+}
