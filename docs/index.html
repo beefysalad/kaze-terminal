@@ -75,31 +75,7 @@
       <button class="chip" type="button" data-moment="agents" aria-pressed="false">A subagent working <i>3</i></button>
       <button class="chip" type="button" data-moment="done" aria-pressed="false">Done <i>4</i></button>
     </div>
-    <div class="kz" role="img" aria-label="A Kaze window drawn in HTML, showing the moment picked above">
-      <div class="kz-bar"><span class="k">K</span><span>todo-api / <b>auth-tokens</b></span><span class="search">Search sessions, skills, commands</span><span>⚙</span></div>
-      <div class="kz-side">
-        <div class="kz-grp here">todo-api <span class="w" data-side-wait>1 waiting</span></div>
-        <div class="kz-row on"><div class="l1"><span class="mk">✳</span><span class="t">auth-tokens · /review-pr</span><span class="s needs" data-side-state>needs you</span></div><div class="l2">feature/V3-3149 +42 −7</div></div>
-        <div class="kz-tray"><span class="ty">Explore</span> Find the auth middleware</div>
-        <div class="kz-row"><div class="l1"><span class="mk">✳</span><span class="t">login-form</span><span class="s run">running</span></div><div class="l2">feat/login +118 −20</div></div>
-        <div class="kz-grp">web-app <span class="n">1</span></div>
-        <div class="kz-row"><div class="l1"><span class="mk cx">›</span><span class="t">dark-mode</span><span class="s done">done</span></div><div class="l2">dark-mode +12 −3</div></div>
-        <div class="kz-grp">notes-cli <span class="n">1</span></div>
-        <div class="kz-row"><div class="l1"><span class="mk">✳</span><span class="t">search-index</span><span class="s run">running</span></div><div class="l2">main</div></div>
-        <div class="kz-ws">WORKSPACES <span>all up</span></div>
-        <div class="kz-mem"><span class="bar-l"></span>API<span class="st">Running</span></div>
-        <div class="kz-mem"><span class="bar-l"></span>Web<span class="st">Running</span></div>
-      </div>
-      <div class="kz-main">
-        <div class="kz-term" data-term></div>
-        <div class="kz-dock" data-dock hidden>
-          <div class="kz-tabs"><span class="kz-tab" data-tab="agent"><span class="ty">Explore</span>Find the auth middleware</span><span class="kz-tab" data-tab="api"><span class="dot"></span>API</span><span class="r"><span data-expand>Expand</span><span>Hide ⌄</span></span></div>
-          <div class="kz-body" data-body></div>
-        </div>
-        <div class="card" data-card hidden></div>
-      </div>
-      <div class="kz-status"><span>~/projects/todo-api</span><span class="g">⎇ feature/V3-3149 +42 −7</span><span class="sp pill2">1 agent</span><span><span class="g">●●</span> 2/2 up</span><span>Claude 42%</span></div>
-    </div>
+    <figure class="shot"><img data-moment-img src="site-assets/kaze-moment-needs.png" alt="" width="2200" height="1440" loading="lazy"></figure>
     <p class="demo-cap" data-cap aria-live="polite"></p>
   </section>
 
@@ -137,7 +113,7 @@
       <div class="docs">
         <article id="f-sidebar"><h3>A sidebar of sessions</h3><p>Sessions group by repo, worktrees included, with a bold name for the project you’re in. Each row shows the agent, its name and state above the branch and lines changed. See what <span class="state needs">needs you</span>, what is <span class="state running">running</span> and what is <span class="state done">done</span> without switching.</p><div class="more-links"><button type="button" data-open="sessions">See the sidebar</button></div></article>
         <article id="f-alerts"><h3>Alert cards <span>new in 0.27</span></h3><p>When Claude asks or finishes, a card at the bottom right names the session the way the sidebar does, with its branch and slash command, what Claude said or the start of its reply, and how long it ran. <kbd>⌘</kbd> <kbd>J</kbd> opens the newest one. An optional chime too.</p><div class="more-links"><a href="https://github.com/beefysalad/kaze-terminal#alerts-claude-code-hooks">Set up the hooks ↗</a></div></article>
-        <article id="f-panel"><h3>Servers in the panel <span>new in 0.27</span></h3><p>Click a workspace member and its terminal opens as a tab in the panel under Claude, next to your subagents. Click the tab to type in it, click Claude’s terminal to take the keyboard back, hide the panel or expand a server to the main view. Nothing floats over your work.</p><div class="more-links"><a href="https://github.com/beefysalad/kaze-terminal#workspace-members-in-the-panel">How the panel works ↗</a></div></article>
+        <article id="f-panel"><h3>Servers in the panel <span>new in 0.27</span></h3><p>Click a workspace member and its terminal opens as a tab in the panel under Claude, next to your subagents. Click the tab to type in it, click Claude’s terminal to take the keyboard back, hide the panel or expand a server to the main view. Nothing floats over your work.</p><div class="more-links"><button type="button" data-open="sessions">See the panel</button><a href="https://github.com/beefysalad/kaze-terminal#workspace-members-in-the-panel">How the panel works ↗</a></div></article>
         <article id="f-agents"><h3>Every subagent</h3><p>When Claude Code or Codex hands work to subagents, each gets a slim line under its session, waiting first. Click one to open it in the panel, which reads like Claude's own transcript: its words first, a short sentence per step, a click for the diff or the output, then a formatted report. Agents started together keep their own names. <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>A</kbd> opens the agents board: filter and search every subagent and preview it without leaving the list.</p><div class="more-links"><button type="button" data-open="agents">See the subagents</button><button type="button" data-open="board">See the board</button></div></article>
         <article id="f-branch"><h3>A session per branch</h3><p>Choose a repo, a branch and an agent. Kaze reuses the branch’s worktree or makes a sibling folder, and opens the session there. When you’re done it cleans up the worktrees it made, after asking. Your branches stay.</p><div class="more-links"><a href="https://github.com/beefysalad/kaze-terminal#the-sidebar">Meet the branch launcher ↗</a></div></article>
         <article id="f-reader"><h3>The doc reader</h3><p>Ctrl+click an .md path, even one with spaces in it, to read it in Kaze with a heading outline and links. It reloads when the agent edits it, and the session is one click away.</p><div class="more-links"><a href="https://github.com/beefysalad/kaze-terminal#reading-docs">How the reader works ↗</a></div></article>
@@ -152,15 +128,7 @@
       <h2 id="workspace-title">Your project has a routine.<span class="q">Save it once.</span></h2>
       <p>The same folders, the same servers, the same log tail. Turn your startup routine into a workspace and run it from Settings or the palette.</p>
     </div>
-    <div class="recipe">
-      <div class="recipe-head"><span>Example workspace</span><span>my-project · 4 tabs</span></div>
-      <ol>
-        <li><div><h3>Code</h3><span class="folder">~/src/project</span></div><code>claude</code><span class="wait">Ready to work</span></li>
-        <li><div><h3>API</h3><span class="folder">~/src/project/api</span></div><code>docker compose up -d</code><span class="wait">Waits for Docker</span></li>
-        <li><div><h3>Frontend</h3><span class="folder">~/src/project/web</span></div><code>npm run dev</code><span class="wait">Waits for port 8000</span></li>
-        <li><div><h3>Logs</h3><span class="folder">~/src/project</span></div><code>docker compose logs -f api</code><span class="wait">Waits for port 8000</span></li>
-      </ol>
-    </div>
+    <figure class="shot"><img src="site-assets/kaze-workspaces.png" alt="Kaze’s Workspaces settings: the Todo API workspace with its API, Web and Health members, each with its folder, command and when it starts" width="2200" height="1440" loading="lazy"></figure>
     <p class="recipe-foot">Each member gets a line in the sidebar and a dot in the status bar. Click one to open it as a tab under your session.</p>
   </section>
 

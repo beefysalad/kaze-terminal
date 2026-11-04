@@ -140,3 +140,40 @@ captures. No product screenshot was fabricated or retouched.
 The headless renders in `docs/audits/battery-activity-names/` (`battery-*.png` from a fake battery
 source, `activity-*.png` from fixture transcripts) are development evidence, not product captures.
 No product screenshot was fabricated or retouched.
+
+## 0.28.2 retake (November 4, 2026)
+
+Every lander capture except `kaze-logo-by-patrick.png` was retaken from a demo build of `main` at
+Kaze 0.28.2 (2200 × 1440 px, Retina). The pending retakes listed under 0.19 to 0.28 above are done,
+apart from the Windows battery shot, which still needs a real Windows laptop.
+
+- `kaze-sessions.png`: the `token-expiry` session (the `todo-api-auth` worktree) running `/fix-tests`
+  with three subagents, `dark-mode` waiting on you with its alert card at the bottom right,
+  `search-index` done, and the Todo API workspace all up. The panel under the terminal has a subagent
+  tab and the API member's tab open, showing the server's log as the Health member polls it.
+- `kaze-agents.png`: the same session with the subagent's tab open in a taller panel, on the
+  Readable view: its notes with the coral bar, "Read 3 files", an edit with its line counts and
+  "Ran the session tests · failed · 1 test".
+- `kaze-board.png`: the agents board with Needs you first, then each session's agents.
+- `kaze-palette.png`: the palette over `token-expiry`: waiting first, then sessions, servers and skills.
+- `kaze-settings.png`, `kaze-workspaces.png`, `kaze-about.png`: Appearance, Workspaces and About.
+  `kaze-workspaces.png` also replaces the HTML example table in the Workspaces section.
+- `kaze-moment-needs.png`, `kaze-moment-servers.png`, `kaze-moment-done.png` (new): the "See what needs
+  you" moments, which used to be an HTML-drawn window. Needs you: the `dark-mode` card over
+  `token-expiry`. Your servers: the API member's tab in the panel with its log. Done: the
+  `search-index` done card (done cards set to stay until seen for the take). "A subagent working"
+  uses `kaze-agents.png`.
+
+How they were made:
+
+- A throwaway home folder with demo projects (`todo-api` with its `todo-api-auth` worktree on
+  `feature/auth`, `web-app` on `feature/dark-mode`, `notes-cli` on `fix/search`), a demo git author,
+  and a `~/.claude/settings.json` holding kaze's hooks. The owner's settings were not touched.
+- The terminal output and the API log are real (git, `go test`, `python3 -m http.server`, a `curl`
+  loop). Claude Code was not run: demo shell scripts sent Claude Code's hook input to Kaze's real
+  `kaze notify` commands, and the subagents' transcripts were written in Claude Code's JSONL format,
+  so the Readable view parsed them the same way it parses Claude's.
+- A temporary helper in the demo build (never committed) opened the tabs, the workspace, the panel,
+  the board, the palette and Settings, confirmed the workspace's commands, named the session rows,
+  and saved the window to a PNG from inside the app. No global keyboard or mouse input was injected.
+  No generated or retouched UI.

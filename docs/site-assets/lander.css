@@ -62,7 +62,9 @@ h1 .q{display:block;color:var(--dim)}
 .first-time a{color:var(--muted);text-decoration:underline;text-underline-offset:3px}
 .first-time a:hover{color:var(--text)}
 
-.wall{position:absolute;z-index:1;top:-160px;right:-160px;width:1180px;height:1040px;perspective:1700px;pointer-events:none}
+/* The wall hangs off the page centre, not the window edge, so it stays beside the words on wide screens
+   (at 1440px wide this is the same spot as before). It grows a little on wide screens to reach the edge. */
+.wall{--ww:clamp(1180px,calc(50vw + 460px),1640px);position:absolute;z-index:1;top:-160px;left:calc(50% - 300px);width:var(--ww);height:calc(var(--ww) * .88);perspective:1700px;pointer-events:none}
 .wall-plane{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);align-items:start;gap:22px;transform:rotateX(16deg) rotateY(-22deg) rotateZ(7deg);transform-origin:30% 50%;pointer-events:auto}
 /* Each column holds its windows twice (lander.js adds the copy) and slides by one copy, so the loop is seamless. */
 .wall-col{display:flex;flex-direction:column;gap:22px;animation:wall-up var(--d,90s) linear infinite;will-change:transform}
@@ -77,7 +79,7 @@ h1 .q{display:block;color:var(--dim)}
 .tile:hover,.tile:focus-visible{transform:translateZ(30px);border-color:#55597a}
 .tile:hover img,.tile:focus-visible img{opacity:1}
 .hero::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
-  background:linear-gradient(90deg,var(--ink) 0%,var(--ink) 34%,rgba(11,12,17,.75) 46%,rgba(11,12,17,0) 62%),linear-gradient(0deg,var(--ink) 0%,rgba(11,12,17,0) 22%)}
+  background:linear-gradient(90deg,var(--ink) 0%,var(--ink) calc(50% - 230px),rgba(11,12,17,.75) calc(50% - 58px),rgba(11,12,17,0) calc(50% + 173px)),linear-gradient(0deg,var(--ink) 0%,rgba(11,12,17,0) 22%)}
 .wall-hint{position:absolute;z-index:2;right:32px;bottom:22px;font:11.5px var(--mono);color:var(--dim)}
 .news{display:flex;align-items:center;gap:10px;padding:16px 0;font-size:13px;color:var(--muted)}
 .news .tag{font:11px var(--mono);color:var(--lilac);border:1px solid #3a3360;border-radius:999px;padding:1px 9px}
@@ -91,69 +93,18 @@ h2{font-size:clamp(36px,4.4vw,58px);font-weight:600;line-height:1.02;letter-spac
 h2 .q{display:block;color:var(--dim)}
 .head p{color:var(--muted);font-size:15.5px;max-width:470px}
 
-/* The live window: HTML-drawn Kaze, Midnight tokens. */
+/* The moments: chips that switch a real Kaze screenshot. */
 .chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
 .chips .label{font-size:12.5px;color:var(--dim);margin-right:auto}
 .chip{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);border:1px solid var(--line2);border-radius:7px;padding:4px 11px}
 .chip i{font:normal 10.5px var(--mono);color:var(--dim)}
 .chip:hover{color:var(--text)}
 .chip[aria-pressed="true"]{color:var(--text);background:var(--raised2);border-color:#3c4155}
-.kz{position:relative;height:560px;border:1px solid var(--line2);border-radius:12px;overflow:hidden;background:#0f1117;display:grid;grid-template-columns:236px 1fr;grid-template-rows:36px 1fr 26px;font:12.5px/1.55 var(--mono);color:#e9ebf2}
-.kz-bar{grid-column:1/-1;background:#0b0d12;border-bottom:1px solid #1d2230;display:flex;align-items:center;gap:10px;padding:0 12px;font-size:12px;color:#8a90a2}
-.kz-bar .k{color:var(--violet);font:700 13px var(--sans)}
-.kz-bar b{color:#e9ebf2;font-weight:400}
-.kz-bar .search{margin-left:auto;margin-right:auto;width:300px;height:22px;border:1px solid #2a3142;border-radius:6px;display:flex;align-items:center;padding:0 9px;font:11.5px var(--sans);color:#6f7587}
-.kz-side{background:#0b0d12;border-right:1px solid #1d2230;padding:8px 0;overflow:hidden}
-.kz-grp{display:flex;justify-content:space-between;padding:7px 12px 3px;font-size:11.5px;color:#8a90a2}
-.kz-grp.here{color:#e9ebf2;font-weight:700}
-.kz-grp .n{font-weight:400}.kz-grp .w{color:var(--needs);font-weight:400}
-.kz-row{margin:0 6px;padding:5px 8px;border-radius:6px;position:relative}
-.kz-row.on{background:#151925}
-.kz-row.on::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:2px;border-radius:2px;background:var(--violet)}
-.kz-row .l1{display:flex;gap:6px;align-items:center;white-space:nowrap}
-.kz-row .l1 .t{flex:1;overflow:hidden;text-overflow:ellipsis}
-.kz-row .l2{padding-left:19px;font-size:11px;color:#62d39a}
-.kz-row .s{font-size:11px}
 .s.needs{color:var(--needs)}.s.run{color:var(--lilac)}.s.done{color:var(--done)}
 .mk{width:13px;height:13px;border-radius:4px;background:var(--claude);display:grid;place-items:center;color:#fff;font:700 9px var(--sans);flex:none}
 .mk.cx{background:#111;border:1px solid #444}
-.kz-tray{margin:0 8px 4px 26px;border-left:1px solid #2a3142;padding-left:8px;font-size:11px;color:#a7adbd;white-space:nowrap;overflow:hidden}
-.kz-tray .ty{color:var(--mag)}
-.kz-ws{margin-top:14px;padding:8px 12px 2px;font:600 10px var(--sans);letter-spacing:.08em;color:#6f7587;display:flex;justify-content:space-between}
-.kz-ws span{color:var(--done);letter-spacing:0;font-weight:500}
-.kz-mem{display:flex;gap:8px;align-items:center;padding:3px 14px;font-size:11.5px}
-.kz-mem .st{margin-left:auto;color:#6f7587;font-size:10.5px}
 .bar-l{width:2px;height:12px;border-radius:2px;background:#4fc3d9}
-.kz-main{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0}
-.kz-term{flex:1;padding:12px 16px;white-space:pre;overflow:hidden;color:#d9dcE6}
-.kz-term .d{color:#747a8c}.kz-term .a{color:var(--lilac)}.kz-term .g{color:var(--done)}.kz-term .y{color:var(--needs)}
-.kz-dock{height:206px;border-top:1px solid #2a3142;display:flex;flex-direction:column;background:#0d0f15}
-.kz-dock[hidden]{display:none}
-.kz-tabs{display:flex;align-items:center;gap:2px;height:30px;padding:0 8px;border-bottom:1px solid #1d2230;font-size:11.5px}
-.kz-tab{display:flex;align-items:center;gap:7px;padding:4px 10px;border-radius:6px 6px 0 0;color:#8a90a2;white-space:nowrap;max-width:270px;overflow:hidden}
-.kz-tab.on{color:#e9ebf2;box-shadow:inset 0 2px 0 var(--violet);background:#131622}
-.kz-tab .ty{color:var(--mag)}
-.kz-tab .dot{width:7px;height:7px;border-radius:50%;background:var(--done)}
-.kz-tabs .r{margin-left:auto;display:flex;gap:14px;color:#8a90a2;font:11.5px var(--sans)}
-.kz-body{flex:1;padding:8px 14px;white-space:pre;overflow:hidden;font-size:12px}
-.kz-body .say{display:block;white-space:normal;font:12.5px/1.55 var(--sans);color:#e9ebf2;border-left:2px solid var(--claude);padding-left:10px;margin:2px 0 8px}
-.kz-body .st{color:#a7adbd}.kz-body .st b{color:#e9ebf2;font-weight:400}.kz-body .add{color:#8fe0b0}.kz-body .del{color:#f3a0a8}
-.kz-status{grid-column:1/-1;background:#0b0d12;border-top:1px solid #1d2230;display:flex;align-items:center;gap:16px;padding:0 12px;font-size:11px;color:#7d8394}
-.kz-status .g{color:var(--done)}.kz-status .sp{margin-left:auto}
-.kz-status .pill2{color:var(--lilac);border:1px solid #3a3360;border-radius:999px;padding:0 8px}
-.card{position:absolute;right:12px;bottom:12px;width:340px;display:grid;grid-template-columns:30px 1fr;gap:0 10px;padding:11px 13px 10px 11px;background:#1a1f2c;border:1px solid #2a3142;border-radius:10px;font:12px/1.45 var(--sans);color:#e7e9f0;box-shadow:0 18px 40px -18px rgba(0,0,0,.7)}
-.card[hidden]{display:none}
-.card .av{position:relative;width:28px;height:28px;border-radius:8px;background:#232838;display:grid;place-items:center;color:var(--claude);font-size:16px}
-.card .bd{position:absolute;right:-5px;bottom:-5px;width:13px;height:13px;border-radius:50%;border:2px solid #1a1f2c;display:grid;place-items:center;font:800 8px var(--sans);color:#1a1f2c}
 .bd.needs{background:var(--needs)}.bd.done{background:var(--done)}
-.card .ctx{font:10.5px var(--mono);color:#8a90a2}.card .ctx .br{color:var(--done)}.card .ctx .c{color:var(--lilac)}
-.card .tt{font-weight:700;font-size:13px;color:#fff}
-.card .bo{color:#c9cdd8;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.card .sl{margin-top:3px;color:#8a90a2;display:flex;gap:6px;align-items:center}
-.card .sl i{width:6px;height:6px;border-radius:50%;display:inline-block}
-.card .ft{margin-top:6px;padding-top:6px;border-top:1px solid #2a3142;display:flex;gap:5px;align-items:center;color:var(--lilac);font-weight:600}
-.card .ft kbd{font-size:10px;padding:1px 5px;background:#0f1117;border-color:#2a3142}
-.card .ft span{margin-right:auto}
 .demo-cap{margin-top:12px;font-size:13px;color:var(--muted);min-height:22px}
 
 /* Commands next to claims. */
@@ -184,16 +135,7 @@ h2 .q{display:block;color:var(--dim)}
 .more-links a,.more-links button{color:var(--lilac)}
 .more-links a:hover,.more-links button:hover{color:#d9cfff}
 
-/* Workspaces as the file you would write. */
-.recipe{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
-.recipe-head{display:flex;justify-content:space-between;padding:11px 18px;border-bottom:1px solid var(--line);font:12px var(--mono);color:var(--dim)}
-.recipe ol{list-style:none;margin:0;padding:0}
-.recipe li{display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:20px;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line)}
-.recipe li:last-child{border-bottom:0}
-.recipe h3{font-size:14.5px;font-weight:650}
-.recipe .folder{font:12px var(--mono);color:var(--dim)}
-.recipe code{color:var(--lilac)}
-.recipe .wait{font-size:12.5px;color:var(--muted);text-align:right}
+/* Workspaces: the real Settings page. */
 .recipe-foot{margin-top:14px;font-size:13.5px;color:var(--muted)}
 
 .quiet{display:grid;grid-template-columns:1fr auto;gap:40px;align-items:center;padding:34px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:110px}
@@ -268,6 +210,10 @@ footer{margin-top:130px;border-top:1px solid var(--line);padding:44px 0 56px}
 .foot li a{color:var(--muted)}
 .foot li a:hover{color:var(--text)}
 
+/* A real Kaze screenshot in a section. */
+.shot{margin:0}
+.shot img{display:block;width:100%;height:auto;border:1px solid var(--line2);border-radius:12px;background:#0f1117}
+
 /* Lightbox */
 .lightbox{border:0;padding:0;background:transparent;max-width:min(1280px,94vw);width:100%}
 .lightbox::backdrop{background:rgba(5,6,9,.88)}
@@ -281,18 +227,12 @@ footer{margin-top:130px;border-top:1px solid var(--line);padding:44px 0 56px}
 
 @media (max-width:980px){
   .nav{display:none}
-  .wall{opacity:.35;right:-360px}
+  .wall{opacity:.35;left:auto;right:-360px;width:1180px;height:1040px}
   .hero::after{background:linear-gradient(0deg,var(--ink) 0%,rgba(11,12,17,.6) 100%)}
   .head,.install,.readme,.guide-grid{grid-template-columns:1fr}
   .toc{position:static}
   .trio{grid-template-columns:1fr}
   .trio article+article{padding-left:0;border-left:0;border-top:1px solid var(--line)}
-  .kz{grid-template-columns:1fr;height:auto}
-  .kz-side{display:none}
-  .kz-term{min-height:220px}
-  .card{position:relative;right:auto;bottom:auto;width:auto;margin:10px}
-  .recipe li{grid-template-columns:1fr}
-  .recipe .wait{text-align:left}
   .release{grid-template-columns:1fr;gap:10px}
   .quiet{grid-template-columns:1fr}
   .foot{grid-template-columns:1fr 1fr}
@@ -307,20 +247,14 @@ footer{margin-top:130px;border-top:1px solid var(--line);padding:44px 0 56px}
 .guide-link{flex-basis:100%;font-size:13px;color:var(--lilac)}
 .installer-tip{margin-top:14px;font-size:12.5px;color:var(--dim)}
 .installer .os-icon{width:15px;height:15px;fill:currentColor}
-.kz-body .y{color:var(--needs)}
 html,body{overflow-x:hidden}
 @media (max-width:980px){
-  .kz{grid-template-columns:minmax(0,1fr)}
-  .kz-bar .search{display:none}
-  .kz-term,.kz-body{overflow-x:auto}
-  .kz-status{overflow:hidden;white-space:nowrap}
   .wall-hint{display:none}
   .chips .label{flex-basis:100%}
 }
 @media (max-width:560px){
   .wall{display:none}
   .actions .button{flex:1 1 100%;justify-content:center}
-  .card .ft kbd{display:none}
 }
 q{quotes:none}
 .inline-icon{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px}
