@@ -78,6 +78,11 @@ func (win *window) syncDockMember() {
 	if now != 0 {
 		win.mgr.SetVisible(now, true)
 		win.invalidate() // one more frame, so its input filters are up before the next click
+		if now == win.dock.keysMember && win.dock.keys {
+			// drawDockMember registered its filters this frame: focus it now,
+			// so typing right after opening it reaches it.
+			win.dock.refocus, win.wantFocus = false, true
+		}
 	}
 	win.dock.drawn = now
 }

@@ -35,7 +35,8 @@ func TestScratchShortcutKeepsFollowingInputWithItsDestination(t *testing.T) {
 					toggle(t, win, r)
 				}
 				if tc.setup == "unfocused" {
-					win.floatMember(m1.ID)
+					win.fl.open(a.ID, m1.ID, paneMember)
+					win.focusPane(m1.ID)
 					floatFrames(t, win, r)
 				}
 			case "member":

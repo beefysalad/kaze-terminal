@@ -456,3 +456,47 @@ func (win *window) pruneDock(list []*tabs.Tab) {
 		}
 	}
 }
+
+// dockMember opens workspace member id as a tab of the shown session's panel
+// and gives it the keyboard: the one entry point for the sidebar, the server
+// dots and the palette. With no session in front (a member is the main view,
+// or Settings, the board or a document covers it) the member is shown
+// instead. From the sidebar, toggle hides the panel when it shows id already.
+func (win *window) dockMember(id tabs.TabID, toggle bool) {
+	if a := win.shownTab(); a != nil && a.ID == id {
+		return
+	}
+	owner := win.dockOwner()
+	if owner != 0 {
+		if _, member := win.isMember(win.mgr.Lookup(owner)); member {
+			owner = 0
+		}
+	}
+	if owner == 0 {
+		win.selectTab(id)
+		return
+	}
+	if win.shownMember() == id {
+		if toggle {
+			win.closeDock(owner)
+		} else {
+			win.dockFocusMember(true)
+		}
+		return
+	}
+	win.openDockMember(owner, id)
+	win.dockFocusMember(true)
+}
+
+// expandMember is a member tab's Expand: the member leaves the panel and
+// becomes the main view; picking a session goes back.
+func (win *window) expandMember(id tabs.TabID) {
+	if o := win.memberDeck(id); o != 0 {
+		d := win.dock.by[o]
+		win.closeDockTab(o, slices.IndexFunc(d.entries, func(e dockEntry) bool { return e.member == id }))
+	}
+	win.fl.remove(id)
+	win.mgr.Dock(id)
+	win.selectTab(id)
+	win.side.reveal = true
+}

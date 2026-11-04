@@ -37,7 +37,7 @@ type sideDrawKey struct {
 	size                   image.Point
 	metric                 unit.Metric
 	locale                 system.Locale
-	shown, hover, floating tabs.TabID
+	shown, hover, docked tabs.TabID
 	renaming               tabs.TabID
 	doc, hoverDoc          docID
 	scroll                 int

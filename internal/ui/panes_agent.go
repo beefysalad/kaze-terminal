@@ -46,15 +46,14 @@ func trimBlock(s string) string {
 }
 
 // showAgent opens subagent k's panel under session tab, showing that session
-// first (a floating workspace member becomes the main view, as Expand does).
-// From the sidebar, toggle closes the panel when it already shows k.
+// first (a docked workspace member becomes the main view, as Expand does).
+// From the sidebar, toggle hides the panel when it already shows k.
 func (win *window) showAgent(tab tabs.TabID, k subagents.Key, toggle bool) {
 	if win.subs.Get(k) == nil || win.mgr.Lookup(tab) == nil {
 		return
 	}
-	if win.fl.owner(tab) != 0 {
-		win.fl.remove(tab)
-		win.mgr.Dock(tab)
+	if win.memberDeck(tab) != 0 {
+		win.expandMember(tab)
 	}
 	shown := win.dockOwner() == tab
 	if !shown {

@@ -202,32 +202,6 @@ func (win *window) closePane(id tabs.TabID) {
 	win.w.Invalidate()
 }
 
-// expandMember makes a floating member the main view; picking a session goes back.
-func (win *window) expandMember(id tabs.TabID) {
-	win.fl.remove(id)
-	win.mgr.Dock(id)
-	win.selectTab(id)
-	win.side.reveal = true
-}
-
-// floatMember opens workspace member id as a pane over the shown session (spec
-// 8.2): the one entry point for the sidebar, the server dots and the palette.
-// With no session in front (a member or Settings) it shows the member instead.
-func (win *window) floatMember(id tabs.TabID) {
-	if a := win.shownTab(); a != nil && a.ID == id {
-		return
-	}
-	owner := win.paneOwner()
-	if owner == 0 {
-		win.selectTab(id)
-		return
-	}
-	if _, dropped := win.fl.open(owner, id, paneMember); dropped != 0 {
-		win.mgr.Dock(dropped)
-	}
-	win.focusPane(id)
-}
-
 // autoScrollSelection keeps the held selection's history moving in its own
 // visible view. dragPos is relative to that view's grid, not the main grid.
 func (win *window) autoScrollSelection(gtx layout.Context, active *tabs.Tab, cw, ch int) bool {

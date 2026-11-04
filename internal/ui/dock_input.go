@@ -177,6 +177,10 @@ func (win *window) dockRow(owner tabs.TabID, p image.Point) {
 		}
 	}
 	switch {
+	case p.In(h.expand):
+		if m := win.shownMember(); m != 0 {
+			win.expandMember(m)
+		}
 	case p.In(h.hide):
 		win.closeDock(owner)
 	case p.In(h.reader):

@@ -225,13 +225,8 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 		}
 		s.st.doc = win.docs.shown
 		s.st.settings, s.st.settingsOn = win.set.open, win.set.shown
-		s.st.floating = 0
-		if set := win.fl.sets[win.paneOwner()]; set != nil {
-			if f := set.front(); f != nil && f.kind == paneMember {
-				s.st.floating = f.id
-			}
-		}
-		key := sideDrawKey{activeRepo: s.st.activeRepo, openAgent: s.st.openAgent, hoverAgent: s.st.hoverAgent, size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, floating: s.st.floating, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds, launchVersion: s.launch.version, launcher: s.launch.shown, renaming: s.renaming}
+		s.st.docked = win.shownMember()
+		key := sideDrawKey{activeRepo: s.st.activeRepo, openAgent: s.st.openAgent, hoverAgent: s.st.hoverAgent, size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, docked: s.st.docked, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds, launchVersion: s.launch.version, launcher: s.launch.shown, renaming: s.renaming}
 		if !s.cache.drawValid || s.cache.drawKey != key || s.reveal {
 			s.cache.ops.Reset()
 			cg := sg
@@ -673,12 +668,13 @@ func (win *window) sidePress(p image.Point, b pointer.Buttons, at time.Duration)
 	}
 }
 
-// clickRow is a click on a session row or a workspace member line: a member floats
-// over its session, a session is shown. It reports whether id was a session.
+// clickRow is a click on a session row or a workspace member line: a member
+// docks as a tab under its session (a second click hides it), a session is
+// shown. It reports whether id was a session.
 func (win *window) clickRow(id tabs.TabID) bool {
 	if t := win.mgr.Lookup(id); t != nil {
 		if _, member := win.isMember(t); member {
-			win.floatMember(id)
+			win.dockMember(id, true)
 			return false
 		}
 	}
