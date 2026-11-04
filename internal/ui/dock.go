@@ -191,12 +191,24 @@ func (win *window) deck(session tabs.TabID) *dockDeck {
 	return d
 }
 
-// showEntry shows entry i of d and unhides the panel.
+// showEntry shows entry i of d and unhides the panel. When the panel has the
+// keyboard it follows the front: a member tab takes it, and a member that had
+// it gives it back when an agent tab comes forward.
 func (win *window) showEntry(d *dockDeck, i int) {
 	win.dock.seq++
 	d.entries[i].opened = win.dock.seq
 	d.on, d.hidden = i, false
 	win.invalidate()
+	if !win.dock.keys || d != win.deckOf(win.dockOwner()) {
+		return
+	}
+	m := d.entries[i].member
+	if win.dock.keysMember != 0 && win.dock.keysMember != m {
+		win.dropDockKeys() // the member leaves the front with its focus-out
+	}
+	if m != 0 && win.dock.keysMember != m {
+		win.dockFocusMember(true)
+	}
 }
 
 // addEntry appends e to session's panel and shows it; past dockMaxTabs the
