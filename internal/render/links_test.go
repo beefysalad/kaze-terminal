@@ -295,3 +295,70 @@ func TestVisibleWithSpacedPathsAllocatesNothing(t *testing.T) {
 		t.Fatalf("%v allocs per frame", n)
 	}
 }
+
+// refsOn is refsFor for the link whose text is name on line.
+func refsOn(t *testing.T, line, name string) []string {
+	t.Helper()
+	rs := []rune(line)
+	for _, f := range findLinks(rs) {
+		if string(rs[f[0]:f[1]]) == name {
+			return refsFor(rs, f)
+		}
+	}
+	t.Fatalf("no link %q on %q", name, line)
+	return nil
+}
+
+func TestRefsForFolderEarlierOnLine(t *testing.T) {
+	got := refsOn(t, `Full plan and design: C:\Users\me\.notes\tickets\T-1\ (plan.md, design.md, rulings.md)`, "design.md")
+	want := []string{"design.md", `C:\Users\me\.notes\tickets\T-1\design.md`}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
+func TestRefsForSpacedPathTails(t *testing.T) {
+	got := refsOn(t, obsidianLine, obsidianPath)
+	want := []string{obsidianPath, "Obsidian/Patrick/tickets/V3-3261/review-mine-2026-11-03.md"}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
+func TestRefsForTailsLongestFirstAndFoldersNearestFirst(t *testing.T) {
+	got := refsOn(t, `/a/ /b/ then x y.md`, "/b/ then x y.md")
+	want := []string{"/b/ then x y.md", "then x y.md", "x y.md", "y.md"}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+	got = refsOn(t, `/a/ /b/ (y.md)`, "y.md")
+	want = []string{"y.md", "/b/y.md", "/a/y.md"}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+	got = refsOn(t, `/a/ /b/ /c/ /d/ /e/ (y.md)`, "y.md")
+	if len(got) != 5 || got[1] != "/e/y.md" || got[4] != "/b/y.md" {
+		t.Fatalf("at most 4 folders, nearest first: %q", got)
+	}
+}
+
+func TestRefsForWebLink(t *testing.T) {
+	s := screen.New(40, 2)
+	printAll(s, "see https://x.io/a.md")
+	var l Links
+	if got := l.RefsAt(s, Point{Col: 8, Row: 0}); len(got) != 1 || got[0] != "https://x.io/a.md" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestRefsAtNothingUnderPoint(t *testing.T) {
+	s := screen.New(40, 2)
+	printAll(s, "see docs/a.md")
+	var l Links
+	if got := l.RefsAt(s, Point{Col: 30, Row: 0}); len(got) != 0 {
+		t.Fatalf("got %q", got)
+	}
+	if got := l.RefsAt(s, Point{Col: 6, Row: 0}); len(got) != 1 || got[0] != "docs/a.md" {
+		t.Fatalf("got %q", got)
+	}
+}

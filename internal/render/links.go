@@ -27,8 +27,31 @@ type Links struct {
 
 // At is the link under p, an absolute grid point. Call with the session locked.
 func (l *Links) At(scr *screen.Screen, p Point) (string, bool) {
-	if p.Row < 0 || p.Row >= totalRows(scr) {
+	f, ok := l.under(scr, p)
+	if !ok {
 		return "", false
+	}
+	return string(l.rs[f[0]:f[1]]), true
+}
+
+// RefsAt is what the link under p may mean, best first: a web link alone, or
+// for a .md path the candidates of refsFor. Empty when there is no link under p.
+// It allocates, so call it only on a click, with the session locked.
+func (l *Links) RefsAt(scr *screen.Screen, p Point) []string {
+	f, ok := l.under(scr, p)
+	if !ok {
+		return nil
+	}
+	if s := string(l.rs[f[0]:f[1]]); IsWebLink(s) {
+		return []string{s}
+	}
+	return refsFor(l.rs, f)
+}
+
+// under is the rune range in l.rs of the link under p; l.rs holds p's logical line.
+func (l *Links) under(scr *screen.Screen, p Point) ([2]int, bool) {
+	if p.Row < 0 || p.Row >= totalRows(scr) {
+		return [2]int{}, false
 	}
 	if p.Col > 0 && cellAt(scr, p.Col, p.Row).Width == 0 {
 		p.Col-- // the right half of a wide character
@@ -45,11 +68,11 @@ func (l *Links) At(scr *screen.Screen, p Point) (string, bool) {
 	for _, f := range l.found {
 		for k := f[0]; k < f[1]; k++ {
 			if l.pos[k] == p {
-				return string(l.rs[f[0]:f[1]]), true
+				return f, true
 			}
 		}
 	}
-	return "", false
+	return [2]int{}, false
 }
 
 // Visible is every link part on rows [top, top+n), in row order. The result is
@@ -218,13 +241,7 @@ func extendBack(rs []rune, i, floor int) int {
 			return i
 		}
 		end := start - 1 // the run before the gap is rs[k:end]
-		k := end - 1
-		for k > floor && pathRune(rs[k-1]) {
-			k--
-		}
-		if k-2 >= floor && rs[k-1] == ':' && driveAt(rs, k-2) {
-			k -= 2 // the drive's colon counts inside X:/
-		}
+		k := runStart(rs, end, floor)
 		if rootAt(rs, k) {
 			if hasExt(rs[k:end]) {
 				return i
@@ -234,6 +251,61 @@ func extendBack(rs []rune, i, floor int) int {
 		start = k
 	}
 	return i
+}
+
+// runStart is the start of the path run that ends at end (rs[end-1] is a path
+// rune), never before floor. A drive's colon counts inside X:/.
+func runStart(rs []rune, end, floor int) int {
+	k := end - 1
+	for k > floor && pathRune(rs[k-1]) {
+		k--
+	}
+	if k-2 >= floor && rs[k-1] == ':' && driveAt(rs, k-2) {
+		k -= 2
+	}
+	return k
+}
+
+// maxFolders bounds how many folders printed earlier on a line a click tries.
+const maxFolders = 4
+
+// refsFor is what the .md link rs[f[0]:f[1]] may mean, best first, duplicates
+// dropped: the link text; each shorter tail after a space inside it, longest
+// first; then, when the link is not rooted, each rooted folder run ending in a
+// slash earlier on the line (nearest first, at most maxFolders) joined with it.
+func refsFor(rs []rune, f [2]int) []string {
+	text := string(rs[f[0]:f[1]])
+	out := []string{text}
+	add := func(s string) {
+		for _, o := range out {
+			if o == s {
+				return
+			}
+		}
+		out = append(out, s)
+	}
+	for k := f[0]; k < f[1]-1; k++ {
+		if rs[k] == ' ' && rs[k+1] != ' ' {
+			add(string(rs[k+1 : f[1]]))
+		}
+	}
+	if rootAt(rs, f[0]) {
+		return out
+	}
+	n := 0
+	for end := f[0]; end > 0 && n < maxFolders; {
+		if !pathRune(rs[end-1]) {
+			end--
+			continue
+		}
+		k := runStart(rs, end, 0)
+		if rootAt(rs, k) && slash(rs[end-1]) {
+			add(string(rs[k:end]) + text)
+			n++
+		}
+		end = k
+	}
+	return out
 }
 
 // hasExt reports whether the last segment of a path run has a dot extension.
