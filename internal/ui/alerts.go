@@ -8,6 +8,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/patrick-gogo/kaze-terminal/internal/input"
 	"github.com/patrick-gogo/kaze-terminal/internal/notify"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 	"github.com/patrick-gogo/kaze-terminal/internal/theme"
@@ -44,6 +45,8 @@ type toast struct {
 	// names the card's mark when set ("workspace" for a run summary).
 	Ran   time.Duration
 	Agent string
+
+	wrap cardWrap // the card body's lines, wrapped once per text and width
 }
 
 // alerts holds the tab marks and toasts. Used only on the UI goroutine.
@@ -55,6 +58,11 @@ type alerts struct {
 	ink   cardInk // the cards' colours for inkOf, see window.cardInk
 	inkOf theme.Chrome
 	inkOK bool
+
+	caps           []string // the next_waiting key caps for capsOf, see nextWaitingCaps
+	capsOf         input.Shortcut
+	capsOn, capsOK bool
+	texts          []cardText // what the last drawToasts drew, for tests
 }
 
 // doneToastFor is how long a "done" card stays for a done_toast value; 0 means

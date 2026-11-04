@@ -194,24 +194,6 @@ func alertWindow(t *testing.T, n int) (*window, *[]time.Time) {
 	return win, &played
 }
 
-func TestGoSwitchesTab(t *testing.T) {
-	win, _ := alertWindow(t, 3)
-	target := win.mgr.Tabs()[2].ID
-	win.alerts.apply(notify.Msg{Tab: int(target), Kind: notify.KindNeeds}, win.mgr.Active().ID, true, only(3), t0)
-	win.drawToasts(barContext(1000), toastArea(1000, 600, 24))
-	if len(win.ui.toastHits) != 1 {
-		t.Fatalf("%d toast hit areas, want 1", len(win.ui.toastHits))
-	}
-	g := win.ui.toastHits[0].goRect
-	win.toastEvent(pointer.Event{Kind: pointer.Press, Buttons: pointer.ButtonPrimary, Position: f32.Pt(float32(g.Min.X+2), float32(g.Min.Y+2))})
-	if got := win.mgr.Active().ID; got != target {
-		t.Fatalf("active %d after Go, want %d", got, target)
-	}
-	if !win.wantFocus {
-		t.Fatal("Go left the terminal without keyboard focus")
-	}
-}
-
 func TestTabClickAndGoShareTheSwitch(t *testing.T) {
 	win, _ := alertWindow(t, 2)
 	target := win.mgr.Tabs()[1].ID
@@ -405,33 +387,6 @@ func TestDrainAppliesQueuedAlerts(t *testing.T) {
 	}
 }
 
-func TestToastsSitAboveStatusBarBottomRight(t *testing.T) {
-	win, _ := alertWindow(t, 4)
-	for _, tb := range win.mgr.Tabs()[1:] {
-		win.alerts.apply(notify.Msg{Tab: int(tb.ID), Kind: notify.KindNeeds, Reason: strings.Repeat("long reason ", 20)}, win.mgr.Active().ID, true, only(4), t0)
-	}
-	const w, h, statusH = 400, 600, 24
-	win.drawToasts(barContext(w), toastArea(w, h, statusH))
-	hits := win.ui.toastHits
-	if len(hits) != 3 {
-		t.Fatalf("%d toasts drawn, want 3", len(hits))
-	}
-	for i, th := range hits {
-		if th.rect.Max.Y > h-statusH || th.rect.Max.X > w || th.rect.Min.X < 0 {
-			t.Fatalf("toast %d at %v overlaps the status bar or leaves a %dx%d window", i, th.rect, w, h)
-		}
-		if !th.goRect.In(th.rect) || !th.closeRect.In(th.rect) {
-			t.Fatalf("toast %d: Go %v / × %v outside %v", i, th.goRect, th.closeRect, th.rect)
-		}
-		if i > 0 && th.rect.Overlaps(hits[i-1].rect) {
-			t.Fatalf("toasts %d and %d overlap", i-1, i)
-		}
-	}
-	if hits[0].id != win.mgr.Tabs()[3].ID || hits[0].rect.Min.Y > hits[1].rect.Min.Y {
-		t.Fatal("the newest toast is not on top")
-	}
-}
-
 func TestTabDotsFollowMarks(t *testing.T) {
 	win, _ := alertWindow(t, 3)
 	list := win.mgr.Tabs()
@@ -455,49 +410,6 @@ func TestTabDotsFollowMarks(t *testing.T) {
 	}
 	if _, ok := win.ui.dotColor(false, markNone); ok {
 		t.Fatal("an unmarked inactive tab has a dot")
-	}
-}
-
-func TestNarrowWindowKeepsTextOffTheButtons(t *testing.T) {
-	win, _ := alertWindow(t, 2)
-	target := win.mgr.Tabs()[1]
-	target.Session.Lock()
-	target.Session.Applier().OSC([]byte("0;" + strings.Repeat("W", 40)))
-	target.Session.Unlock()
-	win.alerts.apply(notify.Msg{Tab: int(target.ID), Kind: notify.KindNeeds, Reason: "why"}, win.mgr.Active().ID, true, only(2), t0)
-	for _, w := range []int{0, 10, 60, 120, 200, 320} {
-		win.drawToasts(barContext(w), toastArea(w, 600, 24))
-		for _, h := range win.ui.toastHits {
-			if h.rect.Min.X < 0 || h.rect.Max.X > w {
-				t.Fatalf("width %d: toast %v outside the window", w, h.rect)
-			}
-			if h.text.Max.X > h.goRect.Min.X || h.text.Min.X < h.rect.Min.X {
-				t.Fatalf("width %d: text %v runs under Go %v", w, h.text, h.goRect)
-			}
-		}
-	}
-}
-
-func TestShortWindowDropsCardsAboveTheBar(t *testing.T) {
-	win, _ := alertWindow(t, 4)
-	for _, tb := range win.mgr.Tabs()[1:] {
-		win.alerts.apply(notify.Msg{Tab: int(tb.ID), Kind: notify.KindNeeds}, win.mgr.Active().ID, true, only(4), t0)
-	}
-	newest := win.mgr.Tabs()[3].ID
-	for _, h := range []int{40, 62, 110, 150} {
-		win.drawToasts(barContext(800), toastArea(800, h, 24))
-		for i, th := range win.ui.toastHits {
-			if th.rect.Min.Y < 38 || th.rect.Max.Y > h-24 {
-				t.Fatalf("height %d: toast %d at %v leaves the room between bar and status", h, i, th.rect)
-			}
-		}
-		if hits := win.ui.toastHits; len(hits) > 0 && hits[0].id != newest {
-			t.Fatalf("height %d: kept tab %d on top, want the newest %d", h, hits[0].id, newest)
-		}
-	}
-	win.drawToasts(barContext(800), toastArea(800, 600, 24))
-	if len(win.ui.toastHits) != 3 {
-		t.Fatal("a tall window lost toasts")
 	}
 }
 
@@ -525,8 +437,8 @@ func toastArea(w, h, statusH int) image.Rectangle {
 	return image.Rectangle{Min: image.Pt(0, 38), Max: image.Pt(w, max(h-statusH, 38))}
 }
 
-// Toasts sit over the terminal, right of the sidebar, never over it.
-func TestToastsStayRightOfTheSidebar(t *testing.T) {
+// Cards sit over the terminal, right of the sidebar, never over it.
+func TestCardsStayRightOfTheSidebar(t *testing.T) {
 	win, _ := sideWindow(t, true)
 	a := openIn(t, win, "")
 	b := openIn(t, win, "")
@@ -538,13 +450,140 @@ func TestToastsStayRightOfTheSidebar(t *testing.T) {
 	win.alerts.apply(notify.Msg{Tab: int(b.ID), Kind: notify.KindNeeds, Reason: strings.Repeat("long reason ", 20)}, a.ID, true, only(3), t0)
 	win.alerts.apply(notify.Msg{Tab: int(c.ID), Kind: notify.KindNeeds}, a.ID, true, only(3), t0)
 	var r input.Router
-	sizedFrame(t, win, &r, 640, 600)
+	sizedFrame(t, win, &r, 720, 600)
 	if win.side.hidden || len(win.ui.toastHits) == 0 {
-		t.Fatalf("640 wide: sidebar hidden %v, %d toasts", win.side.hidden, len(win.ui.toastHits))
+		t.Fatalf("720 wide: sidebar hidden %v, %d cards", win.side.hidden, len(win.ui.toastHits))
 	}
 	for i, h := range win.ui.toastHits {
-		if h.rect.Min.X < sidebarW || h.rect.Max.X > 640 {
-			t.Fatalf("toast %d at %v covers the %ddp sidebar or leaves the window", i, h.rect, sidebarW)
+		if h.rect.Min.X < sidebarW || h.rect.Max.X > 720 {
+			t.Fatalf("card %d at %v covers the %ddp sidebar or leaves the window", i, h.rect, sidebarW)
 		}
+	}
+}
+
+// threeCards gives tabs 2, 3 and 4 of a 4-tab window a needs card each, oldest first.
+func threeCards(t *testing.T) *window {
+	t.Helper()
+	win, _ := alertWindow(t, 4)
+	for _, tb := range win.mgr.Tabs()[1:] {
+		win.alerts.apply(notify.Msg{Tab: int(tb.ID), Kind: notify.KindNeeds, Reason: strings.Repeat("long reason ", 20)}, win.mgr.Active().ID, true, only(4), t0)
+	}
+	return win
+}
+
+func TestCardsSitBottomRightNewestLowest(t *testing.T) {
+	win := threeCards(t)
+	gtx := barContext(1000)
+	area := toastArea(1000, 600, 24)
+	win.drawToasts(gtx, area)
+	hits := win.ui.toastHits
+	if len(hits) != 3 {
+		t.Fatalf("%d cards drawn, want 3", len(hits))
+	}
+	newest := win.mgr.Tabs()[3].ID
+	low := hits[0]
+	for i, h := range hits {
+		if !h.rect.In(area) {
+			t.Fatalf("card %d at %v leaves the area %v", i, h.rect, area)
+		}
+		if h.rect.Dx() != gtx.Dp(cardWidthDp) || h.rect.Max.X != area.Max.X-gtx.Dp(12) {
+			t.Fatalf("card %d at %v: want %d wide, 12dp from the right", i, h.rect, gtx.Dp(cardWidthDp))
+		}
+		if !h.closeRect.In(h.rect) {
+			t.Fatalf("card %d: close %v outside %v", i, h.closeRect, h.rect)
+		}
+		for j := range i {
+			if h.rect.Overlaps(hits[j].rect) {
+				t.Fatalf("cards %d and %d overlap", j, i)
+			}
+		}
+		if h.rect.Min.Y > low.rect.Min.Y {
+			low = h
+		}
+	}
+	if low.id != newest || low.rect.Max.Y != area.Max.Y-gtx.Dp(12) {
+		t.Fatalf("lowest card is tab %d at %v, want the newest %d 12dp above the bottom", low.id, low.rect, newest)
+	}
+}
+
+func TestCardsStackAboveDock(t *testing.T) {
+	win := threeCards(t)
+	area := toastArea(1000, 800, 24)
+	win.dock.lastRect = image.Rect(area.Min.X, area.Max.Y-200, area.Max.X, area.Max.Y)
+	gtx := barContext(1000)
+	win.drawToasts(gtx, area)
+	if len(win.ui.toastHits) == 0 {
+		t.Fatal("no cards above the dock")
+	}
+	for i, h := range win.ui.toastHits {
+		if h.rect.Max.Y > win.dock.lastRect.Min.Y-gtx.Dp(8) {
+			t.Fatalf("card %d at %v runs into the dock panel %v", i, h.rect, win.dock.lastRect)
+		}
+	}
+}
+
+func TestShortWindowDropsOldestCards(t *testing.T) {
+	win := threeCards(t)
+	tabsNow := win.mgr.Tabs()
+	newest, oldest := tabsNow[3].ID, tabsNow[1].ID
+	area := image.Rect(0, 38, 800, 338) // 300 px tall
+	win.drawToasts(barContext(800), area)
+	hits := win.ui.toastHits
+	if len(hits) == 0 || len(hits) == 3 {
+		t.Fatalf("%d cards in a 300 px area, want some but not all", len(hits))
+	}
+	seen := map[tabs.TabID]bool{}
+	for i, h := range hits {
+		if !h.rect.In(area) {
+			t.Fatalf("card %d at %v leaves the area %v", i, h.rect, area)
+		}
+		seen[h.id] = true
+	}
+	if !seen[newest] || seen[oldest] {
+		t.Fatalf("kept %v, want the newest %d and not the oldest %d", seen, newest, oldest)
+	}
+	for _, hgt := range []int{0, 20, 60} {
+		win.drawToasts(barContext(800), image.Rect(0, 38, 800, 38+hgt))
+		if len(win.ui.toastHits) != 0 {
+			t.Fatalf("a %d px area drew %d cards", hgt, len(win.ui.toastHits))
+		}
+	}
+}
+
+func TestNarrowAreaDrawsNoCards(t *testing.T) {
+	win := threeCards(t)
+	for _, w := range []int{0, 10, 120, 250, 283} {
+		win.drawToasts(barContext(w), toastArea(w, 600, 24))
+		if len(win.ui.toastHits) != 0 {
+			t.Fatalf("width %d: %d cards, want none under 260dp", w, len(win.ui.toastHits))
+		}
+	}
+	win.drawToasts(barContext(300), toastArea(300, 600, 24))
+	if len(win.ui.toastHits) == 0 {
+		t.Fatal("300 wide: no cards")
+	}
+	for _, h := range win.ui.toastHits {
+		if h.rect.Dx() != 300-24 || h.rect.Min.X != 12 {
+			t.Fatalf("300 wide: card %v, want the width less 12dp each side", h.rect)
+		}
+	}
+}
+
+func TestCardClickOpensSession(t *testing.T) {
+	win, _ := alertWindow(t, 3)
+	target := win.mgr.Tabs()[2].ID
+	win.alerts.apply(notify.Msg{Tab: int(target), Kind: notify.KindNeeds}, win.mgr.Active().ID, true, only(3), t0)
+	win.drawToasts(barContext(1000), toastArea(1000, 600, 24))
+	if len(win.ui.toastHits) != 1 {
+		t.Fatalf("%d card hit areas, want 1", len(win.ui.toastHits))
+	}
+	r := win.ui.toastHits[0].rect
+	mid := r.Min.Add(r.Size().Div(2))
+	win.toastEvent(pointer.Event{Kind: pointer.Press, Buttons: pointer.ButtonPrimary, Position: f32.Pt(float32(mid.X), float32(mid.Y))})
+	if got := win.mgr.Active().ID; got != target {
+		t.Fatalf("active %d after a click on the card, want %d", got, target)
+	}
+	if !win.wantFocus {
+		t.Fatal("opening the session left the terminal without keyboard focus")
 	}
 }

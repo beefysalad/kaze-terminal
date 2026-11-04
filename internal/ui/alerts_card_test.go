@@ -1,7 +1,9 @@
 package ui
 
 import (
+	"image"
 	"image/color"
+	"strings"
 	"testing"
 	"time"
 
@@ -162,5 +164,99 @@ func TestCardContrast(t *testing.T) {
 			t.Errorf("%s: card surface is not the theme's toast tokens", th.Key)
 		}
 		t.Logf("%s: lowest card contrast %.2f", th.Key, low)
+	}
+}
+
+// cardTexts is every text the last drawToasts drew.
+func cardTexts(win *window) []string {
+	var out []string
+	for _, x := range win.alerts.texts {
+		out = append(out, x.s)
+	}
+	return out
+}
+
+func TestCardBodyWrapsOnceAndCuts(t *testing.T) {
+	win, _ := alertWindow(t, 2)
+	body := strings.Repeat("fixed the link split ", 8)[:160]
+	win.alerts.apply(notify.Msg{Tab: int(win.mgr.Tabs()[1].ID), Kind: notify.KindDone, Reason: body}, win.mgr.Active().ID, true, only(2), t0)
+	win.drawToasts(barContext(1000), toastArea(1000, 600, 24))
+	w := &win.alerts.toasts[0].wrap
+	if w.lines[0] == "" || w.lines[1] == "" || !strings.HasSuffix(w.lines[1], "…") {
+		t.Fatalf("lines %q, want two with the second cut", w.lines)
+	}
+	if !strings.HasPrefix(body, w.lines[0]) || strings.HasSuffix(w.lines[0], " ") || body[len(w.lines[0])] != ' ' {
+		t.Fatalf("line 1 %q does not end on a word of %q", w.lines[0], body)
+	}
+	if w.measures == 0 || w.measures > 40 {
+		t.Fatalf("%d measures for one wrap", w.measures)
+	}
+	before := w.measures
+	for range 10 {
+		win.drawToasts(barContext(1000), toastArea(1000, 600, 24))
+	}
+	if w := &win.alerts.toasts[0].wrap; w.measures != before {
+		t.Fatalf("10 more frames measured %d more times, want 0", w.measures-before)
+	}
+	win.drawToasts(barContext(800), toastArea(800, 600, 24)) // still 380 wide: no re-wrap
+	if w := &win.alerts.toasts[0].wrap; w.measures != before {
+		t.Fatal("a window resize that keeps the card width re-wrapped")
+	}
+	win.drawToasts(barContext(340), toastArea(340, 600, 24))
+	if w := &win.alerts.toasts[0].wrap; w.measures == before {
+		t.Fatal("a narrower card kept the old wrap")
+	}
+}
+
+func TestCardKeyCapsOnNewestOnly(t *testing.T) {
+	win, _ := alertWindow(t, 3)
+	win.binds, _ = resolveBindings("windows", nil)
+	for _, tb := range win.mgr.Tabs()[1:] {
+		win.alerts.apply(notify.Msg{Tab: int(tb.ID), Kind: notify.KindNeeds}, win.mgr.Active().ID, true, only(3), t0)
+	}
+	newest := win.mgr.Tabs()[2].ID
+	win.drawToasts(barContext(1000), toastArea(1000, 600, 24))
+	var newRect image.Rectangle
+	for _, h := range win.ui.toastHits {
+		if h.id == newest {
+			newRect = h.rect
+		}
+	}
+	for _, k := range []string{"Ctrl", "Shift", "J"} {
+		n := 0
+		for _, x := range win.alerts.texts {
+			if x.s == k {
+				n++
+				if !x.r.In(newRect) {
+					t.Fatalf("key cap %q at %v is not on the newest card %v", k, x.r, newRect)
+				}
+			}
+		}
+		if n != 1 {
+			t.Fatalf("key cap %q drawn %d times, want once (texts %q)", k, n, cardTexts(win))
+		}
+	}
+	if got := strings.Count(strings.Join(cardTexts(win), "\n"), "Open session"); got != 2 {
+		t.Fatalf("%d cards say Open session, want 2", got)
+	}
+	delete(win.binds, "next_waiting")
+	win.drawToasts(barContext(1000), toastArea(1000, 600, 24))
+	for _, s := range cardTexts(win) {
+		if s == "Ctrl" || s == "Shift" || s == "J" {
+			t.Fatalf("unbound next_waiting still drew key cap %q", s)
+		}
+	}
+}
+
+func TestDoneCardShowsReply(t *testing.T) {
+	win, tab := cardTab(t, "main")
+	deliverNow(win, notify.Msg{Tab: int(tab.ID), Kind: notify.KindPrompt, Command: "/ship", Args: "links"}, t0)
+	deliverNow(win, notify.Msg{Tab: int(tab.ID), Kind: notify.KindDone, Reason: "Fixed the link split. 214 tests pass"}, t0.Add(400*time.Second))
+	win.drawToasts(barContext(1000), toastArea(1000, 600, 24))
+	all := strings.Join(cardTexts(win), "\n")
+	for _, want := range []string{"Fixed the link split", "Done · ran 6m 40s", "links", "⎇ main", "/ship", "Open session", "×"} {
+		if !strings.Contains(all, want) {
+			t.Fatalf("texts %q lack %q", cardTexts(win), want)
+		}
 	}
 }
