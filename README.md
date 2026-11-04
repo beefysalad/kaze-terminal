@@ -986,7 +986,7 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 Done:
 
-- Agents board redesign (built on `feat/agents-board`, release 0.26 next): session cards with filters, search and a live preview; a click on a tray line opens its panel again, and "+N more" opens the board for that session; the project rail is gone.
+- 0.27: workspace members open as tabs in the panel under the terminal and the scratch shell and floating panes are gone (#133); richer alert cards at the bottom right (#9); .md links with spaces or an earlier folder open (#128) (PR #136).
 - 0.26: an agents board you can work from, with filters, search, per-session cards and a live preview; one click on an agent line opens its panel and the project rail is gone (PR #131).
 - 0.25: a slim, capped subagent tray with safe clicks, a rail for the project you’re in (#125), clean session titles (#124) and colour emoji on Windows and macOS (#127).
 - 0.24: subagents open in a panel docked under the terminal with an Activity timeline and formatted reports (#106, #103); Ctrl+C/Ctrl+V copy and paste on Windows, screenshots included (#117); finished workspace setup tabs read Ready (#118).

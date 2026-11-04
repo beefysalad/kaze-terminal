@@ -1,10 +1,9 @@
-## What’s new in Kaze 0.26
+## What’s new in Kaze 0.27
 
-- **A new agents board:** filter by All, Needs you, Running or Done, and search by type, task, session or repo (press /). Waiting agents sit in a pinned Needs you card; the rest are grouped under their session, with a bar showing what’s waiting, running and done. Finished agents fold away.
-- **Preview without leaving:** pick an agent to see its steps and messages, or its formatted report, beside the list. Double-click it, press Enter or use Open in session to jump to it.
-- **One click opens an agent:** clicking an agent line in the sidebar opens its panel again, and a second click closes it. “+N more” opens the board for that session.
-- **A quieter highlight:** the project rail is gone. The project you’re in keeps its bold name and your session keeps its own bar.
-- **Fixed: report summaries:** a finished agent shows the first sentence of its report, not its heading.
+- **Servers in the panel:** workspace members open as tabs in the panel under the terminal, next to your subagents, instead of floating over Claude. Click a member’s tab to type in it, click the terminal to take the keyboard back, and use Expand to make it the main view.
+- **Richer alert cards:** a card at the bottom right names the session the way the sidebar does, shows its branch and slash command, Claude’s message or the start of its last reply, and how long the turn ran. Ctrl+Shift+J (⌘ J on macOS) opens the newest one.
+- **Links with spaces:** a .md path with a space in it, or one printed after its folder, is underlined whole and opens on Ctrl+click. When it can’t be found, Kaze says where it looked.
+- **Removed: the scratch shell and floating panes:** the docked panel replaces both. An old scratch_shell line in config.toml is ignored with a warning.
 
 ## Download
 

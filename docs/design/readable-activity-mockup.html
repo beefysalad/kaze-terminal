@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Readable agent activity: clickable mockup</title>
+<style>
+  @font-face { font-family:Manrope; src:url(../site-assets/Manrope.ttf) format('truetype'); font-weight:200 800; }
+  @font-face { font-family:JB; src:url(../site-assets/JetBrainsMono-Regular.ttf) format('truetype'); }
+  :root { --mono:JB,"JetBrains Mono",ui-monospace,monospace; --sans:Manrope,"Segoe UI",sans-serif; --claude:#d97757; }
+  .sumi { --chrome:#0c0c0c; --panel:#111111; --raised:#181818; --raised2:#1f1f1f; --hair:#222222; --hair2:#2e2e2e;
+    --t1:#ece8e1; --t2:#aaa398; --t3:#77726a; --acc:#e2553d; --acc2:#f08a74; --ok:#9fbf8f; --bad:#f07b7b; --needs:#d9b56a; --mag:#c39be0;
+    --addbg:#16261a; --addfg:#a9d79a; --delbg:#2c1513; --delfg:#f0a093; }
+  .midnight { --chrome:#0b0d12; --panel:#0f1117; --raised:#151925; --raised2:#1a1f2c; --hair:#1d2230; --hair2:#2a3142;
+    --t1:#e9ebf2; --t2:#a7adbd; --t3:#747a8c; --acc:#8b7bff; --acc2:#b9a6ff; --ok:#62d39a; --bad:#f07b7b; --needs:#f2b84b; --mag:#c39be0;
+    --addbg:#122419; --addfg:#8fe0b0; --delbg:#2a1418; --delfg:#f3a0a8; }
+  * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
+  html,body { margin:0; min-height:100%; background:#040507; }
+  body { color:var(--t1); font:13px/1.5 var(--mono); display:flex; flex-direction:column; align-items:center; padding:12px; gap:10px; -webkit-font-smoothing:antialiased; }
+  .hint { width:100%; max-width:1480px; display:flex; gap:8px; align-items:center; font:12px/1.5 var(--sans); color:#8a90a2; }
+  .hint b { color:#e7e9f0; font-weight:600; }
+  .seg { display:flex; gap:2px; border:1px solid #232733; border-radius:8px; padding:2px; }
+  .hint button { background:none; color:#8a90a2; border:0; border-radius:6px; padding:2px 10px; font:12px var(--sans); cursor:pointer; }
+  .hint button.on { background:#1a1f2c; color:#e7e9f0; }
+  .grow { flex:1; }
+  button:focus-visible { outline:1px solid var(--acc2); outline-offset:1px; }
+
+  .stage { width:100%; max-width:1480px; display:grid; grid-template-columns:1fr 300px; gap:12px; }
+  .win { height:min(860px, calc(100vh - 70px)); min-height:600px; background:var(--panel); border:1px solid var(--hair2); border-radius:10px; overflow:hidden; display:grid; grid-template-rows:40px 1fr; }
+  .bar { background:var(--chrome); border-bottom:1px solid var(--hair); display:flex; align-items:center; padding:0 14px; font:600 13px var(--sans); }
+  .body { display:grid; grid-template-columns:44% 1fr; min-height:0; }
+  .list { padding:16px 14px; border-right:1px solid var(--hair); overflow:auto; }
+  .list h2 { margin:0 0 12px; font:700 20px var(--sans); } .list h2 span { font:400 12px var(--sans); color:var(--t3); margin-left:8px; }
+  .card { border:1px solid var(--hair); border-radius:10px; background:var(--raised); overflow:hidden; }
+  .chead { display:flex; gap:8px; align-items:center; padding:10px 12px; font:600 12.5px var(--sans); border-bottom:1px solid var(--hair); }
+  .chead .m { color:var(--claude); } .chead .d { color:var(--t3); font:400 11.5px var(--mono); }
+  .arow { display:grid; grid-template-columns:14px 92px 1fr auto; gap:8px; align-items:center; padding:8px 12px; font-size:12.5px; cursor:pointer; border-bottom:1px solid var(--hair); }
+  .arow:hover { background:var(--raised2); } .arow.on { background:var(--raised2); box-shadow:inset 2px 0 0 var(--acc); }
+  .arow .ty { color:var(--mag); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .arow .el { color:var(--t3); font-size:11px; }
+  .arow .sub { grid-column:3 / 5; color:var(--t3); font-size:11.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:-4px; font-family:var(--sans); }
+  .dot { width:8px; height:8px; border-radius:50%; } .dot.run { border:2px solid var(--acc); width:10px; height:10px; } .dot.done { background:var(--ok); }
+
+  .prev { display:flex; flex-direction:column; min-height:0; min-width:0; }
+  .phead { padding:16px 22px 14px; border-bottom:1px solid var(--hair); }
+  .phead .st { font:600 11px var(--sans); letter-spacing:.08em; color:var(--acc); display:flex; gap:8px; align-items:center; }
+  .phead .st .ty { letter-spacing:0; font:11px var(--mono); color:var(--mag); background:var(--raised2); border-radius:5px; padding:0 6px; }
+  .phead .st .el { color:var(--t3); letter-spacing:0; font-weight:400; }
+  .phead h1 { margin:6px 0 2px; font:700 17px var(--sans); }
+  .phead .in { font:12px var(--sans); color:var(--t3); }
+  .tools { display:flex; align-items:center; gap:10px; padding:10px 22px; border-bottom:1px solid var(--hair); font:12px var(--sans); color:var(--t3); }
+  .tools .lbl { font:600 11px var(--sans); letter-spacing:.08em; }
+  .tools .seg2 { margin-left:auto; display:flex; border:1px solid var(--hair2); border-radius:7px; padding:2px; }
+  .tools .seg2 button { background:none; border:0; color:var(--t3); font:12px var(--sans); padding:2px 10px; border-radius:5px; cursor:pointer; }
+  .tools .seg2 button.on { background:var(--raised2); color:var(--t1); }
+  .feed { overflow:auto; padding:12px 22px 24px; min-height:0; }
+
+  /* Readable view */
+  .say { position:relative; margin:12px 0 10px; padding:2px 0 2px 14px; font:13.5px/1.6 var(--sans); color:var(--t1); }
+  .say::before { content:""; position:absolute; left:0; top:4px; bottom:4px; width:2px; border-radius:2px; background:var(--claude); }
+  .say .t { position:absolute; right:0; top:0; font:11px var(--mono); color:var(--t3); }
+  .say p { margin:0 48px 6px 0; } .say code { font:12px var(--mono); color:var(--acc2); }
+  .step { display:grid; grid-template-columns:16px minmax(0,1fr) auto; gap:8px; align-items:baseline; padding:4px 6px; margin:0 -6px; border-radius:6px; font:13px/1.5 var(--sans); color:var(--t2); cursor:pointer; }
+  .step:hover { background:var(--raised); }
+  .step .ch { color:var(--t3); font-size:10px; transition:none; }
+  .step.open .ch { transform:rotate(90deg); display:inline-block; }
+  .step b { color:var(--t1); font-weight:600; } .step .f { font:12px var(--mono); color:var(--t1); }
+  .step .meta { font:11px var(--mono); color:var(--t3); white-space:nowrap; }
+  .meta .a { color:var(--addfg); } .meta .r { color:var(--delfg); } .meta .ok { color:var(--ok); } .meta .bad { color:var(--bad); }
+  .more { margin:2px 0 8px 24px; border:1px solid var(--hair); border-radius:8px; background:var(--chrome); font:12px/1.55 var(--mono); overflow:hidden; }
+  .more .ln { padding:0 10px; white-space:pre; overflow:hidden; text-overflow:ellipsis; color:var(--t2); }
+  .more .ln.add { background:var(--addbg); color:var(--addfg); } .more .ln.del { background:var(--delbg); color:var(--delfg); }
+  .more .ln.dim { color:var(--t3); } .more .cap { padding:4px 10px; font:11px var(--sans); color:var(--t3); border-bottom:1px solid var(--hair); }
+  .more .pad { padding:6px 0; }
+  .live { margin-top:10px; display:flex; gap:8px; align-items:center; font:13px var(--sans); color:var(--t2); }
+  .live .ring { width:10px; height:10px; border-radius:50%; border:2px solid var(--acc); }
+
+  /* Raw view, for comparison: today's list */
+  .raw .r { display:grid; grid-template-columns:44px 56px 1fr; gap:8px; font-size:12px; line-height:20px; white-space:nowrap; }
+  .raw .r .tm { color:var(--t3); } .raw .r .tool { color:var(--acc); } .raw .r .x { overflow:hidden; text-overflow:ellipsis; color:var(--t2); }
+
+  .notes { background:#0b0d12; border:1px solid #1d2230; border-radius:10px; padding:14px 16px; color:#a7adbd; font:12.5px/1.55 var(--sans); overflow:auto; height:min(860px, calc(100vh - 70px)); min-height:600px; }
+  .notes h3 { margin:14px 0 6px; color:#e9ebf2; font-size:13px; } .notes h3:first-child { margin-top:0; }
+  .notes ul { margin:0; padding-left:16px; } .notes li { margin:3px 0; } .notes b { color:#e9ebf2; font-weight:600; }
+  .notes code { font:11.5px var(--mono); color:#c9cdd8; }
+</style>
+</head>
+<body class="sumi">
+<div class="hint">
+  <b>Readable agent activity</b><span>Same view in the agents board preview and the docked agent panel.</span>
+  <span class="grow"></span>
+  <span class="seg" id="themes"><button class="on" data-t="sumi">Sumi</button><button data-t="midnight">Midnight</button></span>
+</div>
+<div class="stage">
+  <div class="win">
+    <div class="bar">Agents</div>
+    <div class="body">
+      <div class="list">
+        <h2>Agents<span>4 agents in 1 session</span></h2>
+        <div class="card">
+          <div class="chead"><span class="m">✳</span>Kaze repo updates<span class="d">kaze · feat/dock-alerts-links</span></div>
+          <div class="arow on"><span class="dot run"></span><span class="ty">general-purpose</span><span>Lane D: dock tabs #133</span><span class="el">45m</span><span class="sub">Ran go vet and the ui tests</span></div>
+          <div class="arow"><span class="dot done"></span><span class="ty">general-purpose</span><span>Lane A: alert cards #9</span><span class="el">took 23m</span></div>
+          <div class="arow"><span class="dot done"></span><span class="ty">general-purpose</span><span>Lane L: path links #128</span><span class="el">took 20m</span></div>
+          <div class="arow"><span class="dot done"></span><span class="ty">general-purpose</span><span>Write the 0.27 bundle plan</span><span class="el">took 11m</span></div>
+        </div>
+      </div>
+      <div class="prev">
+        <div class="phead">
+          <div class="st">RUNNING <span class="ty">general-purpose</span><span class="el">45m</span></div>
+          <h1>Lane D: dock tabs #133</h1>
+          <div class="in">In Kaze repo updates · kaze</div>
+        </div>
+        <div class="tools"><span class="lbl">ACTIVITY</span><span>21 steps, 3 messages</span>
+          <span class="seg2" id="mode"><button class="on" data-m="read">Readable</button><button data-m="raw">Every step</button></span></div>
+        <div class="feed" id="feed"></div>
+      </div>
+    </div>
+  </div>
+  <aside class="notes">
+    <h3>What changes</h3>
+    <ul>
+      <li><b>The agent's own words lead</b>, as readable text with a coral bar, like Claude Code's transcript.</li>
+      <li><b>Each step reads as a sentence:</b> "Edited <code>scratch_gone_test.go</code> +8 −5", "Read 3 files", "Searched the code 4 times".</li>
+      <li><b>Shell commands use Claude's own description</b> of them ("Ran go vet and the ui tests"), with passed or failed. The command itself is one click away.</li>
+      <li><b>Runs of small steps fold together</b> (reads, searches, tool lookups), so the list stays short.</li>
+      <li><b>Click a step</b> to see the diff, the file list or the command and its last lines of output.</li>
+      <li><b>Every step</b> keeps today's full list for when you want it.</li>
+    </ul>
+    <h3>Where it comes from</h3>
+    <ul>
+      <li>All of it is already in the agent's transcript, which Kaze reads today for the messages: Claude writes a short description for every shell command, an edit carries the old and new text, and a result says whether it passed.</li>
+      <li>Still read only while the panel or preview is open, as today. No timers added.</li>
+    </ul>
+    <h3>Try it</h3>
+    <ul>
+      <li>Click the steps with ›.</li>
+      <li>Switch <b>Readable</b> and <b>Every step</b> to compare with today.</li>
+    </ul>
+  </aside>
+</div>
+<script>
+const feed = [
+  { say:'Starting D6: removing the scratch shell. I\'ll merge the feature branch first so the alert card changes are in, then update the tests that still use it.', t:'09:07' },
+  { step:'Merged <b>feat/dock-alerts-links</b> into this lane', meta:'<span class="ok">done</span>', more:{cap:'git merge feat/dock-alerts-links', lines:[['dim','Merge made by the \'ort\' strategy.'],['dim',' 21 files changed, 1170 insertions(+), 212 deletions(-)']]} },
+  { step:'Searched the code <b>4 times</b>', meta:'', more:{lines:[['','scratch|Scratch in internal/ui  · 31 matches'],['','win.fl|paneOwner|focusPane  · 18 matches'],['','func routeKey  · 1 match'],['','paneWindow  · 22 matches']]} },
+  { step:'Read <b>3 files</b>', meta:'', more:{lines:[['','internal/ui/agent.go'],['','internal/ui/window.go'],['','internal/ui/scratch_gone_test.go']]} },
+  { step:'Edited <span class="f">internal/ui/agent.go</span>', meta:'<span class="a">+1</span> <span class="r">−3</span>', more:{lines:[['del','	// The scratch shell shares its parent\'s agent state.'],['del','	if t.Parent != 0 {'],['del','		return win.agentOf(t.Parent)'],['add','	// Every session keeps its own agent state.']]} },
+  { step:'Edited <span class="f">internal/ui/scratch_gone_test.go</span>', meta:'<span class="a">+8</span> <span class="r">−5</span>', open:true, more:{lines:[['del','	// Ctrl+Shift+` is now the shell\'s.'],['del','	win, st, r, _, _, _, _ := paneWindow(t)'],['add','	// Ctrl+Shift+` (Ctrl+` on macOS) is no kaze action any more: it is the shell\'s.'],['add','	for goos, mods := range map[string]key.Modifiers{"windows": key.ModCtrl | key.ModShift, "darwin": key.ModCtrl} {'],['add','		km, _ := buildKeymap(goos, nil)'],['add','		if out := routeKey(goos, km, "`", mods, term.Modes{}); out.act != actNone {'],['add','			t.Fatalf("%s: the old scratch key runs %v", goos, out.act)'],['add','		}'],['add','	}'],['add','	win, _, r, _, _, _, _ := paneWindow(t)'],['dim','	n := len(win.mgr.Tabs())'],['del','	if got := ptyOf(st, 0).sent(); got == "" {'],['del','		t.Fatal("the key never reached the shell")']]} },
+  { step:'Ran <b>go vet and the ui tests</b>', meta:'<span class="bad">failed · 1 test</span>', more:{cap:'cd kaze-lane-d && gofmt -l internal cmd; go vet ./... && go test ./internal/ui/', lines:[['dim','--- FAIL: TestOldScratchKeyIsTheShells (0.01s)'],['dim','    scratch_gone_test.go:26: windows: the old scratch key runs actScratch'],['dim','FAIL	github.com/patrick-gogo/kaze-terminal/internal/ui	4.812s']]} },
+  { say:'RED as expected: the old Ctrl+Shift+` key still opens the scratch shell. Next I remove <code>actScratch</code> from the keymap and keep an old <code>scratch_shell</code> line in config.toml loading with a warning.', t:'09:12' },
+  { step:'Edited <b>3 files</b>', meta:'<span class="a">+6</span> <span class="r">−41</span>', more:{lines:[['','internal/ui/commands.go  +0 −12'],['','internal/ui/logic.go  +2 −9'],['','internal/config/config.go  +4 −20']]} },
+  { step:'Ran <b>the ui and config tests</b>', meta:'<span class="ok">passed</span>', more:{cap:'go test ./internal/ui/ ./internal/config/', lines:[['dim','ok  	github.com/patrick-gogo/kaze-terminal/internal/ui	5.102s'],['dim','ok  	github.com/patrick-gogo/kaze-terminal/internal/config	0.412s']]} },
+  { step:'Committed <b>"refactor(ui): Remove the scratch shell key"</b>', meta:'<span class="ok">c3f9a12</span>' },
+  { say:'D6 key part done. Now taking <code>Tab.Parent</code> out of the sidebar, Ctrl+Tab and session restore.', t:'09:14' },
+];
+const raw = [
+  ['09:07','Bash','cd /c/Users/john/Desktop/kaze-lane-d && git merge feat/dock-alerts-links'],
+  ['09:08','Bash','cd /c/Users/john/Desktop/kaze-lane-d && grep -n "scratch\\|Scratch" internal/ui/*.go | grep -v _test | …'],
+  ['09:08','Read','internal/ui/agent.go'],['09:08','Edit','internal/ui/agent.go'],['09:08','Read','internal/ui/window.go'],
+  ['09:09','Bash','cd /c/Users/john/Desktop/kaze-lane-d && grep -rn "win\\.fl\\b\\|win\\.fl\\.\\|paneOwner\\|paneKeyView\\|focusP…'],
+  ['09:09','Bash','cd /c/Users/john/Desktop/kaze-lane-d && grep -rln "win\\.fl\\b\\|win\\.fl\\.\\|floatOne\\|paneOf(\\|twoPanes\\|…'],
+  ['09:09','Bash','sleep 1; cat "C:\\Users\\john\\AppData\\Local\\Temp\\claude\\e910d71aae5ea1d1\\33ed9fcb-a91f-4309-b679-7e6f0e2…'],
+  ['09:09','ToolSearch',''],['09:10','Monitor',''],
+  ['09:10','Bash','cd /c/Users/john/Desktop/kaze-lane-d && sed -n 110,130p internal/ui/settings_commands_test.go'],
+  ['09:12','Read','internal/ui/scratch_gone_test.go'],['09:12','Edit','internal/ui/scratch_gone_test.go'],
+  ['09:12','Bash','cd /c/Users/john/Desktop/kaze-lane-d && sed -i \'s#^\\t"gioui.org/io/key"$#\\t"gioui.org/io/key"\\n\\n\\t"gi…'],
+  ['09:12','Bash','cd /c/Users/john/Desktop/kaze-lane-d && gofmt -l internal cmd; go vet ./... && git add -A inter…'],
+  ['09:13','Edit','internal/ui/commands.go'],['09:13','Edit','internal/ui/logic.go'],['09:13','Edit','internal/config/config.go'],
+  ['09:13','Bash','cd /c/Users/john/Desktop/kaze-lane-d && D="C:/Users/john/AppData/Local/Temp/claude/e910d71aae5ea1d1/33e…'],
+  ['09:14','Bash','cd /c/Users/john/Desktop/kaze-lane-d && git commit -q -m "refactor(ui): Remove the scratch shell key"'],
+];
+let mode = 'read';
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+function draw() {
+  const el = document.getElementById('feed');
+  if (mode === 'raw') {
+    el.innerHTML = '<div class="raw">' + raw.map(r => `<div class="r"><span class="tm">${r[0]}</span><span class="tool">${r[1]}</span><span class="x">${esc(r[2])}</span></div>`).join('') + '<div class="r"><span class="tm">09:14</span><span class="tm">… working</span></div></div>';
+    return;
+  }
+  el.innerHTML = feed.map((f, i) => {
+    if (f.say) return `<div class="say"><span class="t">${f.t}</span><p>${f.say}</p></div>`;
+    const m = f.more;
+    const more = m && f.open ? `<div class="more">${m.cap ? `<div class="cap">$ ${esc(m.cap)}</div>` : ''}<div class="pad">${m.lines.map(l => `<div class="ln ${l[0]}">${l[0]==='add'?'+ ':l[0]==='del'?'− ':''}${esc(l[1])}</div>`).join('')}</div></div>` : '';
+    return `<div class="step ${f.open ? 'open' : ''}" data-i="${i}"><span class="ch">${m ? '›' : ''}</span><span>${f.step}</span><span class="meta">${f.meta}</span></div>${more}`;
+  }).join('') + '<div class="live"><span class="ring"></span>Updating the sidebar and session restore…</div>';
+}
+document.addEventListener('click', e => {
+  const s = e.target.closest('[data-i]'); if (s) { const f = feed[+s.dataset.i]; if (f.more) { f.open = !f.open; draw(); } return; }
+  const m = e.target.closest('[data-m]'); if (m) { mode = m.dataset.m; document.querySelectorAll('#mode button').forEach(b => b.classList.toggle('on', b === m)); draw(); return; }
+  const t = e.target.closest('[data-t]'); if (t) { document.body.className = t.dataset.t; document.querySelectorAll('#themes button').forEach(b => b.classList.toggle('on', b === t)); }
+});
+draw();
+</script>
+</body>
+</html>
