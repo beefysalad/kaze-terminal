@@ -22,7 +22,19 @@
     <div class="section-intro"><a class="archive-back" href="index.html#changelog">Back to Kaze</a><h1 id="changelog-title">Changelog.</h1><p>Features, improvements and fixes, release by release. Kaze checks for updates in Settings, Updates.</p></div>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.27</span><span class="badge">Latest</span><time datetime="2026-11-04">Nov 4, 2026</time></div>
+        <div class="release-meta"><span class="version">0.28</span><span class="badge">Latest</span><time datetime="2026-11-04">Nov 4, 2026</time></div>
+        <div class="release-body">
+          <h3>Readable agent steps, and the battery on Windows</h3>
+          <ul>
+            <li><b>Read what your agents are doing:</b> a subagent’s panel and the agents board now read like Claude’s own transcript: the agent’s words first, then one sentence per step, like “Edited routes.ts +8 −5”, “Read 3 files” or “Ran the tests · failed · 1 test”. Click a step to see its diff or output. “Every step” brings back the full list.</li>
+            <li><b>Battery in the status bar:</b> on Windows laptops, the battery level sits at the far right of the status bar, with a bolt while charging, amber at 20% and red at 10%. It updates when Windows says it changed, so it costs nothing while idle. Desktops show nothing. macOS comes later.</li>
+            <li><b>Fixed: swapped agent names:</b> subagents of the same type started together keep their own task names instead of trading them.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.27</span><time datetime="2026-11-04">Nov 4, 2026</time></div>
         <div class="release-body">
           <h3>Servers docked under the terminal, and alerts you can read</h3>
           <ul>

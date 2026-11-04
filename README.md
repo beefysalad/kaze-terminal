@@ -1010,6 +1010,7 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 Done:
 
+- 0.28: readable agent activity in the panel and the board (#134); the battery in the status bar on Windows (#111, macOS in #139); subagents started together keep their own names (#135) (PR #140).
 - 0.27: workspace members open as tabs in the panel under the terminal and the scratch shell and floating panes are gone (#133); richer alert cards at the bottom right (#9); .md links with spaces or an earlier folder open (#128) (PR #136).
 - 0.26: an agents board you can work from, with filters, search, per-session cards and a live preview; one click on an agent line opens its panel and the project rail is gone (PR #131).
 - 0.25: a slim, capped subagent tray with safe clicks, a rail for the project you’re in (#125), clean session titles (#124) and colour emoji on Windows and macOS (#127).

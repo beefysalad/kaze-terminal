@@ -1,11 +1,11 @@
 # kaze handoff
 
-Last updated: 2026-11-04, battery, readable agent activity and agent names built on `feat/battery-activity-names` (0.28 next; the latest release is 0.27). Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-04, release 0.28 (battery on Windows, readable agent activity and agent names, PR #140). Read this first when you pick up kaze on another machine.
 
 ## Where things stand
 
-**Battery, readable agent activity and agent names (#111, #134, #135) are built on
-`feat/battery-activity-names`, not yet released. Release 0.28 is next.** Built in three worktree lanes
+**Release 0.28 ships PR #140: battery on Windows, readable agent activity and agent names (#111,
+#134, #135).** Next: the macOS battery (#139, on the owner's MacBook). Built in three worktree lanes
 (N, B, R) from `docs/superpowers/plans/2026-11-04-kaze-battery-activity-names.md`:
 
 - **#111 battery (Windows only):** an icon that fills to the level and the percent at the far right of

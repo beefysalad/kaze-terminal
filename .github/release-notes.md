@@ -1,9 +1,8 @@
-## What’s new in Kaze 0.27
+## What’s new in Kaze 0.28
 
-- **Servers in the panel:** workspace members open as tabs in the panel under the terminal, next to your subagents, instead of floating over Claude. Click a member’s tab to type in it, click the terminal to take the keyboard back, and use Expand to make it the main view.
-- **Richer alert cards:** a card at the bottom right names the session the way the sidebar does, shows its branch and slash command, Claude’s message or the start of its last reply, and how long the turn ran. Ctrl+Shift+J (⌘ J on macOS) opens the newest one.
-- **Links with spaces:** a .md path with a space in it, or one printed after its folder, is underlined whole and opens on Ctrl+click. When it can’t be found, Kaze says where it looked.
-- **Removed: the scratch shell and floating panes:** the docked panel replaces both. An old scratch_shell line in config.toml is ignored with a warning.
+- **Read what your agents are doing:** a subagent’s panel and the agents board now read like Claude’s own transcript: the agent’s words first, then one sentence per step, like “Edited routes.ts +8 −5”, “Read 3 files” or “Ran the tests · failed · 1 test”. Click a step to see its diff or output. “Every step” brings back the full list.
+- **Battery in the status bar:** on Windows laptops, the battery level sits at the far right of the status bar, with a bolt while charging, amber at 20% and red at 10%. It updates when Windows says it changed, so it costs nothing while idle. Desktops show nothing. macOS comes later.
+- **Fixed: swapped agent names:** subagents of the same type started together keep their own task names instead of trading them.
 
 ## Download
 
