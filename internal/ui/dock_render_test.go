@@ -1,11 +1,13 @@
 package ui
 
 import (
+	"encoding/json"
 	"image"
 	"image/png"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -266,4 +268,177 @@ func TestDockTabsFrameTiming(t *testing.T) {
 	measure("agent tab")
 	win.dockMember(m1.ID, false)
 	measure("member tab")
+}
+
+// act21Step is one tool call of the 21-step fixture: its hook summary, the
+// transcript input and, when it has one, its result.
+type act21Step struct {
+	tool, summary string
+	input         map[string]any
+	out           string
+	failed        bool
+}
+
+// act21 is the readable fixture of the mockup (docs/design/readable-activity-mockup.html):
+// 21 steps and 3 messages. A string is a note.
+func act21() []any {
+	cmd := func(c, desc string) map[string]any { return map[string]any{"command": c, "description": desc} }
+	file := func(p string) map[string]any { return map[string]any{"file_path": "/w/kaze/" + p} }
+	edit := func(p, old, nw string) map[string]any {
+		return map[string]any{"file_path": "/w/kaze/" + p, "old_string": old, "new_string": nw}
+	}
+	grep := func(p string) map[string]any { return map[string]any{"pattern": p, "path": "/w/kaze/internal/ui"} }
+	return []any{
+		"Starting D6: removing the scratch shell. I will merge the feature branch first so the alert card changes are in, then update the tests that still use it.",
+		act21Step{tool: "Bash", summary: "cd kaze-lane-d && git merge feat/dock-alerts-links", input: cmd("cd kaze-lane-d && git merge feat/dock-alerts-links", "Merge feat/dock-alerts-links into this lane"),
+			out: "Merge made by the ort strategy.\n 21 files changed, 1170 insertions(+), 212 deletions(-)"},
+		act21Step{tool: "Grep", summary: "scratch|Scratch", input: grep("scratch|Scratch")},
+		act21Step{tool: "Read", summary: "internal/ui/agent.go", input: file("internal/ui/agent.go")},
+		act21Step{tool: "Edit", summary: "internal/ui/agent.go", input: edit("internal/ui/agent.go",
+			"\t// The scratch shell shares its parent agent state.\n\tif t.Parent != 0 {\n\t\treturn win.agentOf(t.Parent)\n\t}\n\treturn nil",
+			"\t// Every session keeps its own agent state.\n\treturn nil"), out: "ok"},
+		act21Step{tool: "Read", summary: "internal/ui/window.go", input: file("internal/ui/window.go")},
+		act21Step{tool: "Grep", summary: "win.fl", input: grep(`win\.fl\b`)},
+		act21Step{tool: "Grep", summary: "paneOwner", input: grep("paneOwner|focusPane")},
+		act21Step{tool: "Bash", summary: "sleep 1; cat task.output", input: cmd("sleep 1; cat task.output", "Read the background task output"), out: "ok"},
+		act21Step{tool: "ToolSearch", input: map[string]any{"query": "monitor"}},
+		act21Step{tool: "Monitor", input: map[string]any{}},
+		act21Step{tool: "Bash", summary: "sed -n 110,130p internal/ui/settings_commands_test.go", input: cmd("sed -n 110,130p internal/ui/settings_commands_test.go", "Show the settings test lines"), out: "func TestX(t *testing.T) {"},
+		act21Step{tool: "Read", summary: "internal/ui/scratch_gone_test.go", input: file("internal/ui/scratch_gone_test.go")},
+		act21Step{tool: "Edit", summary: "internal/ui/scratch_gone_test.go", input: edit("internal/ui/scratch_gone_test.go",
+			"func TestOldScratchKey(t *testing.T) {\n\t// Ctrl+Shift+` is now the shell key.\n\twin, st, r, _, _, _, _ := paneWindow(t)\n\tn := len(win.mgr.Tabs())\n\tif got := ptyOf(st, 0).sent(); got == \"\" {\n\t\tt.Fatal(\"the key never reached the shell\")\n\t}\n}",
+			"func TestOldScratchKey(t *testing.T) {\n\t// Ctrl+Shift+` (Ctrl+` on macOS) is no kaze action any more.\n\tfor goos, mods := range map[string]key.Modifiers{\"windows\": key.ModCtrl | key.ModShift, \"darwin\": key.ModCtrl} {\n\t\tkm, _ := buildKeymap(goos, nil)\n\t\tif out := routeKey(goos, km, \"`\", mods, term.Modes{}); out.act != actNone {\n\t\t\tt.Fatalf(\"%s: the old scratch key runs %v\", goos, out.act)\n\t\t}\n\t}\n\twin, _, r, _, _, _, _ := paneWindow(t)\n\tn := len(win.mgr.Tabs())\n}"), out: "ok"},
+		act21Step{tool: "Bash", summary: "sed -i imports internal/ui/scratch_gone_test.go", input: cmd("sed -i s/x/y/ internal/ui/scratch_gone_test.go", "Fix the test imports"), out: ""},
+		act21Step{tool: "Bash", summary: "cd kaze-lane-d && gofmt -l internal cmd; go vet ./... && go test ./internal/ui/", input: cmd("cd kaze-lane-d && gofmt -l internal cmd; go vet ./... && go test ./internal/ui/", "Run go vet and the ui tests"),
+			out: "Exit code 1\n--- FAIL: TestOldScratchKeyIsTheShells (0.01s)\n    scratch_gone_test.go:26: windows: the old scratch key runs actScratch\nFAIL\tgithub.com/patrick-gogo/kaze-terminal/internal/ui\t4.812s", failed: true},
+		"RED as expected: the old Ctrl+Shift+backtick key still opens the scratch shell. Next I remove `actScratch` from the keymap and keep an old `scratch_shell` line in config.toml loading with a warning.",
+		act21Step{tool: "Edit", summary: "internal/ui/commands.go", input: edit("internal/ui/commands.go", "a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nk\nl", ""), out: "ok"},
+		act21Step{tool: "Edit", summary: "internal/ui/logic.go", input: edit("internal/ui/logic.go", "a\nb\nc\nd\ne\nf\ng\nh\ni", "x\ny"), out: "ok"},
+		act21Step{tool: "Edit", summary: "internal/config/config.go", input: edit("internal/config/config.go", "a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nk\nl\nm\nn\no\np\nq\nr\ns\nt", "w\nx\ny\nz"), out: "ok"},
+		act21Step{tool: "Bash", summary: "go test ./internal/ui/ ./internal/config/", input: cmd("go test ./internal/ui/ ./internal/config/", "Run the ui and config tests"),
+			out: "ok  \tgithub.com/patrick-gogo/kaze-terminal/internal/ui\t5.102s\nok  \tgithub.com/patrick-gogo/kaze-terminal/internal/config\t0.412s"},
+		act21Step{tool: "Bash", summary: `cd kaze-lane-d && git commit -q -m "refactor(ui): Remove the scratch shell key"`, input: cmd(`cd kaze-lane-d && git commit -m "refactor(ui): Remove the scratch shell key"`, ""),
+			out: "[lane/d c3f9a12] refactor(ui): Remove the scratch shell key\n 3 files changed, 6 insertions(+), 41 deletions(-)"},
+		"D6 key part done. Now taking `Tab.Parent` out of the sidebar, Ctrl+Tab and session restore.",
+		act21Step{tool: "Read", summary: "internal/ui/sidebar.go", input: file("internal/ui/sidebar.go")},
+	}
+}
+
+// act21Line is one transcript record of the fixture.
+func act21Line(kind string, at time.Time, block map[string]any) string {
+	b, _ := json.Marshal(map[string]any{"type": kind, "cwd": "/w/kaze", "timestamp": at.UTC().Format(time.RFC3339Nano), "message": map[string]any{"content": []any{block}}})
+	return string(b) + "\n"
+}
+
+// act21Scene starts agent "x" in tab a's session with the 21-step fixture as
+// its transcript and hook steps, and returns its key.
+func act21Scene(t testing.TB, win *window, a int) subagents.Key {
+	main := filepath.Join(t.TempDir(), "s.jsonl")
+	path := subagents.TranscriptPath(main, "x")
+	os.MkdirAll(filepath.Dir(path), 0o755)
+	var b strings.Builder
+	at := time.Date(2026, 11, 4, 9, 7, 0, 0, time.Local)
+	for i, p := range act21() {
+		at = at.Add(20 * time.Second)
+		switch v := p.(type) {
+		case string:
+			b.WriteString(act21Line("assistant", at, map[string]any{"type": "text", "text": v}))
+		case act21Step:
+			id := "t" + strconv.Itoa(i)
+			b.WriteString(act21Line("assistant", at, map[string]any{"type": "tool_use", "id": id, "name": v.tool, "input": v.input}))
+			if v.out != "" || v.tool == "Bash" {
+				b.WriteString(act21Line("user", at, map[string]any{"type": "tool_result", "tool_use_id": id, "is_error": v.failed, "content": v.out}))
+			}
+		}
+	}
+	os.WriteFile(path, []byte(b.String()), 0o644)
+	win.liveMgr.Store(win.mgr)
+	send := func(m notify.Msg) { m.Tab, m.Session = a, "s"; win.onNotify(m) }
+	send(notify.Msg{Kind: notify.KindTool, Tool: "Agent", AgentType: "general-purpose", Description: "Lane D: dock tabs #133", TaskPrompt: "Build lane D of the dock tabs plan."})
+	send(notify.Msg{Kind: notify.KindAgentStart, AgentID: "x", AgentType: "general-purpose", Transcript: main})
+	for _, p := range act21() {
+		if v, ok := p.(act21Step); ok {
+			send(notify.Msg{Kind: notify.KindTool, AgentID: "x", AgentType: "general-purpose", Tool: v.tool, Summary: v.summary})
+		}
+	}
+	return subagents.Key{Session: "s", ID: "x"}
+}
+
+// Opt-in development evidence for the readable Activity (issue #134), in the
+// docked panel and the board preview, at 1400x860 in Midnight and Sumi.
+func TestReadableRenders(t *testing.T) {
+	dir := os.Getenv("KAZE_DOCK_RENDER_DIR")
+	if dir == "" {
+		t.Skip("set KAZE_DOCK_RENDER_DIR for headless visual evidence")
+	}
+	os.MkdirAll(dir, 0o700)
+	size := image.Pt(1400, 860)
+	for _, key := range []string{"midnight", "sumi"} {
+		for _, state := range []string{"dock", "open", "every", "board"} {
+			win, _, r, a, _, _, _ := memberWindow(t)
+			win.km, _ = buildKeymap(runtime.GOOS, nil)
+			win.binds, _ = resolveBindings(runtime.GOOS, nil)
+			th, _ := theme.ByKey(key)
+			win.applyTheme(th)
+			win.dock.heightDp = 560
+			k := act21Scene(t, win, int(a.ID))
+			frame := func() { sizedFrame(t, win, r, size.X, size.Y) }
+			frame()
+			g := pageContext(size.X, size.Y)
+			switch state {
+			case "board":
+				win.openBoard(0)
+				win.boardSelect(k)
+			case "open":
+				win.openDock(a.ID, k)
+				s := win.dockOf(a.ID)
+				s.open = map[string]bool{"t13": true, "t15": true}
+			case "every":
+				win.actEvery = true
+				win.openDock(a.ID, k)
+			default:
+				win.openDock(a.ID, k)
+			}
+			frame()
+			frame()
+			g.Source = r.Source()
+			if err := win.frame(g); err != nil {
+				t.Fatal(err)
+			}
+			writeRender(t, g.Ops, size, filepath.Join(dir, "activity-"+key+"-"+state+".png"))
+		}
+	}
+}
+
+// Opt-in timing for the audit (KAZE_DOCK_BENCH=1): a still 1000x600 frame
+// with the 21-step agent tab in Readable, in Every step and with one detail
+// open. Run the "every" case on main (this fixture copied) to compare.
+func TestReadableFrameTiming(t *testing.T) {
+	if os.Getenv("KAZE_DOCK_BENCH") == "" {
+		t.Skip("set KAZE_DOCK_BENCH=1 to time panel frames")
+	}
+	win, _, r, a, _, _, _ := memberWindow(t)
+	k := act21Scene(t, win, int(a.ID))
+	win.openDock(a.ID, k)
+	s := win.dockOf(a.ID)
+	measure := func(name string) {
+		twoFrames(t, win, r)
+		const n = 200
+		start := time.Now()
+		for range n {
+			sideFrame(t, win, r)
+		}
+		per := time.Since(start) / n
+		allocs := testing.AllocsPerRun(50, func() { sideFrame(t, win, r) })
+		t.Logf("21 steps, %s: %v per frame, %.0f allocations per frame", name, per, allocs)
+	}
+	measure("readable")
+	s.open = map[string]bool{"t13": true}
+	s.follow = false
+	s.scroll = 0
+	measure("readable, one detail open")
+	s.open = nil
+	s.follow = true
+	win.actEvery = true
+	measure("every step")
 }
