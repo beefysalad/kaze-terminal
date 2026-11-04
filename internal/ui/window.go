@@ -1275,6 +1275,8 @@ func (win *window) runShortcut(gtx layout.Context, a action) {
 		win.togglePalette()
 	case actAgentsBoard:
 		win.toggleBoard()
+	case actFind:
+		win.openFind()
 	case actPaste:
 		if v, ok := win.keyView(); ok {
 			gtx.Execute(clipboard.ReadCmd{Tag: v.tag})

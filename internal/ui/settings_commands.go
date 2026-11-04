@@ -36,7 +36,7 @@ var shortcutGroups = []struct {
 }{
 	{"Sessions", []string{"new_tab", "new_branch_session", "close_tab", "next_tab", "prev_tab", "next_waiting"}},
 	{"Kaze", []string{"palette", "toggle_sidebar", "open_settings"}},
-	{"Editing and mouse", []string{"copy", "paste"}},
+	{"Editing and mouse", []string{"copy", "paste", "find"}},
 }
 
 func commandsSection() settingsSection {
