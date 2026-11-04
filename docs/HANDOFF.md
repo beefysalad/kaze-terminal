@@ -4,6 +4,16 @@ Last updated: 2026-11-04, release 0.27 (dock tabs, alert cards and path links, P
 
 ## Where things stand
 
+**Lander reworked (2026-11-04, branch `site/lander-rework`), inspired by herdr.dev:** a still, tilted wall of
+the existing screenshots (click any to open a lightbox), an HTML-drawn Kaze window with four moments (needs you,
+servers, a subagent, done) that shows the 0.27 panel and alert card until real captures exist, a README-style
+feature index, an FAQ and a closing install section. Styles and script moved to `site-assets/lander.css` and
+`lander.js`; `site.css` stays for `changelog.html`. Release markup in `#changelog` is unchanged. **When dropping
+the oldest lander release, remove the whole `<li class="release">` up to `</div>
+      </li>`**: a lazy
+match to the first `</li>` stops inside the bullet list, which left orphaned 0.23 and 0.24 bullets on the lander
+in the 0.26 and 0.27 releases (fixed here).
+
 **Release 0.27 ships PR #136: dock tabs, alert cards and path links (2026-11-04).** Next: #134
 (readable agent activity, mockup approved) and #135 (subagents started together swap names). Three issues in one
 bundle, built in three worktree lanes (L, A, D) from `docs/superpowers/plans/2026-11-04-kaze-dock-alerts-links.md`:
