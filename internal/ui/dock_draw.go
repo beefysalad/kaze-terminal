@@ -248,7 +248,8 @@ func (win *window) memberTabLabel(m tabs.TabID) dockTabLabel {
 	return l
 }
 
-// memberDot is a member tab's state colour: down, needs you, else up.
+// memberDot is a member tab's state colour: down, needs you, else up. Down
+// is UsageHigh, as the sidebar's member line draws a down status.
 func (c *chrome) memberDot(l dockTabLabel) color.NRGBA {
 	switch {
 	case l.down:

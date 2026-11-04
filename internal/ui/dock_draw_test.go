@@ -143,3 +143,21 @@ func TestDockContrast(t *testing.T) {
 		}
 	}
 }
+
+// A member tab's dot uses the sidebar's state colours (down, needs you, up)
+// and stands out at 3:1 on the tab row and on the shown tab, in every theme.
+func TestDockMemberDotContrast(t *testing.T) {
+	for _, th := range theme.All() {
+		c := newChrome()
+		c.setTheme(th)
+		for name, l := range map[string]dockTabLabel{
+			"down": {member: true, down: true}, "needs": {member: true, mk: markNeeds}, "up": {member: true},
+		} {
+			for bgName, bg := range map[string]color.NRGBA{"row": th.UI.Chrome, "shown tab": th.Term.BG} {
+				if got := contrast(c.memberDot(l), bg); got < 3 {
+					t.Errorf("%s: %s dot on %s contrast %.2f, want at least 3", th.Key, name, bgName, got)
+				}
+			}
+		}
+	}
+}
