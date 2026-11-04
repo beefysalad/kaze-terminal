@@ -276,13 +276,14 @@ opens what they point at. In a narrow window the least important parts give way 
 battery, then the tab count, then the resource label and meter, then other labels, so nothing
 overlaps.
 
-**Battery (Windows only for now):** at the far right, a small battery that fills to the level and
+**Battery (Windows and macOS):** at the far right, a small battery that fills to the level and
 the percent. A green bolt shows while it charges below 100% (a full battery shows no bolt, even
 plugged in). It turns amber at 20% or less and red at 10% or less. A desktop shows nothing, and
-Kaze stops asking after the first check. Kaze hears about changes from Windows instead of polling;
-if that is not available it reads at most once a minute, only on frames that are drawn anyway.
-Nothing is read while the window is minimised, or in bench mode. It is not clickable and has no
-tooltip. macOS shows no battery yet (#139).
+Kaze stops asking after the first check. Kaze hears about changes from the OS instead of polling
+(Windows power-setting notifications; on macOS the system's battery percent and power source
+alerts); if that is not available it reads at most once a minute, only on frames that are drawn
+anyway. Nothing is read while the window is minimised, or in bench mode. It is not clickable and
+has no tooltip.
 
 Hover **CPU · memory** for **Kaze resource usage**: Kaze itself first, followed by
 session totals for its observable child processes, including shells, agents and
@@ -1012,6 +1013,7 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 Done:
 
+- 0.29: the battery in the status bar on macOS (#139, PR #158); a compact About page built around the refreshed logo (PR #160).
 - 0.28.2: a .md link Claude printed opens the file Claude wrote or read, wherever it lives (#143, PR #153).
 - 0.28.1: the project moved to beefysalad/kaze-terminal; updates and the website follow it (PR #151).
 - 0.28: readable agent activity in the panel and the board (#134); the battery in the status bar on Windows (#111, macOS in #139); subagents started together keep their own names (#135) (PR #140).

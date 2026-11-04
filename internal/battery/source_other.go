@@ -1,15 +1,13 @@
-//go:build !windows
+//go:build !windows && !darwin
 
 package battery
 
-// Every OS but Windows, macOS included for now, reports no battery, so the
-// status bar never shows one there. The macOS IOKit source is a follow-up
-// issue (#139): adding source_darwin.go means narrowing this file's build tag
-// to !windows && !darwin.
+// Every OS but Windows and macOS reports no battery, so the status bar never
+// shows one there.
 
 type noSource struct{}
 
-// Native reports no battery off Windows.
+// Native reports no battery off Windows and macOS.
 func Native() Source { return noSource{} }
 
 func (noSource) Read() (Status, error)               { return Status{}, nil }

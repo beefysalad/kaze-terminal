@@ -2,6 +2,7 @@ package ui
 
 import (
 	"image"
+	"image/color"
 	"io"
 	"os/exec"
 	"runtime"
@@ -19,11 +20,26 @@ import (
 
 const aboutRepository = "https://github.com/beefysalad/kaze-terminal"
 
-// The name under the logo: kaze (風) is Japanese for "wind".
+// The lines under the logo: kaze (風) is Japanese for "wind".
 const (
-	aboutName    = "風・\"wind\""
 	aboutTagline = "Light, fast, and out of the way."
+	aboutKanji   = "風"
+	aboutMeaning = "Kaze means “wind”."
 )
+
+// The mark's lilac on dark pages, and a deeper one that holds contrast on light pages.
+var (
+	aboutMarkDark  = color.NRGBA{R: 0xc2, G: 0xb4, B: 0xeb, A: 0xff}
+	aboutMarkLight = color.NRGBA{R: 0x75, G: 0x63, B: 0xbf, A: 0xff}
+)
+
+// aboutGeom is where the About page put things, for tests.
+type aboutGeom struct {
+	lockup, by, card  image.Rectangle
+	meaning           image.Rectangle // the kanji and the meaning, together
+	wordX, markBottom int
+	byBase            int // the byline's baseline
+}
 
 func aboutSection() settingsSection {
 	return settingsSection{title: "About", draw: drawAbout, act: aboutAct}
@@ -73,8 +89,14 @@ func platformName(goos string) string {
 	return goos
 }
 
-// drawAbout is one roomy card: the logo with its byline, the name and tagline,
-// a version pill, a row of facts and the page's buttons.
+// isLight reports a light page colour.
+func isLight(c color.NRGBA) bool {
+	return 299*int(c.R)+587*int(c.G)+114*int(c.B) > 128*1000
+}
+
+// drawAbout is a compact, centred colophon: the lockup with "by Patrick",
+// the tagline and the name's meaning, then one card holding the facts with
+// the page's actions in its footer.
 func drawAbout(p *page, r image.Rectangle, win *window) int {
 	gtx, ops, col := p.gtx, p.gtx.Ops, p.col
 	if text := win.set.aboutCopy; text != "" {
@@ -86,127 +108,142 @@ func drawAbout(p *page, r image.Rectangle, win *window) int {
 		}
 		win.note("Build details copied")
 	}
+	geom := &win.set.about
+	*geom = aboutGeom{}
+	narrow := r.Dx() < gtx.Dp(420)
+	colW := min(r.Dx(), gtx.Dp(440))
+	cx0 := r.Min.X + (r.Dx()-colW)/2
+	centerX := func(w int) int { return r.Min.X + (r.Dx()-w)/2 }
+	y := r.Min.Y + gtx.Dp(14)
+
+	// The lockup, with "by Patrick" under the wordmark on the mark's baseline.
+	lw, bySize := gtx.Dp(208), unit.Sp(11)
+	if narrow {
+		lw, bySize = gtx.Dp(168), 10
+	}
+	lk := lockupShapes()
+	lg := lk.place(image.Pt(centerX(lw), y), lw)
+	markCol := aboutMarkDark
+	if isLight(col.bg) {
+		markCol = aboutMarkLight
+	}
+	lk.draw(ops, lg, markCol, col.title)
+	bc, bs, bb := p.monoBase("by Patrick", bySize, col.muted)
+	by := image.Rectangle{Min: image.Pt(lg.wordX, lg.markBottom-bb)}
+	by.Max = by.Min.Add(bs)
+	place(ops, bc, by.Min)
+	geom.lockup, geom.by, geom.wordX, geom.markBottom, geom.byBase = lg.rect, by, lg.wordX, lg.markBottom, by.Min.Y+bb
+	y = max(lg.rect.Max.Y, by.Max.Y) + gtx.Dp(20)
+
+	// The tagline, then the meaning.
+	tc, ts := p.textW(aboutTagline, 15, col.title, font.Medium)
+	place(ops, tc, image.Pt(centerX(ts.X), y))
+	y += ts.Y + gtx.Dp(2)
+	// The kanji and the sentence are set separately, a small gap apart: in one
+	// run the Japanese font's wide space opens a hole after the kanji.
+	kc, ks := p.text(aboutKanji, 12.5, col.muted)
+	mc, ms := p.text(aboutMeaning, 12.5, col.muted)
+	kgap := gtx.Dp(5)
+	mx := centerX(ks.X + kgap + ms.X)
+	mh := max(ks.Y, ms.Y)
+	place(ops, kc, image.Pt(mx, y+(mh-ks.Y)/2))
+	place(ops, mc, image.Pt(mx+ks.X+kgap, y+(mh-ms.Y)/2))
+	geom.meaning = image.Rect(mx, y, mx+ks.X+kgap+ms.X, y+mh)
+	y += mh + gtx.Dp(24)
+
+	// The card: fact rows, then the footer with the actions.
+	cardTop := y
 	rec := op.Record(ops)
-	top := r.Min.Y
-	y := top + gtx.Dp(40)
-
-	// The lockup: the mark, "kaze" and "by Patrick" under its right edge.
-	logoPx, wordSize := gtx.Dp(86), unit.Sp(64)
-	if r.Dx() < gtx.Dp(420) {
-		logoPx, wordSize = gtx.Dp(52), 38
-	}
-	word, ws := p.mono("kaze", wordSize, col.title)
-	by, bs := p.mono("by Patrick", 13, col.muted)
-	gap := gtx.Dp(18)
-	w := logoPx + gap + max(ws.X, bs.X)
-	x := r.Min.X + (r.Dx()-w)/2
-	if mark, img := markImage(logoPx); img != nil {
-		off := op.Offset(image.Pt(x, y)).Push(ops)
-		mark.Add(ops)
-		paint.PaintOp{}.Add(ops)
-		off.Pop()
-	}
-	textY := y + (logoPx-ws.Y-bs.Y)/2
-	place(ops, word, image.Pt(x+logoPx+gap, textY))
-	place(ops, by, image.Pt(x+logoPx+gap+ws.X-bs.X, textY+ws.Y))
-	y += logoPx + gtx.Dp(20)
-
-	center := func(call op.CallOp, size image.Point) {
-		place(ops, call, image.Pt(r.Min.X+(r.Dx()-size.X)/2, y))
-		y += size.Y
-	}
-	// The name in the bundled CJK font's reach, then the tagline.
-	nc, ns := p.text(aboutName, 14, col.muted)
-	dc, ds := p.text("  ·  ", 14, col.dim)
-	tc, ts := p.text(aboutTagline, 14, col.muted)
-	lineW := ns.X + ds.X + ts.X
-	lx := r.Min.X + (r.Dx()-lineW)/2
-	place(ops, nc, image.Pt(lx, y))
-	place(ops, dc, image.Pt(lx+ns.X, y))
-	place(ops, tc, image.Pt(lx+ns.X+ds.X, y))
-	y += max(ns.Y, ts.Y) + gtx.Dp(16)
-
-	// The version pill, green when up to date and accent when a newer one is out.
+	padX, labelW := gtx.Dp(18), gtx.Dp(78)
 	state, dot := "", col.done
 	switch {
 	case win.upd.newer:
-		state, dot = " · "+win.upd.rel.Version+" available", col.accent
+		state, dot = win.upd.rel.Version+" available", col.accent
 	case win.upd.checked && win.upd.err == "":
-		state = " · up to date"
+		state = "Up to date"
 	}
-	pc, ps := p.mono("Version "+version.Number+state, 12, col.title)
-	d, padX := gtx.Dp(7), gtx.Dp(12)
-	ph := ps.Y + gtx.Dp(10)
-	pw := padX + d + gtx.Dp(8) + ps.X + padX
-	px := r.Min.X + (r.Dx()-pw)/2
-	box := image.Rect(px, y, px+pw, y+ph)
-	paint.FillShape(ops, col.raised, clip.UniformRRect(box, ph/2).Op(ops))
-	stroke(ops, box, ph/2, col.line2)
-	paint.FillShape(ops, dot, clip.Ellipse(image.Rect(px+padX, y+(ph-d)/2, px+padX+d, y+(ph-d)/2+d)).Op(ops))
-	place(ops, pc, image.Pt(px+padX+d+gtx.Dp(8), y+(ph-ps.Y)/2))
-	y += ph + gtx.Dp(30)
-
-	// The facts row: four cells split by hairlines.
-	paint.FillShape(ops, col.line, clip.Rect(image.Rect(r.Min.X, y, r.Max.X, y+1)).Op())
-	facts := [][2]string{
-		{"VERSION", version.Number},
-		{"PLATFORM", platformName(runtime.GOOS)},
-		{"CHIP", runtime.GOARCH},
-		{"LICENSE", "MIT License"},
+	type fact struct{ label, value, extra string }
+	facts := []fact{
+		{"Version", version.Number, ""},
+		{"Platform", platformName(runtime.GOOS), runtime.GOARCH},
+		{"License", "MIT", ""},
 	}
-	cellW := r.Dx() / len(facts)
-	cellH := 0
 	for i, f := range facts {
-		cx := r.Min.X + i*cellW
 		if i > 0 {
-			paint.FillShape(ops, col.line, clip.Rect(image.Rect(cx, y, cx+1, y+gtx.Dp(62))).Op())
+			paint.FillShape(ops, col.line, clip.Rect(image.Rect(cx0, y, cx0+colW, y+1)).Op())
 		}
-		lc, ls := p.textW(f[0], 10, col.dim, font.SemiBold)
-		vc, vs := p.mono(f[1], 12.5, col.title)
-		place(ops, lc, image.Pt(cx+gtx.Dp(18), y+gtx.Dp(14)))
-		place(ops, vc, image.Pt(cx+gtx.Dp(18), y+gtx.Dp(14)+ls.Y+gtx.Dp(3)))
-		cellH = max(cellH, gtx.Dp(14)+ls.Y+gtx.Dp(3)+vs.Y+gtx.Dp(14))
+		top := gtx.Dp(11)
+		if i == 0 {
+			top = gtx.Dp(13)
+		}
+		lc, ls := p.text(f.label, 12.5, col.dim)
+		vc, vs := p.mono(f.value, 12.5, col.title)
+		h := max(ls.Y, vs.Y)
+		ry := y + top
+		place(ops, lc, image.Pt(cx0+padX, ry+(h-ls.Y)/2))
+		vx := cx0 + padX + labelW
+		place(ops, vc, image.Pt(vx, ry+(h-vs.Y)/2))
+		if f.extra != "" {
+			ec, es := p.mono(" · "+f.extra, 12.5, col.muted)
+			place(ops, ec, image.Pt(vx+vs.X, ry+(h-es.Y)/2))
+		}
+		if i == 0 && state != "" {
+			sc, ss := p.textW(state, 12, dot, font.Medium)
+			sx := cx0 + colW - padX - ss.X
+			place(ops, sc, image.Pt(sx, ry+(h-ss.Y)/2))
+			d := gtx.Dp(6)
+			dx, dy := sx-gtx.Dp(7)-d, ry+(h-d)/2
+			paint.FillShape(ops, dot, clip.Ellipse(image.Rect(dx, dy, dx+d, dy+d)).Op(ops))
+		}
+		y = ry + h + gtx.Dp(11)
 	}
-	y += cellH
-	paint.FillShape(ops, col.line, clip.Rect(image.Rect(r.Min.X, y, r.Max.X, y+1)).Op())
-	y += gtx.Dp(18)
 
-	// The buttons, centered.
-	type laid struct {
-		call     op.CallOp
-		size     image.Point
-		from, to int
+	// The footer: Copy at the left, Report and GitHub at the right; stacked when narrow.
+	footTop := y
+	fy := y + gtx.Dp(12)
+	fx0, fx1 := cx0+gtx.Dp(14), cx0+colW-gtx.Dp(14)
+	copyB := ctrl{kind: ctlButton, id: "about_copy", text: "Copy build info", ghost: true}
+	issueB := ctrl{kind: ctlButton, id: "about_issue", text: "Report an issue", ghost: true}
+	ghB := ctrl{kind: ctlButton, id: "about_github", text: "View on GitHub", solid: true}
+	put := func(b ctrl, w int, at func(size image.Point) image.Point) image.Point {
+		call, sz, from := p.ctrl(b, w)
+		pt := at(sz)
+		p.st.shift(from, len(p.st.controls), pt)
+		place(ops, call, pt)
+		return sz
 	}
-	var row []laid
-	bw, bgap := 0, gtx.Dp(10)
-	for _, b := range []ctrl{
-		{kind: ctlButton, id: "about_copy", text: "Copy build info"},
-		{kind: ctlButton, id: "about_github", text: "View on GitHub"},
-		{kind: ctlButton, id: "about_issue", text: "Report an issue", ghost: true},
-	} {
-		call, sz, from := p.ctrl(b, 0)
-		row = append(row, laid{call, sz, from, len(p.st.controls)})
-		bw += sz.X + bgap
+	if narrow {
+		for _, b := range []ctrl{ghB, copyB, issueB} {
+			sz := put(b, fx1-fx0, func(image.Point) image.Point { return image.Pt(fx0, fy) })
+			fy += sz.Y + gtx.Dp(8)
+		}
+		fy -= gtx.Dp(8)
+	} else {
+		gap := gtx.Dp(8)
+		sz := put(copyB, 0, func(image.Point) image.Point { return image.Pt(fx0, fy) })
+		right := fx1
+		var gs image.Point
+		gs = put(ghB, 0, func(s image.Point) image.Point { return image.Pt(right-s.X, fy) })
+		right -= gs.X + gap
+		put(issueB, 0, func(s image.Point) image.Point { return image.Pt(right-s.X, fy) })
+		fy += max(sz.Y, gs.Y)
 	}
-	bx := r.Min.X + (r.Dx()-(bw-bgap))/2
-	bh := 0
-	for _, l := range row {
-		at := image.Pt(bx, y)
-		p.st.shift(l.from, l.to, at)
-		place(ops, l.call, at)
-		bx += l.size.X + bgap
-		bh = max(bh, l.size.Y)
-	}
-	y += bh + gtx.Dp(18)
+	y = fy + gtx.Dp(12)
 	call := rec.Stop()
 
-	card := image.Rect(r.Min.X, top, r.Max.X, y)
-	paint.FillShape(ops, col.card, clip.UniformRRect(card, gtx.Dp(12)).Op(ops))
+	card := image.Rect(cx0, cardTop, cx0+colW, y)
+	rad := gtx.Dp(12)
+	paint.FillShape(ops, col.card, clip.UniformRRect(card, rad).Op(ops))
+	foot := image.Rect(cx0, footTop, cx0+colW, y)
+	paint.FillShape(ops, col.raised, clip.RRect{Rect: foot, SE: rad, SW: rad}.Op(ops))
+	paint.FillShape(ops, col.line, clip.Rect(image.Rect(cx0, footTop, cx0+colW, footTop+1)).Op())
 	call.Add(ops)
-	stroke(ops, card, gtx.Dp(12), col.line)
+	stroke(ops, card, rad, col.line)
 	p.st.cards = append(p.st.cards, card)
+	geom.card = card
+
 	y += gtx.Dp(18)
-	cc, cs := p.text("Made with Go and Gio, for the long session.", 12, col.dim)
-	center(cc, cs)
-	return y + gtx.Dp(16)
+	nc, ns := p.text("Made with Go and Gio, for the long session.", 11.5, col.dim)
+	place(ops, nc, image.Pt(centerX(ns.X), y))
+	return y + ns.Y + gtx.Dp(16)
 }
