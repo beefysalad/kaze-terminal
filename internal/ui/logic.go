@@ -34,6 +34,7 @@ const (
 	actPalette
 	actAgentsBoard
 	actNewBranchSession
+	actFind
 )
 
 // actionByName maps config [keys] names to actions; it must match config.KnownActions.
@@ -41,7 +42,7 @@ var actionByName = map[string]action{
 	"new_branch_session": actNewBranchSession, "new_tab": actNewTab, "close_tab": actCloseTab, "next_tab": actNextTab,
 	"prev_tab": actPrevTab, "copy": actCopy, "paste": actPaste, "open_settings": actOpenSettings,
 	"toggle_sidebar": actToggleSidebar, "next_waiting": actNextWaiting, "palette": actPalette,
-	"agents_board": actAgentsBoard,
+	"agents_board": actAgentsBoard, "find": actFind,
 }
 
 // maxGrid matches term's per-dimension clamp, so a huge window never asks for more.
@@ -86,6 +87,7 @@ func defaultBindings(goos string) map[string]input.Shortcut {
 			"palette":            {Name: "K", Mods: key.ModCommand},
 			"agents_board":       {Name: "A", Mods: key.ModCommand | key.ModShift},
 			"new_branch_session": {Name: "N", Mods: key.ModCommand | key.ModShift},
+			"find":               {Name: "F", Mods: key.ModCommand},
 		}
 	}
 	return map[string]input.Shortcut{
@@ -98,6 +100,7 @@ func defaultBindings(goos string) map[string]input.Shortcut {
 		"palette":            {Name: "K", Mods: cs},
 		"agents_board":       {Name: "A", Mods: cs},
 		"new_branch_session": {Name: "N", Mods: cs},
+		"find":               {Name: "F", Mods: cs},
 	}
 }
 

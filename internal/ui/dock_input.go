@@ -91,7 +91,7 @@ loop:
 				continue
 			}
 			pass = append(pass, ev)
-			if e.State == key.Press && win.km[input.Shortcut{Name: e.Name, Mods: e.Modifiers}] == actPalette {
+			if e.State == key.Press && takesKeys(win.km[input.Shortcut{Name: e.Name, Mods: e.Modifiers}]) {
 				// As in termEvents: leave the rest in Gio's queue for the
 				// palette's editor, so typing after the shortcut lands there.
 				break loop

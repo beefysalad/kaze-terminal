@@ -49,9 +49,11 @@ func (win *window) drawDockMember(gtx layout.Context, m tabs.TabID, body image.R
 	off := op.Offset(grid.Min).Push(ops)
 	tg := gtx
 	tg.Constraints = layout.Exact(image.Pt(max(grid.Dx(), 0), max(grid.Dy(), 0)))
+	rend.SetMarks(win.findMarksFor(m, true))
 	rend.Layout(tg, t.Session, &sel)
 	off.Pop()
 	g.Pop()
+	rend.DrawScrollMarks(gtx, findTrack(gtx, grid, body)) // nothing without marks
 	area := clip.Rect(body).Push(ops)
 	event.Op(ops, tag)
 	cw, ch := rend.CellSize()
