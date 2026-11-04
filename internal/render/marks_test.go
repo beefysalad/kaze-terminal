@@ -6,10 +6,18 @@ import (
 	"time"
 )
 
-// waitFor polls cond under the session lock for at most two seconds.
+// waitFor polls cond under the session lock for at most two seconds, draining
+// change signals so the session's reader never blocks on a full channel.
 func (h *harness) waitFor(cond func() bool) {
 	h.t.Helper()
 	for end := time.Now().Add(2 * time.Second); time.Now().Before(end); time.Sleep(5 * time.Millisecond) {
+		for drained := false; !drained; {
+			select {
+			case <-h.changed:
+			default:
+				drained = true
+			}
+		}
 		h.s.Lock()
 		ok := cond()
 		h.s.Unlock()

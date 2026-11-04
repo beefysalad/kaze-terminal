@@ -97,6 +97,17 @@ type Renderer struct {
 	markCur       int32   // marks.Cur at the last snapshot
 	markTop       int     // the stable line of visible row 0 at the last snapshot
 	find          findInk
+	markFirst     int    // the stable line of the oldest line held (the grid's first on the alt screen)
+	markTotal     int    // the lines held: history plus the screen, or the screen alone on the alt screen
+	markView      int    // the stable line of visible row 0
+	scrollOps     op.Ops // the recorded scroll marks, replayed while nothing changed
+	scrollCall    op.CallOp
+	scrollKey     scrollKey
+	scrollReady   bool
+	scrollPaint   scrollPaint
+	markYs        []int32 // the marks' pixel rows, one per row, reused
+	marksRecorded int     // times the scroll marks were recorded, read by tests
+	marksAdded    int     // times they were added to a frame, read by tests
 	lastSel       Selection
 	links         Links  // finds the web links to style, reused every frame
 	linkWas       []bool // per visible row: had a styled link last snapshot
@@ -160,6 +171,7 @@ func (r *Renderer) Release() {
 	r.strips, r.drawn, r.snap, r.snapRows = nil, nil, nil, nil
 	r.snapSel, r.drawnSel, r.lastSel = nil, nil, Selection{}
 	r.snapHit, r.drawnHit, r.hadMarks = nil, nil, false
+	r.scrollOps, r.scrollCall, r.scrollReady, r.markYs = op.Ops{}, op.CallOp{}, false, nil
 	r.selectionRows = nil
 	r.links, r.linkWas, r.linkNow, r.linkQueued = Links{}, nil, nil, nil
 	r.curImg, r.curDrawn = nil, cursorState{}
@@ -234,6 +246,10 @@ func (r *Renderer) snapshot(s *term.Session, sel *Selection) (held bool) {
 	base := scr.ScrollbackLen() - scr.ViewOffset() // absolute row of visible row 0
 	top := int(scr.Evicted()) + base               // its stable line, as find counts lines
 	hits := r.queueMarkRows(top)
+	r.markFirst, r.markTotal, r.markView = int(scr.Evicted()), scr.ScrollbackLen()+rows, top
+	if scr.OnAltScreen() { // only the grid is searched there
+		r.markFirst, r.markTotal = int(scr.Evicted())+scr.ScrollbackLen(), rows
+	}
 	cur := Selection{}
 	if sel != nil && sel.Active {
 		cur = *sel
