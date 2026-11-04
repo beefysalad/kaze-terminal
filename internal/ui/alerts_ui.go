@@ -39,7 +39,8 @@ type inbox struct {
 type queued struct {
 	m     notify.Msg
 	seq   uint64
-	shell uint64 // shellSeq of the tab when the message arrived
+	shell uint64    // shellSeq of the tab when the message arrived
+	at    time.Time // when it arrived; zero means the frame's time
 }
 
 type pending struct {
@@ -61,7 +62,7 @@ func (b *inbox) put(m notify.Msg, shell uint64) {
 		p = &pending{}
 		b.byTab[id] = p
 	}
-	q := queued{m, b.seq, shell}
+	q := queued{m, b.seq, shell, time.Now()}
 	switch m.Kind {
 	case notify.KindNeeds:
 		p.needs = &q
@@ -212,13 +213,39 @@ func (win *window) deliver(q queued, now time.Time) {
 	if t := win.shownTab(); t != nil {
 		active = t.ID
 	}
+	var ran time.Duration
 	if t := win.mgr.Lookup(tabs.TabID(m.Tab)); t != nil {
 		win.noteAgent(m, t.ID, q.shell)
+		ran = win.noteTurn(t.ID, m.Kind, cmp.Or(q.at, now))
 		win.wantCount(t)
 		win.staleBranch(t) // a background row has no other reason to re-read its branch
 	}
 	win.alerts.doneToast = win.opt.Config.DoneToast
-	win.alerts.apply(m, active, win.focused, win.mgr.Has, now)
+	if _, shown := win.alerts.apply(m, active, win.focused, win.mgr.Has, now); shown && ran > 0 {
+		win.alerts.toasts[len(win.alerts.toasts)-1].Ran = ran // apply appends the tab's card last
+	}
+}
+
+// noteTurn keeps when the tab's turn began: a prompt starts it, a done or an
+// interrupt ends it, and a done returns how long it ran (0 when unknown).
+func (win *window) noteTurn(id tabs.TabID, k notify.Kind, at time.Time) (ran time.Duration) {
+	a, ok := win.agents[id]
+	if !ok {
+		return 0
+	}
+	switch k {
+	case notify.KindPrompt:
+		a.since = at
+	case notify.KindDone, notify.KindInterrupt:
+		if !a.since.IsZero() && at.After(a.since) && k == notify.KindDone {
+			ran = at.Sub(a.since)
+		}
+		a.since = time.Time{}
+	default:
+		return 0
+	}
+	win.agents[id] = a
+	return ran
 }
 
 // selectTab is the one tab switch for a tab click and a toast's "Go ›".

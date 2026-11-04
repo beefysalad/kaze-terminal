@@ -38,6 +38,11 @@ type toast struct {
 	// cleared by visiting its tab, only by its close button or its timer.
 	Run   uint64
 	Title string
+
+	// Ran is how long the turn a done alert ends took, 0 when unknown. Agent
+	// names the card's mark when set ("workspace" for a run summary).
+	Ran   time.Duration
+	Agent string
 }
 
 // alerts holds the tab marks and toasts. Used only on the UI goroutine.
