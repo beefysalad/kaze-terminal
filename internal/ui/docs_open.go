@@ -4,6 +4,7 @@ import (
 	"github.com/patrick-gogo/kaze-terminal/internal/gitinfo"
 	"github.com/patrick-gogo/kaze-terminal/internal/mdoc"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -48,7 +49,8 @@ func (win *window) openDocRef(t *tabs.Tab, inPane bool, ref string) {
 // is a file. Absolute refs are tried first, in order, then relative ones against
 // the session folder and its git top, so a folder printed earlier on the line
 // wins over a same-named file in the session folder. A miss names the folder of
-// the last absolute ref tried, else the session folder.
+// the last absolute ref tried that reads as one (see noteFolder), else the
+// session folder.
 func (win *window) openDocRefs(t *tabs.Tab, inPane bool, refs []string) {
 	if len(refs) == 0 {
 		return
@@ -72,7 +74,7 @@ func (win *window) openDocRefs(t *tabs.Tab, inPane bool, refs []string) {
 			if isAbs != abs {
 				continue
 			}
-			if abs {
+			if abs && noteFolder(full) {
 				where = filepath.Dir(full)
 			}
 			if p, e := mdoc.Resolve(ref, roots); e == nil {
@@ -85,6 +87,17 @@ func (win *window) openDocRefs(t *tabs.Tab, inPane bool, refs []string) {
 		where = dir
 	}
 	win.note(cleanText("Can't find " + name + " in " + tildeHome(where, win.home)))
+}
+
+// noteFolder reports whether full's folder can name a miss: a path without
+// spaces, or one whose folder exists. "/tmp then edit docs/notes.md" is a
+// command line, not a folder.
+func noteFolder(full string) bool {
+	if !strings.Contains(full, " ") {
+		return true
+	}
+	fi, err := os.Stat(filepath.Dir(full))
+	return err == nil && fi.IsDir()
 }
 
 // absRef is ref as a full path, with ~ expanded, and whether it is absolute.

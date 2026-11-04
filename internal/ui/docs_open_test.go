@@ -3,6 +3,7 @@ package ui
 import (
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -140,6 +141,33 @@ func TestDocMissNamesTheLastFolderTried(t *testing.T) {
 	a.Dir = t.TempDir()
 	far := filepath.Join(t.TempDir(), "T-1")
 	win.openDocRefs(a, false, []string{"plan.md", filepath.Join(far, "plan.md")})
+	if want := "Can't find plan.md in " + tildeHome(far, win.home); win.notice != want {
+		t.Fatalf("note %q, want %q", win.notice, want)
+	}
+}
+
+// A missed "cd <tmp> then edit docs/notes.md" names the session folder, not
+// "<tmp> then edit docs": an absolute candidate with spaces is no folder.
+func TestDocMissSkipsSpacedFolder(t *testing.T) {
+	cwd := t.TempDir()
+	win := ctrlClickLine(t, "cd "+t.TempDir()+" then edit docs/notes.md", "notes.md", cwd)
+	if want := "Can't find notes.md in " + tildeHome(cwd, win.home); win.notice != want {
+		t.Fatalf("note %q, want %q", win.notice, want)
+	}
+}
+
+// A missed path with spaces in an existing folder still names that folder.
+func TestDocMissNamesExistingSpacedFolder(t *testing.T) {
+	win := testWindow(t, &recStarter{})
+	win.ui = newChrome()
+	win.topFn = func(string) string { return "" }
+	a, _ := win.mgr.New()
+	a.Dir = t.TempDir()
+	far := filepath.Join(t.TempDir(), "My Notes")
+	if err := os.MkdirAll(far, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	win.openDocRefs(a, false, []string{filepath.Join(far, "plan.md"), "Notes/plan.md"})
 	if want := "Can't find plan.md in " + tildeHome(far, win.home); win.notice != want {
 		t.Fatalf("note %q, want %q", win.notice, want)
 	}
