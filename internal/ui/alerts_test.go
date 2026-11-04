@@ -148,8 +148,8 @@ func TestReasonIsCleanedAndCapped(t *testing.T) {
 	if strings.ContainsAny(got, "\x1b\x07‮") {
 		t.Fatalf("control chars kept: %q", got)
 	}
-	if n := utf8.RuneCountInString(got); n > maxReason {
-		t.Fatalf("reason has %d runes, want at most %d", n, maxReason)
+	if n := utf8.RuneCountInString(got); n != 160 || maxReason != 160 {
+		t.Fatalf("reason has %d runes (cap %d), want 160", n, maxReason)
 	}
 	if !strings.HasPrefix(got, "a[31mb") {
 		t.Fatalf("reason %q", got[:10])

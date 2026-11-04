@@ -23,7 +23,7 @@ const (
 
 const (
 	maxToasts = 3
-	maxReason = 120
+	maxReason = 160
 )
 
 // toast is one alert card. Text is the cleaned reason; the tab title is read
