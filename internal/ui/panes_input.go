@@ -182,23 +182,16 @@ func (win *window) focusPane(id tabs.TabID) {
 func (win *window) focusSession() { win.moveKeys(0) }
 
 // closePane is a pane's ×: a member leaves the set and goes back to the shared
-// size, still running; the scratch shell is only hidden.
+// size, still running.
 func (win *window) closePane(id tabs.TabID) {
-	o := win.fl.owner(id)
-	if o == 0 {
+	if o := win.fl.owner(id); o == 0 {
 		return
 	}
 	if win.fl.keys == id {
 		win.focusSession()
 	}
-	p := win.fl.set(o).find(id)
-	switch p.kind {
-	case paneScratch:
-		p.hidden = true
-	default:
-		win.fl.remove(id)
-		win.mgr.Dock(id)
-	}
+	win.fl.remove(id)
+	win.mgr.Dock(id)
 	win.w.Invalidate()
 }
 

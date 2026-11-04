@@ -126,8 +126,8 @@ func buildSide(in sideInput) sideModel {
 	var members [][]sideRow // every row per group, unfiltered
 	var loose []sideRow
 	for _, t := range in.Tabs {
-		if _, ok := in.Member(t); ok || t.Parent != 0 {
-			continue // members and scratch shells are not sessions
+		if _, ok := in.Member(t); ok {
+			continue // members are not sessions
 		}
 		loc := in.Loc(t)
 		var a agentState

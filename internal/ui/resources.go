@@ -132,11 +132,7 @@ func (win *window) resourceRoots() []resources.Root {
 		if pid == 0 {
 			continue
 		}
-		owner := t.ID
-		if t.Parent != 0 {
-			owner = t.Parent
-		}
-		roots = append(roots, resources.Root{PID: pid, Owner: int(owner), Name: names[owner]})
+		roots = append(roots, resources.Root{PID: pid, Owner: int(t.ID), Name: names[t.ID]})
 	}
 	return roots
 }

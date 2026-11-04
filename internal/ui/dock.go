@@ -143,14 +143,14 @@ func (win *window) dockHeight() int {
 }
 
 // dockOwner is the session whose panel shows under the terminal: the shown
-// tab, members included, unless it is a scratch shell; 0 when Settings, the
-// board or a document covers the terminal.
+// tab, members included; 0 when Settings, the board or a document covers the
+// terminal.
 func (win *window) dockOwner() tabs.TabID {
 	if win.mgr == nil {
 		return 0
 	}
 	t := win.shownTab()
-	if t == nil || t.Parent != 0 {
+	if t == nil {
 		return 0
 	}
 	return t.ID
@@ -499,4 +499,24 @@ func (win *window) expandMember(id tabs.TabID) {
 	win.mgr.Dock(id)
 	win.selectTab(id)
 	win.side.reveal = true
+}
+
+// closeSessionDock forgets closing session's panel: its members go back on the
+// shared size, still running, and nothing of it is drawn again.
+func (win *window) closeSessionDock(session tabs.TabID) {
+	if d := win.dock.by[session]; d != nil {
+		for _, e := range d.entries {
+			if e.member != 0 {
+				win.mgr.Dock(e.member)
+			}
+		}
+		win.dropKeysOf(session)
+		delete(win.dock.by, session)
+	}
+	if set := win.fl.sets[session]; set != nil {
+		for _, p := range set.panes {
+			win.mgr.Dock(p.id)
+		}
+		delete(win.fl.sets, session)
+	}
 }

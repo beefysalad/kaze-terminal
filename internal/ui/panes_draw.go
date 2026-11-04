@@ -3,7 +3,6 @@ package ui
 import (
 	"image"
 	"image/color"
-	"runtime"
 	"slices"
 
 	"gioui.org/io/event"
@@ -115,10 +114,10 @@ func (c *chrome) layoutPane(gtx layout.Context, r image.Rectangle, lk paneLook) 
 }
 
 // paneOwner is the session panes float over: the shown tab when it is a
-// session, else 0 (a member or a scratch shell in front, or Settings).
+// session, else 0 (a member in front, or Settings).
 func (win *window) paneOwner() tabs.TabID {
 	t := win.shownTab()
-	if t == nil || t.Parent != 0 {
+	if t == nil {
 		return 0
 	}
 	if _, member := win.isMember(t); member {
@@ -128,8 +127,7 @@ func (win *window) paneOwner() tabs.TabID {
 }
 
 // paneStep keeps the pane model in line with the tabs before drawing: the
-// shown tab is never also a pane, gone tabs leave their sets, and an orphaned
-// scratch shell closes.
+// shown tab is never also a pane and gone tabs leave their sets.
 func (win *window) paneStep(active *tabs.Tab) {
 	if active != nil && win.fl.owner(active.ID) != 0 {
 		// It floated: back to the shared size. Only then, so the docked
@@ -137,21 +135,7 @@ func (win *window) paneStep(active *tabs.Tab) {
 		win.mgr.Dock(active.ID)
 		win.fl.remove(active.ID)
 	}
-	orphans, released := win.fl.prune(win.mgr.Has)
-	for _, id := range orphans {
-		win.mgr.Close(id)
-	}
-	for _, t := range win.mgr.Tabs() {
-		if t.Parent != 0 && !win.mgr.Has(t.Parent) {
-			win.mgr.Close(t.ID) // its session is gone
-		}
-	}
-	if active != nil && active.Parent != 0 {
-		// A scratch shell is never the main view: show its session instead.
-		if win.mgr.Has(active.Parent) {
-			win.mgr.SetActive(active.Parent)
-		}
-	}
+	released := win.fl.prune(win.mgr.Has)
 	for _, id := range released {
 		win.mgr.Dock(id)
 	}
@@ -195,16 +179,6 @@ func (win *window) paneViews(gtx layout.Context, termRect image.Rectangle, cw, c
 // paneLook is what pane p's header says.
 func (win *window) paneLook(p *pane, t *tabs.Tab, front bool) paneLook {
 	lk := paneLook{front: front, bg: win.pal.BG, mark: win.alerts.markOf(p.id)}
-	if p.kind == paneScratch {
-		lk.title = "scratch shell"
-		if s := win.mgr.Lookup(t.Parent); s != nil {
-			lk.folder = cleanText(tildeHome(win.scratchDir(s), win.home))
-		}
-		if sc, ok := win.binds["scratch_shell"]; ok {
-			lk.key = formatShortcut(runtime.GOOS, sc)
-		}
-		return lk
-	}
 	lk.title, lk.color, lk.expand = t.Title, t.Color, true
 	for _, r := range win.curRuns() {
 		for _, m := range r.Members {
@@ -214,15 +188,6 @@ func (win *window) paneLook(p *pane, t *tabs.Tab, front bool) paneLook {
 		}
 	}
 	return lk
-}
-
-// scratchDir is where a session's scratch shell starts: the session's last
-// reported folder, else the folder it started in.
-func (win *window) scratchDir(session *tabs.Tab) string {
-	if cwd := win.locOf(session).cwd; cwd != "" {
-		return cwd
-	}
-	return session.Dir
 }
 
 // drawPanes draws the views back to front, each with its own renderer, and

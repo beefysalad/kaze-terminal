@@ -26,7 +26,7 @@ func titleAt(w int, mac bool, side int) titleLayout {
 func TestTitleSameLayoutBothPlatforms(t *testing.T) {
 	mac, win := titleAt(1200, true, 248), titleAt(1200+3*46, false, 248)
 	for name, pair := range map[string][2]image.Rectangle{
-		"Search": {mac.Search, win.Search}, "Scratch": {mac.Scratch, win.Scratch},
+		"Search": {mac.Search, win.Search},
 		"Agents": {mac.Agents, win.Agents}, "Gear": {mac.Gear, win.Gear}, "Plus": {mac.Plus, win.Plus},
 	} {
 		if pair[0].Empty() || pair[0] != pair[1] {
@@ -83,7 +83,7 @@ func TestTitleSearchClamp(t *testing.T) {
 	if l.Search.Dx() != 400 {
 		t.Fatalf("wide search %v", l.Search)
 	}
-	left, right := l.Crumb.Max.X+8, l.Scratch.Min.X-8
+	left, right := l.Crumb.Max.X+8, l.Agents.Min.X-8
 	if mid := (l.Search.Min.X + l.Search.Max.X) / 2; abs(mid-(left+right)/2) > 1 {
 		t.Fatalf("search %v not centred in %d..%d", l.Search, left, right)
 	}
@@ -113,13 +113,13 @@ func TestTitleCrumbDropOrder(t *testing.T) {
 				t.Fatalf("%dpx: repo dropped before the command", w)
 			}
 		}
-		for name, r := range map[string]image.Rectangle{"toggle": l.Toggle, "plus": l.Plus, "search": l.Search, "scratch": l.Scratch, "agents": l.Agents, "gear": l.Gear} {
+		for name, r := range map[string]image.Rectangle{"toggle": l.Toggle, "plus": l.Plus, "search": l.Search, "agents": l.Agents, "gear": l.Gear} {
 			if r.Empty() {
 				t.Fatalf("%dpx: %s gone", w, name)
 			}
 		}
-		if l.Crumb.Max.X > l.Search.Min.X || l.Search.Max.X > l.Scratch.Min.X {
-			t.Fatalf("%dpx: overlap crumb %v search %v scratch %v", w, l.Crumb, l.Search, l.Scratch)
+		if l.Crumb.Max.X > l.Search.Min.X || l.Search.Max.X > l.Agents.Min.X {
+			t.Fatalf("%dpx: overlap crumb %v search %v agents %v", w, l.Crumb, l.Search, l.Agents)
 		}
 	}
 	if !sawNoCmd || !sawNoRepo {
@@ -133,15 +133,15 @@ func TestTitleLongShortcutFits(t *testing.T) {
 	if !l.SearchIconOnly || l.SearchKey {
 		t.Fatalf("a long key cap should go first: %+v", l)
 	}
-	if l.Search.Dx() != 30 || l.Search.Min.X < l.Lead.Max.X || l.Search.Max.X > l.Scratch.Min.X {
-		t.Fatalf("compact search %v lead %v scratch %v", l.Search, l.Lead, l.Scratch)
+	if l.Search.Dx() != 30 || l.Search.Min.X < l.Lead.Max.X || l.Search.Max.X > l.Agents.Min.X {
+		t.Fatalf("compact search %v lead %v agents %v", l.Search, l.Lead, l.Agents)
 	}
 }
 
 func TestTitleDragCoversEmptySpace(t *testing.T) {
 	for _, mac := range []bool{true, false} {
 		l := titleAt(1200, mac, 248)
-		buttons := []image.Rectangle{l.Toggle, l.Plus, l.Search, l.Scratch, l.Agents, l.Gear, l.Buttons[0], l.Buttons[1], l.Buttons[2]}
+		buttons := []image.Rectangle{l.Toggle, l.Plus, l.Search, l.Agents, l.Gear, l.Buttons[0], l.Buttons[1], l.Buttons[2]}
 		for x := 0; x < 1200; x++ {
 			p := image.Pt(x, 21)
 			inBtn, inDrag := false, false
@@ -189,7 +189,7 @@ func TestTitleHitLookup(t *testing.T) {
 	w := titleAt(1200, false, 248)
 	mid := func(r image.Rectangle) image.Point { return r.Min.Add(r.Size().Div(2)) }
 	for want, r := range map[captionButton]image.Rectangle{
-		capToggle: w.Toggle, capPlus: w.Plus, capSearch: w.Search, capScratch: w.Scratch,
+		capToggle: w.Toggle, capPlus: w.Plus, capSearch: w.Search,
 		capAgents: w.Agents, capGear: w.Gear, capMinimize: w.Buttons[0], capMaximize: w.Buttons[1], capClose: w.Buttons[2],
 	} {
 		if got := w.at(mid(r)); got != want {
@@ -205,7 +205,7 @@ func TestTitleNarrowWindowsButtonsNeverOverlap(t *testing.T) {
 	for _, w := range []int{320, 360, 374, 420, 480} {
 		in := titleIn{Size: image.Pt(w, 42), SideW: 0, Crumb: fullCrumb, Key: "Ctrl+Shift+K", Dims: titleTestDims, Measure: sevenPx}
 		l := layoutTitle(in)
-		rs := []image.Rectangle{l.Toggle, l.Search, l.Scratch, l.Agents, l.Gear, l.Buttons[0], l.Buttons[1], l.Buttons[2]}
+		rs := []image.Rectangle{l.Toggle, l.Search, l.Agents, l.Gear, l.Buttons[0], l.Buttons[1], l.Buttons[2]}
 		for i, a := range rs {
 			for _, b := range rs[i+1:] {
 				if !a.Empty() && !b.Empty() && a.Overlaps(b) {
@@ -213,8 +213,8 @@ func TestTitleNarrowWindowsButtonsNeverOverlap(t *testing.T) {
 				}
 			}
 		}
-		if !l.Scratch.Empty() && l.at(l.Scratch.Min.Add(image.Pt(2, 2))) != capScratch {
-			t.Fatalf("%dpx: a press on scratch hits %v", w, l.at(l.Scratch.Min.Add(image.Pt(2, 2))))
+		if !l.Agents.Empty() && l.at(l.Agents.Min.Add(image.Pt(2, 2))) != capAgents {
+			t.Fatalf("%dpx: a press on agents hits %v", w, l.at(l.Agents.Min.Add(image.Pt(2, 2))))
 		}
 	}
 }

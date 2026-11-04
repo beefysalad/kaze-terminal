@@ -129,7 +129,7 @@ func (win *window) closeTab(id tabs.TabID) {
 		win.worktreeClosing(dir)
 	}
 	win.closeSessionDocs(id)
-	win.closeScratch(id)
+	win.closeSessionDock(id)
 	if a := win.mgr.Active(); a != nil && a.ID == id {
 		if next := win.afterClose(id); next != 0 {
 			win.mgr.SetActive(next)
@@ -152,7 +152,7 @@ func (win *window) afterClose(id tabs.TabID) tabs.TabID {
 		return order[0]
 	}
 	for _, t := range win.mgr.Tabs() {
-		if _, ok := win.isMember(t); ok && t.ID != id && t.Parent == 0 {
+		if _, ok := win.isMember(t); ok && t.ID != id {
 			return t.ID
 		}
 	}

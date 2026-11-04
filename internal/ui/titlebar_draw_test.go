@@ -81,7 +81,7 @@ func TestTitleBarDrawsInEveryTheme(t *testing.T) {
 			win.side.w = sidebarW // what the frame sets before it draws the bar
 			win.drawBar(barContext(1200), 42)
 			b := win.bar
-			for name, r := range map[string]image.Rectangle{"toggle": b.Toggle, "plus": b.Plus, "search": b.Search, "scratch": b.Scratch, "agents": b.Agents, "gear": b.Gear} {
+			for name, r := range map[string]image.Rectangle{"toggle": b.Toggle, "plus": b.Plus, "search": b.Search, "agents": b.Agents, "gear": b.Gear} {
 				if r.Empty() {
 					t.Fatalf("%s custom=%v: %s empty", th.Key, custom, name)
 				}

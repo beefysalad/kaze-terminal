@@ -32,8 +32,7 @@ type Tab struct {
 	Group      *Group // nil for a tab that no workspace run opened
 
 	// Set once at creation, so safe to read from any goroutine.
-	Parent TabID  // the session a scratch shell belongs to; 0 for every other tab
-	Dir    string // the folder it was started in, "" for the window's default
+	Dir string // the folder it was started in, "" for the window's default
 }
 
 // Group says which workspace run opened a tab and which of its tabs it is.
@@ -48,7 +47,6 @@ type StartOpts struct {
 	Dir, Title, Color string // an empty Dir starts the shell in the window's default folder
 	Group             *Group
 	Prefeed           func(*term.Session) // writes into the tab before its shell's output, as NewWith does
-	Parent            TabID               // non-zero: a scratch shell of that session, never made active here
 }
 
 // entry holds what the session's notifier goroutine needs without taking the manager lock.
@@ -157,7 +155,7 @@ func (m *Manager) newTab(o StartOpts, prefeed func(*term.Session)) (*Tab, error)
 	if err != nil {
 		return nil, err
 	}
-	e := &entry{tab: &Tab{ID: id, Title: o.Title, FixedTitle: o.Title, Color: o.Color, Group: o.Group, Parent: o.Parent, Dir: o.Dir}}
+	e := &entry{tab: &Tab{ID: id, Title: o.Title, FixedTitle: o.Title, Color: o.Color, Group: o.Group, Dir: o.Dir}}
 	s := term.NewSessionOpts(p, cols, rows, term.Opts{Scrollback: sb, Prefeed: prefeed}, func() { m.notify(e) })
 	e.sess.Store(s)
 	e.tab.Session = s
@@ -165,9 +163,7 @@ func (m *Manager) newTab(o StartOpts, prefeed func(*term.Session)) (*Tab, error)
 	m.mu.Lock()
 	m.entries = append(m.entries, e)
 	m.mu.Unlock()
-	if o.Parent == 0 {
-		m.active.Store(int64(id))
-	}
+	m.active.Store(int64(id))
 	m.stateChanged()
 	return e.tab, nil
 }

@@ -2,7 +2,6 @@ package ui
 
 import (
 	"image"
-	"slices"
 	"testing"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
@@ -45,60 +44,12 @@ func TestOpenAgainRaisesAndUnhides(t *testing.T) {
 	}
 }
 
-func TestFifthPaneReplacesTheOldestMember(t *testing.T) {
-	var f floats
-	f.open(1, 99, paneScratch)
-	var dropped tabs.TabID
-	for _, id := range []tabs.TabID{11, 12, 13, 14} {
-		_, dropped = f.open(1, id, paneMember)
-	}
-	s := f.set(1)
-	if dropped != 11 || len(s.panes) != maxPanes || s.scratch() == nil || s.find(11) != nil {
-		t.Fatalf("dropped %d, panes %v", dropped, paneIDs(s.panes))
-	}
-}
-
-func TestScratchIsNeverReplaced(t *testing.T) {
-	var f floats
-	f.open(1, 11, paneMember)
-	sc, _ := f.open(1, 99, paneScratch)
-	sc.hidden = true
-	var dropped tabs.TabID
-	for _, id := range []tabs.TabID{12, 13, 14} {
-		_, dropped = f.open(1, id, paneMember)
-	}
-	s := f.set(1)
-	if dropped != 11 || len(s.panes) != maxPanes || s.scratch() != sc {
-		t.Fatalf("dropped %d, panes %v", dropped, paneIDs(s.panes))
-	}
-}
-
 func TestMemberFloatsInOneSessionAtATime(t *testing.T) {
 	var f floats
 	f.open(1, 11, paneMember)
 	f.open(2, 11, paneMember)
 	if f.owner(11) != 2 || f.set(1).find(11) != nil {
 		t.Fatalf("owner %d", f.owner(11))
-	}
-}
-
-func TestVisibleSkipsHiddenInZOrder(t *testing.T) {
-	var f floats
-	a, _ := f.open(1, 11, paneMember)
-	b, _ := f.open(1, 12, paneMember)
-	sc, _ := f.open(1, 99, paneScratch)
-	sc.hidden = true
-	f.raise(1, 12)
-	f.raise(1, 11)
-	s := f.set(1)
-	if got := paneIDs(s.visible()); !slices.Equal(got, []tabs.TabID{12, 11}) {
-		t.Fatalf("visible %v", got)
-	}
-	if s.front() != a || b.z >= a.z {
-		t.Fatalf("front %v", s.front())
-	}
-	if (&paneSet{}).front() != nil {
-		t.Fatal("an empty set has a front pane")
 	}
 }
 
@@ -111,23 +62,6 @@ func TestRemoveClearsTheKeyboard(t *testing.T) {
 	}
 	if _, ok := f.remove(11); ok {
 		t.Fatal("removed twice")
-	}
-}
-
-func TestPruneDropsGoneTabsAndReturnsOrphanScratch(t *testing.T) {
-	var f floats
-	f.open(1, 11, paneMember)
-	f.open(1, 99, paneScratch)
-	f.open(2, 12, paneMember)
-	f.open(2, 13, paneMember)
-	f.keys = 13
-	alive := map[tabs.TabID]bool{2: true, 11: true, 99: true, 12: true}
-	orphans, released := f.prune(func(id tabs.TabID) bool { return alive[id] })
-	if !slices.Equal(orphans, []tabs.TabID{99}) || !slices.Equal(released, []tabs.TabID{11}) {
-		t.Fatalf("orphans %v released %v", orphans, released)
-	}
-	if f.sets[1] != nil || f.set(2).find(13) != nil || f.set(2).find(12) == nil || f.keys != 0 {
-		t.Fatalf("sets %v keys %d", f.sets, f.keys)
 	}
 }
 

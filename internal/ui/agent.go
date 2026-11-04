@@ -154,10 +154,9 @@ func tabIn(list []*tabs.Tab, id tabs.TabID) bool {
 	return false
 }
 
-// termAgents is which agent each terminal runs, by the tab its hooks ran in.
-// A scratch shell's hooks count on its session's row (agents), but input such
-// as a screenshot paste goes to the scratch terminal itself, so this keeps
-// the source. Written on notify goroutines, read on the UI goroutine.
+// termAgents is which agent each terminal runs, by the tab its hooks ran in;
+// input such as a screenshot paste uses it to pick the agent's paste key.
+// Written on notify goroutines, read on the UI goroutine.
 type termAgents struct {
 	mu sync.Mutex
 	m  map[tabs.TabID]termAgent

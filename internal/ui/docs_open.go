@@ -29,12 +29,9 @@ func (win *window) docParent(t *tabs.Tab, inPane bool) tabs.TabID {
 	if t == nil {
 		return 0
 	}
-	if t.Parent != 0 {
-		return t.Parent
-	}
 	if _, member := win.isMember(t); member {
 		if inPane {
-			return win.paneOwner()
+			return win.dockOwner() // a docked member's docs belong to the session it is docked under
 		}
 		if ids := win.sessionIDs(); len(ids) > 0 {
 			return ids[0]

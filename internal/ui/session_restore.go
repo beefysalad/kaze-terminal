@@ -167,7 +167,7 @@ func (win *window) finishRestore(released bool) {
 	}
 }
 func (win *window) originIdentity(m notify.Msg, t *tabs.Tab) {
-	if win.restore == nil || t == nil || t.Parent != 0 || subKind(m.Kind) || m.Kind == notify.KindUsage {
+	if win.restore == nil || t == nil || subKind(m.Kind) || m.Kind == notify.KindUsage {
 		return
 	}
 	win.restoreCaptureMu.Lock()

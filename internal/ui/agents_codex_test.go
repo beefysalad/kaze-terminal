@@ -56,25 +56,6 @@ func TestCodexIdentityInSidebarAndPalette(t *testing.T) {
 	}
 }
 
-func TestCodexScratchInterruptCountsOnParent(t *testing.T) {
-	win, _, _ := liveWindow(t, 2)
-	parent := win.mgr.Tabs()[1].ID
-	scratch, err := win.mgr.NewOpts(tabs.StartOpts{Parent: parent})
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, kind := range []notify.Kind{notify.KindPrompt, notify.KindInterrupt} {
-		win.onNotify(notify.Msg{Tab: int(scratch.ID), Kind: kind, Agent: "codex", Command: "$test"})
-	}
-	win.drainAlerts(t0)
-	if a := win.agentOf(parent); a.running || a.agentName() != "codex" {
-		t.Fatalf("parent %+v", a)
-	}
-	if win.agentOf(scratch.ID).agentName() != "" {
-		t.Fatal("scratch kept separate agent state")
-	}
-}
-
 func TestQueuedClaudeUsageCannotGiveCodexContext(t *testing.T) {
 	win, _, _ := liveWindow(t, 2)
 	tab := win.mgr.Tabs()[1]

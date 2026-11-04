@@ -57,7 +57,7 @@ type Config struct {
 var KnownActions = map[string]bool{
 	"new_branch_session": true, "new_tab": true, "close_tab": true, "next_tab": true, "prev_tab": true,
 	"copy": true, "paste": true, "open_settings": true, "toggle_sidebar": true, "next_waiting": true,
-	"palette": true, "scratch_shell": true, "agents_board": true,
+	"palette": true, "agents_board": true,
 }
 
 var (
@@ -305,6 +305,8 @@ func loadKeys(v any, cfg *Config, warn func(string, ...any)) {
 	for _, k := range sortedKeys(t) {
 		s, isStr := t[k].(string)
 		switch {
+		case k == "scratch_shell":
+			warn("scratch_shell under [keys] is no longer used: the scratch shell was removed; ignored")
 		case !KnownActions[k]:
 			warn("unknown key action %q ignored", k)
 		case !isStr || s == "":

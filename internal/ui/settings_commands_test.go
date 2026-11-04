@@ -117,10 +117,10 @@ func TestShortcutSearchNarrowsTheList(t *testing.T) {
 	if len(controlsOf(win, "cmd_filter")) != 1 {
 		t.Fatal("no search field")
 	}
-	win.set.cmdFilter = "scratch"
+	win.set.cmdFilter = "palette"
 	text := commandsPage(t, win)
-	if !strings.Contains(text, "Scratch shell") || strings.Contains(text, "New session") || strings.Contains(text, "SESSIONS") {
-		t.Fatalf("search for scratch shows:\n%s", text)
+	if !strings.Contains(text, "Open the palette") || strings.Contains(text, "New session") || strings.Contains(text, "SESSIONS") {
+		t.Fatalf("search for palette shows:\n%s", text)
 	}
 	win.set.cmdFilter = "zzz"
 	if text := commandsPage(t, win); !strings.Contains(text, "No shortcut matches") {

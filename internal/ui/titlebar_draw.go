@@ -129,7 +129,6 @@ func (win *window) drawBar(gtx layout.Context, barH int) {
 	}
 	icon(capToggle, b.Toggle, "panel")
 	icon(capPlus, b.Plus, "plus")
-	icon(capScratch, b.Scratch, "terminal")
 	icon(capAgents, b.Agents, "agents")
 	icon(capGear, b.Gear, "cog")
 	win.drawAgentsBadge(gtx, b.Agents)

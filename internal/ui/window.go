@@ -742,7 +742,7 @@ func (win *window) frame(gtx layout.Context) error {
 		area.Pop()
 	}
 	b := win.bar
-	for _, r := range []image.Rectangle{b.Toggle, b.Plus, b.Search, b.Scratch, b.Agents, b.Gear, b.Buttons[0], b.Buttons[1], b.Buttons[2]} {
+	for _, r := range []image.Rectangle{b.Toggle, b.Plus, b.Search, b.Agents, b.Gear, b.Buttons[0], b.Buttons[1], b.Buttons[2]} {
 		if r.Empty() {
 			continue
 		}
@@ -970,8 +970,6 @@ func (win *window) captionEvent(e pointer.Event) {
 		win.toggleSidebar()
 	case capSearch:
 		win.openPalette()
-	case capScratch:
-		win.toggleScratch()
 	case capPlus:
 		win.newTab()
 	case capAgents:
@@ -1085,15 +1083,6 @@ func (win *window) keyView() (termView, bool) {
 	if v, ok := win.paneKeyView(); ok {
 		return v, true
 	}
-	// A scratch shortcut can start a pane before its first frame. Keyboard
-	// input following that shortcut already belongs to its terminal, even
-	// though its grid and renderer will be laid out later this frame.
-	if owner := win.fl.owner(win.fl.keys); owner != 0 && owner == win.paneOwner() {
-		p := win.fl.sets[owner].find(win.fl.keys)
-		if t := win.mgr.Lookup(p.id); t != nil && !p.hidden {
-			return termView{tab: t, tag: &p.body}, true
-		}
-	}
 	t := win.shownTab()
 	if t == nil {
 		return termView{}, false
@@ -1197,7 +1186,7 @@ func (win *window) routeView(gtx layout.Context, v termView, batch []event.Event
 			keysBefore := win.fl.keys
 			win.onKey(gtx, t, e, m)
 			if win.fl.keys != keysBefore {
-				// Scratch toggles move the keyboard without switching the main
+				// A shortcut moved the keyboard without switching the main
 				// tab. Keep the rest of this batch with its new destination.
 				if next, ok := win.keyView(); ok {
 					win.endGesture()
@@ -1315,8 +1304,6 @@ func (win *window) runShortcut(gtx layout.Context, a action) {
 		win.nextWaiting()
 	case actPalette:
 		win.togglePalette()
-	case actScratch:
-		win.toggleScratch()
 	case actAgentsBoard:
 		win.toggleBoard()
 	case actPaste:

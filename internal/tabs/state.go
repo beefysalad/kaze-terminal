@@ -28,9 +28,6 @@ func (m *Manager) State() ([]StateTab, TabID) {
 	out := make([]StateTab, 0, len(m.entries))
 	for _, e := range m.entries {
 		t := e.tab
-		if t.Parent != 0 {
-			continue
-		}
 		s := t.Session
 		s.Lock()
 		cwd := s.Applier().Cwd()

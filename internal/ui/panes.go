@@ -11,7 +11,7 @@ import (
 
 // Floating pane sizes in dp at 100% scale (spec 8.1, mockup .fp).
 const (
-	maxPanes     = 4 // per session, the scratch shell included even while hidden
+	maxPanes     = 4 // per session
 	paneHeaderDp = 30
 	paneEdgeDp   = 6
 	paneCornerDp = 14
@@ -19,16 +19,14 @@ const (
 )
 
 var (
-	paneMinDp     = image.Pt(280, 140)
-	memberSizeDp  = image.Pt(560, 260)
-	scratchRectDp = image.Rect(150, 80, 670, 320)
+	paneMinDp    = image.Pt(280, 140)
+	memberSizeDp = image.Pt(560, 260)
 )
 
 type paneKind int
 
 const (
 	paneMember paneKind = iota
-	paneScratch
 )
 
 // pane is one floating terminal over a session. r is kept in dp relative to
@@ -40,7 +38,7 @@ type pane struct {
 	fit    image.Rectangle // r as fitted last frame, dp; a drag starts from it
 	z      uint64          // draw order: higher is in front
 	opened uint64          // open order: the oldest member is replaced first
-	hidden bool            // the scratch shell only: toggled off, still running
+	hidden bool            // unused since the scratch shell went; kept until the panes go
 	body   int             // event tag: keys, paste and the terminal's pointer input
 	frame  int             // event tag: header and edges
 	hits   paneHits
@@ -106,9 +104,7 @@ func (f *floats) open(session, id tabs.TabID, kind paneKind) (p *pane, dropped t
 		return p, 0
 	}
 	p = &pane{id: id, kind: kind}
-	if kind == paneScratch {
-		p.r = scratchRectDp
-	} else {
+	{
 		size := memberSizeDp
 		n := len(s.visible())
 		at := image.Pt(80+30*n, 40+30*n)
@@ -120,7 +116,7 @@ func (f *floats) open(session, id tabs.TabID, kind paneKind) (p *pane, dropped t
 	if len(s.panes) > maxPanes {
 		var old *pane
 		for _, q := range s.panes {
-			if q.kind != paneScratch && q != p && (old == nil || q.opened < old.opened) {
+			if q != p && (old == nil || q.opened < old.opened) {
 				old = q
 			}
 		}
@@ -164,9 +160,8 @@ func (f *floats) owner(id tabs.TabID) tabs.TabID {
 }
 
 // prune drops panes whose tab is gone and sets whose session is gone. It
-// returns the scratch shells of dropped sets, which the caller closes, and
-// their member tabs, which the caller docks.
-func (f *floats) prune(exists func(tabs.TabID) bool) (orphans, released []tabs.TabID) {
+// returns the member tabs of dropped sets, which the caller docks.
+func (f *floats) prune(exists func(tabs.TabID) bool) (released []tabs.TabID) {
 	ids := make([]tabs.TabID, 0, len(f.sets))
 	for sid := range f.sets {
 		ids = append(ids, sid)
@@ -179,8 +174,6 @@ func (f *floats) prune(exists func(tabs.TabID) bool) (orphans, released []tabs.T
 		for _, p := range s.panes {
 			switch {
 			case !exists(p.id):
-			case gone && p.kind == paneScratch:
-				orphans = append(orphans, p.id)
 			case gone:
 				released = append(released, p.id)
 			default:
@@ -196,21 +189,12 @@ func (f *floats) prune(exists func(tabs.TabID) bool) (orphans, released []tabs.T
 			delete(f.sets, sid)
 		}
 	}
-	return orphans, released
+	return released
 }
 
 func (s *paneSet) find(id tabs.TabID) *pane {
 	for _, p := range s.panes {
 		if p.id == id {
-			return p
-		}
-	}
-	return nil
-}
-
-func (s *paneSet) scratch() *pane {
-	for _, p := range s.panes {
-		if p.kind == paneScratch {
 			return p
 		}
 	}

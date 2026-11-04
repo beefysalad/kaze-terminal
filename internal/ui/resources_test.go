@@ -200,12 +200,8 @@ func TestResourceRootsKeepScratchAndWorkspaceOwnership(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = win.mgr.NewOpts(tabs.StartOpts{Parent: a.ID})
-	if err != nil {
-		t.Fatal(err)
-	}
 	roots := win.resourceRoots()
-	if len(roots) != 3 || roots[0].Owner != int(a.ID) || roots[1].Owner != int(b.ID) || roots[2].Owner != int(a.ID) || roots[1].Name != "Project / API" {
+	if len(roots) != 2 || roots[0].Owner != int(a.ID) || roots[1].Owner != int(b.ID) || roots[1].Name != "Project / API" {
 		t.Fatalf("roots %+v", roots)
 	}
 	w := newResourceWork(nil, nil)
