@@ -18,6 +18,7 @@ import (
 	"gioui.org/op/paint"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/render"
+	"github.com/patrick-gogo/kaze-terminal/internal/theme"
 	"github.com/patrick-gogo/kaze-terminal/internal/usage"
 )
 
@@ -435,11 +436,11 @@ func (c *chrome) batteryInk(pct int, charging bool) batteryInk {
 
 // batteryInkCache keeps the last ink, so an unchanged frame does no colour math.
 type batteryInkCache struct {
-	valid         bool
-	band          int // 0 normal, 1 low, 2 very low
-	charging      bool
-	chrome, value color.NRGBA
-	ink           batteryInk
+	valid    bool
+	band     int // 0 normal, 1 low, 2 very low
+	charging bool
+	th       theme.Chrome // the whole theme the ink was worked out for
+	ink      batteryInk
 }
 
 func (k *batteryInkCache) get(c *chrome, pct int, charging bool) batteryInk {
@@ -450,8 +451,8 @@ func (k *batteryInkCache) get(c *chrome, pct int, charging bool) batteryInk {
 	case pct <= 20:
 		band = 1
 	}
-	if !k.valid || k.band != band || k.charging != charging || k.chrome != c.th.Chrome || k.value != c.statusValueColor() {
-		k.valid, k.band, k.charging, k.chrome, k.value = true, band, charging, c.th.Chrome, c.statusValueColor()
+	if !k.valid || k.band != band || k.charging != charging || k.th != c.th {
+		k.valid, k.band, k.charging, k.th = true, band, charging, c.th
 		k.ink = c.batteryInk(pct, charging)
 	}
 	return k.ink

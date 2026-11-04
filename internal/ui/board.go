@@ -241,7 +241,7 @@ func (win *window) drawBoard(gtx layout.Context, r image.Rectangle) {
 		win.drawBoardPreview(gtx, b.preview, ink)
 	} else {
 		b.openIn, b.copy, b.reader, b.prevHits = image.Rectangle{}, image.Rectangle{}, image.Rectangle{}, dockHits{}
-		b.prev.tr = nil // nobody sees a preview: hold no transcript
+		b.prev.dropTranscript() // nobody sees a preview: hold no transcript
 	}
 }
 

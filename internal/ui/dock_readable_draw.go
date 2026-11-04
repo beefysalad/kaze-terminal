@@ -314,7 +314,7 @@ func (win *window) drawReadable(gtx layout.Context, s *dockSession, a *subagents
 				*texts = append(*texts, it.clock)
 			}
 		case readStep:
-			win.drawReadStep(gtx, s, it, image.Rect(x0, top, inner.Max.X, y), ink, h, texts)
+			win.drawReadStep(gtx, s, it, image.Rect(x0, top, inner.Max.X, y), inner, ink, h, texts)
 		case readWaiting:
 			box := image.Rect(x0, top+dp(3), inner.Max.X, y-dp(3))
 			paint.FillShape(ops, tint(th.Needs, 0x22), clip.UniformRRect(box, dp(5)).Op(ops))
@@ -342,8 +342,8 @@ func (win *window) drawReadable(gtx layout.Context, s *dockSession, a *subagents
 }
 
 // drawReadStep draws one step in r: chevron, verb, object, meta and, when
-// open, its detail box.
-func (win *window) drawReadStep(gtx layout.Context, s *dockSession, it *readItem, r image.Rectangle, ink *readInk, h *dockHits, texts *[]string) {
+// open, its detail box. Its click target is kept inside list.
+func (win *window) drawReadStep(gtx layout.Context, s *dockSession, it *readItem, r, list image.Rectangle, ink *readInk, h *dockHits, texts *[]string) {
 	ops, c, dp := gtx.Ops, win.ui, gtx.Dp
 	row := image.Rect(r.Min.X, r.Min.Y, r.Max.X, r.Min.Y+dp(readRowDp))
 	mid := row.Min.Y + row.Dy()/2
@@ -355,7 +355,9 @@ func (win *window) drawReadStep(gtx layout.Context, s *dockSession, it *readItem
 		}
 		call, sz := c.sans(gtx, chev, 12, ink.meta, font.Normal)
 		place(ops, call, image.Pt(row.Min.X+dp(3), mid-sz.Y/2))
-		h.steps = append(h.steps, readHit{id: it.id, rect: row})
+		if hit := row.Intersect(list); !hit.Empty() {
+			h.steps = append(h.steps, readHit{id: it.id, rect: hit})
+		}
 	}
 	// Meta first, right-aligned, so the words can be cut to what is left.
 	var calls [2]op.CallOp
@@ -559,6 +561,11 @@ func (win *window) readPress(s *dockSession, h *dockHits, p image.Point) bool {
 			if s.open == nil {
 				s.open = map[string]bool{}
 			}
+			// Following would snap the list to its new bottom and slide the
+			// clicked row away; only the last step keeps following.
+			if s.follow && x.id != lastStepID(s.read.items) {
+				s.follow = false
+			}
 			if s.open[x.id] {
 				delete(s.open, x.id)
 			} else {
@@ -569,4 +576,24 @@ func (win *window) readPress(s *dockSession, h *dockHits, p image.Point) bool {
 		}
 	}
 	return false
+}
+
+// lastStepID is the id of the last step in items, "" when there is none.
+func lastStepID(items []readItem) string {
+	for i := len(items) - 1; i >= 0; i-- {
+		if items[i].kind == readStep {
+			return items[i].id
+		}
+	}
+	return ""
+}
+
+// dropTranscript lets go of s's transcript and of the lists built from it,
+// so nothing keeps the old transcript alive.
+func (s *dockSession) dropTranscript() {
+	s.tr = nil
+	if rc := &s.read; rc.tr != nil {
+		rc.tr, rc.items, rc.every, rc.itemsOK, rc.everyOK = nil, nil, nil, false, false
+		s.pruneNotes()
+	}
 }

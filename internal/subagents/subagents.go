@@ -389,7 +389,6 @@ func (t *Tracker) PromptCheck(k Key) bool {
 // call still queued, or the call of another agent not yet settled, becomes
 // k's, and k's old call goes where that one was. A settled name is never taken.
 func (t *Tracker) SettlePrompt(k Key, prompt string) bool {
-	t.revision++
 	if !t.PromptCheck(k) {
 		return false
 	}
@@ -411,6 +410,7 @@ func (t *Tracker) SettlePrompt(k Key, prompt string) bool {
 		if promptKey(c.prompt) == key {
 			t.queues[q][i] = a.call
 			t.setCall(a, c)
+			t.revision++
 			return true
 		}
 	}
@@ -419,6 +419,7 @@ func (t *Tracker) SettlePrompt(k Key, prompt string) bool {
 			old := a.call
 			t.setCall(a, b.call)
 			t.setCall(b, old)
+			t.revision++
 			return true
 		}
 	}

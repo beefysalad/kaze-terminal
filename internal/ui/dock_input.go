@@ -248,13 +248,15 @@ func (win *window) dockBody(gtx layout.Context, owner tabs.TabID, s *dockSession
 				}
 			}
 		}
+		win.dropSideEdit()
+		// A mode or step click leaves the keyboard where it is on purpose:
+		// opening a step is reading, not typing into the panel.
 		if win.readPress(s, &win.dock.hits, p) {
 			return
 		}
 		if p.In(win.dock.hits.finish) {
 			s.tab, s.picked, s.scroll = dockReport, true, 0
 		}
-		win.dropSideEdit()
 		if win.dock.keysMember != 0 {
 			win.dropDockKeys()
 		}

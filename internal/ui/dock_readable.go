@@ -122,11 +122,29 @@ var pastVerbs = map[string]string{
 	"write": "Wrote", "open": "Opened", "merge": "Merged", "push": "Pushed", "commit": "Committed",
 }
 
-// testCommand reports whether a shell command runs a test suite.
+// testCommand reports whether a shell command runs a test suite, matched on
+// its words: a runner (jest, pytest, vitest, also as a path's last part) or a
+// tool's test command (go test, cargo test, npm test, npm run test, ...). A
+// word that only contains one ("jest.config.js") does not count.
 func testCommand(cmd string) bool {
-	for _, t := range []string{"go test", "npm test", "pnpm test", "yarn test", "pytest", "cargo test", "jest", "vitest"} {
-		if strings.Contains(cmd, t) {
+	words := strings.FieldsFunc(cmd, func(r rune) bool {
+		return unicode.IsSpace(r) || strings.ContainsRune(";&|()", r)
+	})
+	for i, w := range words {
+		switch w[strings.LastIndexAny(w, `/\`)+1:] {
+		case "jest", "pytest", "vitest":
 			return true
+		case "go", "cargo", "npm", "pnpm", "yarn", "bun":
+			next := ""
+			if i+1 < len(words) {
+				next = words[i+1]
+			}
+			if next == "run" && w != "go" && w != "cargo" && i+2 < len(words) {
+				next = words[i+2]
+			}
+			if next == "test" {
+				return true
+			}
 		}
 	}
 	return false
@@ -154,7 +172,7 @@ func appendReadable(out []readItem, a *subagents.Agent, tr *subagents.Transcript
 	var ents []rdEntry
 	hook := !(tr != nil && tr.Available && len(tr.Steps) > 0)
 	if !hook {
-		if tr.Dropped {
+		if tr.StepsDropped {
 			out = append(out, readItem{kind: readDropped, msg: -1, text: "… earlier steps hidden"})
 		}
 		ents = make([]rdEntry, 0, len(tr.Steps)+len(tr.Messages))

@@ -2,6 +2,7 @@ package subagents
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/patrick-gogo/kaze-terminal/internal/notify"
 	"io"
@@ -36,7 +37,8 @@ type Transcript struct {
 	Steps              []TranscriptStep // tool calls in record order, at most MaxTranscriptSteps
 	Offset             int64
 	Bytes              int
-	Dropped            bool
+	Dropped            bool // anything was left out: messages, steps or an oversized line
+	StepsDropped       bool // the oldest steps were trimmed past MaxTranscriptSteps
 	Version            uint64
 	Available          bool
 	pending            []byte
@@ -133,21 +135,39 @@ func TranscriptPath(main, id string) string {
 	}
 	return filepath.Join(strings.TrimSuffix(main, ".jsonl"), "subagents", "agent-"+id+".jsonl")
 }
+
+// openFile opens a file the readers have checked; tests count the opens.
+var openFile = os.Open
+
+var errNotRegular = errors.New("not a regular file")
+
+// openRegular opens path only when it is a regular file: a FIFO or a device
+// is turned away before the open, which could block on it.
+func openRegular(path string) (*os.File, os.FileInfo, error) {
+	if st, err := os.Stat(path); err != nil {
+		return nil, nil, err
+	} else if !st.Mode().IsRegular() {
+		return nil, nil, errNotRegular
+	}
+	f, err := openFile(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	st, err := f.Stat()
+	if err != nil || !st.Mode().IsRegular() {
+		f.Close()
+		return nil, nil, errNotRegular
+	}
+	return f, st, nil
+}
+
 func (tr *Transcript) Read(path string) error {
-	f, e := os.Open(path)
+	f, st, e := openRegular(path)
 	if e != nil {
 		tr.Available = false
 		return e
 	}
 	defer f.Close()
-	st, e := f.Stat()
-	if e != nil {
-		return e
-	}
-	if !st.Mode().IsRegular() {
-		tr.Available = false
-		return fmt.Errorf("not a regular file")
-	}
 	if tr.info != nil && (!os.SameFile(tr.info, st) || st.Size() < tr.Offset) {
 		v := tr.Version
 		*tr = Transcript{Version: v + 1}
@@ -343,7 +363,7 @@ func (tr *Transcript) addStep(st TranscriptStep) {
 		tr.Steps[len(tr.Steps)-1] = TranscriptStep{}
 		tr.Steps = tr.Steps[:len(tr.Steps)-1]
 		tr.detailFrom = max(0, tr.detailFrom-1)
-		tr.Dropped = true
+		tr.Dropped, tr.StepsDropped = true, true
 	}
 	tr.trimDetail()
 }
@@ -386,8 +406,7 @@ func (tr *Transcript) result(id string, isErr bool, raw json.RawMessage) {
 		st.Commit, st.Subject = commitLine(text)
 	}
 	switch st.Tool {
-	case "Edit", "MultiEdit", "Write", "Read", "NotebookEdit":
-	default:
+	case "Bash", "exec_command", "shell": // the only steps that show their output
 		if at >= tr.detailFrom {
 			before := stepDetail(st)
 			st.Out = tailLines(text, maxStepDetail-before)
