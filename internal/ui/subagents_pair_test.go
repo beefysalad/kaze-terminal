@@ -134,7 +134,7 @@ func TestNoTranscriptFallsBackWithoutStealing(t *testing.T) {
 		}
 	}
 	w.send("claude", w.step("d1", gp)) // given up: no fourth read
-	if *w.reads != 3+2 { // three misses for d1, one read each for d2 and d3
+	if *w.reads != 3+2 {               // three misses for d1, one read each for d2 and d3
 		t.Fatalf("%d prompt reads, want 5", *w.reads)
 	}
 }
