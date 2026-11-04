@@ -2,11 +2,13 @@ package ui
 
 import (
 	"image"
+	"image/color"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
+	"github.com/patrick-gogo/kaze-terminal/internal/theme"
 )
 
 // rdBashRun is n finished Bash steps, each with a "$ command" detail.
@@ -112,5 +114,60 @@ func TestDockTickDropsReadCache(t *testing.T) {
 	win.dockTick(s, &subagents.Agent{Engine: "codex"}, time.Now())
 	if s.tr != nil || s.read.tr != nil || s.read.items != nil {
 		t.Fatalf("tr %v cache %v items %d", s.tr != nil, s.read.tr != nil, len(s.read.items))
+	}
+}
+
+// Messages trimmed or a skipped line are not "earlier steps hidden".
+func TestStepsHiddenOnlyWhenStepsDropped(t *testing.T) {
+	tr := rdTr(subagents.TranscriptStep{Tool: "Read", Path: "a.go"})
+	tr.Dropped = true
+	for _, it := range readableItems(rdAgent(), tr) {
+		if it.text == "… earlier steps hidden" {
+			t.Fatalf("steps banner with no step dropped: %+v", it)
+		}
+	}
+	tr.StepsDropped = true
+	if items := readableItems(rdAgent(), tr); items[0].text != "… earlier steps hidden" {
+		t.Fatalf("no steps banner: %+v", items[0])
+	}
+}
+
+// Test runners are matched on command words, not substrings.
+func TestTestCommandMatchesWords(t *testing.T) {
+	for cmd, want := range map[string]bool{
+		"go test ./...":                         true,
+		"cd x && go vet ./... && go test ./ui/": true,
+		"npx jest --watch=false":                true,
+		"python -m pytest -q":                   true,
+		"npm test":                              true,
+		"npm run test":                          true,
+		"pnpm test":                             true,
+		"yarn test":                             true,
+		"cargo test --all":                      true,
+		"npx vitest run":                        true,
+		"cat jest.config.js":                    false,
+		"ls pytest_cache":                       false,
+		"vim vitest.config.ts":                  false,
+		"git log --grep 'go testing'":           false,
+		"grep -r cargo src/test":                false,
+		"echo gotest":                           false,
+	} {
+		if got := testCommand(cmd); got != want {
+			t.Errorf("testCommand(%q) = %v, want %v", cmd, got, want)
+		}
+	}
+}
+
+// The battery's ink follows any theme change, not only Chrome and Folder.
+func TestBatteryInkCacheFollowsTheme(t *testing.T) {
+	c := newChrome()
+	c.setTheme(theme.All()[0])
+	var k batteryInkCache
+	first := k.get(c, 15, false)
+	th := c.th
+	th.Needs = color.NRGBA{R: 0x10, G: 0x80, B: 0xff, A: 0xff}
+	c.th = th
+	if got, want := k.get(c, 15, false), c.batteryInk(15, false); got != want {
+		t.Fatalf("ink %+v after a Needs change, want %+v (was %+v)", got, want, first)
 	}
 }

@@ -276,7 +276,7 @@ func TestReadableEndRowsAndDropped(t *testing.T) {
 	a.State = subagents.Done
 	a.Ended = tl0.Add(90 * time.Second)
 	tr := rdTr(subagents.TranscriptStep{Tool: "Read", Path: "a.go"})
-	tr.Dropped = true
+	tr.StepsDropped = true
 	items := readableItems(a, tr)
 	if items[0].kind != readDropped || items[0].text != "… earlier steps hidden" || items[len(items)-1].kind != readFinished || items[len(items)-1].text != "Finished in 1m" {
 		t.Fatalf("items %+v", items)
