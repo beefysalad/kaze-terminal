@@ -269,18 +269,20 @@ func TestFindOpeningAndTypingSameFrame(t *testing.T) {
 }
 
 func TestFindEnterAndArrowsStep(t *testing.T) {
-	win, _, r, _, _, _, _ := memberWindow(t)
-	var steps []int
-	findStepHook = func(d int) { steps = append(steps, d) }
-	t.Cleanup(func() { findStepHook = nil })
-	findKey(t, win, r)
-	pressKey(t, win, r, key.NameReturn, 0)
-	pressKey(t, win, r, key.NameReturn, key.ModShift)
-	pressKey(t, win, r, key.NameEnter, 0)
-	pressKey(t, win, r, key.NameDownArrow, 0)
-	pressKey(t, win, r, key.NameUpArrow, 0)
-	if fmt.Sprint(steps) != "[1 -1 1 1 -1]" {
-		t.Fatalf("steps %v, want [1 -1 1 1 -1]", steps)
+	win, st, r, a, _, _, _ := memberWindow(t)
+	lines(t, st, 0, a, "warn", "warn", "warn")
+	findFor(t, win, r, "warn")
+	var got []int
+	for _, k := range []struct {
+		name key.Name
+		mods key.Modifiers
+	}{{key.NameReturn, 0}, {key.NameReturn, key.ModShift}, {key.NameEnter, 0}, {key.NameDownArrow, 0}, {key.NameUpArrow, 0}} {
+		pressKey(t, win, r, k.name, k.mods)
+		cur, _, _, _ := win.findCount()
+		got = append(got, cur)
+	}
+	if fmt.Sprint(got) != "[2 1 2 3 2]" {
+		t.Fatalf("current after Enter, Shift+Enter, Enter, Down, Up: %v, want [2 1 2 3 2]", got)
 	}
 }
 

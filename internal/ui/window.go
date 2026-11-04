@@ -706,6 +706,7 @@ func (win *window) frame(gtx layout.Context) error {
 		win.visit(v.tab) // the docked member being typed into is seen too
 	}
 	win.autoScrollSelection(gtx, active, cw, ch)
+	win.findTick(gtx) // nothing while the bar is closed
 	win.drainUpdates()
 	if at, ok := win.updTick(gtx.Now); ok {
 		gtx.Execute(op.InvalidateCmd{At: at}) // one wake per update check, a day apart
@@ -852,6 +853,7 @@ func (win *window) drawTerminal(gtx layout.Context, active *tabs.Tab, termRect, 
 		win.benchBeforeDraw(active)
 	}
 	if win.rend != nil { // frame builds it first; a nil here must not take the window down
+		win.rend.SetMarks(win.findMarksFor(active.ID, false))
 		win.rend.Layout(tg, active.Session, sel)
 	}
 	if win.bench != nil {
@@ -859,6 +861,9 @@ func (win *window) drawTerminal(gtx layout.Context, active *tabs.Tab, termRect, 
 	}
 	off.Pop()
 	g.Pop()
+	if win.rend != nil {
+		win.rend.DrawScrollMarks(gtx, findTrack(gtx, grid, termRect)) // nothing without marks
+	}
 }
 
 // shownTab is the terminal tab in front of the user, or nil while settings is shown.

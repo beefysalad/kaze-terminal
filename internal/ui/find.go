@@ -36,6 +36,8 @@ type findState struct {
 	hits      findHits
 	edKeys    []event.Filter // the field's own keys, made once
 	edFocused bool           // the field had the focus last frame
+
+	work findWork // the search; runs only while open
 }
 
 // findHits are the bar's parts as drawn last frame, in window pixels.
@@ -63,6 +65,7 @@ func (win *window) openFind() {
 		f.restoreLive = off == 0
 		f.restoreTop = int(scr.Evicted()) + scr.ScrollbackLen() - off
 		s.Unlock()
+		f.work.fresh = true // output while closed was not followed: search again
 	}
 	f.open, f.keys = true, true
 	f.ed.SetCaret(f.ed.Len(), 0)
@@ -189,16 +192,6 @@ func (win *window) findEvents(gtx layout.Context) {
 			win.ui.fit(f.text) // loads a fallback font for any rune the bundled ones lack
 			win.invalidate()
 		}
-	}
-}
-
-// findStepHook sees every findStep while U4 has not made it real; tests only.
-var findStepHook func(dir int)
-
-// findStep moves the current match by dir (next 1, previous -1).
-func (win *window) findStep(dir int) {
-	if findStepHook != nil {
-		findStepHook(dir)
 	}
 }
 
