@@ -6,6 +6,7 @@ import (
 	"gioui.org/io/clipboard"
 	"gioui.org/io/event"
 	"gioui.org/io/key"
+	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/widget"
 
@@ -38,11 +39,21 @@ type findState struct {
 	edFocused bool           // the field had the focus last frame
 
 	work findWork // the search; runs only while open
+
+	tag         int // the bar's buttons take presses and hover here
+	hover       int // the hovered button, findBtnNone for none
+	placeholder string
+	phTab       tabs.TabID // the pane placeholder was made for
+	phMember    bool
+	countText   string // built only when countKey changes (Review Focus 2)
+	countKey    findCountKey
+	countBuilds int      // times countText was built, for tests
+	texts       []string // the texts drawn last frame, for tests
 }
 
 // findHits are the bar's parts as drawn last frame, in window pixels.
 type findHits struct {
-	bar, field, caseBtn, prev, next, close image.Rectangle
+	bar, field, count, caseBtn, prev, next, close image.Rectangle
 }
 
 // openFind opens the bar on the pane with the keyboard, or takes the keyboard
@@ -170,6 +181,18 @@ func (win *window) findEvents(gtx layout.Context) {
 		f.keys = true
 	}
 	f.edFocused = focused
+	for {
+		ev, ok := gtx.Event(pointer.Filter{Target: &f.tag, Kinds: pointer.Press | pointer.Move | pointer.Enter | pointer.Leave})
+		if !ok {
+			break
+		}
+		if e, ok := ev.(pointer.Event); ok && !win.bench.IgnoreInput() {
+			win.findPointer(e)
+			if !f.open {
+				return // ×
+			}
+		}
+	}
 	for {
 		ev, ok := gtx.Event(f.edKeys...)
 		if !ok {

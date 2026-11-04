@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"image"
 	"os"
 	"strconv"
 	"time"
@@ -59,7 +60,8 @@ type wsRunner struct {
 	now     func() time.Time
 	tag     int
 	hits    []bannerHit
-	hitTab  tabs.TabID // the tab the banner hits belong to
+	hitTab  tabs.TabID      // the tab the banner hits belong to
+	rect    image.Rectangle // the banner drawn last, empty when none; the find bar sits under it
 }
 
 func (win *window) wsNow() time.Time {
