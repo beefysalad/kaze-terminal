@@ -9,6 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/patrick-gogo/kaze-terminal/internal/battery"
 	"github.com/patrick-gogo/kaze-terminal/internal/gitinfo"
 	"github.com/patrick-gogo/kaze-terminal/internal/resources"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
@@ -188,6 +189,7 @@ type statusModel struct {
 	Tabs            int
 	Resources       resources.Snapshot
 	Notice          string
+	Battery         battery.Status // Present only on a laptop
 }
 
 func (win *window) statusModel(now time.Time) statusModel {
@@ -198,6 +200,7 @@ func (win *window) statusModel(now time.Time) statusModel {
 		}
 		m.Resources = win.resources.snapshot
 	}
+	m.Battery = win.battery.tick(now)
 
 	if _, ok := win.noticeWake(now); ok {
 		m.Notice = win.notice

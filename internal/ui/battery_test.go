@@ -1,12 +1,19 @@
 package ui
 
 import (
+	"image/color"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/patrick-gogo/kaze-terminal/internal/battery"
 	"github.com/patrick-gogo/kaze-terminal/internal/bench"
+	"github.com/patrick-gogo/kaze-terminal/internal/render"
+	"github.com/patrick-gogo/kaze-terminal/internal/theme"
+
+	"gioui.org/io/input"
+	"gioui.org/op"
+	"gioui.org/unit"
 )
 
 // fakeBattery is a battery.Source that counts what it is asked.
@@ -157,4 +164,117 @@ func TestNoBatteryInBenchMode(t *testing.T) {
 		t.Fatal("bench mode started the battery")
 	}
 	win.statusModel(time.Now())
+}
+
+func TestStatusBatteryColors(t *testing.T) {
+	th := theme.All()[0]
+	c := newChrome()
+	c.setTheme(th)
+	u := th.UI
+	cases := []struct {
+		pct      int
+		charging bool
+		text     color.NRGBA // before the readable nudge
+		bolt     bool
+	}{
+		{82, false, u.Folder, false},
+		{64, true, u.Folder, true},
+		{18, false, u.Needs, false},
+		{7, false, u.UsageHigh, false},
+		{10, false, u.UsageHigh, false},
+		{20, false, u.Needs, false},
+		{21, false, u.Folder, false},
+	}
+	for _, k := range cases {
+		ink := c.batteryInk(k.pct, k.charging)
+		if want := render.Readable(k.text, u.Chrome); ink.text != want || ink.fill != want {
+			t.Errorf("%d%%: text %v fill %v, want %v", k.pct, ink.text, ink.fill, want)
+		}
+		outline := u.StatusFG
+		if k.pct <= 20 {
+			outline = k.text
+		}
+		if want := render.Readable(outline, u.Chrome); ink.outline != want {
+			t.Errorf("%d%%: outline %v, want %v", k.pct, ink.outline, want)
+		}
+		if ink.bolt != k.bolt {
+			t.Errorf("%d%%: bolt %v", k.pct, ink.bolt)
+		}
+		if k.bolt && ink.boltFill != render.Readable(u.Done, u.Chrome) {
+			t.Errorf("%d%%: bolt colour %v", k.pct, ink.boltFill)
+		}
+	}
+}
+
+func TestStatusBatteryReadableInEveryTheme(t *testing.T) {
+	for _, th := range theme.All() {
+		c := newChrome()
+		c.setTheme(th)
+		for _, pct := range []int{82, 18, 7} {
+			ink := c.batteryInk(pct, true)
+			for name, col := range map[string]color.NRGBA{"text": ink.text, "fill": ink.fill, "outline": ink.outline, "bolt": ink.boltFill} {
+				if r := contrast(col, th.UI.Chrome); r < 4.5 {
+					t.Errorf("%s %d%%: %s %.2f:1 on the bar", th.Key, pct, name, r)
+				}
+			}
+		}
+	}
+}
+
+func TestStatusBatteryCacheHits(t *testing.T) {
+	var cache statusLayoutCache
+	runs := 0
+	measure := func(s string, mono bool) int { runs++; return seven(s, mono) }
+	m := batteryModel()
+	cache.layout(m, 1400, statusTestDims, unit.Metric{}, nil, measure)
+	n := runs
+	cache.layout(m, 1400, statusTestDims, unit.Metric{}, nil, measure)
+	if runs != n {
+		t.Fatal("the same model with a battery laid out again")
+	}
+	m.Battery.Percent = 81
+	cache.layout(m, 1400, statusTestDims, unit.Metric{}, nil, measure)
+	if runs == n {
+		t.Fatal("a new percent did not lay out again")
+	}
+	n = runs
+	m.Battery.Charging = true
+	cache.layout(m, 1400, statusTestDims, unit.Metric{}, nil, measure)
+	if runs == n {
+		t.Fatal("charging did not lay out again")
+	}
+}
+
+// statusFrameAllocs is the allocations of an unchanged status bar frame.
+func statusFrameAllocs(t *testing.T, st battery.Status) float64 {
+	t.Helper()
+	win, _ := sideWindow(t, true)
+	openIn(t, win, osPath("/code/alpha/a"))
+	if st.Present {
+		win.battery = newBatteryWork(&fakeBattery{st: st, watchOK: true}, func() {})
+	}
+	var r input.Router
+	sizedFrame(t, win, &r, 1600, 600)
+	var ops op.Ops
+	g := pageContext(1600, 600)
+	g.Ops = &ops
+	now := time.Now()
+	draw := func() { ops.Reset(); win.drawStatus(g, 568, now) }
+	for range 10 {
+		draw()
+	}
+	if st.Present && win.statusRect(grpBattery).Empty() {
+		t.Fatal("the battery was not drawn")
+	}
+	return testing.AllocsPerRun(50, draw)
+}
+
+func TestStatusBatteryAddsNoAllocations(t *testing.T) {
+	without := statusFrameAllocs(t, battery.Status{})
+	for _, st := range []battery.Status{{Present: true, Percent: 82}, {Present: true, Percent: 64, Charging: true}, {Present: true, Percent: 7}} {
+		if with := statusFrameAllocs(t, st); with != without {
+			t.Fatalf("%+v: %g allocations per unchanged frame, %g without a battery", st, with, without)
+		}
+	}
+	t.Logf("%g allocations per unchanged status frame", without)
 }
