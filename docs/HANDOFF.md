@@ -528,12 +528,6 @@ Measured (Windows, `docs/benchmarks/2026-10-28-milestone-1.md`):
 
 ## Next
 
-- **Battery on macOS (#139):** add `internal/battery/source_darwin.go` reading IOKit
-  (`IOPSCopyPowerSourcesInfo`, with `IOPSNotificationCreateRunLoopSource` for changes) and narrow
-  `source_other.go` to `//go:build !windows && !darwin`. Build and check it on the MacBook (cgo needs
-  the Xcode Command Line Tools); the macOS CI job covers the rest. Then drop "Windows only" from the
-  README and here.
-
 - Owner: open the reader spec from terminal output, use the outline, return via the
   session row, edit the file and check reload, close with Cmd+W, and try all themes.
   On Windows verify Ctrl+click, backslash paths and drive letters. Native runtime
@@ -573,7 +567,9 @@ setup/checklist is historical; unresolved platform checks are listed above.
    - **zsh snippet:** add the OSC 7 snippet from the README to `~/.zshrc` and check folder and branch show, including a folder with spaces, `#`, `%` and Japanese. Unlike the pwsh one, the zsh snippet only escapes `%`, `#` and space and sends other characters as raw UTF-8 (kaze accepts that); it could not be run on Windows, so verify it here.
    - **Dock bounce:** alerts while kaze is in the background should bounce the Dock icon (the Windows taskbar flash has no macOS twin yet; `flashTaskbar` is a no-op off Windows).
    - **Title bar:** the native traffic lights are restored on the custom frame; owner checked the Mac behavior on 2026-10-31.
-6. **Battery (#139):** build the IOKit source on the MacBook and check the far right of the status bar
+6. **Battery (#139, `feat/macos-battery`):** the IOKit source is built (`internal/battery/source_darwin.go`
+   + `iops_darwin.c`; changes come from the `com.apple.system.powersources.percent` and
+   `kIOPSNotifyPowerSource` notify alerts, not a run loop source). Check the far right of the status bar
    matches Windows: level, percent, the bolt while charging, amber at 20% or less, red at 10% or less,
    nothing on a Mac desktop, no wakes while idle or hidden.
 7. Benchmarks: `bench/run.sh` (it uses a history-free shell and kaze drops real input in bench mode, so it can't type into your sessions). Add a "macOS" column to the milestone doc.
@@ -608,9 +604,11 @@ setup/checklist is historical; unresolved platform checks are listed above.
 - Closing a tab whose ConPTY close times out can keep that screen in memory until ConPTY lets go.
 - Links set with OSC 8 (hidden link targets) are not read (#128 item 3; needs its own design).
 - Accepted link false positive (Ruling 21 of the 0.27 plan): in "cd /tmp then edit docs/notes.md" the underline starts at `/tmp`; the click still opens `docs/notes.md` through the shorter candidates.
-- No battery on macOS yet (#139); the 0.28 battery is Windows only.
+- The macOS percent alert (`com.apple.system.powersources.percent`) is not named in the public SDK; powerd
+  posts it on every percent change. If a future macOS stopped posting it, the percent would refresh only
+  when the charger is plugged in or out (the power source alert is public and still fires).
 - No battery tooltip (time remaining), left out to keep the bar's cost unchanged (Ruling 7 of the 0.28 plan).
-- A battery plugged into a desktop after Kaze started shows only after a restart (Ruling 2). If Windows
+- A battery plugged into a desktop after Kaze started shows only after a restart (Ruling 2). If the OS
   notifications fail to register, an idle window may show a stale percent until something redraws (Ruling 3).
 - Agent names: two prompts identical in their first 2 KiB count as the same task, so the start order
   decides (Ruling 17).

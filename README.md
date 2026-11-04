@@ -276,13 +276,14 @@ opens what they point at. In a narrow window the least important parts give way 
 battery, then the tab count, then the resource label and meter, then other labels, so nothing
 overlaps.
 
-**Battery (Windows only for now):** at the far right, a small battery that fills to the level and
+**Battery (Windows and macOS):** at the far right, a small battery that fills to the level and
 the percent. A green bolt shows while it charges below 100% (a full battery shows no bolt, even
 plugged in). It turns amber at 20% or less and red at 10% or less. A desktop shows nothing, and
-Kaze stops asking after the first check. Kaze hears about changes from Windows instead of polling;
-if that is not available it reads at most once a minute, only on frames that are drawn anyway.
-Nothing is read while the window is minimised, or in bench mode. It is not clickable and has no
-tooltip. macOS shows no battery yet (#139).
+Kaze stops asking after the first check. Kaze hears about changes from the OS instead of polling
+(Windows power-setting notifications; on macOS the system's battery percent and power source
+alerts); if that is not available it reads at most once a minute, only on frames that are drawn
+anyway. Nothing is read while the window is minimised, or in bench mode. It is not clickable and
+has no tooltip.
 
 Hover **CPU · memory** for **Kaze resource usage**: Kaze itself first, followed by
 session totals for its observable child processes, including shells, agents and
