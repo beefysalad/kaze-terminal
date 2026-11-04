@@ -22,7 +22,8 @@ const windows = process.platform === 'win32';
 const knownPhases = ['isolation', 'mcp', 'popup', 'dialogs', 'download', 'memory'];
 const askedPhases = knownPhases.filter(phase => process.argv.includes(`--${phase}`));
 const phases = askedPhases.length ? askedPhases : windows ? knownPhases : ['isolation', 'mcp'];
-const launchVariants = ['node-hidden', 'node-default', 'shownoactivate', 'showminnoactive'];
+const launchVariants = ['node-hidden', 'node-default', 'shownoactivate', 'showminnoactive', 'wmi-default', 'wmi-noactivate'];
+const WMI_SHOW = { 'wmi-default': 1, 'wmi-noactivate': 4 }; // SW_SHOWNORMAL, SW_SHOWNOACTIVATE
 const launchVariant = process.env.KAZE_SPIKE_LAUNCH || (windows ? 'node-default' : 'open-g');
 if (windows && !launchVariants.includes(launchVariant)) throw new Error(`KAZE_SPIKE_LAUNCH must be one of ${launchVariants.join(', ')}`);
 const owned = new Map(); // browser-tree pid -> { from, to }: only these count as test-browser activations
@@ -93,12 +94,17 @@ async function launchBrowser(label) {
     `--user-data-dir=${profile}`, '--remote-debugging-address=127.0.0.1', '--remote-debugging-port=0',
     '--no-first-run', '--no-default-browser-check', '--no-startup-window', '--disable-extensions',
     '--disable-background-networking', '--disable-component-update', '--disable-sync', '--disable-default-apps',
-    '--metrics-recording-only', '--disable-features=Translate,MediaRouter', '--window-size=900,650'
+    '--metrics-recording-only', '--disable-features=Translate,MediaRouter', '--window-size=900,650',
+    ...(process.env.KAZE_SPIKE_HEADLESS ? ['--headless=new'] : [])
   ];
   const item = { label, profile, closed: false, treePids: new Set() };
   browsers.add(item);
   if (process.platform === 'darwin') {
     execFileSync('/usr/bin/open', ['-g', '-n', '-a', executable().split('/Contents/')[0], '--args', ...flags], { timeout: 10000 });
+  } else if (windows && WMI_SHOW[launchVariant]) {
+    // Started by WMI, so the browser is not a descendant of the foreground app (Kaze) and inherits no foreground right.
+    const quote = v => /[\s"]/.test(v) ? `"${v.replace(/"/g, '\\"')}"` : v;
+    item.launcherPid = (await tools.launchWmi([executable(), ...flags].map(quote).join(' '), WMI_SHOW[launchVariant])).pid;
   } else if (windows && SHOW[launchVariant]) {
     // CreateProcess with STARTF_USESHOWWINDOW and SW_SHOWNOACTIVATE / SW_SHOWMINNOACTIVE.
     item.launcherPid = (await tools.launch(executable(), flags, SHOW[launchVariant])).pid;
@@ -263,9 +269,9 @@ async function mcpProbe(kind, origin) {
     : [path.join(directory, 'node_modules/chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js'), '--wsEndpoint', relay.url, '--no-usage-statistics', '--no-performance-crux', '--no-source-maps'];
   const mcp = new McpPeer(process.execPath, args, artifacts); mcps.add(mcp);
   observation.initialize = await mcp.initialize();
-  const { tools } = await mcp.call('tools/list');
-  await fs.writeFile(path.join(artifacts, `${kind}-tools.json`), JSON.stringify(tools, null, 2));
-  observation.tools = tools.map(t => t.name);
+  const { tools: mcpTools } = await mcp.call('tools/list');
+  await fs.writeFile(path.join(artifacts, `${kind}-tools.json`), JSON.stringify(mcpTools, null, 2));
+  observation.tools = mcpTools.map(t => t.name);
   observation.afterDiscovery = { relayConnections: relay.connections, browserLaunches: observation.launches, nodeProcessRunning: mcp.process.exitCode === null };
   assert.equal(relay.connections, 0, `${kind} connected before its first tool call`);
   assert.equal(observation.launches, 0, `${kind} launched a browser during discovery`);
@@ -468,6 +474,7 @@ try {
     report.browserName = browserName;
     report.browserExecutable = executable();
     report.launchVariant = launchVariant;
+    report.headless = Boolean(process.env.KAZE_SPIKE_HEADLESS);
     tools = new WinTools();
     monitor = startForegroundMonitor(focusEvents);
     for (let n = 0; n < 300 && !focusEvents.length; n++) await delay(50);
@@ -561,7 +568,7 @@ try {
   if (report.chromeActivationEvents.length) { report.error ??= 'test browser became the foreground window'; process.exitCode = 1; }
   await fs.writeFile(path.join(artifacts, `${phases.join('-')}-results.json`), JSON.stringify(report, null, 2) + '\n');
   if (windows) {
-    const suffix = browserName === 'edge' && launchVariant === 'node-default' && !askedPhases.length ? '' : `-${browserName}-${launchVariant}${askedPhases.length ? `-${askedPhases.join('-')}` : ''}`;
+    const suffix = browserName === 'edge' && launchVariant === 'node-default' && !askedPhases.length && !process.env.KAZE_SPIKE_HEADLESS ? '' : `-${browserName}-${process.env.KAZE_SPIKE_HEADLESS ? 'headless-' : ''}${launchVariant}${askedPhases.length ? `-${askedPhases.join('-')}` : ''}`;
     const out = path.join(directory, 'results', `windows-${os.arch()}${suffix}.json`);
     await fs.writeFile(out, JSON.stringify(report, null, 2) + '\n');
     console.log('Wrote', out);

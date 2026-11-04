@@ -1,4 +1,5 @@
 # Windows helper for probe.mjs. Reads one JSON request per line on stdin, answers one JSON line on stdout.
+# Requests: {"id":1,"cmd":"launchwmi","cmdline":"...","show":4}  start via WMI, outside this process tree
 # Requests: {"id":1,"cmd":"launch","exe":"...","args":[...],"show":4}  start a process with STARTUPINFO.wShowWindow
 #           {"id":2,"cmd":"tree","pid":123}                            the process and its descendants, with memory
 #           {"id":3,"cmd":"windows","pids":[...]}                       top-level windows owned by these processes
@@ -147,6 +148,13 @@ while ($null -ne ($line = $stdin.ReadLine())) {
     $request = $line | ConvertFrom-Json
     $result = switch ($request.cmd) {
       'launch' { @{ pid = [KazeWinTools]::Launch($request.exe, [string[]]@($request.args), [int16]$request.show) } }
+      'launchwmi' {
+        # Win32_Process.Create: the new process's parent is WmiPrvSE, not this run's (foreground-descended) tree.
+        $si = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ ShowWindow = [uint16]$request.show }
+        $r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = [string]$request.cmdline; ProcessStartupInformation = $si }
+        if ($r.ReturnValue -ne 0) { throw "Win32_Process.Create failed: $($r.ReturnValue)" }
+        @{ pid = $r.ProcessId }
+      }
       'tree' { , @([KazeWinTools]::Tree([uint32]$request.pid)) }
       'windows' { , @([KazeWinTools]::Windows([uint32[]]@($request.pids))) }
       'leftovers' {

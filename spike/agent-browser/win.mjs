@@ -70,6 +70,7 @@ export class WinTools {
     });
   }
   launch(exe, args, show) { return this.call('launch', { exe, args, show }); }
+  launchWmi(cmdline, show) { return this.call('launchwmi', { cmdline, show }); }
   async tree(pid) {
     const rows = await this.call('tree', { pid });
     return Array.isArray(rows) ? rows : rows ? [rows] : [];

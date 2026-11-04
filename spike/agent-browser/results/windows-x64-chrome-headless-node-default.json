@@ -1,0 +1,2601 @@
+{
+  "date": "2026-11-04T05:52:54.421Z",
+  "platform": "win32",
+  "release": "10.0.26200",
+  "arch": "x64",
+  "node": "v24.19.0",
+  "nodeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+  "phases": [
+    "isolation",
+    "mcp",
+    "popup",
+    "dialogs",
+    "download",
+    "memory"
+  ],
+  "baseCommit": "d5741fca91caea528d6abeeecc57bd90503a38ee",
+  "dependencies": {
+    "@playwright/mcp": "0.0.84",
+    "chrome-devtools-mcp": "1.12.0",
+    "ws": "8.22.1"
+  },
+  "observations": {
+    "sharedWindows": {
+      "sharedSignIn": true,
+      "foreignWindowListed": true,
+      "foreignWindowReadable": true,
+      "isolated": false,
+      "startupMs": 694
+    },
+    "separateContexts": {
+      "cookiesSeparated": true,
+      "foreignContextReadableThroughBrowserEndpoint": true,
+      "isolatedConnection": false
+    },
+    "pageEndpoint": {
+      "foreignWindowListed": true,
+      "foreignWindowReadable": true,
+      "isolated": false
+    },
+    "separateInstances": {
+      "cookiesSeparated": true,
+      "foreignTargetsAbsent": true,
+      "foreignTargetAttachRejected": true,
+      "startupMs": 782
+    },
+    "browserProcesses": [
+      {
+        "label": "shared-browser",
+        "processCount": 13,
+        "workingSetBytes": 843407360,
+        "privateBytes": 421072896,
+        "note": "Working-set sum counts shared pages once per process; private bytes are closer to the per-instance cost"
+      },
+      {
+        "label": "separate-session-browser",
+        "processCount": 10,
+        "workingSetBytes": 577208320,
+        "privateBytes": 277024768,
+        "note": "Working-set sum counts shared pages once per process; private bytes are closer to the per-instance cost"
+      }
+    ],
+    "playwright": {
+      "kind": "playwright",
+      "toolCalls": [
+        {
+          "name": "browser_navigate",
+          "args": {
+            "url": "http://127.0.0.1:57221/playwright"
+          },
+          "ms": 1547,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "### Ran Playwright code\n```js\nawait page.goto('http://127.0.0.1:57221/playwright');\n```\n### Page\n- Page URL: http://127.0.0.1:57221/playwright\n- Page Title: Kaze fixture /playwright\n- Console: 2 errors, 0 warnings\n### Snapshot\n- [Snapshot](./page-2026-11-04T05-53-04-908Z.yml)\n### Events\n- New console entries: console-2026-11-04T05-53-04-778Z.log#L1-L2",
+          "images": []
+        },
+        {
+          "name": "browser_snapshot",
+          "args": {},
+          "ms": 16,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "### Page\n- Page URL: http://127.0.0.1:57221/playwright\n- Page Title: Kaze fixture /playwright\n- Console: 2 errors, 0 warnings\n### Snapshot\n```yaml\n- generic [ref=f1e1]:\n  - heading \"Kaze browser fixture\" [level=1] [ref=f1e2]\n  - generic [ref=f1e3]:\n    - text: Message\n    - textbox \"Message\" [ref=f1e4]\n  - button \"Apply\" [ref=f1e5]\n  - status [ref=f1e6]: Waiting\n```",
+          "images": []
+        },
+        {
+          "name": "browser_type",
+          "args": {
+            "target": "f1e4",
+            "text": "playwright-applied"
+          },
+          "ms": 106,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "### Ran Playwright code\n```js\nawait page.getByRole('textbox', { name: 'Message' }).fill('playwright-applied');\n```",
+          "images": []
+        },
+        {
+          "name": "browser_click",
+          "args": {
+            "target": "f1e5"
+          },
+          "ms": 594,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "### Ran Playwright code\n```js\nawait page.getByRole('button', { name: 'Apply' }).click();\n```\n### Page\n- Page URL: http://127.0.0.1:57221/playwright\n- Page Title: Kaze fixture /playwright\n- Console: 2 errors, 0 warnings\n### Snapshot\n- [Snapshot](./page-2026-11-04T05-53-05-627Z.yml)",
+          "images": []
+        },
+        {
+          "name": "browser_snapshot",
+          "args": {},
+          "ms": 10,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "### Page\n- Page URL: http://127.0.0.1:57221/playwright\n- Page Title: Kaze fixture /playwright\n- Console: 2 errors, 0 warnings\n### Snapshot\n```yaml\n- generic [ref=f1e1]:\n  - heading \"Kaze browser fixture\" [level=1] [ref=f1e2]\n  - generic [ref=f1e3]:\n    - text: Message\n    - textbox \"Message\" [ref=f1e4]: playwright-applied\n  - button \"Apply\" [active] [ref=f1e5]\n  - status [ref=f1e6]: playwright-applied\n```",
+          "images": []
+        },
+        {
+          "name": "browser_console_messages",
+          "args": {
+            "level": "error"
+          },
+          "ms": 6,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "### Result\nTotal messages: 2 (Errors: 2, Warnings: 0)\n\n[ERROR] kaze-fixture-console-error @ http://127.0.0.1:57221/playwright:0\n[ERROR] Failed to load resource: net::ERR_EMPTY_RESPONSE @ http://127.0.0.1:57221/network-failure:0",
+          "images": []
+        },
+        {
+          "name": "browser_network_requests",
+          "args": {
+            "includeStatic": true
+          },
+          "ms": 7,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "### Result\n2. [GET] http://127.0.0.1:57221/network-failure => [FAILED] net::ERR_EMPTY_RESPONSE\n\nNote: 1 static request not shown, run with \"static\" option to see it.",
+          "images": []
+        },
+        {
+          "name": "browser_take_screenshot",
+          "args": {
+            "type": "png",
+            "scale": "css"
+          },
+          "ms": 76,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "### Result\n- [Screenshot of viewport](./page-2026-11-04T05-53-05-723Z.png)\n### Ran Playwright code\n```js\n// Screenshot viewport and save it as ./page-2026-11-04T05-53-05-723Z.png\nawait page.screenshot({\n  path: './page-2026-11-04T05-53-05-723Z.png',\n  scale: 'css',\n  type: 'png'\n});\n```",
+          "images": [
+            {
+              "mimeType": "image/png",
+              "bytes": 11211
+            }
+          ]
+        },
+        {
+          "name": "browser_tabs",
+          "args": {
+            "action": "list"
+          },
+          "ms": 6,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "### Result\n- 0: (current) [Kaze fixture /playwright](http://127.0.0.1:57221/playwright)",
+          "images": []
+        },
+        {
+          "name": "browser_tabs",
+          "args": {
+            "action": "new",
+            "url": "http://127.0.0.1:57221/playwright-new-page"
+          },
+          "ms": 197,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "### Result\n- 0: [Kaze fixture /playwright](http://127.0.0.1:57221/playwright)\n- 1: (current) [Kaze fixture /playwright-new-page](http://127.0.0.1:57221/playwright-new-page)\n### Ran Playwright code\n```js\nawait page.goto('http://127.0.0.1:57221/playwright-new-page');\n```\n### Open tabs\n- 0: [Kaze fixture /playwright](http://127.0.0.1:57221/playwright)\n- 1: (current) [Kaze fixture /playwright-new-page](http://127.0.0.1:57221/playwright-new-page)\n### Page\n- Page URL: http://127.0.0.1:57221/playwright-new-page\n- Page Title: Kaze fixture /playwright-new-page\n- Console: 2 errors, 0 warnings\n### Snapshot\n- [Snapshot](./page-2026-11-04T05-53-05-931Z.yml)\n### Events\n- New console entries: console-2026-11-04T05-53-05-773Z.log#L1-L2",
+          "images": []
+        },
+        {
+          "name": "browser_tabs",
+          "args": {
+            "action": "select",
+            "index": 0
+          },
+          "ms": 13,
+          "focusCommandsBlocked": [
+            "Page.bringToFront"
+          ],
+          "isError": false,
+          "text": "### Result\n- 0: (current) [Kaze fixture /playwright](http://127.0.0.1:57221/playwright)\n- 1: [Kaze fixture /playwright-new-page](http://127.0.0.1:57221/playwright-new-page)",
+          "images": []
+        },
+        {
+          "name": "browser_tabs",
+          "args": {
+            "action": "list"
+          },
+          "ms": 31,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "### Result\n- 0: (current) [Kaze fixture /playwright](http://127.0.0.1:57221/playwright)\n- 1: [Kaze fixture /playwright-new-page](http://127.0.0.1:57221/playwright-new-page)\n- 2: [Kaze fixture /foreign-window](http://127.0.0.1:57221/foreign-window)\n- 3: [Kaze fixture /foreign-context](http://127.0.0.1:57221/foreign-context)",
+          "images": []
+        },
+        {
+          "name": "browser_tabs",
+          "args": {
+            "action": "list"
+          },
+          "ms": 19,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "### Result\n- 0: (current) [Kaze fixture /playwright](http://127.0.0.1:57221/playwright)\n- 1: [Kaze fixture /playwright-new-page](http://127.0.0.1:57221/playwright-new-page)",
+          "images": []
+        },
+        {
+          "name": "browser_navigate",
+          "args": {
+            "url": "http://127.0.0.1:57221/playwright-reconnected"
+          },
+          "ms": 1628,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "### Ran Playwright code\n```js\nawait page.goto('http://127.0.0.1:57221/playwright-reconnected');\n```\n### Page\n- Page URL: http://127.0.0.1:57221/playwright-reconnected\n- Page Title: Kaze fixture /playwright-reconnected\n- Console: 2 errors, 0 warnings\n### Snapshot\n- [Snapshot](./page-2026-11-04T05-53-11-291Z.yml)\n### Events\n- New console entries: console-2026-11-04T05-53-11-168Z.log#L1-L2",
+          "images": []
+        }
+      ],
+      "launches": 2,
+      "initialize": {
+        "protocolVersion": "2024-11-05",
+        "capabilities": {
+          "tools": {
+            "listChanged": true
+          }
+        },
+        "serverInfo": {
+          "name": "Playwright",
+          "version": "1.65.0-alpha-2026-10-30"
+        }
+      },
+      "tools": [
+        "browser_close",
+        "browser_resize",
+        "browser_console_messages",
+        "browser_handle_dialog",
+        "browser_emulate_media",
+        "browser_evaluate",
+        "browser_file_upload",
+        "browser_drop",
+        "browser_find",
+        "browser_fill_form",
+        "browser_press_key",
+        "browser_type",
+        "browser_navigate",
+        "browser_navigate_back",
+        "browser_network_requests",
+        "browser_network_request",
+        "browser_run_code_unsafe",
+        "browser_take_screenshot",
+        "browser_snapshot",
+        "browser_click",
+        "browser_drag",
+        "browser_hover",
+        "browser_select_option",
+        "browser_tabs",
+        "browser_wait_for"
+      ],
+      "afterDiscovery": {
+        "relayConnections": 0,
+        "browserLaunches": 0,
+        "nodeProcessRunning": true
+      },
+      "idleWorker": {
+        "intervalMs": 1000,
+        "cpuMsBefore": 546,
+        "cpuMsAfter": 546,
+        "workingSetBytes": 125337600,
+        "privateBytes": 106246144,
+        "browserLaunches": 0,
+        "relayConnections": 0
+      },
+      "unfilteredRelay": {
+        "foreignWindowListed": true,
+        "foreignContextListed": true
+      },
+      "separateInstanceNeighborHidden": true,
+      "reconnect": {
+        "firstCallSucceeded": true,
+        "browserRelaunched": true
+      },
+      "connections": 2,
+      "focusCommandsBlocked": [
+        "Page.bringToFront"
+      ],
+      "cdpMethods": [
+        "Browser.getVersion",
+        "Target.setAutoAttach",
+        "Runtime.runIfWaitingForDebugger",
+        "Page.enable",
+        "Page.getFrameTree",
+        "Log.enable",
+        "Page.setLifecycleEventsEnabled",
+        "Runtime.enable",
+        "Page.addScriptToEvaluateOnNewDocument",
+        "Network.enable",
+        "Page.setFontFamilies",
+        "Inspector.enable",
+        "Emulation.setUserAgentOverride",
+        "Target.getTargetInfo",
+        "Target.detachFromTarget",
+        "Page.createIsolatedWorld",
+        "Page.setInterceptFileChooserDialog",
+        "Page.navigate",
+        "Runtime.evaluate",
+        "Runtime.callFunctionOn",
+        "DOM.describeNode",
+        "DOM.resolveNode",
+        "Runtime.releaseObject",
+        "Input.insertText",
+        "DOM.scrollIntoViewIfNeeded",
+        "DOM.getContentQuads",
+        "Input.dispatchMouseEvent",
+        "Page.getLayoutMetrics",
+        "Page.captureScreenshot",
+        "Target.createTarget",
+        "Page.bringToFront"
+      ]
+    },
+    "devtools": {
+      "kind": "devtools",
+      "toolCalls": [
+        {
+          "name": "list_pages",
+          "args": {},
+          "ms": 1036,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "## Pages\n1: Kaze fixture /devtools-initial (http://127.0.0.1:57221/devtools-initial) [selected]",
+          "images": []
+        },
+        {
+          "name": "navigate_page",
+          "args": {
+            "pageId": 1,
+            "type": "url",
+            "url": "http://127.0.0.1:57221/devtools"
+          },
+          "ms": 167,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "Successfully navigated to http://127.0.0.1:57221/devtools.\n## Pages\n1: Kaze fixture /devtools (http://127.0.0.1:57221/devtools) [selected]",
+          "images": []
+        },
+        {
+          "name": "take_snapshot",
+          "args": {
+            "pageId": 1
+          },
+          "ms": 19,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "## Latest page snapshot\nuid=1_0 RootWebArea \"Kaze fixture /devtools\" url=\"http://127.0.0.1:57221/devtools\"\n  uid=1_1 heading \"Kaze browser fixture\" level=\"1\"\n  uid=1_2 \"Message \"\n  uid=1_3 textbox \"Message\"\n  uid=1_4 button \"Apply\"\n  uid=1_5 status atomic live=\"polite\" relevant=\"additions text\"\n    uid=1_6 \"Waiting\"\n",
+          "images": []
+        },
+        {
+          "name": "fill",
+          "args": {
+            "pageId": 1,
+            "uid": "1_3",
+            "value": "devtools-applied"
+          },
+          "ms": 408,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "Successfully filled out the element",
+          "images": []
+        },
+        {
+          "name": "click",
+          "args": {
+            "pageId": 1,
+            "uid": "1_4"
+          },
+          "ms": 279,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "Successfully clicked on the element",
+          "images": []
+        },
+        {
+          "name": "take_snapshot",
+          "args": {
+            "pageId": 1
+          },
+          "ms": 8,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "## Latest page snapshot\nuid=1_0 RootWebArea \"Kaze fixture /devtools\" url=\"http://127.0.0.1:57221/devtools\"\n  uid=1_1 heading \"Kaze browser fixture\" level=\"1\"\n  uid=1_2 \"Message \"\n  uid=1_3 textbox \"Message\" value=\"devtools-applied\"\n  uid=1_4 button \"Apply\" focusable focused\n  uid=1_5 status atomic live=\"polite\" relevant=\"additions text\"\n    uid=2_0 \"devtools-applied\"\n",
+          "images": []
+        },
+        {
+          "name": "list_console_messages",
+          "args": {
+            "pageId": 1,
+            "types": [
+              "error"
+            ]
+          },
+          "ms": 5,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "## Console messages\nShowing 1-2 of 2 (Page 1 of 1).\nmsgid=1 [error] kaze-fixture-console-error (1 args)\nmsgid=2 [error] Failed to load resource: net::ERR_EMPTY_RESPONSE (0 args)",
+          "images": []
+        },
+        {
+          "name": "list_network_requests",
+          "args": {
+            "pageId": 1
+          },
+          "ms": 6,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "## Network requests\nShowing 1-3 of 3 (Page 1 of 1).\nreqid=1 GET http://127.0.0.1:57221/devtools [200]\nreqid=2 GET http://127.0.0.1:57221/network-failure [net::ERR_EMPTY_RESPONSE]\nreqid=3 GET http://127.0.0.1:57221/favicon.ico [204]",
+          "images": []
+        },
+        {
+          "name": "take_screenshot",
+          "args": {
+            "pageId": 1,
+            "format": "png"
+          },
+          "ms": 63,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "Took a screenshot of the current page's viewport.",
+          "images": [
+            {
+              "mimeType": "image/png",
+              "bytes": 19546
+            }
+          ]
+        },
+        {
+          "name": "select_page",
+          "args": {
+            "pageId": 1,
+            "bringToFront": true
+          },
+          "ms": 6,
+          "focusCommandsBlocked": [
+            "Page.bringToFront"
+          ],
+          "isError": false,
+          "text": "## Pages\n1: Kaze fixture /devtools (http://127.0.0.1:57221/devtools) [selected]",
+          "images": []
+        },
+        {
+          "name": "list_pages",
+          "args": {},
+          "ms": 10,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "## Pages\n1: Kaze fixture /devtools (http://127.0.0.1:57221/devtools) [selected]\n2: Kaze fixture /foreign-window (http://127.0.0.1:57221/foreign-window)\n3: Kaze fixture /foreign-context (http://127.0.0.1:57221/foreign-context)",
+          "images": []
+        },
+        {
+          "name": "list_pages",
+          "args": {},
+          "ms": 7,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "## Pages\n1: Kaze fixture /devtools (http://127.0.0.1:57221/devtools) [selected]",
+          "images": []
+        },
+        {
+          "name": "list_pages",
+          "args": {},
+          "ms": 1413,
+          "focusCommandsBlocked": [],
+          "isError": false,
+          "text": "Note: the browser was restarted or reconnected since the last call. Page ids have changed. Call list_pages to see open pages.\n## Pages\n4: Kaze fixture /devtools-initial (http://127.0.0.1:57221/devtools-initial) [selected]",
+          "images": []
+        }
+      ],
+      "launches": 2,
+      "initialize": {
+        "protocolVersion": "2024-11-05",
+        "capabilities": {
+          "logging": {},
+          "tools": {
+            "listChanged": true
+          }
+        },
+        "serverInfo": {
+          "name": "chrome_devtools",
+          "title": "Chrome DevTools MCP server",
+          "version": "1.12.0"
+        }
+      },
+      "tools": [
+        "click",
+        "close_page",
+        "drag",
+        "emulate",
+        "evaluate_script",
+        "fill",
+        "fill_form",
+        "get_console_message",
+        "get_css_styles",
+        "get_network_request",
+        "handle_dialog",
+        "hover",
+        "lighthouse_audit",
+        "list_console_messages",
+        "list_network_requests",
+        "list_pages",
+        "navigate_page",
+        "new_page",
+        "performance_analyze_insight",
+        "performance_start_trace",
+        "performance_stop_trace",
+        "press_key",
+        "resize_page",
+        "screencast_start",
+        "screencast_stop",
+        "select_page",
+        "take_heapsnapshot",
+        "take_screenshot",
+        "take_snapshot",
+        "type_text",
+        "upload_file",
+        "wait_for"
+      ],
+      "afterDiscovery": {
+        "relayConnections": 0,
+        "browserLaunches": 0,
+        "nodeProcessRunning": true
+      },
+      "idleWorker": {
+        "intervalMs": 1000,
+        "cpuMsBefore": 671,
+        "cpuMsAfter": 671,
+        "workingSetBytes": 126672896,
+        "privateBytes": 137428992,
+        "browserLaunches": 0,
+        "relayConnections": 0
+      },
+      "unfilteredRelay": {
+        "foreignWindowListed": true,
+        "foreignContextListed": true
+      },
+      "separateInstanceNeighborHidden": true,
+      "reconnect": {
+        "firstCallSucceeded": true,
+        "browserRelaunched": true
+      },
+      "connections": 2,
+      "focusCommandsBlocked": [
+        "Page.bringToFront"
+      ],
+      "cdpMethods": [
+        "Target.getBrowserContexts",
+        "Target.setDiscoverTargets",
+        "Target.setAutoAttach",
+        "Runtime.runIfWaitingForDebugger",
+        "Network.enable",
+        "Page.enable",
+        "Page.getFrameTree",
+        "Page.setLifecycleEventsEnabled",
+        "Runtime.enable",
+        "Audits.enable",
+        "Performance.enable",
+        "Log.enable",
+        "WebMCP.enable",
+        "Target.detachFromTarget",
+        "Page.addScriptToEvaluateOnNewDocument",
+        "Target.attachToTarget",
+        "Page.createIsolatedWorld",
+        "Network.setAttachDebugStack",
+        "Page.getResourceTree",
+        "Debugger.setSkipAllPauses",
+        "Debugger.enable",
+        "Debugger.setPauseOnExceptions",
+        "Debugger.setAsyncCallStackDepth",
+        "Log.startViolationsReport",
+        "DOM.enable",
+        "CSS.enable",
+        "Runtime.getIsolateId",
+        "Debugger.setBlackboxPatterns",
+        "Autofill.enable",
+        "Autofill.setAddresses",
+        "Target.getDevToolsTarget",
+        "Storage.getStorageKey",
+        "Profiler.enable",
+        "Debugger.setBlackboxExecutionContexts",
+        "Target.getTargets",
+        "Emulation.setFocusEmulationEnabled",
+        "Page.navigate",
+        "Runtime.callFunctionOn",
+        "Runtime.releaseObject",
+        "Accessibility.getFullAXTree",
+        "DOM.resolveNode",
+        "DOM.describeNode",
+        "Runtime.addBinding",
+        "Runtime.evaluate",
+        "Input.dispatchKeyEvent",
+        "Input.dispatchMouseEvent",
+        "Page.captureScreenshot",
+        "Page.bringToFront"
+      ]
+    },
+    "popup": {
+      "tab": {
+        "userGesture": true,
+        "returned": true,
+        "newPages": [
+          {
+            "url": "/popup-tab",
+            "hasOpener": true
+          }
+        ],
+        "startedAt": 1793771603115,
+        "endedAt": 1793771604727,
+        "windows": [
+          {
+            "hwnd": 1903532,
+            "pid": 39208,
+            "visible": false,
+            "class": "Chrome_WidgetWin_1",
+            "title": "Kaze fixture /popup-tab - Google Chrome",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 6,
+            "rect": [
+              10,
+              10,
+              910,
+              660
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 2034544,
+            "pid": 12180,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 2820898,
+            "pid": 39208,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 2820916,
+            "pid": 14776,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          }
+        ]
+      },
+      "window": {
+        "userGesture": true,
+        "returned": true,
+        "newPages": [
+          {
+            "url": "/popup-window",
+            "hasOpener": true
+          }
+        ],
+        "startedAt": 1793771604729,
+        "endedAt": 1793771606370,
+        "windows": [
+          {
+            "hwnd": 3082516,
+            "pid": 39208,
+            "visible": false,
+            "class": "Chrome_WidgetWin_1",
+            "title": "Kaze fixture /popup-window - Google Chrome",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 6,
+            "rect": [
+              182,
+              182,
+              1622,
+              935
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 1903532,
+            "pid": 39208,
+            "visible": false,
+            "class": "Chrome_WidgetWin_1",
+            "title": "Kaze fixture /popup-tab - Google Chrome",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 6,
+            "rect": [
+              10,
+              10,
+              910,
+              660
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 2034544,
+            "pid": 12180,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 2820898,
+            "pid": 39208,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 2820916,
+            "pid": 14776,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          }
+        ]
+      },
+      "windowWithoutGesture": {
+        "userGesture": false,
+        "returned": false,
+        "newPages": [],
+        "startedAt": 1793771606371,
+        "endedAt": 1793771607933,
+        "windows": [
+          {
+            "hwnd": 3082516,
+            "pid": 39208,
+            "visible": false,
+            "class": "Chrome_WidgetWin_1",
+            "title": "Kaze fixture /popup-window - Google Chrome",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 6,
+            "rect": [
+              182,
+              182,
+              1622,
+              935
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 1903532,
+            "pid": 39208,
+            "visible": false,
+            "class": "Chrome_WidgetWin_1",
+            "title": "Kaze fixture /popup-tab - Google Chrome",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 6,
+            "rect": [
+              10,
+              10,
+              910,
+              660
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 2034544,
+            "pid": 12180,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 2820898,
+            "pid": 39208,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 2820916,
+            "pid": 14776,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          }
+        ]
+      },
+      "openerCallsWindowFocus": {
+        "userGesture": true,
+        "returned": "undefined",
+        "newPages": [],
+        "startedAt": 1793771607934,
+        "endedAt": 1793771609512,
+        "windows": [
+          {
+            "hwnd": 3082516,
+            "pid": 39208,
+            "visible": false,
+            "class": "Chrome_WidgetWin_1",
+            "title": "Kaze fixture /popup-window - Google Chrome",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 6,
+            "rect": [
+              182,
+              182,
+              1622,
+              935
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 1903532,
+            "pid": 39208,
+            "visible": false,
+            "class": "Chrome_WidgetWin_1",
+            "title": "Kaze fixture /popup-tab - Google Chrome",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 6,
+            "rect": [
+              10,
+              10,
+              910,
+              660
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 2034544,
+            "pid": 12180,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 2820898,
+            "pid": 39208,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 2820916,
+            "pid": 14776,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          }
+        ]
+      }
+    },
+    "dialogs": {
+      "alert": {
+        "opened": true,
+        "type": "alert",
+        "handled": true,
+        "valueAfter": "undefined",
+        "startedAt": 1793771611544,
+        "endedAt": 1793771613184,
+        "windows": [
+          {
+            "hwnd": 2558868,
+            "pid": 5896,
+            "visible": false,
+            "class": "Chrome_WidgetWin_1",
+            "title": "Kaze fixture /dialogs - Google Chrome",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 6,
+            "rect": [
+              10,
+              10,
+              910,
+              660
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 2100080,
+            "pid": 18540,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 7145956,
+            "pid": 5896,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 2886434,
+            "pid": 17152,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          }
+        ]
+      },
+      "confirm": {
+        "opened": true,
+        "type": "confirm",
+        "handled": true,
+        "valueAfter": "false",
+        "startedAt": 1793771613184,
+        "endedAt": 1793771614820,
+        "windows": [
+          {
+            "hwnd": 2558868,
+            "pid": 5896,
+            "visible": false,
+            "class": "Chrome_WidgetWin_1",
+            "title": "Kaze fixture /dialogs - Google Chrome",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 6,
+            "rect": [
+              10,
+              10,
+              910,
+              660
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 2100080,
+            "pid": 18540,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 7145956,
+            "pid": 5896,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 2886434,
+            "pid": 17152,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          }
+        ]
+      },
+      "prompt": {
+        "opened": true,
+        "type": "prompt",
+        "handled": true,
+        "valueAfter": "kaze",
+        "startedAt": 1793771614820,
+        "endedAt": 1793771616450,
+        "windows": [
+          {
+            "hwnd": 2558868,
+            "pid": 5896,
+            "visible": false,
+            "class": "Chrome_WidgetWin_1",
+            "title": "Kaze fixture /dialogs - Google Chrome",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 6,
+            "rect": [
+              10,
+              10,
+              910,
+              660
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 2100080,
+            "pid": 18540,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 7145956,
+            "pid": 5896,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 2886434,
+            "pid": 17152,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 25,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          }
+        ]
+      }
+    },
+    "download": {
+      "began": true,
+      "state": "completed",
+      "files": [
+        "kaze-spike.txt"
+      ],
+      "behavior": "allow (temporary profile folder)",
+      "startedAt": 1793771618979,
+      "endedAt": 1793771620841,
+      "windows": [
+        {
+          "hwnd": 1444690,
+          "pid": 1232,
+          "visible": false,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /download-page - Google Chrome",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 6,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2165616,
+          "pid": 26452,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 1769964,
+          "pid": 1232,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 7211492,
+          "pid": 29608,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    },
+    "memory": {
+      "oneInstance": {
+        "label": "memory-1",
+        "processCount": 11,
+        "workingSetBytes": 618733568,
+        "privateBytes": 290783232,
+        "note": "Working-set sum counts shared pages once per process; private bytes are closer to the per-instance cost"
+      },
+      "threeInstances": {
+        "perInstance": [
+          {
+            "label": "memory-1",
+            "processCount": 10,
+            "workingSetBytes": 602583040,
+            "privateBytes": 285614080,
+            "note": "Working-set sum counts shared pages once per process; private bytes are closer to the per-instance cost"
+          },
+          {
+            "label": "memory-2",
+            "processCount": 10,
+            "workingSetBytes": 600408064,
+            "privateBytes": 287133696,
+            "note": "Working-set sum counts shared pages once per process; private bytes are closer to the per-instance cost"
+          },
+          {
+            "label": "memory-3",
+            "processCount": 10,
+            "workingSetBytes": 603414528,
+            "privateBytes": 286478336,
+            "note": "Working-set sum counts shared pages once per process; private bytes are closer to the per-instance cost"
+          }
+        ],
+        "workingSetBytes": 1806405632,
+        "privateBytes": 859226112
+      },
+      "note": "Each instance has one fixture page open, sampled 2 s after load"
+    }
+  },
+  "browserInstances": [
+    {
+      "label": "shared-browser",
+      "pid": 7888,
+      "launcherPid": 7888,
+      "launchVariant": "node-default",
+      "startupMs": 694,
+      "startedAt": 1793771577262
+    },
+    {
+      "label": "separate-session-browser",
+      "pid": 9296,
+      "launcherPid": 9296,
+      "launchVariant": "node-default",
+      "startupMs": 782,
+      "startedAt": 1793771578964
+    },
+    {
+      "label": "playwright-lazy",
+      "pid": 28476,
+      "launcherPid": 28476,
+      "launchVariant": "node-default",
+      "startupMs": 672,
+      "startedAt": 1793771584066
+    },
+    {
+      "label": "playwright-neighbor",
+      "pid": 31636,
+      "launcherPid": 31636,
+      "launchVariant": "node-default",
+      "startupMs": 819,
+      "startedAt": 1793771587273
+    },
+    {
+      "label": "playwright-lazy",
+      "pid": 22856,
+      "launcherPid": 22856,
+      "launchVariant": "node-default",
+      "startupMs": 769,
+      "startedAt": 1793771590443
+    },
+    {
+      "label": "devtools-lazy",
+      "pid": 21156,
+      "launcherPid": 21156,
+      "launchVariant": "node-default",
+      "startupMs": 592,
+      "startedAt": 1793771594409
+    },
+    {
+      "label": "devtools-neighbor",
+      "pid": 7944,
+      "launcherPid": 7944,
+      "launchVariant": "node-default",
+      "startupMs": 831,
+      "startedAt": 1793771597124
+    },
+    {
+      "label": "devtools-lazy",
+      "pid": 19020,
+      "launcherPid": 19020,
+      "launchVariant": "node-default",
+      "startupMs": 668,
+      "startedAt": 1793771600338
+    },
+    {
+      "label": "popup",
+      "pid": 39208,
+      "launcherPid": 39208,
+      "launchVariant": "node-default",
+      "startupMs": 600,
+      "startedAt": 1793771602430
+    },
+    {
+      "label": "dialogs",
+      "pid": 5896,
+      "launcherPid": 5896,
+      "launchVariant": "node-default",
+      "startupMs": 657,
+      "startedAt": 1793771610922
+    },
+    {
+      "label": "download",
+      "pid": 1232,
+      "launcherPid": 1232,
+      "launchVariant": "node-default",
+      "startupMs": 605,
+      "startedAt": 1793771617802
+    },
+    {
+      "label": "memory-1",
+      "pid": 5528,
+      "launcherPid": 5528,
+      "launchVariant": "node-default",
+      "startupMs": 683,
+      "startedAt": 1793771622265
+    },
+    {
+      "label": "memory-2",
+      "pid": 23404,
+      "launcherPid": 23404,
+      "launchVariant": "node-default",
+      "startupMs": 833,
+      "startedAt": 1793771625488
+    },
+    {
+      "label": "memory-3",
+      "pid": 26060,
+      "launcherPid": 26060,
+      "launchVariant": "node-default",
+      "startupMs": 942,
+      "startedAt": 1793771626734
+    }
+  ],
+  "browserName": "chrome",
+  "browserExecutable": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  "launchVariant": "node-default",
+  "headless": true,
+  "focusBaseline": {
+    "kind": "baseline",
+    "at_ms": 1793771576470,
+    "pid": 37956,
+    "exe": "kaze",
+    "hwnd": 460096,
+    "class": "kaze.exe",
+    "ancestors": [
+      29992
+    ]
+  },
+  "fixtureOrigin": "http://127.0.0.1:57221",
+  "chrome": "Chrome/156.0.8078.80",
+  "cleanup": {
+    "leftoverBrowserProcesses": [],
+    "ownedPidsStillAlive": [],
+    "ownedPidCount": 143,
+    "note": "ownedPidsStillAlive can include a PID already reused by an unrelated process; leftoverBrowserProcesses matches this run profile root in the command line",
+    "profileRootRemoved": true
+  },
+  "focusMonitor": {
+    "baselineReceived": true,
+    "runningUntilCleanup": true
+  },
+  "browserWindowShows": [],
+  "focusEvents": [
+    {
+      "kind": "baseline",
+      "at_ms": 1793771576470,
+      "pid": 37956,
+      "exe": "kaze",
+      "hwnd": 460096,
+      "class": "kaze.exe",
+      "ancestors": [
+        29992
+      ]
+    }
+  ],
+  "chromeActivationEvents": [],
+  "scenarios": {
+    "isolation": {
+      "startedAt": 1793771576568,
+      "ok": true,
+      "endedAt": 1793771581668,
+      "activationEvents": 0,
+      "browserWindowShows": 0
+    },
+    "playwright": {
+      "startedAt": 1793771581668,
+      "ok": true,
+      "endedAt": 1793771592053,
+      "activationEvents": 0,
+      "browserWindowShows": 0
+    },
+    "devtools": {
+      "startedAt": 1793771592053,
+      "ok": true,
+      "endedAt": 1793771601830,
+      "activationEvents": 0,
+      "browserWindowShows": 0
+    },
+    "popup": {
+      "startedAt": 1793771601830,
+      "ok": true,
+      "endedAt": 1793771610265,
+      "activationEvents": 0,
+      "browserWindowShows": 0
+    },
+    "dialogs": {
+      "startedAt": 1793771610265,
+      "ok": true,
+      "endedAt": 1793771617197,
+      "activationEvents": 0,
+      "browserWindowShows": 0
+    },
+    "download": {
+      "startedAt": 1793771617197,
+      "ok": true,
+      "endedAt": 1793771621582,
+      "activationEvents": 0,
+      "browserWindowShows": 0
+    },
+    "memory": {
+      "startedAt": 1793771621582,
+      "ok": true,
+      "endedAt": 1793771632051,
+      "activationEvents": 0,
+      "browserWindowShows": 0
+    }
+  },
+  "windowSnapshots": [
+    {
+      "label": "isolation: shared and separate browsers open",
+      "at_ms": 1793771579865,
+      "windows": [
+        {
+          "hwnd": 4065740,
+          "pid": 9296,
+          "visible": false,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /separate-session - Google Chrome",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 6,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2100026,
+          "pid": 7888,
+          "visible": false,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /isolated-context - Google Chrome",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 6,
+          "rect": [
+            20,
+            20,
+            920,
+            670
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 1444778,
+          "pid": 7888,
+          "visible": false,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /session-b - Google Chrome",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 6,
+          "rect": [
+            20,
+            20,
+            920,
+            670
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 1379264,
+          "pid": 7888,
+          "visible": false,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /session-a - Google Chrome",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 6,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 789256,
+          "pid": 25364,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 3803922,
+          "pid": 9296,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2493198,
+          "pid": 6544,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 1641192,
+          "pid": 11788,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 1444792,
+          "pid": 7888,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 131842,
+          "pid": 13080,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    },
+    {
+      "label": "playwright: after tool calls",
+      "at_ms": 1793771585950,
+      "windows": [
+        {
+          "hwnd": 197376,
+          "pid": 28476,
+          "visible": false,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /playwright - Google Chrome",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 6,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 1706728,
+          "pid": 37688,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 985938,
+          "pid": 28476,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 1510316,
+          "pid": 22620,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    },
+    {
+      "label": "devtools: after tool calls",
+      "at_ms": 1793771595809,
+      "windows": [
+        {
+          "hwnd": 328450,
+          "pid": 21156,
+          "visible": false,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /devtools - Google Chrome",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 6,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 1641400,
+          "pid": 5392,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2755432,
+          "pid": 21156,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 5966574,
+          "pid": 11116,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    },
+    {
+      "label": "popup: tab",
+      "at_ms": 1793771604729,
+      "windows": [
+        {
+          "hwnd": 1903532,
+          "pid": 39208,
+          "visible": false,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /popup-tab - Google Chrome",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 6,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2034544,
+          "pid": 12180,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2820898,
+          "pid": 39208,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2820916,
+          "pid": 14776,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    },
+    {
+      "label": "popup: window",
+      "at_ms": 1793771606371,
+      "windows": [
+        {
+          "hwnd": 3082516,
+          "pid": 39208,
+          "visible": false,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /popup-window - Google Chrome",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 6,
+          "rect": [
+            182,
+            182,
+            1622,
+            935
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 1903532,
+          "pid": 39208,
+          "visible": false,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /popup-tab - Google Chrome",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 6,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2034544,
+          "pid": 12180,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2820898,
+          "pid": 39208,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2820916,
+          "pid": 14776,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    },
+    {
+      "label": "popup: windowWithoutGesture",
+      "at_ms": 1793771607934,
+      "windows": [
+        {
+          "hwnd": 3082516,
+          "pid": 39208,
+          "visible": false,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /popup-window - Google Chrome",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 6,
+          "rect": [
+            182,
+            182,
+            1622,
+            935
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 1903532,
+          "pid": 39208,
+          "visible": false,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /popup-tab - Google Chrome",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 6,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2034544,
+          "pid": 12180,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2820898,
+          "pid": 39208,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2820916,
+          "pid": 14776,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    },
+    {
+      "label": "popup: openerCallsWindowFocus",
+      "at_ms": 1793771609515,
+      "windows": [
+        {
+          "hwnd": 3082516,
+          "pid": 39208,
+          "visible": false,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /popup-window - Google Chrome",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 6,
+          "rect": [
+            182,
+            182,
+            1622,
+            935
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 1903532,
+          "pid": 39208,
+          "visible": false,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /popup-tab - Google Chrome",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 6,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2034544,
+          "pid": 12180,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2820898,
+          "pid": 39208,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2820916,
+          "pid": 14776,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    },
+    {
+      "label": "dialogs: alert open",
+      "at_ms": 1793771613178,
+      "windows": [
+        {
+          "hwnd": 2558868,
+          "pid": 5896,
+          "visible": false,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /dialogs - Google Chrome",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 6,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2100080,
+          "pid": 18540,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 7145956,
+          "pid": 5896,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2886434,
+          "pid": 17152,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    },
+    {
+      "label": "dialogs: confirm open",
+      "at_ms": 1793771614815,
+      "windows": [
+        {
+          "hwnd": 2558868,
+          "pid": 5896,
+          "visible": false,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /dialogs - Google Chrome",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 6,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2100080,
+          "pid": 18540,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 7145956,
+          "pid": 5896,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2886434,
+          "pid": 17152,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    },
+    {
+      "label": "dialogs: prompt open",
+      "at_ms": 1793771616445,
+      "windows": [
+        {
+          "hwnd": 2558868,
+          "pid": 5896,
+          "visible": false,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /dialogs - Google Chrome",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 6,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2100080,
+          "pid": 18540,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 7145956,
+          "pid": 5896,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2886434,
+          "pid": 17152,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    },
+    {
+      "label": "download: after completion",
+      "at_ms": 1793771620842,
+      "windows": [
+        {
+          "hwnd": 1444690,
+          "pid": 1232,
+          "visible": false,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /download-page - Google Chrome",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 6,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2165616,
+          "pid": 26452,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 1769964,
+          "pid": 1232,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 7211492,
+          "pid": 29608,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 25,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    }
+  ]
+}

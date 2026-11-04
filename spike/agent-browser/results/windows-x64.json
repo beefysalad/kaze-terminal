@@ -1,0 +1,2769 @@
+{
+  "date": "2026-11-04T05:36:05.179Z",
+  "platform": "win32",
+  "release": "10.0.26200",
+  "arch": "x64",
+  "node": "v24.19.0",
+  "nodeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+  "phases": [
+    "isolation",
+    "mcp",
+    "popup",
+    "dialogs",
+    "download",
+    "memory"
+  ],
+  "baseCommit": "d5741fca91caea528d6abeeecc57bd90503a38ee",
+  "dependencies": {
+    "@playwright/mcp": "0.0.84",
+    "chrome-devtools-mcp": "1.12.0",
+    "ws": "8.22.1"
+  },
+  "observations": {
+    "sharedWindows": {
+      "sharedSignIn": true,
+      "foreignWindowListed": true,
+      "foreignWindowReadable": true,
+      "isolated": false,
+      "startupMs": 1061
+    },
+    "separateContexts": {
+      "cookiesSeparated": true,
+      "foreignContextReadableThroughBrowserEndpoint": true,
+      "isolatedConnection": false
+    },
+    "pageEndpoint": {
+      "foreignWindowListed": true,
+      "foreignWindowReadable": true,
+      "isolated": false
+    },
+    "separateInstances": {
+      "cookiesSeparated": true,
+      "foreignTargetsAbsent": true,
+      "foreignTargetAttachRejected": true,
+      "startupMs": 849
+    },
+    "browserProcesses": [
+      {
+        "label": "shared-browser",
+        "processCount": 18,
+        "workingSetBytes": 996298752,
+        "privateBytes": 499154944,
+        "note": "Working-set sum counts shared pages once per process; private bytes are closer to the per-instance cost"
+      },
+      {
+        "label": "separate-session-browser",
+        "processCount": 16,
+        "workingSetBytes": 853196800,
+        "privateBytes": 428695552,
+        "note": "Working-set sum counts shared pages once per process; private bytes are closer to the per-instance cost"
+      }
+    ],
+    "playwright": {
+      "kind": "playwright",
+      "toolCalls": [],
+      "launches": 0,
+      "initialize": {
+        "protocolVersion": "2024-11-05",
+        "capabilities": {
+          "tools": {
+            "listChanged": true
+          }
+        },
+        "serverInfo": {
+          "name": "Playwright",
+          "version": "1.65.0-alpha-2026-10-30"
+        }
+      },
+      "tools": [
+        "browser_close",
+        "browser_resize",
+        "browser_console_messages",
+        "browser_handle_dialog",
+        "browser_emulate_media",
+        "browser_evaluate",
+        "browser_file_upload",
+        "browser_drop",
+        "browser_find",
+        "browser_fill_form",
+        "browser_press_key",
+        "browser_type",
+        "browser_navigate",
+        "browser_navigate_back",
+        "browser_network_requests",
+        "browser_network_request",
+        "browser_run_code_unsafe",
+        "browser_take_screenshot",
+        "browser_snapshot",
+        "browser_click",
+        "browser_drag",
+        "browser_hover",
+        "browser_select_option",
+        "browser_tabs",
+        "browser_wait_for"
+      ],
+      "afterDiscovery": {
+        "relayConnections": 0,
+        "browserLaunches": 0,
+        "nodeProcessRunning": true
+      }
+    },
+    "devtools": {
+      "kind": "devtools",
+      "toolCalls": [],
+      "launches": 0,
+      "initialize": {
+        "protocolVersion": "2024-11-05",
+        "capabilities": {
+          "logging": {},
+          "tools": {
+            "listChanged": true
+          }
+        },
+        "serverInfo": {
+          "name": "chrome_devtools",
+          "title": "Chrome DevTools MCP server",
+          "version": "1.12.0"
+        }
+      },
+      "tools": [
+        "click",
+        "close_page",
+        "drag",
+        "emulate",
+        "evaluate_script",
+        "fill",
+        "fill_form",
+        "get_console_message",
+        "get_css_styles",
+        "get_network_request",
+        "handle_dialog",
+        "hover",
+        "lighthouse_audit",
+        "list_console_messages",
+        "list_network_requests",
+        "list_pages",
+        "navigate_page",
+        "new_page",
+        "performance_analyze_insight",
+        "performance_start_trace",
+        "performance_stop_trace",
+        "press_key",
+        "resize_page",
+        "screencast_start",
+        "screencast_stop",
+        "select_page",
+        "take_heapsnapshot",
+        "take_screenshot",
+        "take_snapshot",
+        "type_text",
+        "upload_file",
+        "wait_for"
+      ],
+      "afterDiscovery": {
+        "relayConnections": 0,
+        "browserLaunches": 0,
+        "nodeProcessRunning": true
+      }
+    },
+    "popup": {
+      "tab": {
+        "userGesture": true,
+        "returned": true,
+        "newPages": [
+          {
+            "url": "/popup-tab",
+            "hasOpener": true
+          }
+        ],
+        "startedAt": 1793770578032,
+        "endedAt": 1793770579729,
+        "windows": [
+          {
+            "hwnd": 3607278,
+            "pid": 31416,
+            "visible": true,
+            "class": "Chrome_WidgetWin_1",
+            "title": "Kaze fixture /popup-tab and 1 more page - Personal - Microsoft? Edge",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 7,
+            "rect": [
+              10,
+              10,
+              910,
+              660
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 9570940,
+            "pid": 26696,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 26,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 7538846,
+            "pid": 7512,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 26,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 590784,
+            "pid": 18484,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 26,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 1050400,
+            "pid": 31416,
+            "visible": false,
+            "class": "MSCTFIME UI",
+            "title": "MSCTFIME UI",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 26,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 199476,
+            "pid": 31416,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 26,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          }
+        ]
+      },
+      "window": {
+        "userGesture": true,
+        "returned": true,
+        "newPages": [
+          {
+            "url": "/popup-window",
+            "hasOpener": true
+          }
+        ],
+        "startedAt": 1793770579731,
+        "endedAt": 1793770581524,
+        "windows": [
+          {
+            "hwnd": 5245234,
+            "pid": 31416,
+            "visible": true,
+            "class": "Chrome_WidgetWin_1",
+            "title": "Kaze fixture /popup-window - Personal - Microsoft? Edge",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 7,
+            "rect": [
+              0,
+              0,
+              916,
+              722
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 3607278,
+            "pid": 31416,
+            "visible": true,
+            "class": "Chrome_WidgetWin_1",
+            "title": "Kaze fixture /popup-tab and 1 more page - Personal - Microsoft? Edge",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 8,
+            "rect": [
+              10,
+              10,
+              910,
+              660
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 9570940,
+            "pid": 26696,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 27,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 7538846,
+            "pid": 7512,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 27,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 590784,
+            "pid": 18484,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 27,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 1050400,
+            "pid": 31416,
+            "visible": false,
+            "class": "MSCTFIME UI",
+            "title": "MSCTFIME UI",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 27,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 199476,
+            "pid": 31416,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 27,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          }
+        ]
+      },
+      "windowWithoutGesture": {
+        "userGesture": false,
+        "returned": false,
+        "newPages": [],
+        "startedAt": 1793770581525,
+        "endedAt": 1793770583147,
+        "windows": [
+          {
+            "hwnd": 5245234,
+            "pid": 31416,
+            "visible": true,
+            "class": "Chrome_WidgetWin_1",
+            "title": "Kaze fixture /popup-window - Personal - Microsoft? Edge",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 7,
+            "rect": [
+              0,
+              0,
+              916,
+              722
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 3607278,
+            "pid": 31416,
+            "visible": true,
+            "class": "Chrome_WidgetWin_1",
+            "title": "Kaze fixture /popup-tab and 1 more page - Personal - Microsoft? Edge",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 8,
+            "rect": [
+              10,
+              10,
+              910,
+              660
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 9570940,
+            "pid": 26696,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 27,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 7538846,
+            "pid": 7512,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 27,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 590784,
+            "pid": 18484,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 27,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 1050400,
+            "pid": 31416,
+            "visible": false,
+            "class": "MSCTFIME UI",
+            "title": "MSCTFIME UI",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 27,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 199476,
+            "pid": 31416,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 27,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          }
+        ]
+      },
+      "openerCallsWindowFocus": {
+        "userGesture": true,
+        "returned": "undefined",
+        "newPages": [],
+        "startedAt": 1793770583149,
+        "endedAt": 1793770584768,
+        "windows": [
+          {
+            "hwnd": 5245234,
+            "pid": 31416,
+            "visible": true,
+            "class": "Chrome_WidgetWin_1",
+            "title": "Kaze fixture /popup-window - Personal - Microsoft? Edge",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 7,
+            "rect": [
+              0,
+              0,
+              916,
+              722
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 3607278,
+            "pid": 31416,
+            "visible": true,
+            "class": "Chrome_WidgetWin_1",
+            "title": "Kaze fixture /popup-tab and 1 more page - Personal - Microsoft? Edge",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 8,
+            "rect": [
+              10,
+              10,
+              910,
+              660
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 9570940,
+            "pid": 26696,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 27,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 7538846,
+            "pid": 7512,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 27,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 590784,
+            "pid": 18484,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 27,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 1050400,
+            "pid": 31416,
+            "visible": false,
+            "class": "MSCTFIME UI",
+            "title": "MSCTFIME UI",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 27,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 199476,
+            "pid": 31416,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 27,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          }
+        ]
+      }
+    },
+    "dialogs": {
+      "alert": {
+        "opened": true,
+        "type": "alert",
+        "handled": true,
+        "valueAfter": "undefined",
+        "startedAt": 1793770587550,
+        "endedAt": 1793770589162,
+        "windows": [
+          {
+            "hwnd": 657742,
+            "pid": 37460,
+            "visible": true,
+            "class": "Chrome_WidgetWin_1",
+            "title": "Kaze fixture /dialogs - Personal - Microsoft? Edge",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 7,
+            "rect": [
+              10,
+              10,
+              910,
+              660
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 5702116,
+            "pid": 22236,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 26,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 919784,
+            "pid": 11480,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 26,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 264992,
+            "pid": 26304,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 26,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 723288,
+            "pid": 37460,
+            "visible": false,
+            "class": "MSCTFIME UI",
+            "title": "MSCTFIME UI",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 26,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 265012,
+            "pid": 37460,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 26,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          }
+        ]
+      },
+      "confirm": {
+        "opened": true,
+        "type": "confirm",
+        "handled": true,
+        "valueAfter": "false",
+        "startedAt": 1793770589162,
+        "endedAt": 1793770590785,
+        "windows": [
+          {
+            "hwnd": 657742,
+            "pid": 37460,
+            "visible": true,
+            "class": "Chrome_WidgetWin_1",
+            "title": "Kaze fixture /dialogs - Personal - Microsoft? Edge",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 7,
+            "rect": [
+              10,
+              10,
+              910,
+              660
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 5702116,
+            "pid": 22236,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 26,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 919784,
+            "pid": 11480,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 26,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 264992,
+            "pid": 26304,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 26,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 723288,
+            "pid": 37460,
+            "visible": false,
+            "class": "MSCTFIME UI",
+            "title": "MSCTFIME UI",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 26,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 265012,
+            "pid": 37460,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 26,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          }
+        ]
+      },
+      "prompt": {
+        "opened": true,
+        "type": "prompt",
+        "handled": true,
+        "valueAfter": "kaze",
+        "startedAt": 1793770590785,
+        "endedAt": 1793770592423,
+        "windows": [
+          {
+            "hwnd": 657742,
+            "pid": 37460,
+            "visible": true,
+            "class": "Chrome_WidgetWin_1",
+            "title": "Kaze fixture /dialogs - Personal - Microsoft? Edge",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 7,
+            "rect": [
+              10,
+              10,
+              910,
+              660
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 5702116,
+            "pid": 22236,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 26,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 919784,
+            "pid": 11480,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 26,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 264992,
+            "pid": 26304,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 26,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 723288,
+            "pid": 37460,
+            "visible": false,
+            "class": "MSCTFIME UI",
+            "title": "MSCTFIME UI",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 26,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          },
+          {
+            "hwnd": 265012,
+            "pid": 37460,
+            "visible": false,
+            "class": "IME",
+            "title": "Default IME",
+            "minimized": false,
+            "foreground": false,
+            "topmost": false,
+            "zIndex": 26,
+            "rect": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "aboveForegroundWindow": false
+          }
+        ]
+      }
+    },
+    "download": {
+      "began": true,
+      "state": "completed",
+      "files": [
+        "kaze-spike.txt"
+      ],
+      "behavior": "allow (temporary profile folder)",
+      "startedAt": 1793770595359,
+      "endedAt": 1793770597322,
+      "windows": [
+        {
+          "hwnd": 788826,
+          "pid": 38304,
+          "visible": true,
+          "class": "Chrome_WidgetWin_1",
+          "title": "",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 7,
+          "rect": [
+            391,
+            86,
+            775,
+            243
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 721856,
+          "pid": 38304,
+          "visible": true,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /download-page - Personal - Microsoft? Edge",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 8,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 985320,
+          "pid": 38872,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 5573128,
+          "pid": 24668,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2296064,
+          "pid": 26948,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 330548,
+          "pid": 38304,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    },
+    "memory": {
+      "oneInstance": {
+        "label": "memory-1",
+        "processCount": 16,
+        "workingSetBytes": 837341184,
+        "privateBytes": 419545088,
+        "note": "Working-set sum counts shared pages once per process; private bytes are closer to the per-instance cost"
+      },
+      "threeInstances": {
+        "perInstance": [
+          {
+            "label": "memory-1",
+            "processCount": 16,
+            "workingSetBytes": 825524224,
+            "privateBytes": 405975040,
+            "note": "Working-set sum counts shared pages once per process; private bytes are closer to the per-instance cost"
+          },
+          {
+            "label": "memory-2",
+            "processCount": 16,
+            "workingSetBytes": 835096576,
+            "privateBytes": 411414528,
+            "note": "Working-set sum counts shared pages once per process; private bytes are closer to the per-instance cost"
+          },
+          {
+            "label": "memory-3",
+            "processCount": 16,
+            "workingSetBytes": 837877760,
+            "privateBytes": 417026048,
+            "note": "Working-set sum counts shared pages once per process; private bytes are closer to the per-instance cost"
+          }
+        ],
+        "workingSetBytes": 2498498560,
+        "privateBytes": 1234415616
+      },
+      "note": "Each instance has one fixture page open, sampled 2 s after load"
+    }
+  },
+  "browserInstances": [
+    {
+      "label": "shared-browser",
+      "pid": 12980,
+      "launcherPid": 14888,
+      "launchVariant": "node-default",
+      "startupMs": 1061,
+      "startedAt": 1793770568335
+    },
+    {
+      "label": "separate-session-browser",
+      "pid": 4152,
+      "launcherPid": 29880,
+      "launchVariant": "node-default",
+      "startupMs": 849,
+      "startedAt": 1793770570773
+    },
+    {
+      "label": "popup",
+      "pid": 31416,
+      "launcherPid": 33848,
+      "launchVariant": "node-default",
+      "startupMs": 790,
+      "startedAt": 1793770576912
+    },
+    {
+      "label": "dialogs",
+      "pid": 37460,
+      "launcherPid": 27472,
+      "launchVariant": "node-default",
+      "startupMs": 745,
+      "startedAt": 1793770586466
+    },
+    {
+      "label": "download",
+      "pid": 38304,
+      "launcherPid": 38392,
+      "launchVariant": "node-default",
+      "startupMs": 932,
+      "startedAt": 1793770594254
+    },
+    {
+      "label": "memory-1",
+      "pid": 39396,
+      "launcherPid": 16652,
+      "launchVariant": "node-default",
+      "startupMs": 846,
+      "startedAt": 1793770599203
+    },
+    {
+      "label": "memory-2",
+      "pid": 33736,
+      "launcherPid": 38516,
+      "launchVariant": "node-default",
+      "startupMs": 680,
+      "startedAt": 1793770602495
+    },
+    {
+      "label": "memory-3",
+      "pid": 14816,
+      "launcherPid": 35768,
+      "launchVariant": "node-default",
+      "startupMs": 1074,
+      "startedAt": 1793770604712
+    }
+  ],
+  "browserName": "edge",
+  "browserExecutable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+  "launchVariant": "node-default",
+  "focusBaseline": {
+    "kind": "baseline",
+    "at_ms": 1793770567161,
+    "pid": 37956,
+    "exe": "kaze",
+    "hwnd": 460096,
+    "class": "kaze.exe",
+    "ancestors": [
+      29992
+    ]
+  },
+  "fixtureOrigin": "http://127.0.0.1:52169",
+  "chrome": "Edg/156.0.4314.58",
+  "error": "TypeError: tools.tree is not a function\n    at mcpProbe (file:///C:/Users/john/Desktop/kaze-spike-win/spike/agent-browser/probe.mjs:283:34)\n    at async scenario (file:///C:/Users/john/Desktop/kaze-spike-win/spike/agent-browser/probe.mjs:81:9)\n    at async file:///C:/Users/john/Desktop/kaze-spike-win/spike/agent-browser/probe.mjs:506:80",
+  "cleanup": {
+    "leftoverBrowserProcesses": [],
+    "ownedPidsStillAlive": [],
+    "ownedPidCount": 136,
+    "note": "ownedPidsStillAlive can include a PID already reused by an unrelated process; leftoverBrowserProcesses matches this run profile root in the command line",
+    "profileRootRemoved": true
+  },
+  "focusMonitor": {
+    "baselineReceived": true,
+    "runningUntilCleanup": true
+  },
+  "browserWindowShows": [
+    {
+      "kind": "show",
+      "at_ms": 1793770568769,
+      "pid": 12980,
+      "exe": "msedge",
+      "hwnd": 3343364,
+      "class": "Chrome_WidgetWin_1",
+      "ancestors": [
+        14888
+      ]
+    },
+    {
+      "kind": "show",
+      "at_ms": 1793770569367,
+      "pid": 12980,
+      "exe": "msedge",
+      "hwnd": 9505404,
+      "class": "Chrome_WidgetWin_1",
+      "ancestors": [
+        14888
+      ]
+    },
+    {
+      "kind": "show",
+      "at_ms": 1793770569703,
+      "pid": 12980,
+      "exe": "msedge",
+      "hwnd": 4917638,
+      "class": "Chrome_WidgetWin_1",
+      "ancestors": [
+        14888
+      ]
+    },
+    {
+      "kind": "show",
+      "at_ms": 1793770571124,
+      "pid": 4152,
+      "exe": "msedge",
+      "hwnd": 2032066,
+      "class": "Chrome_WidgetWin_1",
+      "ancestors": [
+        29880
+      ]
+    },
+    {
+      "kind": "show",
+      "at_ms": 1793770577230,
+      "pid": 31416,
+      "exe": "msedge",
+      "hwnd": 3607278,
+      "class": "Chrome_WidgetWin_1",
+      "ancestors": [
+        33848
+      ]
+    },
+    {
+      "kind": "show",
+      "at_ms": 1793770579839,
+      "pid": 31416,
+      "exe": "msedge",
+      "hwnd": 5245234,
+      "class": "Chrome_WidgetWin_1",
+      "ancestors": [
+        33848
+      ]
+    },
+    {
+      "kind": "show",
+      "at_ms": 1793770586828,
+      "pid": 37460,
+      "exe": "msedge",
+      "hwnd": 657742,
+      "class": "Chrome_WidgetWin_1",
+      "ancestors": [
+        27472
+      ]
+    },
+    {
+      "kind": "show",
+      "at_ms": 1793770594634,
+      "pid": 38304,
+      "exe": "msedge",
+      "hwnd": 721856,
+      "class": "Chrome_WidgetWin_1",
+      "ancestors": [
+        38392
+      ]
+    },
+    {
+      "kind": "show",
+      "at_ms": 1793770595628,
+      "pid": 38304,
+      "exe": "msedge",
+      "hwnd": 788826,
+      "class": "Chrome_WidgetWin_1",
+      "ancestors": [
+        38392
+      ]
+    },
+    {
+      "kind": "show",
+      "at_ms": 1793770599462,
+      "pid": 39396,
+      "exe": "msedge",
+      "hwnd": 1247008,
+      "class": "Chrome_WidgetWin_1",
+      "ancestors": [
+        16652
+      ]
+    },
+    {
+      "kind": "show",
+      "at_ms": 1793770602834,
+      "pid": 33736,
+      "exe": "msedge",
+      "hwnd": 199430,
+      "class": "Chrome_WidgetWin_1",
+      "ancestors": [
+        38516
+      ]
+    },
+    {
+      "kind": "show",
+      "at_ms": 1793770605321,
+      "pid": 14816,
+      "exe": "msedge",
+      "hwnd": 265078,
+      "class": "Chrome_WidgetWin_1",
+      "ancestors": [
+        35768
+      ]
+    }
+  ],
+  "focusEvents": [
+    {
+      "kind": "baseline",
+      "at_ms": 1793770567161,
+      "pid": 37956,
+      "exe": "kaze",
+      "hwnd": 460096,
+      "class": "kaze.exe",
+      "ancestors": [
+        29992
+      ]
+    },
+    {
+      "kind": "foreground",
+      "at_ms": 1793770578083,
+      "pid": 31416,
+      "exe": "msedge",
+      "hwnd": 3607278,
+      "class": "Chrome_WidgetWin_1",
+      "ancestors": [
+        33848
+      ]
+    },
+    {
+      "kind": "foreground",
+      "at_ms": 1793770579854,
+      "pid": 31416,
+      "exe": "msedge",
+      "hwnd": 5245234,
+      "class": "Chrome_WidgetWin_1",
+      "ancestors": [
+        33848
+      ]
+    },
+    {
+      "kind": "foreground",
+      "at_ms": 1793770587649,
+      "pid": 37460,
+      "exe": "msedge",
+      "hwnd": 657742,
+      "class": "Chrome_WidgetWin_1",
+      "ancestors": [
+        27472
+      ]
+    }
+  ],
+  "chromeActivationEvents": [
+    {
+      "kind": "foreground",
+      "at_ms": 1793770578083,
+      "pid": 31416,
+      "exe": "msedge",
+      "hwnd": 3607278,
+      "class": "Chrome_WidgetWin_1",
+      "ancestors": [
+        33848
+      ]
+    },
+    {
+      "kind": "foreground",
+      "at_ms": 1793770579854,
+      "pid": 31416,
+      "exe": "msedge",
+      "hwnd": 5245234,
+      "class": "Chrome_WidgetWin_1",
+      "ancestors": [
+        33848
+      ]
+    },
+    {
+      "kind": "foreground",
+      "at_ms": 1793770587649,
+      "pid": 37460,
+      "exe": "msedge",
+      "hwnd": 657742,
+      "class": "Chrome_WidgetWin_1",
+      "ancestors": [
+        27472
+      ]
+    }
+  ],
+  "scenarios": {
+    "isolation": {
+      "startedAt": 1793770567273,
+      "ok": true,
+      "endedAt": 1793770574785,
+      "activationEvents": 0,
+      "browserWindowShows": 4
+    },
+    "playwright": {
+      "startedAt": 1793770574785,
+      "ok": false,
+      "error": "TypeError: tools.tree is not a function\n    at mcpProbe (file:///C:/Users/john/Desktop/kaze-spike-win/spike/agent-browser/probe.mjs:283:34)\n    at async scenario (file:///C:/Users/john/Desktop/kaze-spike-win/spike/agent-browser/probe.mjs:81:9)\n    at async file:///C:/Users/john/Desktop/kaze-spike-win/spike/agent-browser/probe.mjs:506:80",
+      "endedAt": 1793770575372,
+      "activationEvents": 0,
+      "browserWindowShows": 0
+    },
+    "devtools": {
+      "startedAt": 1793770575372,
+      "ok": false,
+      "error": "TypeError: tools.tree is not a function\n    at mcpProbe (file:///C:/Users/john/Desktop/kaze-spike-win/spike/agent-browser/probe.mjs:283:34)\n    at async scenario (file:///C:/Users/john/Desktop/kaze-spike-win/spike/agent-browser/probe.mjs:81:9)\n    at async file:///C:/Users/john/Desktop/kaze-spike-win/spike/agent-browser/probe.mjs:506:80",
+      "endedAt": 1793770576121,
+      "activationEvents": 0,
+      "browserWindowShows": 0
+    },
+    "popup": {
+      "startedAt": 1793770576121,
+      "ok": true,
+      "endedAt": 1793770585720,
+      "activationEvents": 2,
+      "browserWindowShows": 2
+    },
+    "dialogs": {
+      "startedAt": 1793770585720,
+      "ok": true,
+      "endedAt": 1793770593322,
+      "activationEvents": 1,
+      "browserWindowShows": 1
+    },
+    "download": {
+      "startedAt": 1793770593322,
+      "ok": true,
+      "endedAt": 1793770598356,
+      "activationEvents": 0,
+      "browserWindowShows": 2
+    },
+    "memory": {
+      "startedAt": 1793770598357,
+      "ok": true,
+      "endedAt": 1793770611550,
+      "activationEvents": 0,
+      "browserWindowShows": 3
+    }
+  },
+  "windowSnapshots": [
+    {
+      "label": "isolation: shared and separate browsers open",
+      "at_ms": 1793770572589,
+      "windows": [
+        {
+          "hwnd": 2032066,
+          "pid": 4152,
+          "visible": true,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /separate-session - Personal - Microsoft? Edge",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 7,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 4917638,
+          "pid": 12980,
+          "visible": true,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /isolated-context - Profile 1 - Microsoft? Edge",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 8,
+          "rect": [
+            20,
+            20,
+            920,
+            670
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 9505404,
+          "pid": 12980,
+          "visible": true,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /session-b - Profile 1 - Microsoft? Edge",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 9,
+          "rect": [
+            20,
+            20,
+            920,
+            670
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 3343364,
+          "pid": 12980,
+          "visible": true,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /session-a - Profile 1 - Microsoft? Edge",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 10,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 133968,
+          "pid": 20656,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 29,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 68482,
+          "pid": 5840,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 29,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 68440,
+          "pid": 34860,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 29,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 527082,
+          "pid": 4152,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 29,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 461586,
+          "pid": 14232,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 29,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 526670,
+          "pid": 3696,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 29,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 5376520,
+          "pid": 33884,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 29,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 133938,
+          "pid": 12980,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 29,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    },
+    {
+      "label": "popup: tab",
+      "at_ms": 1793770579731,
+      "windows": [
+        {
+          "hwnd": 3607278,
+          "pid": 31416,
+          "visible": true,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /popup-tab and 1 more page - Personal - Microsoft? Edge",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 7,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 9570940,
+          "pid": 26696,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 26,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 7538846,
+          "pid": 7512,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 26,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 590784,
+          "pid": 18484,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 26,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 1050400,
+          "pid": 31416,
+          "visible": false,
+          "class": "MSCTFIME UI",
+          "title": "MSCTFIME UI",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 26,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 199476,
+          "pid": 31416,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 26,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    },
+    {
+      "label": "popup: window",
+      "at_ms": 1793770581525,
+      "windows": [
+        {
+          "hwnd": 5245234,
+          "pid": 31416,
+          "visible": true,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /popup-window - Personal - Microsoft? Edge",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 7,
+          "rect": [
+            0,
+            0,
+            916,
+            722
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 3607278,
+          "pid": 31416,
+          "visible": true,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /popup-tab and 1 more page - Personal - Microsoft? Edge",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 8,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 9570940,
+          "pid": 26696,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 7538846,
+          "pid": 7512,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 590784,
+          "pid": 18484,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 1050400,
+          "pid": 31416,
+          "visible": false,
+          "class": "MSCTFIME UI",
+          "title": "MSCTFIME UI",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 199476,
+          "pid": 31416,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    },
+    {
+      "label": "popup: windowWithoutGesture",
+      "at_ms": 1793770583149,
+      "windows": [
+        {
+          "hwnd": 5245234,
+          "pid": 31416,
+          "visible": true,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /popup-window - Personal - Microsoft? Edge",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 7,
+          "rect": [
+            0,
+            0,
+            916,
+            722
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 3607278,
+          "pid": 31416,
+          "visible": true,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /popup-tab and 1 more page - Personal - Microsoft? Edge",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 8,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 9570940,
+          "pid": 26696,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 7538846,
+          "pid": 7512,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 590784,
+          "pid": 18484,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 1050400,
+          "pid": 31416,
+          "visible": false,
+          "class": "MSCTFIME UI",
+          "title": "MSCTFIME UI",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 199476,
+          "pid": 31416,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    },
+    {
+      "label": "popup: openerCallsWindowFocus",
+      "at_ms": 1793770584770,
+      "windows": [
+        {
+          "hwnd": 5245234,
+          "pid": 31416,
+          "visible": true,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /popup-window - Personal - Microsoft? Edge",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 7,
+          "rect": [
+            0,
+            0,
+            916,
+            722
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 3607278,
+          "pid": 31416,
+          "visible": true,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /popup-tab and 1 more page - Personal - Microsoft? Edge",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 8,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 9570940,
+          "pid": 26696,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 7538846,
+          "pid": 7512,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 590784,
+          "pid": 18484,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 1050400,
+          "pid": 31416,
+          "visible": false,
+          "class": "MSCTFIME UI",
+          "title": "MSCTFIME UI",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 199476,
+          "pid": 31416,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    },
+    {
+      "label": "dialogs: alert open",
+      "at_ms": 1793770589152,
+      "windows": [
+        {
+          "hwnd": 657742,
+          "pid": 37460,
+          "visible": true,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /dialogs - Personal - Microsoft? Edge",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 7,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 5702116,
+          "pid": 22236,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 26,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 919784,
+          "pid": 11480,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 26,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 264992,
+          "pid": 26304,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 26,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 723288,
+          "pid": 37460,
+          "visible": false,
+          "class": "MSCTFIME UI",
+          "title": "MSCTFIME UI",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 26,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 265012,
+          "pid": 37460,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 26,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    },
+    {
+      "label": "dialogs: confirm open",
+      "at_ms": 1793770590777,
+      "windows": [
+        {
+          "hwnd": 657742,
+          "pid": 37460,
+          "visible": true,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /dialogs - Personal - Microsoft? Edge",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 7,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 5702116,
+          "pid": 22236,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 26,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 919784,
+          "pid": 11480,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 26,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 264992,
+          "pid": 26304,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 26,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 723288,
+          "pid": 37460,
+          "visible": false,
+          "class": "MSCTFIME UI",
+          "title": "MSCTFIME UI",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 26,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 265012,
+          "pid": 37460,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 26,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    },
+    {
+      "label": "dialogs: prompt open",
+      "at_ms": 1793770592414,
+      "windows": [
+        {
+          "hwnd": 657742,
+          "pid": 37460,
+          "visible": true,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /dialogs - Personal - Microsoft? Edge",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 7,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 5702116,
+          "pid": 22236,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 26,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 919784,
+          "pid": 11480,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 26,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 264992,
+          "pid": 26304,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 26,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 723288,
+          "pid": 37460,
+          "visible": false,
+          "class": "MSCTFIME UI",
+          "title": "MSCTFIME UI",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 26,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 265012,
+          "pid": 37460,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 26,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    },
+    {
+      "label": "download: after completion",
+      "at_ms": 1793770597323,
+      "windows": [
+        {
+          "hwnd": 788826,
+          "pid": 38304,
+          "visible": true,
+          "class": "Chrome_WidgetWin_1",
+          "title": "",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 7,
+          "rect": [
+            391,
+            86,
+            775,
+            243
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 721856,
+          "pid": 38304,
+          "visible": true,
+          "class": "Chrome_WidgetWin_1",
+          "title": "Kaze fixture /download-page - Personal - Microsoft? Edge",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 8,
+          "rect": [
+            10,
+            10,
+            910,
+            660
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 985320,
+          "pid": 38872,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 5573128,
+          "pid": 24668,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 2296064,
+          "pid": 26948,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        },
+        {
+          "hwnd": 330548,
+          "pid": 38304,
+          "visible": false,
+          "class": "IME",
+          "title": "Default IME",
+          "minimized": false,
+          "foreground": false,
+          "topmost": false,
+          "zIndex": 27,
+          "rect": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "aboveForegroundWindow": false
+        }
+      ]
+    }
+  ]
+}
