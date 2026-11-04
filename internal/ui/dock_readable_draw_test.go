@@ -382,3 +382,52 @@ func TestNoteLinksStillOpen(t *testing.T) {
 		t.Fatalf("doc not opened: %+v", d)
 	}
 }
+
+// codexDock is a Codex helper with hook steps only, open in a tall panel.
+func codexDock(t *testing.T, steps [][2]string) (*window, *dockSession) {
+	t.Helper()
+	win, _, r, a, _, _, _ := memberWindow(t)
+	win.dock.heightDp = 440
+	win.liveMgr.Store(win.mgr)
+	send := func(m notify.Msg) { m.Tab, m.Session = int(a.ID), "s"; win.onNotify(m) }
+	send(notify.Msg{Kind: notify.KindAgentStart, AgentID: "x", Agent: "codex", AgentType: "worker", Transcript: filepath.Join(t.TempDir(), "s.jsonl")})
+	for _, s := range steps {
+		send(notify.Msg{Kind: notify.KindTool, AgentID: "x", Agent: "codex", Tool: s[0], Summary: s[1]})
+	}
+	win.openDock(a.ID, subagents.Key{Session: "s", ID: "x"})
+	s := win.dockOf(a.ID)
+	s.follow = false
+	twoFrames(t, win, r)
+	return win, s
+}
+
+func TestCodexHelperReadableFallback(t *testing.T) {
+	win, s := codexDock(t, [][2]string{{"apply_patch", "internal/ui/x.go"}, {"Bash", "go test ./..."}, {"Read", "a.go"}, {"Read", "b.go"}})
+	if s.tr != nil {
+		t.Fatal("a Codex helper read a transcript")
+	}
+	for _, w := range []string{"Edited", "internal/ui/x.go", "Ran", "go test ./...", "Read", "2 files", "4 steps · 0 messages"} {
+		if !rdHas(win.dock.texts, w) {
+			t.Errorf("no %q in %q", w, win.dock.texts)
+		}
+	}
+	if rdHas(win.dock.texts, "passed") || rdHas(win.dock.texts, "done") || rdHas(win.dock.texts, "+0") {
+		t.Errorf("hook steps claim results: %q", win.dock.texts)
+	}
+	// Only the fold has a detail to open.
+	if len(win.dock.hits.steps) != 1 {
+		t.Errorf("clickable steps %+v", win.dock.hits.steps)
+	}
+}
+
+func TestNoTranscriptStillShowsNotes(t *testing.T) {
+	win, _, r, a, _, _, _ := memberWindow(t)
+	win.dock.heightDp = 440
+	k := dockAgent(t, win, int(a.ID), "") // no main transcript known
+	win.onNotify(notify.Msg{Tab: int(a.ID), Kind: notify.KindTool, Session: "s", AgentID: "x", AgentType: "Explore", Tool: "Grep", Summary: "auth"})
+	win.openDock(a.ID, k)
+	twoFrames(t, win, r)
+	if !rdHas(win.dock.texts, "Searched the code") || win.dock.texts[len(win.dock.texts)-1] != "working" {
+		t.Fatalf("texts %q", win.dock.texts)
+	}
+}
