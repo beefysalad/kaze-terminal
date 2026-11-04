@@ -212,6 +212,7 @@ type window struct {
 	skillCache *skills.Cache
 	skillsFn   func(skills.Sources) []skills.Skill // nil reads through skillCache; tests fake it
 	dock       dockState                           // the docked agent panel; UI goroutine only
+	find       findState                           // the find bar; UI goroutine only
 	side       sideUI                              // the sidebar; UI goroutine only
 	wsp        wsPage                              // the Workspaces section: its list and the open draft; UI goroutine only
 	actEvery   bool                                // agent Activity shows every step, not the readable view (dock and board); UI goroutine only
@@ -654,6 +655,7 @@ func (win *window) frame(gtx layout.Context) error {
 		win.branchEvents(gtx)
 		win.toastEvents(gtx)
 		win.bannerEvents(gtx)
+		win.findEvents(gtx) // before the panel and the terminal
 		active = win.mgr.Active()
 		if win.set.shown {
 			win.settingsEvents(gtx) // the terminal gets no input; its shell keeps running
@@ -672,6 +674,7 @@ func (win *window) frame(gtx layout.Context) error {
 	}
 	active = win.mgr.Active()
 	win.switchedTo(active)
+	win.findCheck()
 	list := win.mgr.Tabs()
 	win.pruneDocs(list)
 	win.pruneDock(list)
@@ -779,6 +782,7 @@ func (win *window) frame(gtx layout.Context) error {
 		win.drawTerminal(gtx, active, termRect, grid, &sel)
 		win.drawWsBanner(gtx, active, termRect) // after the terminal, so it takes the clicks it covers
 		win.drawShownDock(gtx)
+		win.drawFind(gtx, win.findPane(termRect)) // over its pane, so it takes the clicks it covers
 	}
 	win.syncDockMember()
 
@@ -1018,6 +1022,9 @@ func (win *window) focusTarget() event.Tag {
 	if win.docs.shown != 0 {
 		return &win.docs.tag
 	}
+	if win.find.open && win.find.keys {
+		return &win.find.ed
+	}
 	if win.dock.keys && !win.dock.hits.panel.Empty() {
 		if win.dockMemberKeys() {
 			return &win.dock.term
@@ -1108,6 +1115,11 @@ func (win *window) termEvents(gtx layout.Context, v termView, cw, ch int) {
 	}
 	for _, ev := range batch {
 		if e, ok := ev.(pointer.Event); ok && e.Kind == pointer.Press && !win.bench.IgnoreInput() {
+			// A press in a terminal takes the keyboard from the find bar, which
+			// stays open with its highlights (Ruling 10).
+			if win.find.keys {
+				win.find.keys, win.wantFocus = false, true
+			}
 			// A press in a docked member takes the keyboard there; one in the session takes it back.
 			switch v.tag {
 			case win.termTag:
