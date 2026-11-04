@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"gioui.org/layout"
+	"gioui.org/unit"
 
+	"github.com/patrick-gogo/kaze-terminal/internal/render"
 	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
 	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
 )
@@ -92,6 +94,13 @@ type dockState struct {
 	hits                         dockHits
 	lastRect                     image.Rectangle // the panel as drawn last frame, empty when none
 	texts                        []string        // text drawn last frame; tests read it
+
+	// The member tab's terminal: one renderer, only while a member is drawn.
+	rend    *render.Renderer
+	rendFor tabs.TabID // the member rend last drew
+	drawn   tabs.TabID // the member drawn last frame, marked visible; 0 none
+	drewNow tabs.TabID // the member drawn this frame, until syncDockMember
+	term    int        // the member view's event tag
 }
 
 // dockSplit divides term into the terminal (top) and the panel below it.
@@ -203,7 +212,11 @@ func (win *window) addEntry(session tabs.TabID, e dockEntry) {
 
 // removeEntry takes entry i out of d; the shown index follows its tab, or
 // moves to the left neighbour (else the right) when i was the one shown.
+// A member leaving the panel goes back to the shared size, still running.
 func (win *window) removeEntry(d *dockDeck, i int) {
+	if m := d.entries[i].member; m != 0 && win.mgr != nil {
+		win.mgr.Dock(m)
+	}
 	d.entries = slices.Delete(d.entries, i, i+1)
 	switch {
 	case len(d.entries) == 0:
@@ -228,8 +241,57 @@ func (win *window) openDock(session tabs.TabID, k subagents.Key) {
 	win.addEntry(session, dockEntry{view: &dockSession{agent: k, follow: true}})
 }
 
-// closeDockTab is a tab's ×: entry i leaves session's panel (an agent is
-// untouched); closing the last tab removes the panel.
+// openDockMember shows workspace member m as a tab of session's panel. A
+// member is docked in one session at a time: its tab elsewhere moves here.
+func (win *window) openDockMember(session, m tabs.TabID) {
+	if win.fl.owner(m) != 0 {
+		win.fl.remove(m) // never both floating and docked
+	}
+	if o := win.memberDeck(m); o != 0 && o != session {
+		d := win.dock.by[o]
+		win.closeDockTab(o, slices.IndexFunc(d.entries, func(e dockEntry) bool { return e.member == m }))
+	}
+	d := win.deck(session)
+	for i, e := range d.entries {
+		if e.member == m {
+			win.showEntry(d, i)
+			return
+		}
+	}
+	win.addEntry(session, dockEntry{member: m})
+}
+
+// memberDeck is the session whose panel holds member m's tab, 0 if none.
+func (win *window) memberDeck(m tabs.TabID) tabs.TabID {
+	for id, d := range win.dock.by {
+		for _, e := range d.entries {
+			if e.member == m {
+				return id
+			}
+		}
+	}
+	return 0
+}
+
+// shownMember is the member the shown panel draws, 0 when the panel is
+// hidden, missing or on an agent tab.
+func (win *window) shownMember() tabs.TabID {
+	owner := win.dockOwner()
+	if !win.dockShown(owner) {
+		return 0
+	}
+	return win.deckOf(owner).shown().member
+}
+
+// dockMemberGrid is where a member's terminal is drawn in panel: below the
+// handle and the tab row, inset by the terminal's pad.
+func dockMemberGrid(panel image.Rectangle, dp func(v unit.Dp) int, pad int) image.Rectangle {
+	top := min(panel.Min.Y+dp(dockHandleDp)+dp(dockTabsDp), panel.Max.Y)
+	return image.Rect(panel.Min.X+pad, top+pad/2, panel.Max.X-pad, panel.Max.Y-pad/2)
+}
+
+// closeDockTab is a tab's ×: entry i leaves session's panel (a member keeps
+// running, an agent is untouched); closing the last tab removes the panel.
 func (win *window) closeDockTab(session tabs.TabID, i int) {
 	d := win.dock.by[session]
 	if d == nil || i < 0 || i >= len(d.entries) {
@@ -325,18 +387,45 @@ func (win *window) dockFit(gtx layout.Context, term image.Rectangle, cw, ch, pad
 		win.dock.sized = map[tabs.TabID]bool{}
 	}
 	win.dock.sized[owner] = true
+	if m := win.shownMember(); m != 0 {
+		// The member's own grid: the panel body. It keeps it while its tab
+		// is open, even hidden, so hiding never reflows its output.
+		g := dockMemberGrid(panel, gtx.Dp, pad)
+		cols, rows := gridSize(g.Dx(), g.Dy(), cw, ch)
+		win.mgr.ResizeTab(m, cols, rows)
+	}
 	return top
 }
 
 // dockRect is the panel as laid out this frame, empty when none.
 func (win *window) dockRect() image.Rectangle { return win.dock.lastRect }
 
-// pruneDock forgets the panels of closed sessions.
+// pruneDock forgets the panels of closed sessions, docking their members back
+// on the shared size, and drops the tabs of closed members and of a member
+// that is now the main view (it is never also a tab).
 func (win *window) pruneDock(list []*tabs.Tab) {
-	for id := range win.dock.by {
-		if !slices.ContainsFunc(list, func(t *tabs.Tab) bool { return t.ID == id }) {
+	open := func(id tabs.TabID) bool {
+		return slices.ContainsFunc(list, func(t *tabs.Tab) bool { return t.ID == id })
+	}
+	var active tabs.TabID
+	if a := win.mgr.Active(); a != nil {
+		active = a.ID
+	}
+	for id, d := range win.dock.by {
+		if !open(id) {
+			for _, e := range d.entries {
+				if e.member != 0 {
+					win.mgr.Dock(e.member)
+				}
+			}
 			delete(win.dock.by, id)
 			delete(win.dock.sized, id)
+			continue
+		}
+		for i := len(d.entries) - 1; i >= 0; i-- {
+			if m := d.entries[i].member; m != 0 && (!open(m) || m == active) {
+				win.closeDockTab(id, i)
+			}
 		}
 	}
 	for id := range win.dock.sized {

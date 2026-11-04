@@ -159,16 +159,23 @@ func (win *window) drawDock(gtx layout.Context, session tabs.TabID, d *dockDeck,
 
 	win.drawDockTabs(gtx, d, r, &h)
 	body := image.Rect(r.Min.X, min(h.row.Max.Y, r.Max.Y), r.Max.X, r.Max.Y)
+	member := false
 	if e := d.shown(); e != nil && e.view != nil {
 		if a := win.subs.Get(e.view.agent); a != nil {
 			win.drawDockAgent(gtx, e.view, a, body, &h)
 		}
+	} else if e != nil {
+		member = true
+		h.body = body
+		win.drawDockMember(gtx, e.member, body)
 	}
 	win.dock.hits = h
 
 	// Input areas: the body and prompt first, then the headers, then the handle on top.
 	area := clip.Rect(h.body).Push(ops)
-	event.Op(ops, &win.dock.body)
+	if !member { // a member's body is its terminal's (drawDockMember)
+		event.Op(ops, &win.dock.body)
+	}
 	area.Pop()
 	for _, b := range []image.Rectangle{h.header, h.prompt} {
 		if !b.Empty() {
@@ -208,8 +215,8 @@ func (win *window) drawDock(gtx layout.Context, session tabs.TabID, d *dockDeck,
 type dockTabLabel struct {
 	kind, name string
 	member     bool
-	mk         mark
-	running    bool
+	down       bool // a member that stopped, failed or exited
+	mk         mark // a member's alert mark
 }
 
 func (win *window) dockTabLabel(e *dockEntry) dockTabLabel {
@@ -223,9 +230,33 @@ func (win *window) dockTabLabel(e *dockEntry) dockTabLabel {
 	return l
 }
 
-// memberTabLabel is member m's tab label.
+// memberTabLabel is member m's tab label: its name and state as the
+// sidebar's Workspaces section shows them.
 func (win *window) memberTabLabel(m tabs.TabID) dockTabLabel {
-	return dockTabLabel{member: true, name: "member"}
+	l := dockTabLabel{member: true}
+	if t := win.mgr.Lookup(m); t != nil {
+		l.name = t.Title
+	}
+	for _, r := range win.curRuns() {
+		for _, mem := range r.Members {
+			if mem.ID == m {
+				l.name, l.down, l.mk = mem.Title, mem.Down, mem.Mark
+				return l
+			}
+		}
+	}
+	return l
+}
+
+// memberDot is a member tab's state colour: down, needs you, else up.
+func (c *chrome) memberDot(l dockTabLabel) color.NRGBA {
+	switch {
+	case l.down:
+		return c.th.UsageHigh
+	case l.mk == markNeeds:
+		return c.th.Needs
+	}
+	return c.th.Done
 }
 
 // drawDockTabs draws the tab row under the handle (mockup .tabs): the tabs
@@ -323,7 +354,7 @@ func (win *window) drawDockTabs(gtx layout.Context, d *dockDeck, r image.Rectang
 		l := labels[i]
 		if l.member {
 			dd := dp(7)
-			c.stateDot(gtx, image.Rect(tx, mid-dd/2, tx+dd, mid-dd/2+dd), l.mk, l.running, false)
+			paint.FillShape(ops, c.memberDot(l), clip.Ellipse(image.Rect(tx, mid-dd/2, tx+dd, mid-dd/2+dd)).Op(ops))
 			tx += dd + dp(7)
 		} else {
 			call, sz := c.fitSide(gtx, l.kind, 11, max(hit.close.Min.X-dp(7)-tx, 0), col.kind)

@@ -585,7 +585,8 @@ func (win *window) frame(gtx layout.Context) error {
 		win.rend = render.NewRenderer(px, win.pal, rendOptions(win.opt.Config))
 		win.rend.SetFocused(win.focused)
 		win.rendPx, win.rendStale = px, false
-		win.fl.rends = nil // the panes' renderers follow the main one
+		win.fl.rends = nil  // the panes' renderers follow the main one
+		win.dock.rend = nil // so does the docked member's
 	}
 	cw, ch := win.rend.CellSize()
 	size := gtx.Constraints.Max
@@ -785,6 +786,7 @@ func (win *window) frame(gtx layout.Context) error {
 		win.drawShownDock(gtx)
 	}
 	win.syncVisible(panes)
+	win.syncDockMember()
 
 	// Status bar.
 	sg := gtx
