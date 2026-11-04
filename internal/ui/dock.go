@@ -251,9 +251,6 @@ func (win *window) openDock(session tabs.TabID, k subagents.Key) {
 // openDockMember shows workspace member m as a tab of session's panel. A
 // member is docked in one session at a time: its tab elsewhere moves here.
 func (win *window) openDockMember(session, m tabs.TabID) {
-	if win.fl.owner(m) != 0 {
-		win.fl.remove(m) // never both floating and docked
-	}
 	if o := win.memberDeck(m); o != 0 && o != session {
 		d := win.dock.by[o]
 		win.closeDockTab(o, slices.IndexFunc(d.entries, func(e dockEntry) bool { return e.member == m }))
@@ -495,7 +492,6 @@ func (win *window) expandMember(id tabs.TabID) {
 		d := win.dock.by[o]
 		win.closeDockTab(o, slices.IndexFunc(d.entries, func(e dockEntry) bool { return e.member == id }))
 	}
-	win.fl.remove(id)
 	win.mgr.Dock(id)
 	win.selectTab(id)
 	win.side.reveal = true
@@ -512,11 +508,5 @@ func (win *window) closeSessionDock(session tabs.TabID) {
 		}
 		win.dropKeysOf(session)
 		delete(win.dock.by, session)
-	}
-	if set := win.fl.sets[session]; set != nil {
-		for _, p := range set.panes {
-			win.mgr.Dock(p.id)
-		}
-		delete(win.fl.sets, session)
 	}
 }

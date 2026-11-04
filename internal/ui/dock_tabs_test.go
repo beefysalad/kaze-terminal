@@ -34,13 +34,13 @@ func dockAgents(t *testing.T, win *window, tab tabs.TabID, n int, task string) [
 }
 
 func TestDockDrawsTabRow(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	win.liveMgr.Store(win.mgr)
 	win.onNotify(notify.Msg{Tab: int(a.ID), Kind: notify.KindAgentStart, Session: "s", AgentID: "x", AgentType: "Explore"})
 	win.onNotify(notify.Msg{Tab: int(a.ID), Kind: notify.KindAgentStart, Session: "s", AgentID: "y", AgentType: "Plan"})
 	win.openDock(a.ID, subagents.Key{Session: "s", ID: "x"})
 	win.openDock(a.ID, subagents.Key{Session: "s", ID: "y"})
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	h := win.dock.hits
 	if len(h.tabs) != 2 {
 		t.Fatalf("%d tabs drawn", len(h.tabs))
@@ -65,9 +65,9 @@ func TestDockDrawsTabRow(t *testing.T) {
 }
 
 func TestDockTabsShrinkThenCut(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	dockAgents(t, win, a.ID, 6, strings.Repeat("long task words ", 5))
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	h := win.dock.hits
 	if len(h.tabs) != 6 {
 		t.Fatalf("%d tabs drawn", len(h.tabs))
@@ -84,9 +84,9 @@ func TestDockTabsShrinkThenCut(t *testing.T) {
 }
 
 func TestDockTabClickSwitches(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	ks := dockAgents(t, win, a.ID, 2, "task")
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	clickAt(t, win, r, centre(win.dock.hits.tabs[0].rect))
 	if s := win.dockOf(a.ID); s == nil || s.agent != ks[0] {
 		t.Fatalf("tab click did not show the first agent: %+v", s)
@@ -94,9 +94,9 @@ func TestDockTabClickSwitches(t *testing.T) {
 }
 
 func TestDockTabCloseKeepsOthers(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	ks := dockAgents(t, win, a.ID, 2, "task")
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	clickAt(t, win, r, centre(win.dock.hits.tabs[1].close))
 	d := win.deckOf(a.ID)
 	if d == nil || len(d.entries) != 1 || win.dockOf(a.ID).agent != ks[0] {
@@ -108,9 +108,9 @@ func TestDockTabCloseKeepsOthers(t *testing.T) {
 }
 
 func TestDockHideKeepsTabs(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	ks := dockAgents(t, win, a.ID, 2, "task")
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	clickAt(t, win, r, centre(win.dock.hits.hide))
 	if !win.dockRect().Empty() {
 		t.Fatal("Hide left the panel drawn")
@@ -119,16 +119,16 @@ func TestDockHideKeepsTabs(t *testing.T) {
 		t.Fatalf("Hide lost the tabs: %+v", d)
 	}
 	win.showAgent(a.ID, ks[0], false)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if win.dockRect().Empty() || win.dockOf(a.ID).agent != ks[0] {
 		t.Fatal("showing an agent did not bring the panel back")
 	}
 }
 
 func TestDockHoverRedrawsOnlyOnChange(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	dockAgents(t, win, a.ID, 2, "task")
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	move := func(p image.Point) {
 		r.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, Position: at(p)})
 		sideFrame(t, win, r)
@@ -147,10 +147,10 @@ func TestDockHoverRedrawsOnlyOnChange(t *testing.T) {
 }
 
 func TestDockHiddenAgentReadsNothing(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	k := dockScene(t, win, int(a.ID), "running")
 	win.openDock(a.ID, k)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	s := win.deckOf(a.ID).shown().view
 	read := s.trAt
 	if read.IsZero() {

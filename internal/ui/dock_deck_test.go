@@ -10,7 +10,7 @@ import (
 // Tests for the panel's deck of tabs (issue #133, plan task D1).
 
 func TestDeckOpensTabsAndSwitches(t *testing.T) {
-	win, _, _, a, _, _, _ := paneWindow(t)
+	win, _, _, a, _, _, _ := memberWindow(t)
 	k1 := subagents.Key{Session: "s", ID: "k1"}
 	k2 := subagents.Key{Session: "s", ID: "k2"}
 	win.openDock(a.ID, k1)
@@ -26,7 +26,7 @@ func TestDeckOpensTabsAndSwitches(t *testing.T) {
 }
 
 func TestDeckToggleHidesKeepsTabs(t *testing.T) {
-	win, _, _, a, _, _, _ := paneWindow(t)
+	win, _, _, a, _, _, _ := memberWindow(t)
 	k1 := subagents.Key{Session: "s", ID: "k1"}
 	k2 := subagents.Key{Session: "s", ID: "k2"}
 	win.openDock(a.ID, k1)
@@ -43,7 +43,7 @@ func TestDeckToggleHidesKeepsTabs(t *testing.T) {
 }
 
 func TestDeckCapReplacesOldestNotShown(t *testing.T) {
-	win, _, _, a, _, _, _ := paneWindow(t)
+	win, _, _, a, _, _, _ := memberWindow(t)
 	ks := make([]subagents.Key, 7)
 	for i := range ks {
 		ks[i] = subagents.Key{Session: "s", ID: fmt.Sprintf("k%d", i+1)}
@@ -68,7 +68,7 @@ func TestDeckCapReplacesOldestNotShown(t *testing.T) {
 }
 
 func TestDeckCloseTabMovesLeft(t *testing.T) {
-	win, _, _, a, _, _, _ := paneWindow(t)
+	win, _, _, a, _, _, _ := memberWindow(t)
 	ks := []subagents.Key{{Session: "s", ID: "1"}, {Session: "s", ID: "2"}, {Session: "s", ID: "3"}}
 	for _, k := range ks {
 		win.openDock(a.ID, k)
@@ -89,18 +89,18 @@ func TestDeckCloseTabMovesLeft(t *testing.T) {
 }
 
 func TestDeckDropsGoneAgentOnly(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	k1 := startAgent(win, a.ID, "s", "x")
 	k2 := startAgent(win, a.ID, "s", "y")
 	win.openDock(a.ID, k1)
 	win.openDock(a.ID, k2)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	stopAgent(win, int(a.ID), "done") // k1 is "x"
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if !win.subs.Dismiss(k1) {
 		t.Fatal("k1 not dismissed")
 	}
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	d := win.deckOf(a.ID)
 	if d == nil || len(d.entries) != 1 || d.entries[0].view.agent != k2 || win.dockOf(a.ID).agent != k2 {
 		t.Fatalf("deck after dismissing k1: %+v", d)

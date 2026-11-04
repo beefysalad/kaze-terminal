@@ -7,12 +7,12 @@ import (
 )
 
 func TestOpenReportDoc(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	d := win.openReportDoc(a.ID, "Explore · Find auth", "# Found\n\n**auth** lives in `mw.go`.")
 	if d == nil || d.session != a.ID || d.name != "Explore · Find auth" || win.shownDoc() != d {
 		t.Fatalf("report doc not open and shown: %+v", d)
 	}
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	all := strings.Join(win.docs.texts, "")
 	if !strings.Contains(all, "Agent report") || !strings.Contains(all, "auth") || strings.Contains(all, "**") {
 		t.Fatalf("drawn %q", all)
@@ -24,7 +24,7 @@ func TestOpenReportDoc(t *testing.T) {
 }
 
 func TestReportDocNoReload(t *testing.T) {
-	win, _, _, a, _, _, _ := paneWindow(t)
+	win, _, _, a, _, _, _ := memberWindow(t)
 	d := win.openReportDoc(a.ID, "Plan · x", "text")
 	win.refreshDoc(d, time.Now())
 	if d.removed {
@@ -36,12 +36,12 @@ func TestReportDocNoReload(t *testing.T) {
 }
 
 func TestDockOpenInReader(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	k := dockAgent(t, win, int(a.ID), "")
 	stopAgent(win, int(a.ID), "the report")
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	win.openDock(a.ID, k)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	clickAt(t, win, r, centre(win.dock.hits.reader))
 	if d := win.shownDoc(); d == nil || d.name != "Explore · Find auth" {
 		t.Fatalf("reader not opened: %+v", d)

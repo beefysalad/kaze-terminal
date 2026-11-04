@@ -55,8 +55,8 @@ type entry struct {
 	sess    atomic.Pointer[term.Session]
 	removed atomic.Bool
 	watched atomic.Bool // a background tab that asks for frames on output too
-	visible atomic.Bool // drawn as a floating pane: asks for frames on output, separate from watched
-	// Guarded by Manager.mu: a tab sized on its own (a floating pane) that ResizeAll skips.
+	visible atomic.Bool // drawn as a docked member tab: asks for frames on output, separate from watched
+	// Guarded by Manager.mu: a tab sized on its own (a docked member or session) that ResizeAll skips.
 	own              bool
 	ownCols, ownRows int
 	// Touched only by this session's single notifier goroutine.
@@ -288,7 +288,7 @@ func (m *Manager) Watch(id TabID, on bool) {
 	}
 }
 
-// SetVisible marks a background tab as drawn (a floating pane), so it asks for
+// SetVisible marks a background tab as drawn (a docked member), so it asks for
 // a frame on every output while on; an unknown id is ignored.
 func (m *Manager) SetVisible(id TabID, on bool) {
 	m.mu.Lock()

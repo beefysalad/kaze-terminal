@@ -114,15 +114,15 @@ func TestActiveProjectNameStyle(t *testing.T) {
 	}
 }
 
-func TestActiveProjectKeepsMainSessionContextInPane(t *testing.T) {
-	win, _, r, a, _, member, _ := paneWindow(t)
+func TestActiveProjectKeepsMainSessionContextInDockedMember(t *testing.T) {
+	win, _, r, a, _, member, _ := memberWindow(t)
 	report(t, member, osPath("/code/beta/server"))
-	p, _ := win.fl.open(a.ID, member.ID, paneMember)
-	floatFrames(t, win, r)
-	clickAt(t, win, r, centre(p.hits.body))
+	win.openDockMember(a.ID, member.ID)
+	twoFrames(t, win, r)
+	clickAt(t, win, r, centre(win.dock.hits.body))
 	sideFrame(t, win, r)
-	if win.fl.keys != member.ID || win.side.st.activeRepo != "key-alpha" {
-		t.Fatal("floating pane replaced the main session's project emphasis")
+	if !win.dockMemberKeys() || win.side.st.activeRepo != "key-alpha" {
+		t.Fatal("a docked member replaced the main session's project emphasis")
 	}
 }
 

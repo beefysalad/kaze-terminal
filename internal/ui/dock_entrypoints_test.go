@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"gioui.org/io/input"
 	"gioui.org/io/pointer"
 	"gioui.org/op"
 
@@ -16,12 +15,6 @@ import (
 // Every member entry point docks a tab (issue #133, plan task D5). These
 // replace the floating pane's member tests.
 
-func clickMember(t *testing.T, win *window, r *input.Router, id tabs.TabID) {
-	t.Helper()
-	sideClick(win, r, memberHit(t, win, id).rect, pointer.ButtonPrimary)
-	floatFrames(t, win, r)
-}
-
 // memberShownIn reports whether session's panel shows member m.
 func memberShownIn(win *window, session, m tabs.TabID) bool {
 	d := win.deckOf(session)
@@ -29,7 +22,7 @@ func memberShownIn(win *window, session, m tabs.TabID) bool {
 }
 
 func TestMemberClickDocksATab(t *testing.T) {
-	win, _, r, a, _, m1, _ := paneWindow(t)
+	win, _, r, a, _, m1, _ := memberWindow(t)
 	clickMember(t, win, r, m1.ID)
 	if win.mgr.Active().ID != a.ID || !memberShownIn(win, a.ID, m1.ID) || win.dockRect().Empty() || !win.dockMemberKeys() {
 		t.Fatalf("active %d deck %+v keys %v", win.mgr.Active().ID, win.deckOf(a.ID), win.dock.keys)
@@ -37,7 +30,7 @@ func TestMemberClickDocksATab(t *testing.T) {
 }
 
 func TestMemberClickAgainHidesPanel(t *testing.T) {
-	win, _, r, a, _, m1, _ := paneWindow(t)
+	win, _, r, a, _, m1, _ := memberWindow(t)
 	clickMember(t, win, r, m1.ID)
 	clickMember(t, win, r, m1.ID)
 	d := win.deckOf(a.ID)
@@ -50,7 +43,7 @@ func TestMemberClickAgainHidesPanel(t *testing.T) {
 }
 
 func TestMemberClickWhenItIsTheMainViewDoesNothing(t *testing.T) {
-	win, _, r, _, _, m1, _ := paneWindow(t)
+	win, _, r, _, _, m1, _ := memberWindow(t)
 	win.selectTab(m1.ID)
 	sideFrame(t, win, r)
 	clickMember(t, win, r, m1.ID)
@@ -60,7 +53,7 @@ func TestMemberClickWhenItIsTheMainViewDoesNothing(t *testing.T) {
 }
 
 func TestMemberClickWhileAMemberIsShownShowsIt(t *testing.T) {
-	win, _, r, _, _, m1, m2 := paneWindow(t)
+	win, _, r, _, _, m1, m2 := memberWindow(t)
 	win.selectTab(m1.ID)
 	sideFrame(t, win, r)
 	clickMember(t, win, r, m2.ID)
@@ -70,7 +63,7 @@ func TestMemberClickWhileAMemberIsShownShowsIt(t *testing.T) {
 }
 
 func TestExpandMakesTheMemberTheMainView(t *testing.T) {
-	win, st, r, _, _, m1, _ := paneWindow(t)
+	win, st, r, _, _, m1, _ := memberWindow(t)
 	clickMember(t, win, r, m1.ID)
 	if win.dock.hits.expand.Empty() {
 		t.Fatal("no Expand button on a member tab")
@@ -83,19 +76,19 @@ func TestExpandMakesTheMemberTheMainView(t *testing.T) {
 }
 
 func TestPickingASessionAfterExpandGoesBack(t *testing.T) {
-	win, _, r, a, _, m1, m2 := paneWindow(t)
+	win, _, r, a, _, m1, m2 := memberWindow(t)
 	clickMember(t, win, r, m2.ID)
 	clickMember(t, win, r, m1.ID)
 	clickAt(t, win, r, centre(win.dock.hits.expand))
 	sideClick(win, r, rowHit(t, win, a.ID).rect, pointer.ButtonPrimary)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if win.mgr.Active().ID != a.ID || !memberShownIn(win, a.ID, m2.ID) || win.dockRect().Empty() {
 		t.Fatalf("active %d, deck %+v", win.mgr.Active().ID, win.deckOf(a.ID))
 	}
 }
 
 func TestCloseTabKeepsMemberRunning(t *testing.T) {
-	win, st, r, _, _, m1, _ := paneWindow(t)
+	win, st, r, _, _, m1, _ := memberWindow(t)
 	clickMember(t, win, r, m1.ID)
 	clickAt(t, win, r, centre(win.dock.hits.tabs[0].close))
 	if win.memberDeck(m1.ID) != 0 || !win.mgr.Has(m1.ID) || win.memberOf(m1) == nil {
@@ -108,7 +101,7 @@ func TestCloseTabKeepsMemberRunning(t *testing.T) {
 }
 
 func TestOpeningAMemberInAnotherSessionMovesIt(t *testing.T) {
-	win, _, r, a, b, m1, _ := paneWindow(t)
+	win, _, r, a, b, m1, _ := memberWindow(t)
 	clickMember(t, win, r, m1.ID)
 	win.selectTab(b.ID)
 	sideFrame(t, win, r)
@@ -117,14 +110,14 @@ func TestOpeningAMemberInAnotherSessionMovesIt(t *testing.T) {
 		t.Fatalf("deck %d", win.memberDeck(m1.ID))
 	}
 	win.selectTab(a.ID)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if win.deckOf(a.ID) != nil || !win.dockRect().Empty() {
 		t.Fatalf("a still shows the member: %+v", win.deckOf(a.ID))
 	}
 }
 
 func TestSeventhTabReplacesOldest(t *testing.T) {
-	win, st, r, a, _, m1, _ := paneWindow(t)
+	win, st, r, a, _, m1, _ := memberWindow(t)
 	ids := []tabs.TabID{m1.ID}
 	for _, name := range []string{"x", "y", "z", "w", "v", "u"} {
 		ids = append(ids, openMember(t, win, name).ID)
@@ -141,7 +134,7 @@ func TestSeventhTabReplacesOldest(t *testing.T) {
 }
 
 func TestServerDotsDockTheDownMember(t *testing.T) {
-	win, _, r, a, _, _, m2 := paneWindow(t)
+	win, _, r, a, _, _, m2 := memberWindow(t)
 	win.runs[1].members[1].run.State = workspaces.Failed
 	sideFrame(t, win, r)
 	if win.statusRect(grpServers).Empty() {
@@ -158,7 +151,7 @@ func TestServerDotsDockTheDownMember(t *testing.T) {
 }
 
 func TestDockedMemberIsHighlighted(t *testing.T) {
-	win, _, r, _, _, m1, m2 := paneWindow(t)
+	win, _, r, _, _, m1, m2 := memberWindow(t)
 	clickMember(t, win, r, m1.ID)
 	if win.side.st.docked != m1.ID {
 		t.Fatalf("docked %d", win.side.st.docked)
@@ -170,9 +163,9 @@ func TestDockedMemberIsHighlighted(t *testing.T) {
 }
 
 func TestPaletteDocksAMember(t *testing.T) {
-	win, _, r, a, _, m1, _ := paneWindow(t)
+	win, _, r, a, _, m1, _ := memberWindow(t)
 	win.palAct(pageContext(10, 10), palItem{Section: palSessions, Member: true, Tab: m1.ID}, false)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if !memberShownIn(win, a.ID, m1.ID) || win.mgr.Active().ID != a.ID {
 		t.Fatalf("deck %+v active %d", win.deckOf(a.ID), win.mgr.Active().ID)
 	}
@@ -180,7 +173,7 @@ func TestPaletteDocksAMember(t *testing.T) {
 
 // A member docked from the sidebar takes the keyboard: typing goes to it at once.
 func TestTypingAfterDockingAMemberReachesIt(t *testing.T) {
-	win, st, r, _, _, m1, _ := paneWindow(t)
+	win, st, r, _, _, m1, _ := memberWindow(t)
 	clickMember(t, win, r, m1.ID)
 	typeKeys(t, win, r, "q")
 	waitSent(t, ptyOf(st, 2), "q")
@@ -190,7 +183,7 @@ func TestTypingAfterDockingAMemberReachesIt(t *testing.T) {
 }
 
 func TestDockingAMemberMovesTheFocusReports(t *testing.T) {
-	win, st, r, a, _, m1, _ := paneWindow(t)
+	win, st, r, a, _, m1, _ := memberWindow(t)
 	emitTo(t, st, 0, a, "\x1b[?1004h", func() bool { return modes(a.Session).FocusEvents })
 	emitTo(t, st, 2, m1, "\x1b[?1004h", func() bool { return modes(m1.Session).FocusEvents })
 	clickMember(t, win, r, m1.ID)
@@ -199,7 +192,7 @@ func TestDockingAMemberMovesTheFocusReports(t *testing.T) {
 }
 
 func TestSidebarCacheDockedMemberAllocatesNothing(t *testing.T) {
-	win, _, r, _, _, m1, _ := paneWindow(t)
+	win, _, r, _, _, m1, _ := memberWindow(t)
 	clickMember(t, win, r, m1.ID)
 	var ops op.Ops
 	g := pageContext(1000, 600)

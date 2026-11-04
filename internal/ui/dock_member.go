@@ -106,8 +106,7 @@ func (win *window) dockMemberKeys() bool {
 }
 
 // dockFocusMember gives the shown member tab the keyboard (on) or gives it
-// back to the session, moving the focus-in and focus-out reports with it. A
-// floating pane with the keyboard gives it up first: one keyboard at a time.
+// back to the session, moving the focus-in and focus-out reports with it.
 func (win *window) dockFocusMember(on bool) {
 	if !on {
 		win.dropDockKeys()
@@ -120,9 +119,6 @@ func (win *window) dockFocusMember(on bool) {
 	if win.dockMemberKeys() {
 		win.wantFocus = true
 		return
-	}
-	if win.fl.keys != 0 {
-		win.focusSession()
 	}
 	win.dropSideEdit()
 	win.dock.keys, win.dock.keysMember, win.wantFocus = true, m, true

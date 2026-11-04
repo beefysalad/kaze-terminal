@@ -17,7 +17,7 @@ import (
 	"github.com/patrick-gogo/kaze-terminal/internal/theme"
 )
 
-const dockSampleReport = "## Summary\n\n**No existing binding** for split panes.\n\n- Cmd+D and Cmd+Shift+D are free on macOS.\n- `panes.go` keeps floats per session.\n\n1. **Existing panes ignored.** See `docs/notes.md`.\n2. Tests pass.\n\n| Key | Action |\n|---|---|\n| Cmd+D | split right |\n| Cmd+Shift+D | split down |\n\n```go\nfunc split() {}\n```\n"
+const dockSampleReport = "## Summary\n\n**No existing binding** for split panes.\n\n- Cmd+D and Cmd+Shift+D are free on macOS.\n- `panes.go` keeps panels per session.\n\n1. **Existing panes ignored.** See `docs/notes.md`.\n2. Tests pass.\n\n| Key | Action |\n|---|---|\n| Cmd+D | split right |\n| Cmd+Shift+D | split down |\n\n```go\nfunc split() {}\n```\n"
 
 // dockScene puts tab a's session in one of the panel's states: "running",
 // "waiting" or "report".
@@ -52,13 +52,13 @@ func TestDockRenders(t *testing.T) {
 	os.MkdirAll(dir, 0o700)
 	for _, key := range []string{"midnight", "washi"} {
 		for _, state := range []string{"running", "waiting", "report", "tabs"} {
-			win, _, r, a, _, _, _ := paneWindow(t)
+			win, _, r, a, _, _, _ := memberWindow(t)
 			win.km, _ = buildKeymap(runtime.GOOS, nil)
 			win.binds, _ = resolveBindings(runtime.GOOS, nil)
 			th, _ := theme.ByKey(key)
 			win.applyTheme(th)
 			k := dockScene(t, win, int(a.ID), state)
-			floatFrames(t, win, r)
+			twoFrames(t, win, r)
 			if state == "tabs" {
 				// A second agent's tab beside the shown one.
 				win.onNotify(notify.Msg{Tab: int(a.ID), Session: "s", Kind: notify.KindTool, Tool: "Agent", AgentType: "Plan", Description: "Dock tabs plan"})
@@ -66,7 +66,7 @@ func TestDockRenders(t *testing.T) {
 				win.openDock(a.ID, subagents.Key{Session: "s", ID: "y"})
 			}
 			win.showAgent(a.ID, k, false)
-			floatFrames(t, win, r)
+			twoFrames(t, win, r)
 			size := image.Pt(1000, 600)
 			g := pageContext(size.X, size.Y)
 			if err := win.frame(g); err != nil {
@@ -105,13 +105,13 @@ func longReport(n int) string {
 
 // A long report is parsed once; scrolling it parses nothing more.
 func TestDockLongReportScrollNoReparse(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	k := dockScene(t, win, int(a.ID), "running")
 	win.onNotify(notify.Msg{Tab: int(a.ID), Session: "s", Kind: notify.KindAgentStop, AgentID: "x", Report: longReport(100 << 10)})
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	win.subs.Get(k).Report = longReport(100 << 10) // past the 24 KB hook cap: the worst case
 	win.showAgent(a.ID, k, false)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	s := win.dockOf(a.ID)
 	if s.tab != dockReport || win.dock.hits.scrollMax == 0 {
 		t.Fatalf("report not shown scrollable: tab %d max %d", s.tab, win.dock.hits.scrollMax)
@@ -131,7 +131,7 @@ func TestDockFrameTiming(t *testing.T) {
 	if os.Getenv("KAZE_DOCK_BENCH") == "" {
 		t.Skip("set KAZE_DOCK_BENCH=1 to time panel frames")
 	}
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	k := dockScene(t, win, int(a.ID), "running")
 	win.onNotify(notify.Msg{Tab: int(a.ID), Session: "s", Kind: notify.KindAgentStop, AgentID: "x", Report: longReport(100 << 10)})
 	sideFrame(t, win, r)

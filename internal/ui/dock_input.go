@@ -104,7 +104,7 @@ loop:
 	}
 	if len(pass) > 0 {
 		// Typing and shortcuts belong to whoever has the keyboard without the
-		// panel (a floating pane or the session): hand it back and deliver
+		// panel (the session): hand it back and deliver
 		// them there, so nothing typed into the panel is lost.
 		win.dropDockKeys()
 		if v, ok := win.keyView(); ok {
@@ -283,4 +283,26 @@ func (win *window) dockStep(owner tabs.TabID, d int) {
 		}
 		return
 	}
+}
+
+// autoScrollSelection keeps the held selection's history moving in its own
+// visible view, the session's or the docked member's. dragPos is relative to
+// that view's grid, not the main grid.
+func (win *window) autoScrollSelection(gtx layout.Context, active *tabs.Tab, cw, ch int) bool {
+	if win.set.shown || win.palette.open {
+		return false
+	}
+	if g := win.gestureTab; g != nil {
+		if v, ok := win.dockMemberView(); ok && v.tab == g {
+			return win.autoScrollView(gtx, v, cw, ch)
+		}
+		if g == active {
+			return win.autoScrollView(gtx, win.mainView(active), cw, ch)
+		}
+		return false // the gesture's view is no longer visible
+	}
+	if v, ok := win.keyView(); ok {
+		return win.autoScrollView(gtx, v, cw, ch)
+	}
+	return false
 }

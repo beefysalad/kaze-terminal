@@ -28,10 +28,10 @@ func TestNoScratchAction(t *testing.T) {
 			t.Fatalf("%s: the old scratch key runs %v", goos, out.act)
 		}
 	}
-	win, _, r, _, _, _, _ := paneWindow(t)
+	win, _, r, _, _, _, _ := memberWindow(t)
 	n := len(win.mgr.Tabs())
 	r.Queue(key.Event{Name: "`", Modifiers: key.ModCtrl | key.ModShift, State: key.Press})
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if len(win.mgr.Tabs()) != n {
 		t.Fatal("the old scratch key opened a tab")
 	}
@@ -39,11 +39,11 @@ func TestNoScratchAction(t *testing.T) {
 
 // Closing a session docks its members back on the shared size; they keep running.
 func TestClosingSessionDocksItsMembersBack(t *testing.T) {
-	win, st, r, a, _, m1, _ := paneWindow(t)
+	win, st, r, a, _, m1, _ := memberWindow(t)
 	win.openDockMember(a.ID, m1.ID)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	win.closeTab(a.ID)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	cols, rows := win.mgr.Size()
 	if got := ptyOf(st, 2).lastSize(); got != [2]int{cols, rows} {
 		t.Fatalf("member pty %v, want the shared %v", got, [2]int{cols, rows})

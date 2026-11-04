@@ -23,15 +23,15 @@ func dockKey(t *testing.T, win *window, r *input.Router, name key.Name, mods key
 }
 
 func TestDockTabsAndAutoReport(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	k := dockAgent(t, win, int(a.ID), "")
 	win.openDock(a.ID, k)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if win.dockOf(a.ID).tab != dockActivity {
 		t.Fatal("running agent not on Activity")
 	}
 	stopAgent(win, int(a.ID), "done")
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if win.dockOf(a.ID).tab != dockReport {
 		t.Fatal("finishing did not show the report")
 	}
@@ -40,11 +40,11 @@ func TestDockTabsAndAutoReport(t *testing.T) {
 	win.onNotify(notify.Msg{Tab: int(a.ID), Kind: notify.KindAgentStart, Session: "s", AgentID: "y", AgentType: "Plan"})
 	y := subagents.Key{Session: "s", ID: "y"}
 	win.openDock(a.ID, y)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	clickAt(t, win, r, centre(win.dock.hits.repTab))
 	clickAt(t, win, r, centre(win.dock.hits.actTab))
 	win.onNotify(notify.Msg{Tab: int(a.ID), Kind: notify.KindAgentStop, Session: "s", AgentID: "y", Report: "r"})
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if s := win.dockOf(a.ID); s.tab != dockActivity || !s.picked {
 		t.Fatalf("picked Activity was overridden: %+v", s.tab)
 	}
@@ -55,10 +55,10 @@ func TestDockTabsAndAutoReport(t *testing.T) {
 }
 
 func TestDockHandleDragSavesOnce(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	win.cfgPath = filepath.Join(t.TempDir(), "config.toml")
 	win.openDock(a.ID, dockAgent(t, win, int(a.ID), ""))
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	before := win.dockRect().Dy()
 	p := centre(win.dock.hits.handle)
 	r.Queue(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: at(p)})
@@ -71,7 +71,7 @@ func TestDockHandleDragSavesOnce(t *testing.T) {
 		t.Fatal("saved during the drag")
 	}
 	r.Queue(pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: at(p.Add(image.Pt(0, -80)))})
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if got := win.dockRect().Dy(); got != before+80 {
 		t.Fatalf("height %d, want %d", got, before+80)
 	}
@@ -82,9 +82,9 @@ func TestDockHandleDragSavesOnce(t *testing.T) {
 }
 
 func TestDockEscStaysWithTerminal(t *testing.T) {
-	win, st, r, a, _, _, _ := paneWindow(t)
+	win, st, r, a, _, _, _ := memberWindow(t)
 	win.openDock(a.ID, dockAgent(t, win, int(a.ID), ""))
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	dockKey(t, win, r, key.NameEscape, 0)
 	if !strings.Contains(ptyOf(st, 0).sent(), "\x1b") {
 		t.Fatalf("Esc did not reach the terminal: %q", ptyOf(st, 0).sent())
@@ -95,9 +95,9 @@ func TestDockEscStaysWithTerminal(t *testing.T) {
 }
 
 func TestDockEscClosesWhenFocused(t *testing.T) {
-	win, st, r, a, _, _, _ := paneWindow(t)
+	win, st, r, a, _, _, _ := memberWindow(t)
 	win.openDock(a.ID, dockAgent(t, win, int(a.ID), ""))
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	clickAt(t, win, r, centre(win.dock.hits.body))
 	if !win.dock.keys {
 		t.Fatal("click did not give the panel the keyboard")
@@ -119,14 +119,14 @@ func TestDockEscClosesWhenFocused(t *testing.T) {
 }
 
 func TestDockArrowsStepAgents(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	win.liveMgr.Store(win.mgr)
 	for _, id := range []string{"a1", "a2", "a3"} {
 		win.onNotify(notify.Msg{Tab: int(a.ID), Kind: notify.KindAgentStart, Session: "s", AgentID: id, AgentType: "Explore"})
 	}
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	win.openDock(a.ID, subagents.Key{Session: "s", ID: "a1"})
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	clickAt(t, win, r, centre(win.dock.hits.body))
 	dockKey(t, win, r, key.NameDownArrow, 0)
 	if got := win.dockOf(a.ID).agent.ID; got != "a2" {
@@ -140,22 +140,22 @@ func TestDockArrowsStepAgents(t *testing.T) {
 }
 
 func TestDockLinkClickOpensDoc(t *testing.T) {
-	win, _, r, a, _, _, _ := paneWindow(t)
+	win, _, r, a, _, _, _ := memberWindow(t)
 	dir := t.TempDir()
 	report(t, a, dir)
 	os.WriteFile(filepath.Join(dir, "notes.md"), []byte("# Notes\n"), 0o644)
 	k := dockAgent(t, win, int(a.ID), "")
 	stopAgent(win, int(a.ID), "See notes.md now.")
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	win.openDock(a.ID, k)
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if len(win.dock.hits.links) == 0 {
 		t.Fatal("no link drawn")
 	}
 	p := centre(win.dock.hits.links[0].r)
 	r.Queue(pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Modifiers: key.ModShortcut, Position: at(p)},
 		pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Modifiers: key.ModShortcut, Position: at(p)})
-	floatFrames(t, win, r)
+	twoFrames(t, win, r)
 	if d := win.shownDoc(); d == nil || filepath.Base(d.path) != "notes.md" {
 		t.Fatalf("doc not opened: %+v", d)
 	}
