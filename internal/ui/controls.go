@@ -16,8 +16,8 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 
-	kinput "github.com/patrick-gogo/kaze-terminal/internal/input"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
+	kinput "github.com/beefysalad/kaze-terminal/internal/input"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
 
 // ctrlKind is one of the settings page's control types.

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
 )
 
 type Level int

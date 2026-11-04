@@ -13,8 +13,8 @@ import (
 
 	"gioui.org/io/system"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/update"
-	"github.com/patrick-gogo/kaze-terminal/internal/version"
+	"github.com/beefysalad/kaze-terminal/internal/update"
+	"github.com/beefysalad/kaze-terminal/internal/version"
 )
 
 // Update timing and limits (spec 2026-10-31-kaze-updates-design).

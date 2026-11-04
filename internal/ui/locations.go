@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"github.com/patrick-gogo/kaze-terminal/internal/gitinfo"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/gitinfo"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 const maxLocationWorkers = 2

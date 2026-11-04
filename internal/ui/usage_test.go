@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
-	"github.com/patrick-gogo/kaze-terminal/internal/usage"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/usage"
 )
 
 func usageMsg(tab int, five, ctx float64) notify.Msg {

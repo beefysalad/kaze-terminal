@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/claudesetup"
-	"github.com/patrick-gogo/kaze-terminal/internal/codexsetup"
+	"github.com/beefysalad/kaze-terminal/internal/claudesetup"
+	"github.com/beefysalad/kaze-terminal/internal/codexsetup"
 )
 
 type codexState struct {

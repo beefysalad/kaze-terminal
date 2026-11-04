@@ -7,8 +7,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 // The agents board's view model (spec 2026-11-03-kaze-agents-board-design, 3.1):

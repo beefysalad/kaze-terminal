@@ -4,8 +4,8 @@ import (
 	"math"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/config"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/config"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
 
 // The page's font size range; the file still accepts 4 to 72.

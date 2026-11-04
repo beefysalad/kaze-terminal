@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/patrick-gogo/kaze-terminal/internal/claudesetup"
-	j "github.com/patrick-gogo/kaze-terminal/internal/orderedjson"
+	"github.com/beefysalad/kaze-terminal/internal/claudesetup"
+	j "github.com/beefysalad/kaze-terminal/internal/orderedjson"
 )
 
 type State = claudesetup.State

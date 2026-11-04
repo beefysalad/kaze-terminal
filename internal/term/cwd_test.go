@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/screen"
-	"github.com/patrick-gogo/kaze-terminal/internal/vt"
+	"github.com/beefysalad/kaze-terminal/internal/screen"
+	"github.com/beefysalad/kaze-terminal/internal/vt"
 )
 
 func TestOSC7Unix(t *testing.T) {

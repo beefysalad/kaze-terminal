@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/config"
-	"github.com/patrick-gogo/kaze-terminal/internal/sessionstate"
-	"github.com/patrick-gogo/kaze-terminal/internal/update"
+	"github.com/beefysalad/kaze-terminal/internal/config"
+	"github.com/beefysalad/kaze-terminal/internal/sessionstate"
+	"github.com/beefysalad/kaze-terminal/internal/update"
 )
 
 func restoreFixture(t *testing.T) (*runFixture, string) {

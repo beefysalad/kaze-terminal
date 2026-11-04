@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"github.com/patrick-gogo/kaze-terminal/internal/mdoc"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/mdoc"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 	"image"
 	"strings"
 	"testing"

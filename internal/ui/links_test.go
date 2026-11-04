@@ -17,8 +17,8 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 // Issue #67: Cmd+click (Ctrl+click on Windows) opens a link; a plain click still selects.

@@ -16,10 +16,10 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
-	"github.com/patrick-gogo/kaze-terminal/internal/render"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/render"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
 
 // alertCard is what one alert card shows (issue #9): the mark, a context line

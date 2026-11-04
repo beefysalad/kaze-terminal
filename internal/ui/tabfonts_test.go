@@ -8,8 +8,8 @@ import (
 	"gioui.org/font"
 	"gioui.org/text"
 
-	"github.com/patrick-gogo/kaze-terminal/assets/fonts"
-	"github.com/patrick-gogo/kaze-terminal/internal/render"
+	"github.com/beefysalad/kaze-terminal/assets/fonts"
+	"github.com/beefysalad/kaze-terminal/internal/render"
 )
 
 // missingGlyphs counts glyphs the shaper drew as .notdef (ID 0) for s.

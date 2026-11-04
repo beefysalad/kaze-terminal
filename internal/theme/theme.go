@@ -4,7 +4,7 @@ package theme
 import (
 	"image/color"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/render"
+	"github.com/beefysalad/kaze-terminal/internal/render"
 )
 
 // Chrome is every color the window chrome (title bar, sidebar, status bar, toasts) draws with.

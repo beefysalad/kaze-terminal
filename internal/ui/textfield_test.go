@@ -12,7 +12,7 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/io/transfer"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
 
 // fieldDraft is what a fieldSection's rows show and its fields write back.

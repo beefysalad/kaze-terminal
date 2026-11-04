@@ -3,7 +3,7 @@ package ui
 import (
 	"image/color"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/render"
+	"github.com/beefysalad/kaze-terminal/internal/render"
 )
 
 // boardInk is the agents board's colours (mockup docs/design/agents-board-mockup.html),

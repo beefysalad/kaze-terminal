@@ -15,7 +15,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
-	"github.com/patrick-gogo/kaze-terminal/internal/resources"
+	"github.com/beefysalad/kaze-terminal/internal/resources"
 )
 
 func resourceValues(v resources.Value, partial bool) (string, string) {

@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"gioui.org/io/key"
-	"github.com/patrick-gogo/kaze-terminal/internal/input"
-	"github.com/patrick-gogo/kaze-terminal/internal/term"
+	"github.com/beefysalad/kaze-terminal/internal/input"
+	"github.com/beefysalad/kaze-terminal/internal/term"
 )
 
 func chk(t *testing.T, got []byte, want string) {

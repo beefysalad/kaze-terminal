@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
-	"github.com/patrick-gogo/kaze-terminal/internal/sessionstate"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
-	"github.com/patrick-gogo/kaze-terminal/internal/term"
-	"github.com/patrick-gogo/kaze-terminal/internal/update"
-	"github.com/patrick-gogo/kaze-terminal/internal/workspaces"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/sessionstate"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/term"
+	"github.com/beefysalad/kaze-terminal/internal/update"
+	"github.com/beefysalad/kaze-terminal/internal/workspaces"
 )
 
 // restoreWaitDefault bounds how long an updated Kaze waits for the old one to close.

@@ -8,9 +8,9 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/input"
-	"github.com/patrick-gogo/kaze-terminal/internal/render"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/input"
+	"github.com/beefysalad/kaze-terminal/internal/render"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 // dockEvents runs the shown panel's input from last frame's hits: the handle

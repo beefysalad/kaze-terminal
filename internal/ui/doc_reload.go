@@ -1,7 +1,7 @@
 package ui
 
 import (
-	"github.com/patrick-gogo/kaze-terminal/internal/mdoc"
+	"github.com/beefysalad/kaze-terminal/internal/mdoc"
 	"os"
 	"time"
 )

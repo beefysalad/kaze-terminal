@@ -22,11 +22,11 @@ import (
 	"gioui.org/io/transfer"
 	"gioui.org/layout"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/config"
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
-	"github.com/patrick-gogo/kaze-terminal/internal/ptyx"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
-	"github.com/patrick-gogo/kaze-terminal/internal/workspaces"
+	"github.com/beefysalad/kaze-terminal/internal/config"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/ptyx"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/workspaces"
 )
 
 // dirStarter is recStarter that also records each shell's folder.

@@ -14,8 +14,8 @@ import (
 	"gioui.org/io/input"
 	"gioui.org/io/key"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/config"
-	"github.com/patrick-gogo/kaze-terminal/internal/workspaces"
+	"github.com/beefysalad/kaze-terminal/internal/config"
+	"github.com/beefysalad/kaze-terminal/internal/workspaces"
 )
 
 // wsPageRect is a tall page, so every editor row is on screen without scrolling.

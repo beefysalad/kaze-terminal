@@ -12,7 +12,7 @@ import (
 	"golang.org/x/image/font/sfnt"
 	"golang.org/x/image/math/fixed"
 
-	"github.com/patrick-gogo/kaze-terminal/assets/fonts"
+	"github.com/beefysalad/kaze-terminal/assets/fonts"
 )
 
 type faceID uint8

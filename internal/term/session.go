@@ -7,9 +7,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/ptyx"
-	"github.com/patrick-gogo/kaze-terminal/internal/screen"
-	"github.com/patrick-gogo/kaze-terminal/internal/vt"
+	"github.com/beefysalad/kaze-terminal/internal/ptyx"
+	"github.com/beefysalad/kaze-terminal/internal/screen"
+	"github.com/beefysalad/kaze-terminal/internal/vt"
 )
 
 const (

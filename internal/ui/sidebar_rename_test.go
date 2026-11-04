@@ -10,7 +10,7 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 // dblClick presses twice on rect, 100ms apart.

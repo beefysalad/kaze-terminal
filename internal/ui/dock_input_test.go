@@ -11,8 +11,8 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
 )
 
 func dockKey(t *testing.T, win *window, r *input.Router, name key.Name, mods key.Modifiers) {

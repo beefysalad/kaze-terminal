@@ -11,8 +11,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/ptyx"
-	"github.com/patrick-gogo/kaze-terminal/internal/term"
+	"github.com/beefysalad/kaze-terminal/internal/ptyx"
+	"github.com/beefysalad/kaze-terminal/internal/term"
 )
 
 // TabID identifies a tab for its lifetime; IDs are never reused.

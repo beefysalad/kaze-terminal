@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
 )
 
 type dockItemKind uint8

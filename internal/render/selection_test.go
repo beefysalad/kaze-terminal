@@ -3,7 +3,7 @@ package render
 import (
 	"testing"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/screen"
+	"github.com/beefysalad/kaze-terminal/internal/screen"
 )
 
 func printAll(s *screen.Screen, text string) {

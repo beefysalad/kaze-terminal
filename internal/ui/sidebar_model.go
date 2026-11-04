@@ -4,9 +4,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/branchsession"
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/branchsession"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 // sideRow is one session in the sidebar. Folder is already ~-shortened.

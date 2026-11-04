@@ -14,8 +14,8 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 // Tray sizes in dp (spec 3, mockup .tray): an agent line, the gap above a tray, the

@@ -9,8 +9,8 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/clip"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/render"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/render"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 // A workspace member's tab in the docked panel (issue #133): its live

@@ -9,11 +9,11 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/battery"
-	"github.com/patrick-gogo/kaze-terminal/internal/gitinfo"
-	"github.com/patrick-gogo/kaze-terminal/internal/resources"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
-	"github.com/patrick-gogo/kaze-terminal/internal/usage"
+	"github.com/beefysalad/kaze-terminal/internal/battery"
+	"github.com/beefysalad/kaze-terminal/internal/gitinfo"
+	"github.com/beefysalad/kaze-terminal/internal/resources"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/usage"
 )
 
 // serverDot is one run member's status dot: red when Down, green when Up, muted otherwise.

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/input"
-	"github.com/patrick-gogo/kaze-terminal/internal/term"
+	"github.com/beefysalad/kaze-terminal/internal/input"
+	"github.com/beefysalad/kaze-terminal/internal/term"
 )
 
 func TestBracketedPasteWraps(t *testing.T) {

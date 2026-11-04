@@ -19,7 +19,7 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget"
-	"github.com/patrick-gogo/kaze-terminal/internal/branchsession"
+	"github.com/beefysalad/kaze-terminal/internal/branchsession"
 )
 
 type worktreeResult struct {

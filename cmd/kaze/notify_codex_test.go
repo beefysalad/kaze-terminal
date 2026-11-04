@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
 	"io"
 	"strings"
 	"testing"

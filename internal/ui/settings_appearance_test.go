@@ -12,9 +12,9 @@ import (
 
 	"gioui.org/io/input"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/config"
-	"github.com/patrick-gogo/kaze-terminal/internal/render"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/config"
+	"github.com/beefysalad/kaze-terminal/internal/render"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
 
 // appearanceWindow is a window with default settings, saving to path, and the

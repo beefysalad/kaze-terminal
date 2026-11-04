@@ -8,11 +8,11 @@ import (
 
 	"gioui.org/io/input"
 	"gioui.org/op"
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
-	"github.com/patrick-gogo/kaze-terminal/internal/vt"
-	"github.com/patrick-gogo/kaze-terminal/internal/workspaces"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/vt"
+	"github.com/beefysalad/kaze-terminal/internal/workspaces"
 )
 
 func TestSidebarCacheUnchangedDrawAllocatesNothing(t *testing.T) {

@@ -1,6 +1,6 @@
 package claudesetup
 
-import "github.com/patrick-gogo/kaze-terminal/internal/orderedjson"
+import "github.com/beefysalad/kaze-terminal/internal/orderedjson"
 
 type node = orderedjson.Node
 

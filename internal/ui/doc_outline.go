@@ -8,7 +8,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
-	"github.com/patrick-gogo/kaze-terminal/internal/input"
+	"github.com/beefysalad/kaze-terminal/internal/input"
 	"image"
 )
 

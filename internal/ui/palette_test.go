@@ -10,7 +10,7 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
 
 func palDraw(t *testing.T, c *chrome, items []palItem, main image.Rectangle, scale float32) palHits {

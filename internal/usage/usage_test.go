@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
 )
 
 var now = time.Date(2026, 10, 29, 9, 0, 0, 0, time.Local)

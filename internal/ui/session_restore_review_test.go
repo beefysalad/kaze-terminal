@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
-	"github.com/patrick-gogo/kaze-terminal/internal/sessionstate"
-	"github.com/patrick-gogo/kaze-terminal/internal/update"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/sessionstate"
+	"github.com/beefysalad/kaze-terminal/internal/update"
 )
 
 const reviewID = "01234567-89ab-cdef-0123-456789abcdef"

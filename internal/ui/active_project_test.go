@@ -6,8 +6,8 @@ import (
 
 	"gioui.org/font"
 	"gioui.org/io/input"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
 
 func TestActiveProjectFollowsSelectedSession(t *testing.T) {

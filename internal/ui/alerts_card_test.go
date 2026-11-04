@@ -9,10 +9,10 @@ import (
 
 	"gioui.org/io/input"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
-	"github.com/patrick-gogo/kaze-terminal/internal/vt"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/vt"
 )
 
 // shellTitle sets the title the tab's shell reports, as OSC 0 would.

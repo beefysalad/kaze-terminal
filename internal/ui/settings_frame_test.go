@@ -8,9 +8,9 @@ import (
 	"gioui.org/io/input"
 	"gioui.org/io/key"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/config"
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/config"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
 
 // sizedFrame runs one headless frame of a w x h window fed by r.

@@ -8,8 +8,8 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/layout"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/config"
-	"github.com/patrick-gogo/kaze-terminal/internal/render"
+	"github.com/beefysalad/kaze-terminal/internal/config"
+	"github.com/beefysalad/kaze-terminal/internal/render"
 )
 
 func TestRendererOptionsFollowConfig(t *testing.T) {

@@ -14,8 +14,8 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/battery"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/battery"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
 
 // batteryStrip renders the busy status bar with st at the bottom of a w x h

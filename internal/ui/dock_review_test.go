@@ -11,7 +11,7 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
 )
 
 // Review C1: a click back in the terminal, or closing the focused panel, gives

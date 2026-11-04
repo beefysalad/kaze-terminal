@@ -17,10 +17,10 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/config"
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
-	"github.com/patrick-gogo/kaze-terminal/internal/vt"
+	"github.com/beefysalad/kaze-terminal/internal/config"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/vt"
 )
 
 func centre(r image.Rectangle) image.Point { return r.Min.Add(r.Size().Div(2)) }

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
-	"github.com/patrick-gogo/kaze-terminal/internal/workspaces"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/workspaces"
 )
 
 func TestClosedWorkspaceMemberIsStoppedAndCountsDown(t *testing.T) {

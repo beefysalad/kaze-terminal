@@ -17,9 +17,9 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/input"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
-	"github.com/patrick-gogo/kaze-terminal/internal/version"
+	"github.com/beefysalad/kaze-terminal/internal/input"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/version"
 )
 
 // settingsState is the Settings page: a special tab with no shell behind it.

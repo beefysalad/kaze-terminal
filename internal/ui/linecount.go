@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/gitstat"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/gitstat"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 const countTimeout = 2 * time.Second

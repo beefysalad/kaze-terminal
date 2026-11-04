@@ -14,8 +14,8 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 var t0 = time.Date(2026, 10, 28, 9, 0, 0, 0, time.UTC)

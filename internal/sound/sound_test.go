@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/assets/sounds"
+	"github.com/beefysalad/kaze-terminal/assets/sounds"
 )
 
 func TestBundledChimeIsValidWav(t *testing.T) {

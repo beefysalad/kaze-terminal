@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
-	"github.com/patrick-gogo/kaze-terminal/internal/term"
-	"github.com/patrick-gogo/kaze-terminal/internal/workspaces"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/term"
+	"github.com/beefysalad/kaze-terminal/internal/workspaces"
 )
 
 // confirmAfter is how long a workspace tab waits for its first prompt marker

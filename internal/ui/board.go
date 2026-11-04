@@ -13,11 +13,11 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/widget"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/claudesetup"
-	kinput "github.com/patrick-gogo/kaze-terminal/internal/input"
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/claudesetup"
+	kinput "github.com/beefysalad/kaze-terminal/internal/input"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
 
 // boardState is the agents board (spec 2026-11-03-kaze-agents-board-design): a

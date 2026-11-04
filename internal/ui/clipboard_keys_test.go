@@ -10,7 +10,7 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/input"
+	"github.com/beefysalad/kaze-terminal/internal/input"
 )
 
 // On Windows, plain Ctrl+C and Ctrl+V work like Warp: Ctrl+V pastes, Ctrl+C

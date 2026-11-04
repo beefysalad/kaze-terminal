@@ -8,7 +8,7 @@ import (
 
 	"gioui.org/layout"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
 )
 
 // drawPreview draws the board wide at the current time, so the preview reads

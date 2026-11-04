@@ -50,7 +50,7 @@ Windows needs nothing else; the Windows build uses no cgo.
 
 ### Download
 
-Get the latest build from [Releases](https://github.com/patrick-gogo/kaze-terminal/releases/latest):
+Get the latest build from [Releases](https://github.com/beefysalad/kaze-terminal/releases/latest):
 `Kaze-macOS.zip` (macOS 13 or newer, Apple Silicon and Intel), `Kaze-Windows-x64.zip` or
 `Kaze-Windows-arm64.zip` (Windows 10 and 11).
 
@@ -66,19 +66,19 @@ kaze isn't signed by Apple or Microsoft yet, so the first launch needs one extra
 With Go installed, this puts a `kaze` binary in your Go bin folder (`go env GOPATH`, then `bin`):
 
 ```
-go install github.com/patrick-gogo/kaze-terminal/cmd/kaze@latest
+go install github.com/beefysalad/kaze-terminal/cmd/kaze@latest
 ```
 
 On Windows, add the GUI flag so no console window opens next to kaze:
 
 ```
-go install -ldflags "-H=windowsgui" github.com/patrick-gogo/kaze-terminal/cmd/kaze@latest
+go install -ldflags "-H=windowsgui" github.com/beefysalad/kaze-terminal/cmd/kaze@latest
 ```
 
 ## Build and run from a clone
 
 ```
-git clone https://github.com/patrick-gogo/kaze-terminal.git
+git clone https://github.com/beefysalad/kaze-terminal.git
 cd kaze-terminal
 ```
 

@@ -13,11 +13,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/version"
+	"github.com/beefysalad/kaze-terminal/internal/version"
 )
 
 // LatestURL is GitHub's latest-release endpoint for kaze. It skips drafts and prereleases.
-const LatestURL = "https://api.github.com/repos/patrick-gogo/kaze-terminal/releases/latest"
+const LatestURL = "https://api.github.com/repos/beefysalad/kaze-terminal/releases/latest"
 
 // SumsName is the checksum list each release carries.
 const SumsName = "SHA256SUMS"

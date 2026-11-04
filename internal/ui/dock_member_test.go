@@ -10,7 +10,7 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 // Tests for workspace members as panel tabs (issue #133, plan tasks D3 to D5).

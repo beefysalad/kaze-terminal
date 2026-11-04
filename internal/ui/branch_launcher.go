@@ -15,9 +15,9 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/widget"
-	"github.com/patrick-gogo/kaze-terminal/internal/branchsession"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
-	"github.com/patrick-gogo/kaze-terminal/internal/workspaces"
+	"github.com/beefysalad/kaze-terminal/internal/branchsession"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/workspaces"
 )
 
 type branchRepo struct{ key, name, dir string }

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
 )
 
 // promptCall is an Agent call of typ named desc that asks prompt.

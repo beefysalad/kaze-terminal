@@ -11,8 +11,8 @@ import (
 	"gioui.org/gpu/headless"
 	"gioui.org/op"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
 
 // trayRenderAgents is n tray lines in the mockup's mix: one waiting, the rest running.

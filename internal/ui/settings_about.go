@@ -14,10 +14,10 @@ import (
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/version"
+	"github.com/beefysalad/kaze-terminal/internal/version"
 )
 
-const aboutRepository = "https://github.com/patrick-gogo/kaze-terminal"
+const aboutRepository = "https://github.com/beefysalad/kaze-terminal"
 
 // The name under the logo: kaze (風) is Japanese for "wind".
 const (

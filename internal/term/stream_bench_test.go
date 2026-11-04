@@ -3,8 +3,8 @@ package term
 import (
 	"bytes"
 	"fmt"
-	"github.com/patrick-gogo/kaze-terminal/internal/screen"
-	"github.com/patrick-gogo/kaze-terminal/internal/vt"
+	"github.com/beefysalad/kaze-terminal/internal/screen"
+	"github.com/beefysalad/kaze-terminal/internal/vt"
 	"io"
 	"testing"
 )

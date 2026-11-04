@@ -3,8 +3,8 @@ package ui
 import (
 	"fmt"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
-	"github.com/patrick-gogo/kaze-terminal/internal/workspaces"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/workspaces"
 )
 
 // memberStatus is how far a run member got, in words for the group menu, and

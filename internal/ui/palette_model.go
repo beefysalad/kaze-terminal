@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/skills"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
-	"github.com/patrick-gogo/kaze-terminal/internal/workspaces"
+	"github.com/beefysalad/kaze-terminal/internal/skills"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/workspaces"
 )
 
 type palSection int

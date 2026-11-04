@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/config"
-	"github.com/patrick-gogo/kaze-terminal/internal/workspaces"
+	"github.com/beefysalad/kaze-terminal/internal/config"
+	"github.com/beefysalad/kaze-terminal/internal/workspaces"
 )
 
 // notesWorkspace is a second, one-tab workspace in the fixture's first folder.

@@ -3,7 +3,7 @@ package render
 import (
 	"testing"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/screen"
+	"github.com/beefysalad/kaze-terminal/internal/screen"
 )
 
 // drawnCell is the cell the strips show at col, row.

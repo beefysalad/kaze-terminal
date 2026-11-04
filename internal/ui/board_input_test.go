@@ -9,8 +9,8 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 // boardNarrow is a board area too narrow for the preview.

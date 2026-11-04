@@ -9,8 +9,8 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
-	"github.com/patrick-gogo/kaze-terminal/internal/vt"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/vt"
 )
 
 // Reproducible issue #101 probe. Includes the whole frame so the sidebar's

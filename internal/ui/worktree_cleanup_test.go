@@ -7,7 +7,7 @@ import (
 
 	"gioui.org/io/input"
 	"gioui.org/io/key"
-	"github.com/patrick-gogo/kaze-terminal/internal/branchsession"
+	"github.com/beefysalad/kaze-terminal/internal/branchsession"
 )
 
 func TestWorktreeOpenIncludesWorkspaceFolders(t *testing.T) {

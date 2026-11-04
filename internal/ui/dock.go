@@ -8,9 +8,9 @@ import (
 	"gioui.org/layout"
 	"gioui.org/unit"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/render"
-	"github.com/patrick-gogo/kaze-terminal/internal/subagents"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/render"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 // The docked panel (spec 2026-11-03-kaze-agent-dock-design, issue #133): a

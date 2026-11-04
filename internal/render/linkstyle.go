@@ -1,6 +1,6 @@
 package render
 
-import "github.com/patrick-gogo/kaze-terminal/internal/screen"
+import "github.com/beefysalad/kaze-terminal/internal/screen"
 
 // linkFG is the colour of a web link drawn in the default colour: the theme's blue.
 var linkFG = screen.Indexed(4)

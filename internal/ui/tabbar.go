@@ -19,9 +19,9 @@ import (
 	"gioui.org/widget"
 	"golang.org/x/image/math/fixed"
 
-	"github.com/patrick-gogo/kaze-terminal/assets/fonts"
-	"github.com/patrick-gogo/kaze-terminal/internal/render"
-	"github.com/patrick-gogo/kaze-terminal/internal/theme"
+	"github.com/beefysalad/kaze-terminal/assets/fonts"
+	"github.com/beefysalad/kaze-terminal/internal/render"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
 
 func rgb(v uint32) color.NRGBA {

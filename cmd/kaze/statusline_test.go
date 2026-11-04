@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
 )
 
 var slNow = time.Unix(1738400000, 0)

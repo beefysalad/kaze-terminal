@@ -8,8 +8,8 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/op"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
-	"github.com/patrick-gogo/kaze-terminal/internal/workspaces"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/workspaces"
 )
 
 // Every member entry point docks a tab (issue #133, plan task D5). These

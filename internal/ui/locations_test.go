@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/gitinfo"
+	"github.com/beefysalad/kaze-terminal/internal/gitinfo"
 )
 
 func waitLocations(t *testing.T, win *window, done func() bool) {

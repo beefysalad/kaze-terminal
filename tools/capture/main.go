@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/ptyx"
+	"github.com/beefysalad/kaze-terminal/internal/ptyx"
 )
 
 func main() {

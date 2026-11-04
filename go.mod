@@ -1,4 +1,4 @@
-module github.com/patrick-gogo/kaze-terminal
+module github.com/beefysalad/kaze-terminal
 
 go 1.27.0
 

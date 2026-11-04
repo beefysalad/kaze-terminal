@@ -3,8 +3,8 @@ package ui
 import (
 	"time"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/procs"
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/procs"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 // detectEvery is the most often one tab's foreground program is checked.

@@ -8,8 +8,8 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/io/transfer"
 
-	"github.com/patrick-gogo/kaze-terminal/internal/notify"
-	"github.com/patrick-gogo/kaze-terminal/internal/skills"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/skills"
 )
 
 func TestPaletteQueryAndEnterSameFrame(t *testing.T) {

@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"github.com/patrick-gogo/kaze-terminal/internal/tabs"
-	"github.com/patrick-gogo/kaze-terminal/internal/term"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/term"
 )
 
 // writeInput keeps overload visible for keys, text, paste and mouse input.
