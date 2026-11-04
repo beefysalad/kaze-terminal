@@ -1,6 +1,6 @@
-## What’s new in Kaze 0.28.2
+## What’s new in Kaze 0.29
 
-- **Fixed: links to files Claude wrote elsewhere:** clicking a .md link that Claude printed now opens the file Claude actually wrote or read, even when it lives outside the tab's folder, like a note in your Obsidian vault or a file in another repo. Before, Kaze only looked in the tab's folder and said it couldn't find the file.
+- **Battery on macOS:** MacBooks now show the battery at the far right of the status bar too, just like Windows laptops: the level and percent, a bolt while charging, amber at 20% and red at 10%. It updates when macOS says the level or the charger changed, so it costs nothing while idle. Mac desktops show nothing.
 
 ## Download
 
