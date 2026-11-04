@@ -1,6 +1,6 @@
-## What’s new in Kaze 0.28.1
+## What’s new in Kaze 0.28.2
 
-- **Kaze has a new home:** the project moved to beefysalad/kaze-terminal on GitHub. Kaze now checks there for updates, and the website is at beefysalad.github.io/kaze-terminal. Nothing else changes.
+- **Fixed: links to files Claude wrote elsewhere:** clicking a .md link that Claude printed now opens the file Claude actually wrote or read, even when it lives outside the tab's folder, like a note in your Obsidian vault or a file in another repo. Before, Kaze only looked in the tab's folder and said it couldn't find the file.
 
 ## Download
 

@@ -1012,6 +1012,7 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 Done:
 
+- 0.28.2: a .md link Claude printed opens the file Claude wrote or read, wherever it lives (#143, PR #153).
 - 0.28.1: the project moved to beefysalad/kaze-terminal; updates and the website follow it (PR #151).
 - 0.28: readable agent activity in the panel and the board (#134); the battery in the status bar on Windows (#111, macOS in #139); subagents started together keep their own names (#135) (PR #140).
 - 0.27: workspace members open as tabs in the panel under the terminal and the scratch shell and floating panes are gone (#133); richer alert cards at the bottom right (#9); .md links with spaces or an earlier folder open (#128) (PR #136).
