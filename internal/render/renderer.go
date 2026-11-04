@@ -86,9 +86,28 @@ type Renderer struct {
 	drawn         []screen.Cell // what the strips show, row-major
 	snap          []screen.Cell // rows copied out under the session lock
 	snapRows      []int
-	selectionRows []bool // retained selection dedup scratch
-	snapSel       []bool // per cell: selected in the snapshot
-	drawnSel      []bool // per cell: drawn selected
+	selectionRows []bool  // retained selection dedup scratch
+	snapSel       []bool  // per cell: selected in the snapshot
+	drawnSel      []bool  // per cell: drawn selected
+	snapHit       []uint8 // per cell: find highlight in the snapshot (hitNone, hitMatch, hitCur)
+	drawnHit      []uint8 // per cell: the find highlight drawn
+	marks         *Marks  // find highlights, nil for none
+	hadMarks      bool    // the last snapshot had marks
+	markGen       uint64  // marks.Gen at the last snapshot
+	markCur       int32   // marks.Cur at the last snapshot
+	markTop       int     // the stable line of visible row 0 at the last snapshot
+	find          findInk
+	markFirst     int    // the stable line of the oldest line held (the grid's first on the alt screen)
+	markTotal     int    // the lines held: history plus the screen, or the screen alone on the alt screen
+	markView      int    // the stable line of visible row 0
+	scrollOps     op.Ops // the recorded scroll marks, replayed while nothing changed
+	scrollCall    op.CallOp
+	scrollKey     scrollKey
+	scrollReady   bool
+	scrollPaint   scrollPaint
+	markYs        []int32 // the marks' pixel rows, one per row, reused
+	marksRecorded int     // times the scroll marks were recorded, read by tests
+	marksAdded    int     // times they were added to a frame, read by tests
 	lastSel       Selection
 	links         Links  // finds the web links to style, reused every frame
 	linkWas       []bool // per visible row: had a styled link last snapshot
@@ -151,6 +170,8 @@ func (r *Renderer) Release() {
 	r.cols, r.rows = 0, 0
 	r.strips, r.drawn, r.snap, r.snapRows = nil, nil, nil, nil
 	r.snapSel, r.drawnSel, r.lastSel = nil, nil, Selection{}
+	r.snapHit, r.drawnHit, r.hadMarks = nil, nil, false
+	r.scrollOps, r.scrollCall, r.scrollReady, r.markYs = op.Ops{}, op.CallOp{}, false, nil
 	r.selectionRows = nil
 	r.links, r.linkWas, r.linkNow, r.linkQueued = Links{}, nil, nil, nil
 	r.curImg, r.curDrawn = nil, cursorState{}
@@ -223,6 +244,12 @@ func (r *Renderer) snapshot(s *term.Session, sel *Selection) (held bool) {
 		}
 	}
 	base := scr.ScrollbackLen() - scr.ViewOffset() // absolute row of visible row 0
+	top := int(scr.Evicted()) + base               // its stable line, as find counts lines
+	hits := r.queueMarkRows(top)
+	r.markFirst, r.markTotal, r.markView = int(scr.Evicted()), scr.ScrollbackLen()+rows, top
+	if scr.OnAltScreen() { // only the grid is searched there
+		r.markFirst, r.markTotal = int(scr.Evicted())+scr.ScrollbackLen(), rows
+	}
 	cur := Selection{}
 	if sel != nil && sel.Active {
 		cur = *sel
@@ -245,6 +272,9 @@ func (r *Renderer) snapshot(s *term.Session, sel *Selection) (held bool) {
 				sline[c] = sline[c] || sline[c+1]
 				sline[c+1] = sline[c]
 			}
+		}
+		if hits {
+			r.fillHits(r.snapHit[row*cols:(row+1)*cols], line, top+row)
 		}
 	}
 	r.styleLinks(spans, base)
@@ -291,6 +321,7 @@ func (r *Renderer) resize(cols, rows int) {
 	r.full, r.needStrips = true, true
 	r.snap = make([]screen.Cell, cols*rows)
 	r.snapSel = make([]bool, cols*rows)
+	r.snapHit = make([]uint8, cols*rows)
 	r.linkWas, r.linkNow, r.linkQueued = make([]bool, rows), make([]bool, rows), make([]bool, rows)
 }
 
@@ -302,6 +333,7 @@ func (r *Renderer) buildStrips() {
 		r.drawn[i].Rune = -1 // matches no real cell, so every cell is drawn once
 	}
 	r.drawnSel = make([]bool, cols*rows)
+	r.drawnHit = make([]uint8, cols*rows)
 	r.rowsPerStrip = (rows + stripCount - 1) / stripCount
 	r.strips = r.strips[:0]
 	for row0 := 0; row0 < rows; row0 += r.rowsPerStrip {
@@ -323,12 +355,14 @@ func (r *Renderer) rasterizeDirty() {
 		was := r.drawn[row*cols : (row+1)*cols]
 		selNow := r.snapSel[row*cols : (row+1)*cols]
 		selWas := r.drawnSel[row*cols : (row+1)*cols]
+		hitNow := r.snapHit[row*cols : (row+1)*cols]
+		hitWas := r.drawnHit[row*cols : (row+1)*cols]
 		st := &r.strips[row/r.rowsPerStrip]
 		y := (row - st.row0) * r.cellH
 		changed := false
 		for c := 0; c < cols; c++ {
 			cell := now[c]
-			diff := cell != was[c] || selNow[c] != selWas[c]
+			diff := cell != was[c] || selNow[c] != selWas[c] || hitNow[c] != hitWas[c]
 			if cell.Width == 2 && c+1 < cols {
 				diff = diff || now[c+1] != was[c+1] // the lead owns its right half's pixels
 			}
@@ -338,15 +372,21 @@ func (r *Renderer) rasterizeDirty() {
 			if !diff {
 				continue
 			}
+			// Selection over the current match over a match over the cell's own colours.
 			var over *colors
+			var hc colors
 			if selNow[c] {
 				over = &colors{fg: r.selectedFG(cell), bg: r.pal.Selection}
+			} else if hitNow[c] != hitNone {
+				hc = r.hitColors(cell, hitNow[c])
+				over = &hc
 			}
 			r.drawCell(st.img, c*r.cellW, y, cell, over)
 			changed = true
 		}
 		copy(was, now)
 		copy(selWas, selNow)
+		copy(hitWas, hitNow)
 		if changed {
 			r.stats.RowsRedrawn++
 			st.dirty = true
