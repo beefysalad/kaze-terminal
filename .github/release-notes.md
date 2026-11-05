@@ -1,8 +1,7 @@
-## What’s new in Kaze 0.31
+## What’s new in Kaze 0.32
 
-- **A cleaner palette:** it opens on what’s waiting on you, your sessions and the 3 skills you used last, with one row to browse the rest. Servers are no longer listed (they’re in the status bar and sidebar), and Kaze actions show up as you type their name.
-- **Skills behind /:** press / or Tab, or click Skills, to see every skill grouped as Yours, This project and one group per plugin. Type after the / to search by name or by what a skill does.
-- **Edit your shortcuts:** in Settings, Shortcuts, click a shortcut and press the new keys. It works at once. Kaze asks before taking keys another action uses, warns when a key belongs to your shell, and each row can be reset.
+- **Five more themes:** Matcha, Kōyō, Hai and Fuji are dark, Kiri is light, so there are ten in all. Pick one in Settings, Appearance; the cards sit five to a row, fewer in a narrow window.
+- **One font everywhere:** Settings, the palette, alert cards, the Agents board, docs and the title and status bars now use JetBrains Mono, the same font as the terminal, so the whole window reads as one. Kaze is a little smaller too.
 
 ## Download
 

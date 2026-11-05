@@ -19,7 +19,7 @@ Native macOS window captures (2200 × 1440 px, Retina) retaken November 1, 2026,
   and its API, Web and Health members running.
 - `kaze-about.png`: the redesigned About section displaying the shipped logo and byline, version 0.15,
   platform, chip and license facts.
-- `kaze-settings.png`: Appearance settings with five theme cards, Midnight selected, and the live
+- `kaze-settings.png`: Appearance settings with ten theme cards (two rows of five), Midnight selected, and the live
   terminal preview.
 - Settings > Shortcuts has a new row layout (editable keys, a reset button and a "changed" tag). If the
   lander or README uses a Shortcuts screenshot, it needs retaking. Do not fake it.
