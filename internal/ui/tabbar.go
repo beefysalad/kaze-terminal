@@ -40,13 +40,14 @@ type chrome struct {
 	th        theme.Chrome
 	ansi      [16]color.NRGBA // the terminal's ANSI colors, for workspace members
 
-	faces   []font.FontFace
-	ink     sideInk         // sideInk for inkFor and inkMag
-	inkFor  theme.Chrome    // the theme ink was worked out for
-	inkMag  color.NRGBA     // and its magenta
-	palK    *palInk         // the palette's colours for th; nil until drawn
-	covered map[rune]bool   // rune -> some face has it
-	loaded  map[string]bool // system font files already added
+	faces     []font.FontFace
+	ink       sideInk           // sideInk for inkFor and inkMag
+	inkFor    theme.Chrome      // the theme ink was worked out for
+	inkMag    color.NRGBA       // and its magenta
+	palK      *palInk           // the palette's colours for th; nil until drawn
+	palBadges []image.Rectangle // the palette's badge rects, reused across frames
+	covered   map[rune]bool     // rune -> some face has it
+	loaded    map[string]bool   // system font files already added
 }
 
 func newChrome() *chrome {

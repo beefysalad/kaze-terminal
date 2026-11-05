@@ -212,17 +212,56 @@ func TestPaletteRowsAndHeaders(t *testing.T) {
 		{Kind: palSession, Group: palHeadSessions, Key: "tab:2", Name: "misc", State: "shell"},
 	}
 	items = append(items, skillItems(3)...)
-	h := palDraw(t, newChrome(), items, image.Rect(260, 38, 1460, 838), 1)
-	if len(h.rows) != 5 {
-		t.Fatalf("%d rows", len(h.rows))
-	}
-	if !slices.Equal(h.headers, []string{"SESSIONS", "SKILLS"}) {
-		t.Fatalf("headers %v", h.headers)
-	}
-	for i, r := range h.rows {
-		if r.index != i || !r.rect.In(h.list) {
-			t.Errorf("row %d: %+v outside %v", i, r, h.list)
+	items = append(items, palItem{Kind: palSkill, Group: "DEVBOX", GroupCount: "1", Plugin: "devbox", Key: "skill:devbox:run", Name: "/devbox:run", Dim: len("/devbox:"), Detail: "Run it"})
+	for _, scale := range []float32{1, 2} {
+		main := image.Rect(260, 38, 1460, 838)
+		if scale == 2 {
+			main = image.Rect(520, 76, 2920, 1676)
 		}
+		h := palDraw(t, newChrome(), items, main, scale)
+		if len(h.rows) != 6 {
+			t.Fatalf("%d rows", len(h.rows))
+		}
+		if !slices.Equal(h.headers, []string{"SESSIONS", "SKILLS", "DEVBOX"}) {
+			t.Fatalf("headers %v", h.headers)
+		}
+		inset := int(6 * scale)
+		for i, r := range h.rows {
+			if r.index != i || !r.rect.In(h.list) {
+				t.Errorf("row %d: %+v outside %v", i, r, h.list)
+			}
+			if r.rect.Dy() != int(38*scale) || r.rect.Min.X != h.box.Min.X+inset || r.rect.Max.X != h.box.Max.X-inset {
+				t.Errorf("scale %v row %d: %v in box %v, want 38 dp tall, inset 6 dp", scale, i, r.rect, h.box)
+			}
+		}
+	}
+}
+
+// The selected session row alone says "go to session".
+func TestSelectedRowShowsGo(t *testing.T) {
+	items := []palItem{{Kind: palSession, Group: palHeadSessions, Key: "tab:1", Name: "api", State: "idle", Agent: "claude"}}
+	main := image.Rect(260, 38, 1460, 838)
+	if h := palDrawSt(t, newChrome(), palState{items: items, hover: -1, sel: 0}, main, 1); h.goShown != 1 {
+		t.Fatalf("selected: goShown %d", h.goShown)
+	}
+	if h := palDrawSt(t, newChrome(), palState{items: items, hover: -1, sel: -1}, main, 1); h.goShown != 0 {
+		t.Fatalf("not selected: goShown %d", h.goShown)
+	}
+}
+
+// A plugin group's header gets its tile; Yours has none.
+func TestPluginHeaderHasTile(t *testing.T) {
+	main := image.Rect(260, 38, 1460, 838)
+	yours := []palItem{{Kind: palSkill, Group: "YOURS", GroupCount: "1", Key: "skill:a", Name: "/a"}}
+	if h := palDraw(t, newChrome(), yours, main, 1); h.tiles != 0 {
+		t.Fatalf("YOURS drew %d tiles", h.tiles)
+	}
+	devbox := []palItem{
+		{Kind: palSkill, Group: "DEVBOX", GroupCount: "2", Plugin: "devbox", Key: "skill:devbox:a", Name: "/devbox:a", Dim: 8},
+		{Kind: palMoreGroup, Group: "DEVBOX", GroupCount: "2", Plugin: "devbox", Key: "more:devbox", Name: "1 more in devbox", Count: 1},
+	}
+	if h := palDraw(t, newChrome(), devbox, main, 1); h.tiles != 1 {
+		t.Fatalf("DEVBOX drew %d tiles, want 1", h.tiles)
 	}
 }
 
@@ -251,34 +290,63 @@ func TestPaletteListScrolls(t *testing.T) {
 
 func TestPaletteLongTextStaysInside(t *testing.T) {
 	items := []palItem{
-		{Kind: palSkill, Group: palHeadSkills, Key: "skill:x", Name: "/" + strings.Repeat("長い名前", 30), Detail: strings.Repeat("description ", 30)},
-		{Kind: palSession, Group: palHeadSessions, Key: "tab:1", Name: strings.Repeat("title", 40), State: "shell"},
-		{Kind: palKaze, Group: palHeadKaze, Key: "act:x", Name: "Act", Keys: strings.Split(strings.Repeat("Ctrl+", 11)+"T", "+")},
+		{Kind: palSkill, Group: palHeadSkills, Key: "skill:x", Name: "/" + strings.Repeat("長い名前", 75), Detail: strings.Repeat("d", 200)},
+		{Kind: palSession, Group: palHeadSessions, Key: "tab:1", Name: strings.Repeat("title", 60), State: "needs you", Mark: markNeeds, Agent: "claude"},
+		{Kind: palKaze, Group: palHeadKaze, Key: "act:x", Name: strings.Repeat("Act", 40), Icon: "plus", Keys: strings.Split(strings.Repeat("Ctrl+", 11)+"T", "+")},
 	}
-	h := palDraw(t, newChrome(), items, image.Rect(0, 38, 700, 700), 1)
-	for _, r := range h.rows {
-		if !r.rect.In(h.box) {
-			t.Fatalf("row %v outside the box %v", r.rect, h.box)
+	for _, main := range []image.Rectangle{image.Rect(0, 38, 700, 700), image.Rect(0, 38, 330, 700)} {
+		for sel := range items {
+			h := palDrawSt(t, newChrome(), palState{items: items, hover: -1, sel: sel}, main, 1)
+			for _, r := range h.rows {
+				if !r.rect.In(h.box) {
+					t.Fatalf("row %v outside the box %v", r.rect, h.box)
+				}
+			}
+			if len(h.badges) == 0 {
+				t.Fatal("no badges recorded")
+			}
+			for _, b := range h.badges {
+				in := false
+				for _, r := range h.rows {
+					in = in || b.In(r.rect)
+				}
+				if !in {
+					t.Fatalf("badge %v outside every row %v", b, h.rows)
+				}
+			}
 		}
 	}
 }
 
 func TestPaletteDrawsInEveryTheme(t *testing.T) {
 	win, _ := alertWindow(t, 1)
-	items := append([]palItem{
+	items := []palItem{
 		{Kind: palSession, Group: palHeadWaiting, Key: "tab:1", Name: "a", Mark: markNeeds, State: "needs you", Agent: "claude"},
-		{Kind: palSession, Group: palHeadSessions, Key: "tab:2", Name: "web", State: "idle"},
+		{Kind: palSession, Group: palHeadSessions, Key: "tab:2", Name: "web", State: "idle", Agent: "codex"},
+		{Kind: palSession, Group: palHeadSessions, Key: "tab:3", Name: "run", State: "running", Running: true},
+		{Kind: palSession, Group: palHeadSessions, Key: "tab:4", Name: "fin", State: "done", Mark: markDone},
+		{Kind: palSession, Group: palHeadSessions, Key: "tab:5", Name: "sh", State: "shell"},
 		{Kind: palKaze, Group: palHeadKaze, Key: "act:new_tab", Name: "New session", Keys: []string{"Ctrl", "Shift", "T"}, Icon: "plus"},
-		{Kind: palBrowse, Group: palHeadSkills, Key: "browse", Name: "Browse all 2 skills", Count: 2},
-		{Kind: palMoreGroup, Group: "DEVBOX", Key: "more:devbox", Name: "2 more in devbox", Count: 2, Plugin: "devbox"},
+		{Kind: palKaze, Group: palHeadKaze, Key: "act:x", Name: "No icon"},
+		{Kind: palBrowse, Group: palHeadRecentSkills, Key: "browse", Name: "Browse all 2 skills", Count: 2},
+		{Kind: palSkill, Group: "DEVBOX", GroupCount: "3", Plugin: "devbox", Key: "skill:devbox:a", Name: "/devbox:a", Dim: 8, Detail: "does a"},
+		{Kind: palMoreGroup, Group: "DEVBOX", GroupCount: "3", Plugin: "devbox", Key: "more:devbox", Name: "2 more in devbox", Count: 2},
 		{Kind: palMoreMatches, Group: palHeadSkills, Key: "more:matches", Name: "2 more matching skills", Count: 2, Query: "/x"},
-	}, skillItems(2)...)
+	}
+	items = append(items, skillItems(2)...)
 	for _, th := range theme.All() {
 		win.applyTheme(th)
-		if th.UI.Active == th.UI.ToastBG {
-			t.Errorf("%s: the selected row would not show", th.Key)
+		for sel := range items {
+			h := palDrawSt(t, win.ui, palState{items: items, hover: -1, sel: sel, reveal: true, footSkill: items[sel].Kind == palSkill}, image.Rect(260, 38, 1460, 1238), 1)
+			if !slices.ContainsFunc(h.rows, func(r palRowHit) bool { return r.index == sel }) {
+				t.Fatalf("%s: selected row %d not drawn", th.Key, sel)
+			}
+			for _, r := range h.rows {
+				if !r.rect.In(h.box) {
+					t.Fatalf("%s: row %v outside the box %v", th.Key, r.rect, h.box)
+				}
+			}
 		}
-		palDraw(t, win.ui, items, image.Rect(260, 38, 1460, 838), 1)
 	}
 }
 

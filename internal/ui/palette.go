@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"gioui.org/f32"
@@ -79,6 +80,10 @@ type palHits struct {
 	// The scope switch's parts and the Skills chip; zero when not drawn.
 	switchSessions, switchSkills, chip image.Rectangle
 	lines                              []string // the empty list's two lines (a test seam)
+	// Test seams: the badge, pill and keycap rects of visible rows, how many
+	// rows showed "go to session" and how many headers drew a plugin tile.
+	badges         []image.Rectangle
+	goShown, tiles int
 }
 
 type palRowHit struct {
@@ -100,6 +105,7 @@ type palEntry struct {
 	y, h   int
 	header string
 	index  int // item index; -1 for a header, palEmptyEntry for the empty lines
+	of     int // a header's first item
 }
 
 const palEmptyEntry = -2
@@ -114,6 +120,8 @@ func (c *chrome) layoutPalette(gtx layout.Context, st palState, main image.Recta
 		return h
 	}
 	ink := c.palInk()
+	h.badges = c.palBadges[:0] // reused: a seam should cost no allocations
+	defer func() { c.palBadges = h.badges }()
 	paint.FillShape(ops, tint(th.Chrome, 0x88), clip.Rect(main).Op())
 
 	rowH, headH := gtx.Dp(palRowH), gtx.Dp(palHeadH)
@@ -121,7 +129,7 @@ func (c *chrome) layoutPalette(gtx layout.Context, st palState, main image.Recta
 	y := gtx.Dp(4) // the list's top padding (mockup .list)
 	for i, it := range st.items {
 		if i == 0 || it.Group != st.items[i-1].Group {
-			entries = append(entries, palEntry{y: y, h: headH, header: it.Group, index: -1})
+			entries = append(entries, palEntry{y: y, h: headH, header: it.Group, index: -1, of: i})
 			y += headH
 		}
 		entries = append(entries, palEntry{y: y, h: rowH, index: i})
@@ -190,10 +198,9 @@ func (c *chrome) layoutPalette(gtx layout.Context, st palState, main image.Recta
 		case palEmptyEntry:
 			c.palEmpty(gtx, st, &h, rr, ink)
 		case -1:
-			call, sz := c.fitSide(gtx, e.header, 10.5, rr.Dx()-2*gtx.Dp(10), ink.faint)
-			place(ops, call, image.Pt(rr.Min.X+gtx.Dp(10), ey+e.h-sz.Y-gtx.Dp(5)))
+			c.palHeader(gtx, st.items[e.of], rr, ink, &h)
 		default:
-			c.palRow(gtx, st.items[e.index], rr, e.index == st.sel)
+			c.palRow(gtx, st.items[e.index], rr, e.index == st.sel, ink, &h)
 			h.rows = append(h.rows, palRowHit{index: e.index, rect: rr.Intersect(h.list)})
 		}
 	}
@@ -466,50 +473,290 @@ func firstInGroup(items []palItem, i int) int {
 	return i
 }
 
-// palRow draws one item in r: a session's mark, the name, and at the right
-// the session's state, the skill's description or the action's shortcut, in
-// at most 60% of the row.
-func (c *chrome) palRow(gtx layout.Context, it palItem, r image.Rectangle, selected bool) {
-	ops, th := gtx.Ops, c.th
-	if selected {
-		paint.FillShape(ops, th.Active, clip.UniformRRect(r, gtx.Dp(6)).Op(ops))
+// palHeader draws the header of it's group in r (mockup .hd): the name in
+// small caps, bottom-aligned, with a plugin group's tile before it and the
+// group's count at the right.
+func (c *chrome) palHeader(gtx layout.Context, it palItem, r image.Rectangle, ink *palInk, h *palHits) {
+	ops := gtx.Ops
+	pad := gtx.Dp(10)
+	x, right := r.Min.X+pad, r.Max.X-pad
+	head, hs := c.sans(gtx, "Ag", 11, ink.faint, font.SemiBold)
+	base := r.Max.Y - gtx.Dp(5) // the text's bottom
+	mid := base - hs.Y/2
+	if it.GroupCount != "" { // skill groups only (Ruling 8)
+		call, cs := c.fitSide(gtx, it.GroupCount, 11, max(right-x, 0)/3, ink.faint)
+		place(ops, call, image.Pt(right-cs.X, base-cs.Y))
+		right -= cs.X + gtx.Dp(8)
 	}
-	const sz unit.Sp = 12.5
-	pad := gtx.Dp(8)
-	x := r.Min.X + pad
-	mid := r.Min.Y + r.Dy()/2
-	detail := it.Detail
+	if it.Plugin != "" && (it.Kind == palSkill || it.Kind == palMoreGroup) && strings.EqualFold(it.Group, it.Plugin) {
+		ts := gtx.Dp(16)
+		if x+ts <= right {
+			tile := image.Rect(x, mid-ts/2, x+ts, mid-ts/2+ts)
+			i := palPluginColor(it.Plugin)
+			paint.FillShape(ops, ink.plugins[i], clip.UniformRRect(tile, gtx.Dp(4)).Op(ops))
+			call, is := c.labelW(gtx, palInitial(it.Plugin), 9, ink.pluginInk[i], font.Bold)
+			place(ops, call, image.Pt(tile.Min.X+(ts-is.X)/2, tile.Min.Y+(ts-is.Y)/2))
+			h.tiles++
+			x = tile.Max.X + gtx.Dp(8)
+		}
+	}
+	head, hs = c.fitSideW(gtx, it.Group, 11, max(right-x, 0), ink.faint, font.SemiBold)
+	place(ops, head, image.Pt(x, base-hs.Y))
+}
+
+const palUpper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+// palInitial is the upper-case first letter of a plugin's name.
+func palInitial(s string) string {
+	r, n := utf8.DecodeRuneInString(s)
+	switch {
+	case n == 0:
+		return ""
+	case r >= 'a' && r <= 'z':
+		return palUpper[r-'a' : r-'a'+1]
+	case r < utf8.RuneSelf:
+		return s[:1]
+	}
+	return string(unicode.ToUpper(r))
+}
+
+// palRow draws one item in r (mockup .row): the selected fill and bar, then
+// the kind's own parts. Every text is cut to its room; nothing leaves r.
+func (c *chrome) palRow(gtx layout.Context, it palItem, r image.Rectangle, selected bool, ink *palInk, h *palHits) {
+	ops := gtx.Ops
+	if selected {
+		paint.FillShape(ops, ink.sel, clip.UniformRRect(r, gtx.Dp(palRowRadius)).Op(ops))
+		bi := gtx.Dp(9)
+		if bar := image.Rect(r.Min.X, r.Min.Y+bi, r.Min.X+max(gtx.Dp(2), 1), r.Max.Y-bi); bar.Dy() > 0 {
+			paint.FillShape(ops, ink.selBar, clip.UniformRRect(bar, gtx.Dp(1)).Op(ops))
+		}
+	}
+	pad := gtx.Dp(10)
+	in := image.Rect(r.Min.X+pad, r.Min.Y, r.Max.X-pad, r.Max.Y)
+	if in.Dx() <= 0 {
+		return
+	}
 	switch it.Kind {
 	case palSession:
-		dot := gtx.Dp(8)
-		d := image.Rect(x, mid-dot/2, x+dot, mid+dot/2)
-		if it.Mark == markNeeds {
-			paint.FillShape(ops, th.Needs, clip.Ellipse(d).Op(ops))
-		} else {
-			c.sideDot(gtx, d, it.Mark, it.Running)
-		}
-		x += dot + gtx.Dp(10)
-		detail = it.State
+		c.palSessionRow(gtx, it, in, selected, ink, h)
+	case palSkill:
+		c.palSkillRow(gtx, it, in, ink)
 	case palKaze:
-		detail = strings.Join(it.Keys, "+")
+		c.palActionRow(gtx, it, in, ink, h)
+	default:
+		c.palBrowseRow(gtx, it, in, ink)
 	}
-	right := r.Max.X - pad
-	detailW := 0
-	if detail != "" {
-		call, dsz := c.fitSide(gtx, detail, 11.5, (r.Dx()*60)/100, th.Muted)
-		place(ops, call, image.Pt(right-dsz.X, mid-dsz.Y/2))
-		detailW = dsz.X + gtx.Dp(16)
+}
+
+// palPill is the state pill's colours: needs you, running, done, or idle
+// (idle and shell); ok is false for a state with no pill.
+func (k *palInk) palPill(state string) (fg, bg color.NRGBA, ok bool) {
+	switch state {
+	case "needs you":
+		return k.pillNeedsFG, k.pillNeedsBG, true
+	case "running":
+		return k.pillRunFG, k.pillRunBG, true
+	case "done":
+		return k.pillDoneFG, k.pillDoneBG, true
+	case "idle", "shell":
+		return k.pillIdleFG, k.pillIdleBG, true
 	}
-	room := max(right-detailW-x, 0)
-	fg := th.ToastFG
-	switch {
-	case it.Kind == palSkill:
-		fg = c.memberColor("magenta")
-	case it.Kind == palBrowse || it.Kind == palMoreMatches || it.Kind == palMoreGroup:
-		fg = th.Muted
-	case selected:
-		fg = th.ActiveFG
+	return color.NRGBA{}, color.NRGBA{}, false
+}
+
+// palSessionRow: the state mark, the title, the agent badge; at the right
+// the state pill and, on the selected row, "go to session ↵".
+func (c *chrome) palSessionRow(gtx layout.Context, it palItem, in image.Rectangle, selected bool, ink *palInk, h *palHits) {
+	ops := gtx.Ops
+	mid := in.Min.Y + in.Dy()/2
+	x, right := in.Min.X, in.Max.X
+	dot := gtx.Dp(8)
+	if x+dot > right {
+		return
 	}
-	call, nsz := c.fitSide(gtx, it.Name, sz, room, fg)
-	place(ops, call, image.Pt(x, mid-nsz.Y/2))
+	d := image.Rect(x, mid-dot/2, x+dot, mid-dot/2+dot)
+	if it.Running && it.Mark == markNone {
+		c.runningMark(gtx, centeredMarkBox(d, gtx.Dp(10)))
+	} else {
+		c.stateDot(gtx, d, it.Mark, it.Running, false)
+	}
+	x += dot + gtx.Dp(10)
+
+	if fg, bg, ok := ink.palPill(it.State); ok {
+		call, ps := c.sans(gtx, it.State, 11, fg, font.SemiBold)
+		pw, ph := ps.X+2*gtx.Dp(8), max(gtx.Dp(20), ps.Y)
+		if right-pw >= x+gtx.Dp(40) {
+			pill := image.Rect(right-pw, mid-ph/2, right, mid-ph/2+ph)
+			paint.FillShape(ops, bg, clip.UniformRRect(pill, min(gtx.Dp(9), ph/2)).Op(ops))
+			place(ops, call, image.Pt(pill.Min.X+(pw-ps.X)/2, mid-ps.Y/2))
+			h.badges = append(h.badges, pill)
+			right = pill.Min.X - gtx.Dp(8)
+		}
+	}
+	if selected {
+		call, gs := c.sans(gtx, "go to session ↵", 12, ink.faint, font.Normal)
+		if right-gs.X >= x+gtx.Dp(60) {
+			place(ops, call, image.Pt(right-gs.X, mid-gs.Y/2))
+			right -= gs.X + gtx.Dp(8)
+			h.goShown++
+		}
+	}
+	right -= gtx.Dp(4) // the state's own padding (mockup .st)
+
+	bw := 0
+	var badge op.CallOp
+	var bs image.Point
+	if it.Agent != "" {
+		badge, bs = c.label(gtx, it.Agent, 11, ink.badge)
+		bw = bs.X + 2*gtx.Dp(6)
+		if right-bw-gtx.Dp(10) < x+gtx.Dp(24) {
+			bw = 0 // no room: the title comes first
+		}
+	}
+	room := right - x
+	if bw > 0 {
+		room -= bw + gtx.Dp(10)
+	}
+	call, ts := c.fitSideW(gtx, it.Name, 13.5, max(room, 0), ink.text, font.Normal)
+	place(ops, call, image.Pt(x, mid-ts.Y/2))
+	if bw > 0 {
+		bx := x + ts.X + gtx.Dp(10)
+		bh, line := gtx.Dp(18), max(gtx.Dp(1), 1)
+		b := image.Rect(bx, mid-bh/2, bx+bw, mid-bh/2+bh)
+		rad := gtx.Dp(5)
+		paint.FillShape(ops, ink.line, clip.UniformRRect(b, rad).Op(ops))
+		fill := ink.bg
+		if selected {
+			fill = ink.sel
+		}
+		paint.FillShape(ops, fill, clip.UniformRRect(b.Inset(line), max(rad-line, 0)).Op(ops))
+		place(ops, badge, image.Pt(b.Min.X+(bw-bs.X)/2, mid-bs.Y/2))
+		h.badges = append(h.badges, b)
+	}
+}
+
+// palSkillRow: the name in mono, its plugin prefix dim, and the description
+// right-aligned in at most 56% of the row, 16 dp from the name.
+func (c *chrome) palSkillRow(gtx layout.Context, it palItem, in image.Rectangle, ink *palInk) {
+	ops := gtx.Ops
+	mid := in.Min.Y + in.Dy()/2
+	x, right := in.Min.X, in.Max.X
+	gap := gtx.Dp(16)
+	_, nsz, name := c.fitSideText(gtx, it.Name, 13.5, right-x, ink.goInk, font.Normal)
+	if it.Detail != "" {
+		room := min(in.Dx()*56/100, right-x-nsz.X-gap)
+		if floor := in.Dx() * 30 / 100; room < floor {
+			room = min(floor, in.Dx()*56/100)
+		}
+		call, ds := c.fitSideW(gtx, it.Detail, 12.5, max(room, 0), ink.muted, font.Normal)
+		if ds.X > 0 {
+			place(ops, call, image.Pt(right-ds.X, mid-ds.Y/2))
+			right -= ds.X + gap
+		}
+	}
+	if x+nsz.X > right {
+		_, nsz, name = c.fitSideText(gtx, it.Name, 13.5, max(right-x, 0), ink.goInk, font.Normal)
+	}
+	dim := min(it.Dim, len(name))
+	if dim < len(name) && !utf8.RuneStart(name[dim]) {
+		dim = len(name) // the cut fell inside the prefix
+	}
+	if dim > 0 {
+		call, ps := c.label(gtx, name[:dim], 13.5, ink.faint)
+		place(ops, call, image.Pt(x, mid-ps.Y/2))
+		x += ps.X
+	}
+	if dim < len(name) {
+		call, rs := c.label(gtx, name[dim:], 13.5, ink.goInk)
+		place(ops, call, image.Pt(x, mid-rs.Y/2))
+	}
+}
+
+// palTile is the 22 dp tile at the start of action, browse and more rows.
+func (c *chrome) palTile(gtx layout.Context, x, mid int, bg, line color.NRGBA) image.Rectangle {
+	ts := gtx.Dp(22)
+	tile := image.Rect(x, mid-ts/2, x+ts, mid-ts/2+ts)
+	rad := gtx.Dp(6)
+	if line != bg {
+		paint.FillShape(gtx.Ops, line, clip.UniformRRect(tile, rad).Op(gtx.Ops))
+		lw := max(gtx.Dp(1), 1)
+		paint.FillShape(gtx.Ops, bg, clip.UniformRRect(tile.Inset(lw), max(rad-lw, 0)).Op(gtx.Ops))
+	} else {
+		paint.FillShape(gtx.Ops, bg, clip.UniformRRect(tile, rad).Op(gtx.Ops))
+	}
+	return tile
+}
+
+// palActionRow: the icon tile (the slot kept when there is no icon, Ruling
+// 9), the name, and the shortcut as keycaps at the right when they fit.
+func (c *chrome) palActionRow(gtx layout.Context, it palItem, in image.Rectangle, ink *palInk, h *palHits) {
+	ops := gtx.Ops
+	mid := in.Min.Y + in.Dy()/2
+	x, right := in.Min.X, in.Max.X
+	ts := gtx.Dp(22)
+	if x+ts > right {
+		return
+	}
+	if it.Icon != "" {
+		tile := c.palTile(gtx, x, mid, ink.raised, ink.line)
+		is := gtx.Dp(14)
+		c.icon(gtx, it.Icon, image.Rect(tile.Min.X+(ts-is)/2, tile.Min.Y+(ts-is)/2, tile.Min.X+(ts-is)/2+is, tile.Min.Y+(ts-is)/2+is), ink.muted)
+	}
+	x += ts + gtx.Dp(10)
+	if len(it.Keys) > 0 {
+		kw := 0
+		for i, k := range it.Keys {
+			if i > 0 {
+				kw += gtx.Dp(3)
+			}
+			kw += c.palKeycapW(gtx, k, ink)
+		}
+		if right-kw >= x+gtx.Dp(60) {
+			kx := right - kw
+			kh := gtx.Dp(17) + 3*max(gtx.Dp(1), 1)
+			for i, k := range it.Keys {
+				if i > 0 {
+					kx += gtx.Dp(3)
+				}
+				w := c.palKeycap(gtx, k, kx, mid, ink)
+				h.badges = append(h.badges, image.Rect(kx, mid-kh/2, kx+w, mid-kh/2+kh))
+				kx += w
+			}
+			right -= kw + gtx.Dp(12)
+		}
+	}
+	call, ns := c.fitSideW(gtx, it.Name, 13.5, max(right-x, 0), ink.text, font.Normal)
+	place(ops, call, image.Pt(x, mid-ns.Y/2))
+}
+
+const palBrowsePrefix = "Browse all "
+
+// palBrowseRow: Browse and the more rows: a "/" or "+" tile, then the text
+// in muted, Browse's count in the accent.
+func (c *chrome) palBrowseRow(gtx layout.Context, it palItem, in image.Rectangle, ink *palInk) {
+	ops := gtx.Ops
+	mid := in.Min.Y + in.Dy()/2
+	x, right := in.Min.X, in.Max.X
+	ts := gtx.Dp(22)
+	if x+ts > right {
+		return
+	}
+	tile := c.palTile(gtx, x, mid, ink.tileBG, ink.tileBG)
+	glyph := "+"
+	if it.Kind == palBrowse {
+		glyph = "/"
+	}
+	call, gs := c.labelW(gtx, glyph, 12, ink.tileFG, font.Bold)
+	place(ops, call, image.Pt(tile.Min.X+(ts-gs.X)/2, tile.Min.Y+(ts-gs.Y)/2))
+	x += ts + gtx.Dp(10)
+	lead, count := it.Name, ""
+	if it.Kind == palBrowse && strings.HasPrefix(it.Name, palBrowsePrefix) {
+		lead, count = palBrowsePrefix, it.Name[len(palBrowsePrefix):]
+	}
+	call, ls := c.fitSideW(gtx, lead, 13.5, max(right-x, 0), ink.muted, font.Normal)
+	place(ops, call, image.Pt(x, mid-ls.Y/2))
+	if count != "" {
+		call, cs := c.fitSideW(gtx, count, 13.5, max(right-x-ls.X, 0), ink.goInk, font.SemiBold)
+		place(ops, call, image.Pt(x+ls.X, mid-cs.Y/2))
+	}
 }
