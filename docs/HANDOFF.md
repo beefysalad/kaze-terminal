@@ -1,10 +1,10 @@
 # kaze handoff
 
-Last updated: 2026-11-05, five more themes and one UI font on `feat/themes-one-font` (release 0.32 next). Before that, release 0.31 (the palette redesign, PR #163, and editable shortcuts, PR #162). Before that, release 0.30 (find in the terminal and docked tabs, #155 / PR #156). Before that, release 0.29 (battery on macOS, #139 / PR #158; the About page redesign, PR #160; the lander's `kaze-about.png` still shows the old page and needs retaking). Before that, release 0.28.2 (.md links open the file the agent touched, #143 / PR #153; uninstall page #112 designed and planned on `feat/uninstall`). Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-05, release 0.32 (five more themes and one UI font, PR #165). Before that, release 0.31 (the palette redesign, PR #163, and editable shortcuts, PR #162). Before that, release 0.30 (find in the terminal and docked tabs, #155 / PR #156). Before that, release 0.29 (battery on macOS, #139 / PR #158; the About page redesign, PR #160; the lander's `kaze-about.png` still shows the old page and needs retaking). Before that, release 0.28.2 (.md links open the file the agent touched, #143 / PR #153; uninstall page #112 designed and planned on `feat/uninstall`). Read this first when you pick up kaze on another machine.
 
 ## Where things stand
 
-**Five more themes and one font (`feat/themes-one-font`, release 0.32 next).** Matcha, Kōyō (`koyo`),
+**Release 0.32 ships five more themes and one font (PR #165).** Matcha, Kōyō (`koyo`),
 Hai, Fuji (dark) and Kiri (light) join the five, ten in all; the owner asked for fewer light ones, so only
 Washi and Kiri are light. The Theme picker wraps at five per row and drops to fewer columns (none under
 104 dp) in a narrow window; its hint wraps. All UI text is now JetBrains Mono: Manrope is gone from the

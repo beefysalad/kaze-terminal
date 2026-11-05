@@ -1056,9 +1056,9 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 Done:
 
-- Five more themes (Matcha, Kōyō, Hai, Fuji, Kiri, ten in all) and one font, JetBrains Mono, across the whole window (built on `feat/themes-one-font`, release next).
 - Editable shortcuts: change any of them in Settings > Shortcuts, or write `none` to drop one (built on `feat/shortcuts-edit`, ships in 0.31 with the palette redesign).
 - Find in the terminal and the docked tabs (#155): Ctrl+Shift+F or Cmd+F, every match marked, on the whole scrollback (built on `feat/find`, release next).
+- 0.32: five more themes, ten in all, and JetBrains Mono across the whole window (PR #165).
 - 0.31: a cleaner palette with sessions first and skills behind / (PR #163); shortcuts editable in Settings (PR #162).
 - 0.30: find in the terminal and docked tabs, Ctrl+Shift+F / Cmd+F (#155, PR #156).
 - 0.29: the battery in the status bar on macOS (#139, PR #158); a compact About page built around the refreshed logo (PR #160).
