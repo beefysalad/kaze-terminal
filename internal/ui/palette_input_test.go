@@ -185,3 +185,31 @@ func TestPaletteNativeCutAndUndo(t *testing.T) {
 		t.Fatalf("after undo %q", got)
 	}
 }
+
+// Tab and the text after it in one frame: the text's range was taken before
+// the slash went in, and lands after it.
+func TestPaletteTabThenTypeSameFrame(t *testing.T) {
+	win, _, r, _ := palWindow(t)
+	openPal(t, win, r)
+	r.Queue(key.Event{Name: key.NameTab, State: key.Press}, key.EditEvent{Range: key.Range{}, Text: "x"})
+	sideFrame(t, win, r)
+	sideFrame(t, win, r)
+	if got := win.palette.ed.Text(); got != "/x" {
+		t.Fatalf("text %q, want /x", got)
+	}
+	r.Queue(key.EditEvent{Range: key.Range{Start: 2, End: 2}, Text: "y"})
+	sideFrame(t, win, r)
+	if got := win.palette.ed.Text(); got != "/xy" {
+		t.Fatalf("next frame %q, want /xy", got)
+	}
+}
+
+func TestPaletteTypeThenTabThenEnterSameFrame(t *testing.T) {
+	win, st, r, tb := palWindow(t)
+	win.noteAgent(notify.Msg{Tab: int(tb[0].ID), Kind: notify.KindDone}, tb[0].ID, shellSeq(tb[0]))
+	openPal(t, win, r)
+	r.Queue(key.EditEvent{Range: key.Range{}, Text: "rev"}, key.Event{Name: key.NameTab, State: key.Press}, key.Event{Name: key.NameReturn, State: key.Press})
+	sideFrame(t, win, r)
+	sideFrame(t, win, r)
+	waitSent(t, st.ptys[0], "/review-mine ")
+}

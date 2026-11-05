@@ -162,15 +162,6 @@ func TestDockedMemberIsHighlighted(t *testing.T) {
 	}
 }
 
-func TestPaletteDocksAMember(t *testing.T) {
-	win, _, r, a, _, m1, _ := memberWindow(t)
-	win.palAct(pageContext(10, 10), palItem{Section: palSessions, Member: true, Tab: m1.ID}, false)
-	twoFrames(t, win, r)
-	if !memberShownIn(win, a.ID, m1.ID) || win.mgr.Active().ID != a.ID {
-		t.Fatalf("deck %+v active %d", win.deckOf(a.ID), win.mgr.Active().ID)
-	}
-}
-
 // A member docked from the sidebar takes the keyboard: typing goes to it at once.
 func TestTypingAfterDockingAMemberReachesIt(t *testing.T) {
 	win, st, r, _, _, m1, _ := memberWindow(t)

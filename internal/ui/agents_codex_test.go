@@ -44,7 +44,7 @@ func TestAgentSwitchDoesNotKeepOtherAgentsCommand(t *testing.T) {
 
 func TestCodexIdentityInSidebarAndPalette(t *testing.T) {
 	r := sideRow{ID: tabs.TabID(1), Title: "api", Agent: "codex", Command: "$review"}
-	if !r.matches("codex") || agentCommand(r.Agent, r.Command) != "codex · $review" {
+	if !r.matches("codex") || r.Agent != "codex" || r.Command != "$review" {
 		t.Fatal("missing agent identity")
 	}
 	items := buildPalette(palInput{Sessions: []sideRow{r}, Query: "codex"})

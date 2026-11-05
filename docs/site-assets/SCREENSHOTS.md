@@ -11,6 +11,8 @@ Native macOS window captures (2200 × 1440 px, Retina) retaken November 1, 2026,
   workspace running, and its API member floating over the `todo-api` session.
 - `kaze-palette.png`: the palette opened over the same session. The skills are five demo
   `SKILL.md` files in the throwaway home folder.
+  **Needs retaking:** the palette changed in `feat/palette`. It now opens on sessions first, then
+  recent skills. If the lander wants one, take a second shot of the `/` Skills view. Do not fake either shot.
 - `kaze-scratch.png` (removed in the 0.27 docs): the scratch shell over the `todo-api` session.
   The scratch shell is gone, so the shot and its gallery tab were dropped.
 - `kaze-workspaces.png`: the redesigned Workspaces section of Settings with the Todo API workspace card
