@@ -149,49 +149,123 @@ func parseShortcut(s string) (input.Shortcut, bool) {
 type keymap map[input.Shortcut]action
 
 // buildKeymap applies config [keys] over the defaults. A bad or clashing
-// shortcut keeps the default and comes back as a warning.
+// shortcut keeps the default and comes back as a warning. Names are added in
+// sorted order, so a clash left over from a hand edit always gives the same keymap.
 func buildKeymap(goos string, overrides map[string]string) (keymap, []string) {
 	b, warns := resolveBindings(goos, overrides)
 	km := keymap{}
-	for name, sc := range b {
-		km[sc] = actionByName[name]
+	for _, name := range sortedNames(b) {
+		km[b[name]] = actionByName[name]
 	}
 	return km, warns
 }
 
+// isNone reports whether a [keys] value means "no shortcut".
+func isNone(text string) bool { return strings.EqualFold(strings.TrimSpace(text), "none") }
+
 // resolveBindings is buildKeymap's name-to-shortcut step, kept so the palette
-// and Settings can show each action's key, overrides included.
+// and Settings can show each action's key, overrides included. An unbound
+// action ("none") is absent from the map. Clashes are judged after every
+// override is applied, so two overrides that swap keys resolve cleanly; each
+// overridden action that still shares its keys goes back to its default.
 func resolveBindings(goos string, overrides map[string]string) (map[string]input.Shortcut, []string) {
+	def := defaultBindings(goos)
 	b := defaultBindings(goos)
 	var warns []string
-	names := make([]string, 0, len(overrides))
-	for n := range overrides {
-		names = append(names, n)
-	}
-	sort.Strings(names)
-	for _, name := range names {
+	for _, name := range sortedNames(overrides) {
 		text := overrides[name]
-		if _, ok := b[name]; !ok {
+		if _, ok := def[name]; !ok {
 			continue // config already warned about unknown actions
+		}
+		if isNone(text) {
+			if name == "open_settings" {
+				warns = append(warns, "keys.open_settings: Settings needs a shortcut; using the default")
+				continue
+			}
+			delete(b, name)
+			continue
 		}
 		sc, ok := parseShortcut(text)
 		if !ok {
 			warns = append(warns, fmt.Sprintf("keys.%s: cannot read shortcut %q; using the default", name, text))
 			continue
 		}
-		clash := ""
-		for other, osc := range b {
-			if other != name && osc == sc {
-				clash = other
-			}
-		}
-		if clash != "" {
-			warns = append(warns, fmt.Sprintf("keys.%s: %q is already %s; using the default", name, text, clash))
-			continue
-		}
 		b[name] = sc
 	}
+	groups := map[input.Shortcut][]string{}
+	names := sortedNames(b)
+	for _, name := range names {
+		groups[b[name]] = append(groups[b[name]], name)
+	}
+	for _, name := range names {
+		g := groups[b[name]]
+		if len(g) < 2 || b[name] == def[name] {
+			continue
+		}
+		other := g[0]
+		if other == name {
+			other = g[1]
+		}
+		warns = append(warns, fmt.Sprintf("keys.%s: %q is already %s; using the default", name, overrides[name], other))
+		b[name] = def[name] // one pass: a default that still clashes is left as is
+	}
 	return b, warns
+}
+
+// sortedNames returns m's keys in sorted order.
+func sortedNames[V any](m map[string]V) []string {
+	names := make([]string, 0, len(m))
+	for n := range m {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// keyTexts is the saved text of each key name parseShortcut reads by name.
+var keyTexts = map[key.Name]string{
+	key.NameTab: "tab", key.NameSpace: "space", key.NameReturn: "enter", key.NameEscape: "esc",
+	key.NameDeleteBackward: "backspace", key.NameDeleteForward: "delete",
+	key.NamePageUp: "pageup", key.NamePageDown: "pagedown", key.NameHome: "home", key.NameEnd: "end",
+	key.NameUpArrow: "up", key.NameDownArrow: "down", key.NameLeftArrow: "left", key.NameRightArrow: "right",
+	key.NameF1: "f1", key.NameF2: "f2", key.NameF3: "f3", key.NameF4: "f4", key.NameF5: "f5", key.NameF6: "f6",
+	key.NameF7: "f7", key.NameF8: "f8", key.NameF9: "f9", key.NameF10: "f10", key.NameF11: "f11", key.NameF12: "f12",
+}
+
+// shortcutText is the saved [keys] form of sc ("ctrl+shift+f", "cmd+k", "f5"),
+// the inverse of parseShortcut. It is false for a shortcut parseShortcut
+// could not read back: the Super key, the numpad Enter, a bare modifier, "+"
+// or any other key without a name.
+func shortcutText(sc input.Shortcut) (string, bool) {
+	const known = key.ModCtrl | key.ModAlt | key.ModShift | key.ModCommand
+	if sc.Mods&^known != 0 {
+		return "", false
+	}
+	var b strings.Builder
+	for _, m := range []struct {
+		m    key.Modifiers
+		name string
+	}{{key.ModCtrl, "ctrl"}, {key.ModAlt, "alt"}, {key.ModShift, "shift"}, {key.ModCommand, "cmd"}} {
+		if sc.Mods.Contain(m.m) {
+			b.WriteString(m.name + "+")
+		}
+	}
+	switch name, ok := keyTexts[sc.Name]; {
+	case ok:
+		b.WriteString(name)
+	case sc.Name == "+" || sc.Name == key.NameEnter || sc.Name == key.NameCtrl || sc.Name == key.NameShift ||
+		sc.Name == key.NameAlt || sc.Name == key.NameSuper || sc.Name == key.NameCommand:
+		return "", false
+	case utf8.RuneCountInString(string(sc.Name)) == 1:
+		b.WriteString(strings.ToLower(string(sc.Name)))
+	default:
+		return "", false
+	}
+	text := b.String()
+	if back, ok := parseShortcut(text); !ok || back != sc {
+		return "", false
+	}
+	return text, true
 }
 
 func (k keymap) shortcuts() []input.Shortcut {

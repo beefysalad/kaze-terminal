@@ -21,6 +21,8 @@ Native macOS window captures (2200 × 1440 px, Retina) retaken November 1, 2026,
   platform, chip and license facts.
 - `kaze-settings.png`: Appearance settings with five theme cards, Midnight selected, and the live
   terminal preview.
+- Settings > Shortcuts has a new row layout (editable keys, a reset button and a "changed" tag). If the
+  lander or README uses a Shortcuts screenshot, it needs retaking. Do not fake it.
 - `kaze-agents.png` (Kaze 0.14, taken the same day): three subagents under the `TODO-142` session in
   the sidebar (two running, one done), one running under `dark-mode`, and the finished subagent's live
   pane with its steps and report.

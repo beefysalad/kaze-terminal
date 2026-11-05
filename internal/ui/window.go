@@ -220,11 +220,8 @@ type window struct {
 
 // Run drives the window until it closes. It returns after every shell is closed.
 func Run(w *app.Window, opt Options) error {
-	km, warns := buildKeymap(runtime.GOOS, opt.Config.Keys)
-	input.SetReserved(runtime.GOOS, km.shortcuts())
-	opt.Warnings = append(opt.Warnings, warns...)
 	win := &window{
-		w: w, opt: opt, km: km,
+		w: w, opt: opt,
 		ui:       newChrome(),
 		termTag:  new(int),
 		defTitle: shellName(opt.Shell),
@@ -238,7 +235,7 @@ func Run(w *app.Window, opt Options) error {
 		toastTag: new(int),
 		cfgPath:  config.Path(),
 	}
-	win.binds, _ = resolveBindings(runtime.GOOS, opt.Config.Keys)
+	win.opt.Warnings = append(win.opt.Warnings, win.applyKeys(opt.Config.Keys)...)
 	win.applyTheme(startTheme(opt.Config))
 	win.snapFocused.Store(true)
 	win.flash = func() { flashTaskbar(win.hwnd.Load()) }
@@ -446,6 +443,7 @@ func (win *window) setFocused(f bool) {
 	}
 	win.snapFocused.Store(f)
 	if !f {
+		win.dropKeyEdit()
 		// Windows may never send Leave once another window takes the pointer.
 		win.caption.hover = capNone
 		win.side.st.hover = 0

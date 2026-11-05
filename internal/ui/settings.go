@@ -25,9 +25,14 @@ import (
 // settingsState is the Settings page: a special tab with no shell behind it.
 // open means its row is in the sidebar; shown means it is in front instead of the terminal.
 type settingsState struct {
-	aboutCopy string // pending clipboard content, consumed by the About layout
-	cmdCopy   string // the same for the Shortcuts section
-	cmdFilter string // the Shortcuts section's search text
+	aboutCopy   string     // pending clipboard content, consumed by the About layout
+	cmdCopy     string     // the same for the Shortcuts section
+	cmdFilter   string     // the Shortcuts section's search text
+	keyRec      string     // the shortcut row waiting for keys; "" none
+	keyRecHeld  key.Name   // the key that started recording, until it is let go; "" none
+	keyMsg      keyMessage // the strip under one shortcut row; zero value none
+	keysErr     string     // why shortcuts can't be changed; "" when they can
+	keysConfirm bool       // the Reset all question is up
 
 	open, shown       bool
 	section           int             // index into the sections; never a later one
@@ -45,6 +50,8 @@ type settingsState struct {
 	texts    []string          // every string drawn, so tests can read the page
 	cards    []image.Rectangle // every card drawn this frame, for tests
 	about    aboutGeom         // the About page's layout this frame, for tests
+	keyRows  []keyRowGeom      // the Shortcuts page's rows this frame, for tests
+	keyStrip keyStripGeom      // its message strip this frame, for tests
 	// memberFolderX is where each list member's folder starts, so tests can check the columns.
 	memberFolderX []int
 
@@ -170,6 +177,7 @@ func (win *window) openSettings() {
 
 // hideSettings puts the terminal back in front; the Settings tab stays open.
 func (win *window) hideSettings() {
+	win.dropKeyEdit()
 	if win.set.shown {
 		win.set.shown = false
 		win.wantFocus = true
@@ -267,6 +275,7 @@ func (win *window) selectSection(i int) {
 		win.w.Invalidate()
 		return
 	}
+	win.dropKeyEdit()
 	win.set.section, win.set.focus = i, -1
 	if win.set.editing != "" {
 		win.editField("")
@@ -305,6 +314,10 @@ func (win *window) settingsEvents(gtx layout.Context) {
 			win.settingsKey(gtx, e)
 		case key.EditEvent:
 			edited = true
+		case key.FocusEvent:
+			if !e.Focus {
+				win.stopRecording() // the keyboard went elsewhere: the sidebar, a field
+			}
 		case pointer.Event:
 			win.settingsPointer(e)
 		}
@@ -331,6 +344,7 @@ func (win *window) settingsPointer(e pointer.Event) {
 	}
 	win.wantFocus = true
 	win.dropSideEdit()
+	win.stopRecording()  // a click anywhere cancels; one on a shortcut starts it again
 	win.set.editing = "" // a press the page gets is off every field's editor
 	p := e.Position.Round()
 	for i, n := range win.set.nav {
@@ -360,10 +374,14 @@ func (win *window) settingsPointer(e pointer.Event) {
 // settingsKey handles a key on the page: kaze's own shortcuts, Tab / Shift+Tab
 // between controls, and Enter / Space to press the focused one.
 func (win *window) settingsKey(gtx layout.Context, e key.Event) {
+	s := &win.set
+	if s.keyRec != "" {
+		win.recordKey(e) // before the keymap: the press is the row's new keys
+		return
+	}
 	if e.State != key.Press {
 		return
 	}
-	s := &win.set
 	if a, ok := win.km[input.Shortcut{Name: e.Name, Mods: e.Modifiers}]; ok {
 		win.runShortcut(gtx, a)
 		return
@@ -389,6 +407,9 @@ func (win *window) settingsKey(gtx layout.Context, e key.Event) {
 		} else if s.focus >= 0 && !s.controls[s.focus].dead {
 			c := s.controls[s.focus]
 			win.activate(c.id, c.arg)
+			if s.keyRec != "" {
+				s.keyRecHeld = e.Name // its auto-repeats are not the row's new keys
+			}
 		}
 	default:
 		return
@@ -458,6 +479,7 @@ func (win *window) drawSettings(gtx layout.Context, r image.Rectangle) {
 	s := &win.set
 	s.controls, s.nav, s.texts, s.cards = s.controls[:0], s.nav[:0], s.texts[:0], s.cards[:0]
 	s.memberFolderX = s.memberFolderX[:0]
+	s.keyRows, s.keyStrip = s.keyRows[:0], keyStripGeom{}
 	p := &page{gtx: gtx, c: win.ui, win: win, st: s, col: win.ui.pageColors()}
 	ops := gtx.Ops
 	cl := clip.Rect(r).Push(ops)

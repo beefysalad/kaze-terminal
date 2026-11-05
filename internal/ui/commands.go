@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"runtime"
 	"strings"
 
 	"gioui.org/io/key"
@@ -37,6 +38,15 @@ var keyLabels = map[key.Name]string{
 	key.NameUpArrow: "Up", key.NameDownArrow: "Down", key.NameLeftArrow: "Left", key.NameRightArrow: "Right",
 	key.NamePageUp: "PageUp", key.NamePageDown: "PageDown", key.NameHome: "Home", key.NameEnd: "End",
 	key.NameDeleteBackward: "Backspace", key.NameDeleteForward: "Delete", key.NameSpace: "Space",
+}
+
+// keyText is the action's shortcut as the platform names it, or "" when the
+// action has none ("none" in [keys]). Every place that shows keys reads it.
+func (win *window) keyText(name string) string {
+	if sc, ok := win.binds[name]; ok {
+		return formatShortcut(runtime.GOOS, sc)
+	}
+	return ""
 }
 
 // formatShortcut writes a shortcut the way the platform names its keys:

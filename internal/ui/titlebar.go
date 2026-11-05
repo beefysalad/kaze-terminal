@@ -193,7 +193,10 @@ func layoutTitle(in titleIn) titleLayout {
 	// The middle: the crumb and the search field share what is left.
 	lo, hi := l.Lead.Max.X+d.Pad, l.Agents.Min.X-d.Gap
 	avail := max(hi-lo, 0)
-	keyW := in.Measure(in.Key, true) + 2*d.KeyPad
+	keyW := 0 // no key cap when the palette has no shortcut
+	if in.Key != "" {
+		keyW = in.Measure(in.Key, true) + 2*d.KeyPad
+	}
 	iconKey := d.Btn + keyW
 	c := in.Crumb
 	sw := 0
@@ -201,7 +204,7 @@ func layoutTitle(in titleIn) titleLayout {
 	case avail-cw-d.Gap >= d.SearchMin:
 		sw = min(avail-cw-d.Gap, d.SearchMax)
 	default:
-		l.SearchIconOnly, l.SearchKey, sw = true, true, iconKey
+		l.SearchIconOnly, l.SearchKey, sw = true, in.Key != "", iconKey
 		if avail-sw-d.Gap < 0 {
 			l.SearchKey, sw = false, d.Btn // even the key cap has no room
 		}

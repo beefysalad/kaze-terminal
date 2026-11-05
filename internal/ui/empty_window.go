@@ -3,7 +3,6 @@ package ui
 import (
 	"image"
 	"image/color"
-	"runtime"
 
 	"gioui.org/font"
 	"gioui.org/io/event"
@@ -124,12 +123,18 @@ func (win *window) drawEmpty(gtx layout.Context, r image.Rectangle) {
 	}
 	title, ts := label("No open sessions", 22, col.title, font.SemiBold)
 	hint, hs := label("Start a session to get going.", 13, c.emptyMuted(), font.Normal)
-	sc := win.binds["new_tab"]
-	win.empty.shortcut = formatShortcut(runtime.GOOS, sc)
-	shortcut, ss := label(win.empty.shortcut, 11.5, c.emptyMuted(), font.Medium)
+	win.empty.shortcut = win.keyText("new_tab")
+	var shortcut op.CallOp
+	var ss image.Point
+	if win.empty.shortcut != "" {
+		shortcut, ss = label(win.empty.shortcut, 11.5, c.emptyMuted(), font.Medium)
+	}
 	buttonLabel, bs := c.sans(gtx, "New session", 12.5, col.title, font.SemiBold)
 	buttonSize := image.Pt(min(bs.X+gtx.Dp(32), width), gtx.Dp(36))
-	total := ts.Y + gtx.Dp(8) + hs.Y + gtx.Dp(24) + buttonSize.Y + gtx.Dp(10) + ss.Y
+	total := ts.Y + gtx.Dp(8) + hs.Y + gtx.Dp(24) + buttonSize.Y
+	if win.empty.shortcut != "" {
+		total += gtx.Dp(10) + ss.Y
+	}
 	y := r.Min.Y + max((r.Dy()-total)/2, gtx.Dp(16))
 	centered := func(call op.CallOp, size image.Point) { place(ops, call, image.Pt(r.Min.X+(r.Dx()-size.X)/2, y)) }
 	centered(title, ts)
@@ -159,8 +164,10 @@ func (win *window) drawEmpty(gtx layout.Context, r image.Rectangle) {
 		return layout.Dimensions{Size: buttonSize}
 	})
 	off.Pop()
-	y += buttonSize.Y + gtx.Dp(10)
-	centered(shortcut, ss)
+	if win.empty.shortcut != "" {
+		y += buttonSize.Y + gtx.Dp(10)
+		centered(shortcut, ss)
+	}
 }
 
 func (c *chrome) emptyMuted() color.NRGBA {

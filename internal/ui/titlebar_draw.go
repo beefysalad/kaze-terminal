@@ -3,7 +3,6 @@ package ui
 import (
 	"image"
 	"image/color"
-	"runtime"
 	"strconv"
 	"strings"
 
@@ -73,7 +72,7 @@ func (win *window) drawBar(gtx layout.Context, barH int) {
 		lights = int(win.lights.Inset()*float64(gtx.Metric.PxPerDp) + 0.5)
 	}
 	side := win.side.w
-	key := formatShortcut(runtime.GOOS, win.binds["palette"])
+	key := win.keyText("palette")
 	measure := func(s string, mono bool) int {
 		face := font.Font{Typeface: sansFace, Weight: font.SemiBold}
 		size := unit.Sp(12.5)
@@ -254,6 +253,12 @@ func (win *window) drawCrumb(gtx layout.Context, b titleLayout) {
 	}
 }
 
+// searchKeyShown is whether the search field draws the palette's key cap:
+// never when the palette has no shortcut.
+func searchKeyShown(b titleLayout, key string) bool {
+	return key != "" && (!b.SearchIconOnly || b.SearchKey)
+}
+
 // drawSearchField is the search field that opens the palette: a card with a
 // line, the search icon, the placeholder and the key cap.
 func (c *chrome) drawSearchField(gtx layout.Context, b titleLayout, key string, hover bool) {
@@ -273,7 +278,7 @@ func (c *chrome) drawSearchField(gtx layout.Context, b titleLayout, key string, 
 	is := gtx.Dp(30)
 	c.toolIcon(gtx, "search", image.Rect(r.Min.X, r.Min.Y, r.Min.X+is, r.Max.Y).Inset(gtx.Dp(6)), th.Muted)
 	right := r.Max.X - gtx.Dp(4)
-	if !b.SearchIconOnly || b.SearchKey {
+	if searchKeyShown(b, key) {
 		call, sz := c.label(gtx, key, 10.5, th.Muted)
 		pad := gtx.Dp(6)
 		box := image.Rect(right-sz.X-2*pad, r.Min.Y+gtx.Dp(4), right, r.Max.Y-gtx.Dp(4))

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Kaze shortcuts, editable</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--chrome:#0b0d12;--page:#0f1117;--card:#141824;--box2:#1a1f2c;--line:#2a3142;--hair:#1d2230;
+        --fg:#e7e9f0;--muted:#959bad;--faint:#8a90a2;--accent:#8b7bff;--go:#b9a6ff;--amber:#f0ad4e;--red:#ff8a8a;--green:#62d39a;
+        --ui:"Manrope","Segoe UI",system-ui,sans-serif;--mono:"JetBrains Mono",Consolas,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:#07080c;color:var(--fg);font:14px/1.45 var(--ui);padding:28px 36px}
+  h1{font-size:18px;font-weight:700;margin:0 0 4px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 20px;max-width:920px}
+  .wrap{display:flex;gap:36px;align-items:flex-start;flex-wrap:wrap}
+  .win{width:820px;background:var(--chrome);border:1px solid var(--hair);border-radius:12px;display:flex;overflow:hidden;min-height:640px}
+  .menu{width:190px;padding:16px 10px;border-right:1px solid var(--hair)}
+  .menu .g{font:600 11px var(--ui);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:12px 10px 6px}
+  .menu div.i{padding:7px 10px;border-radius:8px;color:var(--muted)}
+  .menu div.i.on{background:var(--box2);color:var(--fg);box-shadow:inset 2px 0 0 var(--accent)}
+  .page{flex:1;background:var(--page);padding:22px 26px 30px;overflow:auto;max-height:720px}
+  .ph{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+  .ph h2{font-size:20px;font-weight:700;margin:0;letter-spacing:-.01em}
+  .ph .search{margin-left:auto;width:200px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--fg);font:13px var(--ui)}
+  .ph .search::placeholder{color:var(--faint)}
+  .hint{color:var(--muted);margin:0 0 18px;font-size:13px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:14px;overflow:hidden}
+  .card h3{font:600 11px var(--ui);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:0;padding:12px 16px 6px}
+  .row{display:flex;align-items:center;gap:12px;padding:0 10px 0 16px;min-height:44px;border-top:1px solid var(--hair);position:relative}
+  .row:first-of-type{border-top:0}
+  .row .lb{flex:1;min-width:0}
+  .row .lb small{display:block;color:var(--faint);font:11.5px var(--mono)}
+  .keys{display:flex;align-items:center;gap:4px;border:1px solid transparent;border-radius:8px;padding:5px 8px;cursor:pointer;min-width:150px;justify-content:flex-end;background:none;color:inherit;font:inherit}
+  .keys:hover{border-color:var(--line);background:var(--box2)}
+  .keys:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  kbd{font:500 12px var(--mono);color:#d3d7e2;background:var(--box2);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 6px;line-height:19px}
+  .none{color:var(--faint);font-style:italic;font-size:13px}
+  .row.custom .lb::after{content:"changed";margin-left:8px;font:600 10.5px var(--ui);color:var(--go);background:rgba(139,123,255,.14);border-radius:999px;padding:1px 7px;vertical-align:1px}
+  .reset{width:28px;height:28px;border-radius:7px;border:1px solid transparent;background:none;color:var(--faint);cursor:pointer;display:grid;place-items:center;visibility:hidden}
+  .row.custom .reset{visibility:visible}
+  .reset:hover{border-color:var(--line);color:var(--fg)}
+  .row.rec{background:rgba(139,123,255,.08)}
+  .row.rec .keys{border-color:var(--accent);background:rgba(139,123,255,.12);color:var(--go);font-size:13px}
+  .pulse{width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:4px}
+
+  .msg{margin:0 10px 10px 16px;border-radius:9px;padding:10px 12px;font-size:13px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .msg.warn{background:rgba(240,173,78,.10);border:1px solid rgba(240,173,78,.35);color:#ffd59a}
+  .msg.clash{background:rgba(139,123,255,.10);border:1px solid rgba(139,123,255,.35);color:#d9d0ff}
+  .msg.bad{background:rgba(255,138,138,.10);border:1px solid rgba(255,138,138,.35);color:#ffc2c2}
+  .msg .sp{flex:1;min-width:200px}
+  .btn{font:600 12.5px var(--ui);border-radius:7px;padding:5px 11px;cursor:pointer;border:1px solid var(--line);background:var(--box2);color:var(--fg)}
+  .btn.strong{background:var(--accent);border-color:var(--accent);color:#0b0d12}
+  .foot{display:flex;justify-content:flex-end;margin-top:6px}
+  .link{background:none;border:0;color:var(--muted);font:13px var(--ui);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+  .ro .keys{cursor:default}.ro .keys:hover{border-color:transparent;background:none}
+  .notes{width:330px}
+  .notes .nh{font-size:13px;font-weight:600;margin:0 0 8px}
+  .notes ul{padding-left:18px;margin:0 0 14px;color:#c9cdd8}
+  .notes li{margin-bottom:6px}
+  .try{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+  .try button{font:13px var(--ui);background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer}
+  .try button:hover{border-color:var(--accent)}
+  .saved{color:var(--green);font-size:13px;min-height:20px}
+</style></head><body>
+<h1>Settings, Shortcuts: click a shortcut, press the new keys</h1>
+<p class="sub">Clickable. Click any shortcut and press keys on your real keyboard (the browser catches them; Esc cancels). Or use the buttons on the right to see a clash, a warning and a refused key. Windows defaults shown; the Mac shows Cmd where Kaze uses it.</p>
+<div class="wrap">
+ <div class="win">
+  <div class="menu">
+   <div class="i">Appearance</div><div class="i">Workspaces</div><div class="i">Agents</div><div class="i on">Shortcuts</div>
+   <div class="g">Kaze</div><div class="i">Updates</div><div class="i">About</div>
+  </div>
+  <div class="page">
+   <div class="ph"><h2>Shortcuts</h2><input class="search" placeholder="Search shortcuts" id="search" aria-label="Search shortcuts"></div>
+   <p class="hint">Click a shortcut to change it. Changes save at once.</p>
+   <div id="cards"></div>
+   <div class="foot"><button class="link" id="resetAll">Reset all to defaults</button></div>
+  </div>
+ </div>
+ <div class="notes">
+  <h2 class="nh">Try these</h2>
+  <div class="try">
+   <button id="t1">Give Find Ctrl+Shift+B (a clash)</button>
+   <button id="t2">Give Palette Ctrl+R (a warning)</button>
+   <button id="t3">Give Copy plain "K" (refused)</button>
+  </div>
+  <h2 class="nh">How it works</h2>
+  <ul>
+   <li><b>Click</b> a shortcut: it waits for keys. Press them and it saves. Esc cancels; the old keys stay.</li>
+   <li><b>Taken by another action:</b> it asks. Replace moves the keys here and leaves the other action with none (still in the palette).</li>
+   <li><b>Keys your shell or Claude Code use</b> (plain Ctrl+letter on Windows): saved, with a one-line warning.</li>
+   <li><b>No modifier</b> (a plain letter, Enter, Esc, Tab): refused, the old keys stay.</li>
+   <li>A changed shortcut gets a "changed" tag and a reset arrow. "Reset all to defaults" asks first.</li>
+   <li>Mouse gestures stay read-only.</li>
+  </ul>
+  <div class="saved" id="saved" aria-live="polite"></div>
+ </div>
+</div>
+<script>
+const A=(id,label,def)=>({id,label,def,cur:def});
+const groups=[
+ {t:"Sessions",a:[A("new_tab","New session",["Ctrl","Shift","T"]),A("new_branch_session","New branch session",["Ctrl","Shift","N"]),A("close_tab","Close session",["Ctrl","Shift","W"]),A("next_tab","Next session",["Ctrl","Tab"]),A("prev_tab","Previous session",["Ctrl","Shift","Tab"]),A("next_waiting","Next waiting session",["Ctrl","Shift","J"])]},
+ {t:"Kaze",a:[A("palette","Palette",["Ctrl","Shift","K"]),A("agents_board","Agents board",["Ctrl","Shift","A"]),A("toggle_sidebar","Toggle sidebar",["Ctrl","Shift","B"]),A("open_settings","Settings",["Ctrl",","])]},
+ {t:"Editing and mouse",a:[A("copy","Copy",["Ctrl","Shift","C"]),A("paste","Paste",["Ctrl","Shift","V"]),A("find","Find in terminal",["Ctrl","Shift","F"]),{id:"m1",label:"Select a word / a line",ro:"double / triple click"},{id:"m2",label:"Select in mouse apps",ro:"Shift + drag"}]},
+];
+const all=()=>groups.flatMap(g=>g.a).filter(a=>!a.ro);
+let rec=null, msg=null; // msg: {id, kind, text, keys, other}
+const $=id=>document.getElementById(id);
+const same=(a,b)=>a&&b&&a.join("+").toLowerCase()===b.join("+").toLowerCase();
+const kb=k=>k&&k.length?k.map(x=>"<kbd>"+x+"</kbd>").join(""):'<span class="none">None</span>';
+const shellKeys={R:"reverse search",C:"stop a command",D:"end input",L:"clear the screen",A:"go to line start",E:"go to line end",U:"delete the line",W:"delete a word",Z:"suspend",O:"open in Claude Code",T:"toggle the task list"};
+function draw(){
+  const q=$("search").value.toLowerCase(); const el=$("cards"); el.innerHTML="";
+  groups.forEach(g=>{
+    const rows=g.a.filter(a=>!q||(a.label+" "+(a.cur||[]).join("+")+" "+a.id).toLowerCase().includes(q)); if(!rows.length)return;
+    const c=document.createElement("div"); c.className="card"; c.innerHTML="<h3>"+g.t+"</h3>";
+    rows.forEach(a=>{
+      const r=document.createElement("div");
+      if(a.ro){r.className="row ro";r.innerHTML='<div class="lb">'+a.label+'</div><div class="keys"><span class="none" style="font-style:normal">'+a.ro+'</span></div><span class="reset"></span>';c.appendChild(r);return;}
+      r.className="row"+(same(a.cur,a.def)?"":" custom")+(rec===a.id?" rec":"");
+      r.innerHTML='<div class="lb">'+a.label+'<small>'+a.id+'</small></div>'+
+        '<button class="keys" aria-label="Change the shortcut for '+a.label+'">'+(rec===a.id?'<span class="pulse"></span>Press the new keys… Esc cancels':kb(a.cur))+'</button>'+
+        '<button class="reset" title="Reset to '+a.def.join("+")+'" aria-label="Reset '+a.label+'">↺</button>';
+      r.querySelector(".keys").onclick=()=>{rec=a.id;msg=null;draw();};
+      r.querySelector(".reset").onclick=()=>{a.cur=a.def.slice();msg=null;say(a.label+" reset to "+a.def.join("+"));draw();};
+      c.appendChild(r);
+      if(msg&&msg.id===a.id){
+        const m=document.createElement("div"); m.className="msg "+msg.kind;
+        if(msg.kind==="clash"){m.innerHTML='<span class="sp"><b>'+msg.keys.join("+")+'</b> is used by '+msg.other.label+'. Use it here instead? '+msg.other.label+' will have no shortcut.</span><button class="btn">Cancel</button><button class="btn strong">Replace</button>';
+          m.querySelectorAll(".btn")[0].onclick=()=>{msg=null;draw();};
+          m.querySelectorAll(".btn")[1].onclick=()=>{msg.other.cur=[];a.cur=msg.keys;say("Saved. "+msg.other.label+" has no shortcut now.");msg=null;draw();};}
+        else{m.innerHTML='<span class="sp">'+msg.text+'</span><button class="btn">OK</button>';m.querySelector(".btn").onclick=()=>{msg=null;draw();};}
+        c.appendChild(m);
+      }
+    });
+    el.appendChild(c);
+  });
+}
+function say(s){$("saved").textContent=s;}
+function tryKeys(a,keys){
+  const mods=keys.filter(k=>["Ctrl","Shift","Alt","Cmd"].includes(k)), main=keys[keys.length-1];
+  rec=null;
+  if(!mods.length&&!/^F\d+$/.test(main)){msg={id:a.id,kind:"bad",text:"<b>"+main+"</b> needs Ctrl, Alt or Shift with it, or it would stop you typing it. "+a.label+" keeps "+a.cur.join("+")+"."};draw();return;}
+  const other=all().find(x=>x!==a&&same(x.cur,keys));
+  if(other){msg={id:a.id,kind:"clash",keys,other};draw();return;}
+  a.cur=keys; say("Saved: "+a.label+" is "+keys.join("+"));
+  if(mods.length===1&&mods[0]==="Ctrl"&&/^[A-Z]$/.test(main)){msg={id:a.id,kind:"warn",text:"Saved. Your shell and Claude Code use <b>Ctrl+"+main+"</b>"+(shellKeys[main]?" ("+shellKeys[main]+")":"")+". Kaze will take it from them."};}
+  else msg=null;
+  draw();
+}
+document.addEventListener("keydown",e=>{
+  if(!rec)return; e.preventDefault();
+  if(e.key==="Escape"){rec=null;draw();return;}
+  if(["Control","Shift","Alt","Meta"].includes(e.key))return;
+  const k=[]; if(e.ctrlKey)k.push("Ctrl"); if(e.altKey)k.push("Alt"); if(e.shiftKey)k.push("Shift"); if(e.metaKey)k.push("Cmd");
+  let n=e.key.length===1?e.key.toUpperCase():e.key; if(n===" ")n="Space"; if(n.startsWith("Arrow"))n=n.slice(5);
+  k.push(n); tryKeys(all().find(a=>a.id===rec),k);
+});
+$("search").oninput=draw;
+$("resetAll").onclick=()=>{if(confirm("Reset every shortcut to its default?")){all().forEach(a=>a.cur=a.def.slice());msg=null;say("All shortcuts reset to their defaults.");draw();}};
+$("t1").onclick=()=>tryKeys(all().find(a=>a.id==="find"),["Ctrl","Shift","B"]);
+$("t2").onclick=()=>tryKeys(all().find(a=>a.id==="palette"),["Ctrl","R"]);
+$("t3").onclick=()=>tryKeys(all().find(a=>a.id==="copy"),["K"]);
+draw();
+</script>
+</body></html>

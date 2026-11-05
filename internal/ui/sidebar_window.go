@@ -577,6 +577,7 @@ func (win *window) sidePress(p image.Point, b pointer.Buttons, at time.Duration)
 		return // a click inside the editor keeps renaming
 	}
 	win.endRename(true)
+	win.stopRecording() // a click outside Settings' pane cancels a shortcut row's recording
 	last := win.side.lastClick
 	win.side.lastClick = titleClick{}
 	win.wantFocus = true
