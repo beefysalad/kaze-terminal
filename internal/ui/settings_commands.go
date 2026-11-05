@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"gioui.org/font"
 	"gioui.org/io/clipboard"
 	"gioui.org/op"
 	"gioui.org/op/clip"
@@ -42,11 +43,12 @@ var shortcutGroups = []struct {
 
 func commandsSection() settingsSection {
 	return settingsSection{
-		title: "Shortcuts",
-		hint:  keysHint,
-		draw:  drawCommands,
-		act:   commandsAct,
-		show:  (*window).checkKeys,
+		title:  "Shortcuts",
+		hint:   keysHint,
+		draw:   drawCommands,
+		act:    commandsAct,
+		show:   (*window).checkKeys,
+		dialog: keysDialogBox,
 	}
 }
 
@@ -61,6 +63,18 @@ func commandsAct(win *window, id string, arg int) {
 
 // keysAct runs the Shortcuts page's own controls; arg is an editableActions index.
 func (win *window) keysAct(id string, arg int) {
+	switch id {
+	case "key_reset_all":
+		win.stopRecording()
+		win.set.keysConfirm = win.set.keysErr == ""
+		return
+	case "keys_cancel":
+		win.set.keysConfirm = false
+		return
+	case "keys_reset_all":
+		win.resetAllKeys()
+		return
+	}
 	names := editableActions(runtime.GOOS)
 	if arg < 0 || arg >= len(names) {
 		return
@@ -68,6 +82,8 @@ func (win *window) keysAct(id string, arg int) {
 	switch id {
 	case "key_rec":
 		win.startRecording(names[arg])
+	case "key_reset":
+		win.resetKey(names[arg])
 	case "key_ok", "key_cancel", "key_replace":
 		win.keysStrip(id)
 	}
@@ -170,6 +186,9 @@ func drawCommands(p *page, r image.Rectangle, win *window) int {
 		place(ops, call, image.Pt(r.Min.X+gtx.Dp(2), y))
 		y += size.Y
 	}
+	if win.set.keysErr == "" {
+		y = p.resetAllLink(r, y+gtx.Dp(6))
+	}
 
 	y += gtx.Dp(26)
 	y = p.sectionLabel(r, y, "Command line")
@@ -223,6 +242,17 @@ func (p *page) shortcutCard(r image.Rectangle, y int, rows []shortcutRow) int {
 			place(ops, cc, image.Pt(right-cs.X, y+(h-cs.Y)/2))
 		}
 		right -= idW
+		editing := row.idx >= 0 && p.st.keysErr == ""
+		if editing && p.win.keyChanged(row.config) {
+			tc, ts := p.textW("changed", 10.5, col.accent, font.SemiBold)
+			place(ops, tc, image.Pt(r.Min.X+pad+ls.X+gtx.Dp(8), y+(h-ts.Y)/2))
+			rs := gtx.Dp(28)
+			p.c.icon(gtx, "reset", image.Rect(right-rs+gtx.Dp(6), y+(h-rs)/2+gtx.Dp(6), right-gtx.Dp(6), y+(h+rs)/2-gtx.Dp(6)), col.muted)
+			p.hit(ctlButton, image.Rect(right-rs, y+(h-rs)/2, right, y+(h+rs)/2), "key_reset", row.idx, false)
+		}
+		if row.idx >= 0 {
+			right -= gtx.Dp(28) + gtx.Dp(6) // the reset slot, kept on every row so the caps line up
+		}
 		if row.idx >= 0 {
 			// The keys are a button: a click (or Enter) records new ones.
 			bw := gtx.Dp(150)
@@ -354,6 +384,20 @@ func (p *page) keyStrip(r image.Rectangle, y int, m keyMessage, idx int) int {
 		x += b.size.X + gtx.Dp(8)
 	}
 	return box.Max.Y + gtx.Dp(10)
+}
+
+// resetAllLink draws "Reset all to defaults" right-aligned from y and returns
+// where the next thing starts.
+func (p *page) resetAllLink(r image.Rectangle, y int) int {
+	gtx, ops, col := p.gtx, p.gtx.Ops, p.col
+	call, size := p.text("Reset all to defaults", 13, col.muted)
+	at := image.Pt(r.Max.X-size.X-gtx.Dp(2), y)
+	place(ops, call, at)
+	u := at.Y + size.Y - gtx.Dp(1)
+	paint.FillShape(ops, col.muted, clip.Rect(image.Rect(at.X, u, at.X+size.X, u+max(gtx.Dp(1), 1))).Op())
+	hit := image.Rectangle{Min: at, Max: at.Add(size)}.Inset(-gtx.Dp(3))
+	p.hit(ctlButton, hit, "key_reset_all", 0, false)
+	return hit.Max.Y
 }
 
 // recordingText is what a recording row's button reads.

@@ -125,7 +125,7 @@ func (win *window) stopRecording() {
 // section, Settings closed or the window lost focus (Ruling 6).
 func (win *window) dropKeyEdit() {
 	win.stopRecording()
-	win.set.keyMsg = keyMessage{}
+	win.set.keyMsg, win.set.keysConfirm = keyMessage{}, false
 }
 
 // modifierNames are keys that only modify another; alone they never end recording.
@@ -313,4 +313,60 @@ func (win *window) keysStrip(id string) {
 		value = ""
 	}
 	win.saveFor(m.action, m.keys, map[string]string{m.action: value, m.other: "none"})
+}
+
+// keyChanged reports whether action's keys are not its default, an unbound
+// action included (spec 8.7).
+func (win *window) keyChanged(action string) bool {
+	sc, ok := win.binds[action]
+	return !ok || sc != defaultBindings(runtime.GOOS)[action]
+}
+
+// resetKey puts action back on its default, asking first when another action
+// has those keys now.
+func (win *window) resetKey(action string) {
+	s := &win.set
+	win.stopRecording()
+	s.keyMsg = keyMessage{}
+	def := defaultBindings(runtime.GOOS)[action]
+	if o, ok := win.boundTo(def, action); ok {
+		if o == "open_settings" {
+			s.keyMsg = keyMessage{action: action, kind: msgRefused, text: settingsNeedsKeys} // Ruling 2
+			return
+		}
+		s.keyMsg = keyMessage{action: action, kind: msgClash, keys: def, other: o, reset: true,
+			text: clashText(runtime.GOOS, def, actionLabel(o))}
+		return
+	}
+	win.saveFor(action, def, map[string]string{action: ""})
+}
+
+// resetAllKeys removes the line of every action the page edits; lines for
+// names Kaze doesn't know stay.
+func (win *window) resetAllKeys() {
+	s := &win.set
+	s.keysConfirm = false
+	win.stopRecording()
+	s.keyMsg = keyMessage{}
+	edits := map[string]string{}
+	for _, name := range editableActions(runtime.GOOS) {
+		edits[name] = ""
+	}
+	if _, err := win.saveKeys(edits); err != nil {
+		win.note("Couldn't save: " + err.Error())
+	}
+}
+
+// keysDialogBox is the Reset all question while it is up.
+func keysDialogBox(win *window) *dialogBox {
+	if !win.set.keysConfirm {
+		return nil
+	}
+	return &dialogBox{
+		title: "Reset every shortcut to its default?",
+		buttons: []ctrl{
+			{kind: ctlButton, id: "keys_cancel", text: "Cancel"},
+			{kind: ctlButton, id: "keys_reset_all", text: "Reset all", strong: true},
+		},
+	}
 }

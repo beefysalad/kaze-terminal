@@ -25,12 +25,13 @@ import (
 // settingsState is the Settings page: a special tab with no shell behind it.
 // open means its row is in the sidebar; shown means it is in front instead of the terminal.
 type settingsState struct {
-	aboutCopy string     // pending clipboard content, consumed by the About layout
-	cmdCopy   string     // the same for the Shortcuts section
-	cmdFilter string     // the Shortcuts section's search text
-	keyRec    string     // the shortcut row waiting for keys; "" none
-	keyMsg    keyMessage // the strip under one shortcut row; zero value none
-	keysErr   string     // why shortcuts can't be changed; "" when they can
+	aboutCopy   string     // pending clipboard content, consumed by the About layout
+	cmdCopy     string     // the same for the Shortcuts section
+	cmdFilter   string     // the Shortcuts section's search text
+	keyRec      string     // the shortcut row waiting for keys; "" none
+	keyMsg      keyMessage // the strip under one shortcut row; zero value none
+	keysErr     string     // why shortcuts can't be changed; "" when they can
+	keysConfirm bool       // the Reset all question is up
 
 	open, shown       bool
 	section           int             // index into the sections; never a later one

@@ -721,3 +721,102 @@ func TestSaveWarningShownInTheRow(t *testing.T) {
 	}
 	stripHas(t, win, m.text)
 }
+
+func TestChangedRowsHaveTagAndReset(t *testing.T) {
+	win, _, _, _ := shortcutsWindow(t, "[keys]\nfind = \"ctrl+alt+f\"\ncopy = \"none\"\n")
+	if n := len(controlsOf(win, "key_reset")); n != 2 {
+		t.Fatalf("%d reset buttons, want 2", n)
+	}
+	if n := strings.Count(pageText(win), "\nchanged\n"); n != 2 {
+		t.Fatalf("%d changed tags, want 2", n)
+	}
+	win, _, _, _ = shortcutsWindow(t, "")
+	if n := len(controlsOf(win, "key_reset")); n != 0 || strings.Contains(pageText(win), "\nchanged\n") {
+		t.Fatalf("%d reset buttons with nothing changed", n)
+	}
+}
+
+func TestResetRemovesTheLine(t *testing.T) {
+	win, r, _, path := shortcutsWindow(t, "[keys]\nfind = \"ctrl+alt+f\"\n")
+	clickRect(t, win, r, keysControl(t, win, r, "key_reset", "find").rect)
+	if got := fileText(t, path); got != "[keys]\n" {
+		t.Fatalf("file %q", got)
+	}
+	if win.binds["find"] != defaultOf("find") {
+		t.Fatalf("find %v", win.binds["find"])
+	}
+}
+
+func TestResetAsksOnClash(t *testing.T) {
+	text, _ := shortcutText(defaultOf("find"))
+	win, r, _, path := shortcutsWindow(t, "[keys]\nfind = \"ctrl+alt+f\"\npalette = \""+text+"\"\n")
+	clickRect(t, win, r, keysControl(t, win, r, "key_reset", "find").rect)
+	want := clashText(runtime.GOOS, defaultOf("find"), "Open the palette")
+	if runtime.GOOS == "windows" && want != "Ctrl+Shift+F is used by Open the palette. Use it here instead? Open the palette will have no shortcut." {
+		t.Fatalf("clash text %q", want)
+	}
+	stripHas(t, win, want)
+	clickRect(t, win, r, keysControl(t, win, r, "key_replace", "find").rect)
+	if got := fileText(t, path); got != "[keys]\npalette = \"none\"\n" {
+		t.Fatalf("file %q", got)
+	}
+	if win.km[defaultOf("find")] != actFind {
+		t.Fatal("the default keys do not find")
+	}
+}
+
+func TestResetCannotUnbindSettings(t *testing.T) {
+	text, _ := shortcutText(defaultOf("find"))
+	cfg := "[keys]\nfind = \"ctrl+alt+f\"\nopen_settings = \"" + text + "\"\n"
+	win, r, _, path := shortcutsWindow(t, cfg)
+	clickRect(t, win, r, keysControl(t, win, r, "key_reset", "find").rect)
+	stripHas(t, win, "Settings needs a shortcut. Pick other keys.")
+	if got := fileText(t, path); got != cfg {
+		t.Fatalf("file %q", got)
+	}
+}
+
+// resetAllLink clicks "Reset all to defaults".
+func resetAllLink(t *testing.T, win *window, r *gioinput.Router) {
+	t.Helper()
+	c := controlsOf(win, "key_reset_all")
+	if len(c) != 1 {
+		t.Fatalf("%d Reset all links", len(c))
+	}
+	if !c[0].rect.In(win.set.pane) {
+		win.set.scroll = win.set.scrollMax
+		sizedFrame(t, win, r, 1000, 900)
+		c = controlsOf(win, "key_reset_all")
+	}
+	clickRect(t, win, r, c[0].rect)
+}
+
+func TestResetAllAsks(t *testing.T) {
+	cfg := "[keys]\nfind = \"ctrl+alt+f\"\n"
+	win, r, _, path := shortcutsWindow(t, cfg)
+	resetAllLink(t, win, r)
+	if !slices.Contains(win.set.texts, "Reset every shortcut to its default?") {
+		t.Fatalf("no question:\n%s", pageText(win))
+	}
+	clickRect(t, win, r, controlsOf(win, "keys_cancel")[0].rect)
+	if got := fileText(t, path); got != cfg || win.dialogShown() {
+		t.Fatalf("file %q, dialog %v", got, win.dialogShown())
+	}
+}
+
+func TestResetAllRemovesOnlyKnownLines(t *testing.T) {
+	cfg := "# mine\ntheme = \"midnight\"\n\n[keys]\nfind = \"ctrl+alt+f\"\npalette = \"ctrl+alt+p\"\ncopy = \"none\"\nzoom = \"ctrl+=\"\n\n[colors]\nbg = \"#000000\"\n"
+	win, r, _, path := shortcutsWindow(t, cfg)
+	resetAllLink(t, win, r)
+	clickRect(t, win, r, controlsOf(win, "keys_reset_all")[0].rect)
+	want := "# mine\ntheme = \"midnight\"\n\n[keys]\nzoom = \"ctrl+=\"\n\n[colors]\nbg = \"#000000\"\n"
+	if got := fileText(t, path); got != want {
+		t.Fatalf("file %q, want %q", got, want)
+	}
+	if !maps.Equal(win.binds, defaultBindings(runtime.GOOS)) {
+		t.Fatalf("binds %v", win.binds)
+	}
+	if win.dialogShown() {
+		t.Fatal("the question is still up")
+	}
+}
