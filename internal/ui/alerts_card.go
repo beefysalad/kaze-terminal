@@ -178,7 +178,7 @@ func (c *chrome) wrapTwo(gtx layout.Context, s string, size unit.Sp, room int, w
 	*w = cardWrap{ok: true, src: s, width: room, metric: gtx.Metric, th: c.th, measures: w.measures}
 	width := func(t string) int {
 		w.measures++
-		_, sz := c.sans(gtx, t, size, c.th.ToastFG, font.Normal)
+		_, sz := c.labelW(gtx, t, size, c.th.ToastFG, font.Normal)
 		return sz.X
 	}
 	if s == "" || width(s) <= room {
@@ -223,7 +223,7 @@ func (c *chrome) wrapTwo(gtx layout.Context, s string, size unit.Sp, room int, w
 func (c *chrome) cutSans(gtx layout.Context, s string, size unit.Sp, room int, wt font.Weight, n *int) string {
 	for i := 0; i < 8 && s != ""; i++ {
 		*n++
-		_, sz := c.sans(gtx, s, size, c.th.ToastFG, wt)
+		_, sz := c.labelW(gtx, s, size, c.th.ToastFG, wt)
 		if sz.X <= room {
 			return s
 		}
@@ -312,7 +312,7 @@ func (win *window) drawCard(gtx layout.Context, t *toast, room image.Rectangle, 
 	}
 	rec := func(call op.CallOp, sz image.Point, s string) txt { return txt{call, sz, s} }
 	sans := func(s string, size unit.Sp, col color.NRGBA, wt font.Weight) txt {
-		call, sz := c.sans(gtx, s, size, col, wt)
+		call, sz := c.labelW(gtx, s, size, col, wt)
 		return txt{call, sz, s}
 	}
 	mono := func(s string, size unit.Sp, col color.NRGBA) txt {

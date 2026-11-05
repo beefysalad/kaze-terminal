@@ -203,8 +203,8 @@ func drawAbout(p *page, r image.Rectangle, win *window) int {
 	fy := y + gtx.Dp(12)
 	fx0, fx1 := cx0+gtx.Dp(14), cx0+colW-gtx.Dp(14)
 	copyB := ctrl{kind: ctlButton, id: "about_copy", text: "Copy build info", ghost: true}
-	issueB := ctrl{kind: ctlButton, id: "about_issue", text: "Report an issue", ghost: true}
-	ghB := ctrl{kind: ctlButton, id: "about_github", text: "View on GitHub", solid: true}
+	issueB := ctrl{kind: ctlButton, id: "about_issue", text: "Report issue", ghost: true}
+	ghB := ctrl{kind: ctlButton, id: "about_github", text: "GitHub", solid: true}
 	put := func(b ctrl, w int, at func(size image.Point) image.Point) image.Point {
 		call, sz, from := p.ctrl(b, w)
 		pt := at(sz)

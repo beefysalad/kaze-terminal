@@ -156,7 +156,7 @@ func (p *page) shortcutCard(r image.Rectangle, y int, rows []shortcutRow) int {
 		var tagC op.CallOp
 		var tagS image.Point
 		if changed {
-			tagC, tagS = p.c.sans(gtx, "changed", 10.5, ink.tagText, font.SemiBold)
+			tagC, tagS = p.c.labelW(gtx, "changed", 10.5, ink.tagText, font.SemiBold)
 			tagW = gtx.Dp(8) + tagS.X + 2*gtx.Dp(7)
 		}
 		// A label too long for its room wraps, the tag after its last line.
@@ -321,7 +321,7 @@ func (p *page) resetButton(slot image.Rectangle, idx int, ink shortcutInk) {
 	p.hit(ctlButton, slot, "key_reset", idx, false)
 }
 
-// oblique is sans text slanted, for "None": the bundled Manrope has no italic,
+// oblique is text slanted, for "None": the bundled JetBrains Mono has no italic,
 // and a font file for one word would cost more than it gives.
 func (p *page) oblique(s string, size unit.Sp, col color.NRGBA) (op.CallOp, image.Point) {
 	call, sz := p.text(s, size, col)
@@ -447,14 +447,14 @@ func (p *page) richLines(s, bold string, w int, col color.NRGBA) ([]richLine, in
 		}
 		return font.Normal
 	}
-	_, space := p.c.sans(gtx, " ", 13, col, font.Normal)
+	_, space := p.c.labelW(gtx, " ", 13, col, font.Normal)
 	var lines []richLine
 	total := 0
 	for i := 0; i < len(words); {
 		// Take words while they fit; a word wider than w gets its own line.
 		j, x := i, 0
 		for j < len(words) {
-			_, sz := p.c.sans(gtx, words[j], 13, col, weight(j))
+			_, sz := p.c.labelW(gtx, words[j], 13, col, weight(j))
 			add := sz.X
 			if j > i {
 				add += space.X
@@ -471,7 +471,7 @@ func (p *page) richLines(s, bold string, w int, col color.NRGBA) ([]richLine, in
 			if k > i {
 				lx += space.X
 			}
-			call, sz := p.c.sans(gtx, words[k], 13, col, weight(k))
+			call, sz := p.c.labelW(gtx, words[k], 13, col, weight(k))
 			place(gtx.Ops, call, image.Pt(lx, 0))
 			lx += sz.X
 			lh = max(lh, sz.Y)

@@ -538,8 +538,13 @@ stays yours.
 | Midnight | The original: soft dark blue-black with a violet accent and rounded tabs. The default. |
 | Sumi | Ink-black with warm paper text and a vermilion accent; tabs get an underline. |
 | Tide | Deep navy with a turquoise accent; pill-shaped tabs. |
-| Washi | The light theme: warm paper background, dark ink text, indigo accent. |
+| Washi | Light: warm paper background, dark ink text, indigo accent. |
 | Sakura | Dark plum with soft pink accents. |
+| Matcha | Olive-black with a soft green accent. |
+| Kōyō | Autumn leaves: brown-black with a maple orange accent. |
+| Hai | Ash grey with muted colors, for low glare. |
+| Fuji | Wisteria: deep violet-black with a lilac accent. |
+| Kiri | Light: cool, foggy grey-blue with a steel blue accent. |
 
 A theme sets the terminal colors and the window colors together. Colors you set under `[colors]`
 still win over the theme's terminal palette.
@@ -787,7 +792,7 @@ error makes kaze use all defaults.
 | `chime_needs` | Chime when Claude Code needs you (see Alerts) | `true` |
 | `chime_done` | Chime when Claude Code finishes its turn | `false` |
 | `chime_file` | Your own chime, a WAV file up to 2MB; `~` means your home folder | the bundled chime |
-| `theme` | `midnight`, `sumi`, `tide`, `washi` or `sakura` | `midnight` |
+| `theme` | `midnight`, `sumi`, `tide`, `washi`, `sakura`, `matcha`, `koyo`, `hai`, `fuji` or `kiri` | `midnight` |
 | `line_spacing` | `tight`, `normal` or `roomy` | `normal` |
 | `cursor_style` | `block`, `bar` or `underline` | `block` |
 | `cursor_blink` | Blink the cursor (off keeps idle CPU at zero) | `false` |
@@ -1051,6 +1056,7 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 Done:
 
+- Five more themes (Matcha, Kōyō, Hai, Fuji, Kiri, ten in all) and one font, JetBrains Mono, across the whole window (built on `feat/themes-one-font`, release next).
 - Editable shortcuts: change any of them in Settings > Shortcuts, or write `none` to drop one (built on `feat/shortcuts-edit`, ships in 0.31 with the palette redesign).
 - Find in the terminal and the docked tabs (#155): Ctrl+Shift+F or Cmd+F, every match marked, on the whole scrollback (built on `feat/find`, release next).
 - 0.31: a cleaner palette with sessions first and skills behind / (PR #163); shortcuts editable in Settings (PR #162).

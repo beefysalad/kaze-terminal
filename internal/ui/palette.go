@@ -252,7 +252,7 @@ func (c *chrome) palField(gtx layout.Context, st palState, h *palHits, ink *palI
 	}
 
 	const fieldSp unit.Sp = 16
-	_, lh := c.sans(gtx, "Ag", fieldSp, ink.text, font.Normal)
+	_, lh := c.labelW(gtx, "Ag", fieldSp, ink.text, font.Normal)
 	h.editor = image.Rect(x, mid-lh.Y/2, max(right, x), mid-lh.Y/2+lh.Y)
 	if st.ed == nil {
 		return
@@ -265,7 +265,7 @@ func (c *chrome) palField(gtx layout.Context, st palState, h *palHits, ink *palI
 		place(ops, call, h.editor.Min)
 	case st.skills && strings.TrimSpace(st.query) == "/":
 		ink.note("skills placeholder", ink.faint, ink.bg, 4.5)
-		_, qs := c.sans(gtx, st.query, fieldSp, ink.text, font.Normal)
+		_, qs := c.labelW(gtx, st.query, fieldSp, ink.text, font.Normal)
 		at := qs.X + gtx.Dp(6)
 		call, _ := c.fitSideW(gtx, palPlaceSkills, fieldSp, room-at, ink.faint, font.Normal)
 		place(ops, call, h.editor.Min.Add(image.Pt(at, 0)))
@@ -280,7 +280,7 @@ func (c *chrome) palField(gtx layout.Context, st palState, h *palHits, ink *palI
 	eg := gtx
 	eg.Constraints = layout.Exact(image.Pt(max(room, 1), max(lh.Y, 1)))
 	t := op.Offset(h.editor.Min).Push(ops)
-	st.ed.Layout(eg, c.shaper, font.Font{Typeface: sansFace}, fieldSp, fg, sel)
+	st.ed.Layout(eg, c.shaper, font.Font{Typeface: chromeFace}, fieldSp, fg, sel)
 	t.Pop()
 }
 
@@ -288,7 +288,7 @@ func (c *chrome) palField(gtx layout.Context, st palState, h *palHits, ink *palI
 // returns where the editor starts.
 func (c *chrome) palChip(gtx layout.Context, x, right, mid int, h *palHits, ink *palInk) int {
 	ops := gtx.Ops
-	word, wsz := c.sans(gtx, "Skills", 12, ink.chipFG, font.SemiBold)
+	word, wsz := c.labelW(gtx, "Skills", 12, ink.chipFG, font.SemiBold)
 	ch := wsz.Y + gtx.Dp(4)
 	cw := gtx.Dp(8) + wsz.X + gtx.Dp(8)
 	if x+cw > right {
@@ -320,8 +320,8 @@ func (c *chrome) palSwitch(gtx layout.Context, skills bool, right, mid int, h *p
 	ink.note("switch Sessions", sFG, sessBG, 4.5)
 	ink.note("switch Skills", kFG, skillBG, 4.5)
 	ink.note("switch slash", keyFG, skillBG, 4.5)
-	sess, ssz := c.sans(gtx, "Sessions", 12, sFG, font.Medium)
-	sk, ksz := c.sans(gtx, "Skills", 12, kFG, font.Medium)
+	sess, ssz := c.labelW(gtx, "Sessions", 12, sFG, font.Medium)
+	sk, ksz := c.labelW(gtx, "Skills", 12, kFG, font.Medium)
 	slash, lsz := c.label(gtx, "/", 11, keyFG)
 	ph := max(ssz.Y, ksz.Y) + 2*py
 	sw := ssz.X + 2*px
@@ -379,7 +379,7 @@ func (c *chrome) palFootWidth(gtx layout.Context, k palFootKeys, ink *palInk) in
 		}
 		w += c.palKeycapW(gtx, s, ink)
 	}
-	_, ws := c.sans(gtx, k.word, 12, ink.muted, font.Normal)
+	_, ws := c.labelW(gtx, k.word, 12, ink.muted, font.Normal)
 	return w + gtx.Dp(6) + ws.X
 }
 
@@ -392,7 +392,7 @@ func (c *chrome) palFootHint(gtx layout.Context, k palFootKeys, x, mid int, ink 
 		x += c.palKeycap(gtx, s, x, mid, ink)
 	}
 	ink.note("footer word", ink.muted, ink.foot, 4.5)
-	call, ws := c.sans(gtx, k.word, 12, ink.muted, font.Normal)
+	call, ws := c.labelW(gtx, k.word, 12, ink.muted, font.Normal)
 	place(gtx.Ops, call, image.Pt(x+gtx.Dp(6), mid-ws.Y/2))
 }
 
@@ -499,7 +499,7 @@ func (c *chrome) palHeader(gtx layout.Context, it palItem, r image.Rectangle, in
 	ops := gtx.Ops
 	pad := gtx.Dp(10)
 	x, right := r.Min.X+pad, r.Max.X-pad
-	head, hs := c.sans(gtx, "Ag", 11, ink.faint, font.SemiBold)
+	head, hs := c.labelW(gtx, "Ag", 11, ink.faint, font.SemiBold)
 	base := r.Max.Y - gtx.Dp(5) // the text's bottom
 	mid := base - hs.Y/2
 	ink.note("header", ink.faint, ink.bg, 4.5)
@@ -612,7 +612,7 @@ func (c *chrome) palSessionRow(gtx layout.Context, it palItem, in image.Rectangl
 		if ink.audit != nil { // the name costs an allocation; only a test reads it
 			ink.note("pill "+it.State, fg, bg, 4.5)
 		}
-		call, ps := c.sans(gtx, it.State, 11, fg, font.SemiBold)
+		call, ps := c.labelW(gtx, it.State, 11, fg, font.SemiBold)
 		pw, ph := ps.X+2*gtx.Dp(8), max(gtx.Dp(20), ps.Y)
 		if right-pw >= x+gtx.Dp(40) {
 			pill := image.Rect(right-pw, mid-ph/2, right, mid-ph/2+ph)
@@ -624,7 +624,7 @@ func (c *chrome) palSessionRow(gtx layout.Context, it palItem, in image.Rectangl
 	}
 	if selected {
 		ink.note("go to session", ink.faint, ink.under, 4.5)
-		call, gs := c.sans(gtx, "go to session ↵", 12, ink.faint, font.Normal)
+		call, gs := c.labelW(gtx, "go to session ↵", 12, ink.faint, font.Normal)
 		if right-gs.X >= x+gtx.Dp(60) {
 			place(ops, call, image.Pt(right-gs.X, mid-gs.Y/2))
 			right -= gs.X + gtx.Dp(8)

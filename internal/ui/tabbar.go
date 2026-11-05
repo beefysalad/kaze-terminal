@@ -28,10 +28,9 @@ func rgb(v uint32) color.NRGBA {
 	return color.NRGBA{R: uint8(v >> 16), G: uint8(v >> 8), B: uint8(v), A: 0xff}
 }
 
+// chromeFace is kaze's one UI font: the terminal and every piece of chrome draw
+// in JetBrains Mono. Don't add a second UI font (see CLAUDE.md).
 const chromeFace = "JetBrains Mono"
-
-// sansFace is the settings page's UI font.
-const sansFace = "Manrope"
 
 // chrome draws the title bar, sidebar and status bar with Gio's shaper over the bundled fonts.
 type chrome struct {
@@ -58,15 +57,13 @@ func newChrome() *chrome {
 		weight font.Weight
 	}{
 		{fonts.MonoRegular, chromeFace, font.Normal}, {fonts.MonoBold, chromeFace, font.Bold}, {fonts.CJK, "Noto Sans JP", font.Normal},
-		{fonts.SansRegular, sansFace, font.Normal}, {fonts.SansMedium, sansFace, font.Medium},
-		{fonts.SansSemiBold, sansFace, font.SemiBold},
 	} {
 		f, err := opentype.Parse(src.data)
 		if err != nil {
 			panic("ui: bundled font does not parse: " + err.Error()) // embedded at build time
 		}
 		ff := font.FontFace{Font: font.Font{Typeface: font.Typeface(src.name), Weight: src.weight}, Face: f}
-		if src.name == sansFace || src.name == chromeFace {
+		if src.name == chromeFace {
 			faces = append(faces, ff)
 		} else {
 			faces = append(faces, atChromeWeights(ff)...)
@@ -217,19 +214,6 @@ func (c *chrome) labelDims(gtx layout.Context, s string, size unit.Sp, col color
 	lg.Constraints = layout.Constraints{Max: image.Pt(1<<16, 1<<16)}
 	d := widget.Label{MaxLines: 1}.Layout(lg, c.shaper, font.Font{Typeface: chromeFace, Weight: w}, size, s, matc)
 	return m.Stop(), d
-}
-
-// sans is label in the settings page's UI font at weight.
-func (c *chrome) sans(gtx layout.Context, s string, size unit.Sp, col color.NRGBA, weight font.Weight) (op.CallOp, image.Point) {
-	s = c.fit(s)
-	m := op.Record(gtx.Ops)
-	mat := op.Record(gtx.Ops)
-	paint.ColorOp{Color: col}.Add(gtx.Ops)
-	matc := mat.Stop()
-	lg := gtx
-	lg.Constraints = layout.Constraints{Max: image.Pt(1<<16, 1<<16)}
-	d := widget.Label{MaxLines: 1}.Layout(lg, c.shaper, font.Font{Typeface: sansFace, Weight: weight}, size, s, matc)
-	return m.Stop(), d.Size
 }
 
 func place(ops *op.Ops, call op.CallOp, at image.Point) {

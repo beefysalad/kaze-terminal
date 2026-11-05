@@ -36,7 +36,7 @@ func ansi(v ...uint32) (a [16]color.NRGBA) {
 
 // All returns the built-in themes in picker order.
 func All() []Theme {
-	return []Theme{midnight(), sumi(), tide(), washi(), sakura()}
+	return []Theme{midnight(), sumi(), tide(), washi(), sakura(), matcha(), koyo(), hai(), fuji(), kiri()}
 }
 
 // ByKey finds a theme by its config key.
@@ -154,6 +154,117 @@ func sakura() Theme {
 			ToastBG: hex(0x24181f), ToastLine: hex(0x2b1f28), ToastFG: hex(0xeedde6), ToastGo: hex(0xff8fb8),
 			ToastTitle: hex(0xffffff), UsageHigh: hex(0xff93ab),
 			DiffAddBG: hex(0x1c2a20), DiffAddFG: hex(0xbdeac3), DiffDelBG: hex(0x2e1820), DiffDelFG: hex(0xffb3c6),
+		},
+	}
+}
+
+// Matcha: olive-black with a soft green accent.
+func matcha() Theme {
+	return Theme{
+		Key: "matcha", Name: "Matcha",
+		Term: render.Palette{
+			FG: hex(0xdde3cf), BG: hex(0x12160f), Cursor: hex(0x9cc77a), Selection: hex(0x2c3a22),
+			ANSI: ansi(0x1d2219, 0xe0786a, 0x9cc77a, 0xd9c27a, 0x86a8c9, 0xc497b0, 0x88c4ae, 0xdde3cf,
+				0x5a6350, 0xf09485, 0xb6dd96, 0xebd796, 0xa4c2de, 0xd8b2c7, 0xa6dcc8, 0xf4f7ec),
+			Match: hex(0x2f3a5e), MatchCur: hex(0xd9c27a), MatchMark: hex(0x8a9ad0),
+		},
+		UI: Chrome{
+			Chrome: hex(0x0e110b), Active: hex(0x12160f), ActiveFG: hex(0xffffff), Muted: hex(0x8e9783),
+			Border: hex(0x232a1c), Accent: hex(0x9cc77a), StatusFG: hex(0x838c78), Folder: hex(0xdde3cf),
+			Branch: hex(0xb6dd96), CapGlyph: hex(0x8e9783), CapHover: hex(0x283020), CapPress: hex(0x181d13),
+			CloseHover: closeHover, ClosePress: closePress, Needs: hex(0xd9c27a), Done: hex(0x9cc77a),
+			ToastBG: hex(0x181d14), ToastLine: hex(0x283020), ToastFG: hex(0xdde3cf), ToastGo: hex(0x9cc77a),
+			ToastTitle: hex(0xffffff), UsageHigh: hex(0xf09485),
+			DiffAddBG: hex(0x1a2a17), DiffAddFG: hex(0xb6dd96), DiffDelBG: hex(0x2c1715), DiffDelFG: hex(0xf0a093),
+		},
+	}
+}
+
+// Kōyō (autumn leaves): brown-black with a maple orange accent.
+func koyo() Theme {
+	return Theme{
+		Key: "koyo", Name: "Kōyō",
+		Term: render.Palette{
+			FG: hex(0xeadccd), BG: hex(0x17110d), Cursor: hex(0xe8803a), Selection: hex(0x45291a),
+			ANSI: ansi(0x241b15, 0xe0604a, 0xa8b86a, 0xe8b84a, 0x8aa0b8, 0xc98a9a, 0x8ab8a8, 0xeadccd,
+				0x6a5848, 0xf47e66, 0xc2d086, 0xf4cc76, 0xa8bcd2, 0xdea6b4, 0xa6d0c2, 0xfaf1e6),
+			Match: hex(0x2e3658), MatchCur: hex(0xe8b84a), MatchMark: hex(0x8a94c8),
+		},
+		UI: Chrome{
+			Chrome: hex(0x110c09), Active: hex(0x17110d), ActiveFG: hex(0xffffff), Muted: hex(0xa08c7a),
+			Border: hex(0x2a1f17), Accent: hex(0xe8803a), StatusFG: hex(0x958170), Folder: hex(0xeadccd),
+			Branch: hex(0xa8b86a), CapGlyph: hex(0xa08c7a), CapHover: hex(0x33261c), CapPress: hex(0x1e1611),
+			CloseHover: closeHover, ClosePress: closePress, Needs: hex(0xf0c060), Done: hex(0xa8b86a),
+			ToastBG: hex(0x1f1712), ToastLine: hex(0x2e2219), ToastFG: hex(0xeadccd), ToastGo: hex(0xe8803a),
+			ToastTitle: hex(0xffffff), UsageHigh: hex(0xf47e66),
+			DiffAddBG: hex(0x1f2716), DiffAddFG: hex(0xc2d086), DiffDelBG: hex(0x30170f), DiffDelFG: hex(0xf4a08a),
+		},
+	}
+}
+
+// Hai (ash): a calm mid-dark grey with muted colors, for low glare.
+func hai() Theme {
+	return Theme{
+		Key: "hai", Name: "Hai",
+		Term: render.Palette{
+			FG: hex(0xd0d2d5), BG: hex(0x26282b), Cursor: hex(0xa6bcd8), Selection: hex(0x3c4250),
+			ANSI: ansi(0x33363a, 0xd88888, 0x98b890, 0xc8b07a, 0x8aa4c4, 0xb49ac0, 0x88b4b4, 0xd0d2d5,
+				0x70747a, 0xe09a9a, 0xb0cca8, 0xdcc698, 0xa6bcd8, 0xc8b2d4, 0xa2cccc, 0xe6e7e9),
+			Match: hex(0x644a82), MatchCur: hex(0xdcc698), MatchMark: hex(0x9a8ad0),
+		},
+		UI: Chrome{
+			Chrome: hex(0x1f2124), Active: hex(0x26282b), ActiveFG: hex(0xf2f3f4), Muted: hex(0x969aa0),
+			Border: hex(0x34373b), Accent: hex(0x8aa4c4), StatusFG: hex(0x8c9096), Folder: hex(0xd0d2d5),
+			Branch: hex(0x98b890), CapGlyph: hex(0x969aa0), CapHover: hex(0x3a3d42), CapPress: hex(0x2c2f33),
+			CloseHover: closeHover, ClosePress: closePress, Needs: hex(0xdcc698), Done: hex(0x98b890),
+			ToastBG: hex(0x2d3034), ToastLine: hex(0x3c4046), ToastFG: hex(0xd6d8db), ToastGo: hex(0xa6bcd8),
+			ToastTitle: hex(0xf2f3f4), UsageHigh: hex(0xe09a9a),
+			DiffAddBG: hex(0x2c3a2e), DiffAddFG: hex(0xb8d8b0), DiffDelBG: hex(0x40292b), DiffDelFG: hex(0xf0b0b0),
+		},
+	}
+}
+
+// Fuji (wisteria): deep violet-black with a lilac accent.
+func fuji() Theme {
+	return Theme{
+		Key: "fuji", Name: "Fuji",
+		Term: render.Palette{
+			FG: hex(0xe2dcec), BG: hex(0x15131f), Cursor: hex(0xc4a7e7), Selection: hex(0x4a2e5c),
+			ANSI: ansi(0x221f2e, 0xf07c8c, 0x9cd4a4, 0xecc98a, 0x8fa8f0, 0xc4a7e7, 0x8cd0d4, 0xe2dcec,
+				0x5e5874, 0xff98a6, 0xb8e6be, 0xf6dca8, 0xadc0ff, 0xd8c2f2, 0xaae2e4, 0xf8f5fc),
+			Match: hex(0x16506a), MatchCur: hex(0xecc98a), MatchMark: hex(0x7fa8d8),
+		},
+		UI: Chrome{
+			Chrome: hex(0x100f19), Active: hex(0x15131f), ActiveFG: hex(0xffffff), Muted: hex(0x9a92ae),
+			Border: hex(0x262236), Accent: hex(0xc4a7e7), StatusFG: hex(0x8f88a4), Folder: hex(0xe2dcec),
+			Branch: hex(0x9cd4a4), CapGlyph: hex(0x9a92ae), CapHover: hex(0x2e2940), CapPress: hex(0x1d1a29),
+			CloseHover: closeHover, ClosePress: closePress, Needs: hex(0xecc98a), Done: hex(0x9cd4a4),
+			ToastBG: hex(0x1d1a2a), ToastLine: hex(0x2c2740), ToastFG: hex(0xe2dcec), ToastGo: hex(0xc4a7e7),
+			ToastTitle: hex(0xffffff), UsageHigh: hex(0xff98a6),
+			DiffAddBG: hex(0x18291f), DiffAddFG: hex(0xb8e6be), DiffDelBG: hex(0x2e1722), DiffDelFG: hex(0xffb0bc),
+		},
+	}
+}
+
+// Kiri (fog) is the second light theme: a cool grey-blue. Like Washi, its caption
+// hover/press go darker, not lighter.
+func kiri() Theme {
+	return Theme{
+		Key: "kiri", Name: "Kiri",
+		Term: render.Palette{
+			FG: hex(0x24303a), BG: hex(0xe8edf1), Cursor: hex(0x255d88), Selection: hex(0xc5d6e6),
+			ANSI: ansi(0x24303a, 0xb83a3a, 0x2e7a4e, 0x8a6500, 0x2a62a8, 0x8a4aa8, 0x1a7880, 0xa9b4be,
+				0x5f6b76, 0xcc4b4b, 0x37905c, 0xa87a00, 0x3a76c0, 0x9c5cbc, 0x228c94, 0x151b21),
+			Match: hex(0xf2e2a8), MatchCur: hex(0x8a6500), MatchMark: hex(0x6a5fb8),
+		},
+		UI: Chrome{
+			Chrome: hex(0xdde3e9), Active: hex(0xe8edf1), ActiveFG: hex(0x24303a), Muted: hex(0x56626d),
+			Border: hex(0xcbd3db), Accent: hex(0x255d88), StatusFG: hex(0x5f6b76), Folder: hex(0x24303a),
+			Branch: hex(0x2e7a4e), CapGlyph: hex(0x5f6b76), CapHover: hex(0xc6cfd8), CapPress: hex(0xbac4ce),
+			CloseHover: closeHover, ClosePress: closePress, Needs: hex(0x8a6500), Done: hex(0x2e7a4e),
+			ToastBG: hex(0xf7f9fb), ToastLine: hex(0xcbd3db), ToastFG: hex(0x24303a), ToastGo: hex(0x255d88),
+			ToastTitle: hex(0x24303a), UsageHigh: hex(0xb83a3a),
+			DiffAddBG: hex(0xcfe0d4), DiffAddFG: hex(0x1d5a37), DiffDelBG: hex(0xefd6d6), DiffDelFG: hex(0x962d2d),
 		},
 	}
 }

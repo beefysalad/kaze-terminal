@@ -42,7 +42,7 @@ func (win *window) drawBoardPreview(gtx layout.Context, r image.Rectangle, ink b
 		head, line := "Pick an agent", "Its steps, messages and report show here."
 		rec(head)
 		rec(line)
-		hc, hs := c.sans(gtx, head, 14, pg.text, font.SemiBold)
+		hc, hs := c.labelW(gtx, head, 14, pg.text, font.SemiBold)
 		lc, ls := c.fitSans(gtx, line, 13, r.Dx()-2*dp(24), pg.muted, font.Normal)
 		y := r.Min.Y + dp(56)
 		place(ops, hc, image.Pt(r.Min.X+(r.Dx()-hs.X)/2, y))
@@ -119,7 +119,7 @@ func (win *window) drawBoardPreview(gtx layout.Context, r image.Rectangle, ink b
 	bx := x0
 	button := func(label string, fill, line, fg color.NRGBA) image.Rectangle {
 		rec(label)
-		call, sz := c.sans(gtx, label, 12, fg, font.Medium)
+		call, sz := c.labelW(gtx, label, 12, fg, font.Medium)
 		br := image.Rect(bx, y, bx+sz.X+2*dp(12), y+dp(boardFieldDp))
 		if br.Max.X > x1 {
 			return image.Rectangle{}

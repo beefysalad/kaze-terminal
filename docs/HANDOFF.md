@@ -1,8 +1,19 @@
 # kaze handoff
 
-Last updated: 2026-11-05, release 0.31 (the palette redesign, PR #163, and editable shortcuts, PR #162). Before that, release 0.30 (find in the terminal and docked tabs, #155 / PR #156). Before that, release 0.29 (battery on macOS, #139 / PR #158; the About page redesign, PR #160; the lander's `kaze-about.png` still shows the old page and needs retaking). Before that, release 0.28.2 (.md links open the file the agent touched, #143 / PR #153; uninstall page #112 designed and planned on `feat/uninstall`). Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-05, five more themes and one UI font on `feat/themes-one-font` (release 0.32 next). Before that, release 0.31 (the palette redesign, PR #163, and editable shortcuts, PR #162). Before that, release 0.30 (find in the terminal and docked tabs, #155 / PR #156). Before that, release 0.29 (battery on macOS, #139 / PR #158; the About page redesign, PR #160; the lander's `kaze-about.png` still shows the old page and needs retaking). Before that, release 0.28.2 (.md links open the file the agent touched, #143 / PR #153; uninstall page #112 designed and planned on `feat/uninstall`). Read this first when you pick up kaze on another machine.
 
 ## Where things stand
+
+**Five more themes and one font (`feat/themes-one-font`, release 0.32 next).** Matcha, Kōyō (`koyo`),
+Hai, Fuji (dark) and Kiri (light) join the five, ten in all; the owner asked for fewer light ones, so only
+Washi and Kiri are light. The Theme picker wraps at five per row and drops to fewer columns (none under
+104 dp) in a narrow window; its hint wraps. All UI text is now JetBrains Mono: Manrope is gone from the
+app (the website still uses it), and `CLAUDE.md` says not to add another font. Mono is wider, so: About's
+buttons read "Report issue" and "GitHub"; the Settings menu subtitle is "Saved to config.toml"; the palette's
+Skills view cuts more descriptions with "…" (106 allocations per still frame, cap raised from 105 to 112).
+Every new theme passes the existing contrast tests. The lander screenshots all need retaking (new font).
+Owner checks by hand: each new theme on the terminal, sidebar, palette and an alert card; Settings, About,
+the palette and the Agents board for text that now looks cramped or cut.
 
 **Release 0.31 ships the palette redesign (PR #163) with editable shortcuts.** The palette now
 opens on Waiting on you, Sessions and up to 3 recent skills with a "Browse all N skills" row. Typing also
@@ -626,7 +637,7 @@ setup/checklist is historical; unresolved platform checks are listed above.
 - **Copy is Ctrl+Shift+C** (Ctrl+C must stay "interrupt"). Smart Ctrl+C is a later idea, not wanted yet.
 - **Ctrl+Backspace** sends 0x08 (word delete in PSReadLine).
 - **Claude Code features left unanswered** (kitty keyboard protocol, XTVERSION, some OSCs): Claude falls back fine. Shift+Enter now aliases Alt/Option+Enter for a newline (issue #114); full kitty keyboard support remains deferred.
-- **Fonts:** JetBrains Mono + Noto Sans JP subset bundled (OFL); missing symbols and rare kanji come from system fonts, loaded lazily, memoized, malformed fonts skipped.
+- **Fonts:** JetBrains Mono is the only UI font (owner, 2026-11-05; Manrope dropped), Noto Sans JP subset bundled for Japanese (OFL); missing symbols and rare kanji come from system fonts, loaded lazily, memoized, malformed fonts skipped.
 - **Low-contrast text** is nudged just enough to reach 4.5:1, not forced to white (keeps dim text dim).
 - **Stable line numbers (find):** a match is stored as `screen.Evicted()` plus its row, a number that never
   changes while the line exists, so eviction only drops matches and never shifts them. Use the same pattern

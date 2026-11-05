@@ -41,7 +41,7 @@ type Config struct {
 	ChimeNeeds       bool              `toml:"chime_needs"`        // chime when Claude needs you; default true
 	ChimeDone        bool              `toml:"chime_done"`         // chime when Claude is done; default false
 	ChimeFile        string            `toml:"chime_file"`         // custom WAV; ~ expands to home, other relative paths use the working dir; empty = bundled chime
-	Theme            string            `toml:"theme"`              // midnight|sumi|tide|washi|sakura
+	Theme            string            `toml:"theme"`              // midnight|sumi|tide|washi|sakura|matcha|koyo|hai|fuji|kiri
 	LineSpacing      string            `toml:"line_spacing"`       // tight|normal|roomy
 	CursorStyle      string            `toml:"cursor_style"`       // block|bar|underline
 	CursorBlink      bool              `toml:"cursor_blink"`       // default false
@@ -219,7 +219,7 @@ func Load(path string) (Config, []string, error) {
 			}
 			cfg.ChimeFile = s
 		case "theme":
-			loadChoice(v, k, &cfg.Theme, []string{"midnight", "sumi", "tide", "washi", "sakura"}, warn)
+			loadChoice(v, k, &cfg.Theme, []string{"midnight", "sumi", "tide", "washi", "sakura", "matcha", "koyo", "hai", "fuji", "kiri"}, warn)
 		case "line_spacing":
 			loadChoice(v, k, &cfg.LineSpacing, []string{"tight", "normal", "roomy"}, warn)
 		case "cursor_style":

@@ -80,11 +80,11 @@ func (p *page) memberRow(r image.Rectangle, y int, row settingRow) int {
 	tagW := 0
 	titleW, folderW := 0, 0
 	for _, m := range row.members {
-		_, s := p.c.sans(gtx, m.title, 13, col.fg, font.SemiBold)
+		_, s := p.c.labelW(gtx, m.title, 13, col.fg, font.SemiBold)
 		titleW = max(titleW, s.X)
 		_, s = p.c.label(gtx, m.folder, 11.5, col.dim)
 		folderW = max(folderW, s.X)
-		_, s = p.c.sans(gtx, m.tag, 11.5, col.muted, font.Normal)
+		_, s = p.c.labelW(gtx, m.tag, 11.5, col.muted, font.Normal)
 		tagW = max(tagW, s.X)
 	}
 	titleX := r.Min.X + bar + gtx.Dp(14)
@@ -184,13 +184,13 @@ func (p *page) fitStart(s string, sz unit.Sp, w int) string {
 // fit shortens s at its end with "…" until it is no wider than w.
 // fitSans is fit for text drawn in the UI font at weight.
 func (p *page) fitSans(s string, sz unit.Sp, w int, weight font.Weight) string {
-	if _, size := p.c.sans(p.gtx, s, sz, p.col.fg, weight); size.X <= w {
+	if _, size := p.c.labelW(p.gtx, s, sz, p.col.fg, weight); size.X <= w {
 		return s
 	}
 	r := []rune(s)
 	for len(r) > 1 {
 		r = r[:len(r)-1]
-		if _, size := p.c.sans(p.gtx, string(r)+"…", sz, p.col.fg, weight); size.X <= w {
+		if _, size := p.c.labelW(p.gtx, string(r)+"…", sz, p.col.fg, weight); size.X <= w {
 			break
 		}
 	}

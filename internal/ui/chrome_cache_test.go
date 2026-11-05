@@ -70,7 +70,7 @@ func TestChromeWidthMatchesDrawnLabels(t *testing.T) {
 		gtx.Metric = unit.Metric{PxPerDp: scale, PxPerSp: scale}
 		for _, s := range []string{"", "hello", "ends with spaces  ", "日本語", "café", "abc אבג"} {
 			for _, mono := range []bool{false, true} {
-				face := font.Font{Typeface: sansFace, Weight: font.SemiBold}
+				face := font.Font{Typeface: chromeFace, Weight: font.SemiBold}
 				if mono {
 					face = font.Font{Typeface: chromeFace}
 				}
@@ -79,7 +79,7 @@ func TestChromeWidthMatchesDrawnLabels(t *testing.T) {
 				if mono {
 					_, size = c.label(gtx, s, 11, c.th.Muted)
 				} else {
-					_, size = c.sans(gtx, s, 11, c.th.Muted, font.SemiBold)
+					_, size = c.labelW(gtx, s, 11, c.th.Muted, font.SemiBold)
 				}
 				if got != size.X {
 					t.Errorf("%q mono=%v scale=%v width=%d drawn=%d", s, mono, scale, got, size.X)

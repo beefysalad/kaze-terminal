@@ -31,6 +31,11 @@ checklist and what's next. The authority for behaviour is the spec
 - **Strict TDD:** write the test, watch it fail (RED), then make it pass (GREEN).
 - **RED tests must fail safely.** A failing test must never allocate unbounded memory or loop forever:
   bounded sizes, timeouts. (An unbounded RED test once crashed the machine.)
+- **One font: JetBrains Mono.** The terminal and every piece of the UI (settings, palette, title and
+  status bars, cards, docs) draw in JetBrains Mono (`chromeFace` in `internal/ui/tabbar.go`), Regular and
+  Bold only. Don't add, bundle or switch to another font, and don't mix fonts within a screen. Noto Sans JP
+  stays only as the fallback for Japanese characters. (Set by the owner on 2026-11-05; the website lander is
+  separate.)
 - **Never inject global keyboard or mouse input** (SendInput, SendKeys, posting to other windows) when
   testing the GUI. The owner works on the same machine; stray keystrokes have landed in their live
   sessions before. Test through the code paths, or use the bench mode, which drops real input by default.

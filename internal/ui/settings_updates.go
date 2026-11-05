@@ -231,7 +231,7 @@ func (p *page) layoutUpdateConfirm(r image.Rectangle, question string, buttons i
 	// Use each line's real font metrics, including fallback glyphs.
 	textWidth := 0
 	for _, line := range l.lines {
-		_, size := p.c.sans(p.gtx, line, 13, p.col.title, font.Normal)
+		_, size := p.c.labelW(p.gtx, line, 13, p.col.title, font.Normal)
 		l.lineH = max(l.lineH, size.Y)
 		textWidth = max(textWidth, size.X)
 	}

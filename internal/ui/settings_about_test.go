@@ -27,7 +27,7 @@ func TestAboutSectionShowsBuildAcrossThemes(t *testing.T) {
 		win.drawSettings(pageContext(800, 600), image.Rect(0, 38, 800, 576))
 		text := strings.Join(win.set.texts, "\n")
 		for _, want := range []string{"by Patrick", aboutKanji, aboutMeaning, aboutTagline, "MIT", platformName(runtime.GOOS), runtime.GOARCH,
-			"Copy build info", "View on GitHub", "Report an issue"} {
+			"Copy build info", "GitHub", "Report issue"} {
 			if !strings.Contains(text, want) {
 				t.Errorf("%s missing %q", th.Key, want)
 			}
@@ -151,7 +151,21 @@ func TestAboutButtonsSitInTheCardFooter(t *testing.T) {
 	}
 }
 
-// In a narrow pane the buttons stack full width, View on GitHub first.
+// At the narrowest width that still puts the buttons on one row, in
+// JetBrains Mono (wider than the old sans), they fit the card without overlapping.
+func TestAboutButtonsFitOneRowAtItsNarrowest(t *testing.T) {
+	r := image.Rect(100, 60, 520, 576) // 420 wide: the first width that is not narrow
+	win, g := aboutAt(t, r)
+	cp, is, gh := aboutButton(t, win, "about_copy"), aboutButton(t, win, "about_issue"), aboutButton(t, win, "about_github")
+	if cp.Min.Y != is.Min.Y || is.Min.Y != gh.Min.Y {
+		t.Fatalf("not one row: %v %v %v", cp, is, gh)
+	}
+	if !(cp.Max.X < is.Min.X && is.Max.X < gh.Min.X) || !cp.In(g.card) || !gh.In(g.card) {
+		t.Fatalf("buttons overlap or leave the card %v: %v %v %v", g.card, cp, is, gh)
+	}
+}
+
+// In a narrow pane the buttons stack full width, GitHub first.
 func TestAboutNarrowStacksButtons(t *testing.T) {
 	r := image.Rect(160, 60, 520, 576)
 	win, g := aboutAt(t, r)

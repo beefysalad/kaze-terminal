@@ -74,7 +74,7 @@ func (win *window) drawBar(gtx layout.Context, barH int) {
 	side := win.side.w
 	key := win.keyText("palette")
 	measure := func(s string, mono bool) int {
-		face := font.Font{Typeface: sansFace, Weight: font.SemiBold}
+		face := font.Font{Typeface: chromeFace, Weight: font.SemiBold}
 		size := unit.Sp(12.5)
 		if mono {
 			face, size = font.Font{Typeface: chromeFace}, 11.5
@@ -160,7 +160,7 @@ func (win *window) drawAgentsBadge(gtx layout.Context, r image.Rectangle) {
 	if len(waiting) > 0 || len(win.subs.SessionWaits()) > 0 {
 		bcol = th.Needs
 	}
-	call, sz := c.sans(gtx, strconv.Itoa(min(n, 99)), 9.5, fg, font.Bold)
+	call, sz := c.labelW(gtx, strconv.Itoa(min(n, 99)), 9.5, fg, font.Bold)
 	h := gtx.Dp(15)
 	w := max(h, sz.X+gtx.Dp(8))
 	box := image.Rect(r.Max.X-w+gtx.Dp(2), r.Min.Y-gtx.Dp(1), r.Max.X+gtx.Dp(2), r.Min.Y-gtx.Dp(1)+h)
@@ -203,7 +203,7 @@ func (win *window) drawCrumb(gtx layout.Context, b titleLayout) {
 		x = dot.Min.X + gtx.Dp(9) + gap
 	}
 	text := func(s string, col color.NRGBA, w font.Weight) {
-		call, sz := c.sans(gtx, s, 12.5, col, w)
+		call, sz := c.labelW(gtx, s, 12.5, col, w)
 		place(ops, call, image.Pt(x, mid-sz.Y/2))
 		x += sz.X
 	}
@@ -216,7 +216,7 @@ func (win *window) drawCrumb(gtx layout.Context, b titleLayout) {
 	pill := statePill(cp.State)
 	pillW := 0
 	if pill != "" {
-		_, sz := c.sans(gtx, pill, 10.5, th.Accent, font.SemiBold)
+		_, sz := c.labelW(gtx, pill, 10.5, th.Accent, font.SemiBold)
 		pillW = sz.X + 2*gtx.Dp(6) + gap
 	}
 	cmdW := 0
@@ -245,7 +245,7 @@ func (win *window) drawCrumb(gtx layout.Context, b titleLayout) {
 		case "done":
 			col = th.Done
 		}
-		call, sz := c.sans(gtx, pill, 10.5, col, font.SemiBold)
+		call, sz := c.labelW(gtx, pill, 10.5, col, font.SemiBold)
 		ph := sz.Y + gtx.Dp(4)
 		box := image.Rect(x, mid-ph/2, x+sz.X+2*gtx.Dp(6), mid-ph/2+ph)
 		paint.FillShape(ops, tint(col, 0x26), clip.UniformRRect(box, ph/2).Op(ops))
@@ -296,7 +296,7 @@ func (c *chrome) drawSearchField(gtx layout.Context, b titleLayout, key string, 
 
 // fitSideW is fitSide in the UI font at a weight: s cut with an ellipsis to room.
 func (c *chrome) fitSideW(gtx layout.Context, s string, size unit.Sp, room int, col color.NRGBA, w font.Weight) (op.CallOp, image.Point) {
-	call, sz := c.sans(gtx, s, size, col, w)
+	call, sz := c.labelW(gtx, s, size, col, w)
 	if sz.X <= room {
 		return call, sz
 	}
@@ -304,14 +304,14 @@ func (c *chrome) fitSideW(gtx layout.Context, s string, size unit.Sp, room int, 
 	lo, hi := 0, len(r)-1 // the longest prefix that fits with an ellipsis
 	for lo < hi {
 		mid := (lo + hi + 1) / 2
-		if _, m := c.sans(gtx, string(r[:mid])+"…", size, col, w); m.X <= room {
+		if _, m := c.labelW(gtx, string(r[:mid])+"…", size, col, w); m.X <= room {
 			lo = mid
 		} else {
 			hi = mid - 1
 		}
 	}
 	if lo > 0 {
-		return c.sans(gtx, string(r[:lo])+"…", size, col, w)
+		return c.labelW(gtx, string(r[:lo])+"…", size, col, w)
 	}
 	return op.CallOp{}, image.Point{}
 }

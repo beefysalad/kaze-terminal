@@ -126,7 +126,8 @@ func TestWorkspacesIsASection(t *testing.T) {
 	if f.has("coming next") {
 		t.Fatal("the nav still says coming next")
 	}
-	f.wantText("docker compose up -d → " + `.\venv\Scripts\Activate.ps1`)
+	// The chain shows; its tail may be cut with "…" in the card.
+	f.wantText("docker compose up -d → " + `.\venv\Scripts\Activate.`)
 	f.wantText("after port 8000")
 }
 
