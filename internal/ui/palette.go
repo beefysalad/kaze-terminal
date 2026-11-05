@@ -230,7 +230,7 @@ func (c *chrome) palHairline(gtx layout.Context, box image.Rectangle, ink *palIn
 	half(mid, x1, ink.hairline, clear)
 }
 
-// palField draws the field row: the magnifier, in Skills the "/ Skills" chip,
+// palField draws the field row: the magnifier, in Skills the "Skills" chip,
 // the editor with its placeholder, and when the box is wide enough the
 // Sessions | Skills switch at the right.
 func (c *chrome) palField(gtx layout.Context, st palState, h *palHits, ink *palInk) {
@@ -282,14 +282,13 @@ func (c *chrome) palField(gtx layout.Context, st palState, h *palHits, ink *palI
 	t.Pop()
 }
 
-// palChip draws the "/ Skills" chip from x when it fits before right and
+// palChip draws the "Skills" chip from x when it fits before right and
 // returns where the editor starts.
 func (c *chrome) palChip(gtx layout.Context, x, right, mid int, h *palHits, ink *palInk) int {
 	ops := gtx.Ops
-	slash, ssz := c.label(gtx, "/", 12, ink.chipFG)
 	word, wsz := c.sans(gtx, "Skills", 12, ink.chipFG, font.SemiBold)
-	ch := max(ssz.Y, wsz.Y) + gtx.Dp(4)
-	cw := gtx.Dp(6) + ssz.X + gtx.Dp(4) + wsz.X + gtx.Dp(8)
+	ch := wsz.Y + gtx.Dp(4)
+	cw := gtx.Dp(8) + wsz.X + gtx.Dp(8)
 	if x+cw > right {
 		return x
 	}
@@ -298,8 +297,7 @@ func (c *chrome) palChip(gtx layout.Context, x, right, mid int, h *palHits, ink 
 	r, line := gtx.Dp(6), max(gtx.Dp(1), 1)
 	paint.FillShape(ops, ink.chipLine, clip.UniformRRect(chip, r).Op(ops))
 	paint.FillShape(ops, ink.chipBG, clip.UniformRRect(chip.Inset(line), max(r-line, 0)).Op(ops))
-	place(ops, slash, image.Pt(chip.Min.X+gtx.Dp(6), mid-ssz.Y/2))
-	place(ops, word, image.Pt(chip.Min.X+gtx.Dp(6)+ssz.X+gtx.Dp(4), mid-wsz.Y/2))
+	place(ops, word, image.Pt(chip.Min.X+gtx.Dp(8), mid-wsz.Y/2))
 	h.chip = chip
 	return chip.Max.X + gtx.Dp(10)
 }
