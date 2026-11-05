@@ -1,8 +1,18 @@
 # kaze handoff
 
-Last updated: 2026-11-05, release 0.30 (find in the terminal and docked tabs, #155 / PR #156). Before that, release 0.29 (battery on macOS, #139 / PR #158; the About page redesign, PR #160; the lander's `kaze-about.png` still shows the old page and needs retaking). Before that, release 0.28.2 (.md links open the file the agent touched, #143 / PR #153; uninstall page #112 designed and planned on `feat/uninstall`). Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-05, editable shortcuts built on `feat/shortcuts-edit`, shipping in release 0.31. Before that, release 0.30 (find in the terminal and docked tabs, #155 / PR #156). Before that, release 0.29 (battery on macOS, #139 / PR #158; the About page redesign, PR #160; the lander's `kaze-about.png` still shows the old page and needs retaking). Before that, release 0.28.2 (.md links open the file the agent touched, #143 / PR #153; uninstall page #112 designed and planned on `feat/uninstall`). Read this first when you pick up kaze on another machine.
 
 ## Where things stand
+
+**Editable shortcuts ship in 0.31 with the palette redesign (built on `feat/shortcuts-edit`).** Settings >
+Shortcuts now lets you change every shortcut: click, press the keys, saved at once. A clash asks first,
+keys without Ctrl, Alt or Cmd are refused, and a plain Ctrl+letter warns. Reset works per row or for all.
+Plan: `docs/superpowers/plans/2026-11-05-kaze-editable-shortcuts.md`; spec:
+`docs/superpowers/specs/2026-11-05-kaze-editable-shortcuts-design.md`. Next: release 0.31 (version,
+changelog and What's new are not done yet). The contrast minimums for the strip colours:
+TBD (filled after Task 8). Owner checks by hand: change Find to Ctrl+Alt+F and use it without a restart;
+Replace a clash; the Ctrl+R warning; Reset all; the strips readable on Washi (the light theme); and on the
+Mac, Cmd keys recorded as `cmd`.
 
 **Release 0.30 ships find (#155, PR #156, merged 2026-11-05).** Ctrl+Shift+F (Cmd+F on macOS) opens a
 find bar on the session's terminal or on a workspace member's tab in the panel. Every match is tinted,
@@ -587,6 +597,9 @@ setup/checklist is historical; unresolved platform checks are listed above.
 
 ## Decisions so far (why the code looks the way it does)
 
+- **Editable shortcuts:** `none` means an action has no shortcut. Two shortcuts clash whatever order the
+  modifiers are written in. Settings always keeps a shortcut (a hand-written `open_settings = "none"` is
+  ignored with a warning). The Shortcuts page writes the file only through `config.SetKeys`.
 - **Go + Gio**, one codebase for Windows and macOS. Beating Warp is not a goal; "fast, not laggy, fits the workflow" is. Memory has no hard cap but must not grow when idle.
 - **Renderer:** a CPU-drawn image of the grid, split into 8 horizontal strips; only strips with changed rows are re-uploaded. Chosen by two spikes (`docs/spike-results.md`): Gio's text path and per-glyph ops were far too slow.
 - **Synchronized output:** frames are held while mode 2026 is on, up to 150ms, but never when nothing has been drawn yet (tab switch).
@@ -611,6 +624,9 @@ setup/checklist is historical; unresolved platform checks are listed above.
 
 ## Known gaps (deferred, not blocking)
 
+- Shortcuts: no chords (two-step keys) and no second shortcut per action; no tooltip on the reset button;
+  hover is not shown on the keys button (keyboard focus only); keys that `parseShortcut` cannot name
+  (Insert, numpad keys, `+`) cannot be recorded.
 - Combining marks dropped (NFD on macOS, see checklist).
 - macOS: Option-as-Alt toggle, wheel units and rare-kanji fallback verification. Memory reporting uses physical footprint.
 - Scrollback uses packed 16-byte cells, trims default blank tails and reuses evicted lines; retained memory still depends on line widths and contents.
