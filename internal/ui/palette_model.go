@@ -3,7 +3,6 @@ package ui
 import (
 	"cmp"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"unicode"
@@ -143,7 +142,7 @@ type ranked struct {
 
 // byTier orders matches by tier, keeping their base order inside a tier.
 func byTier(rs []ranked) {
-	sort.SliceStable(rs, func(i, j int) bool { return rs[i].tier < rs[j].tier })
+	slices.SortStableFunc(rs, func(a, b ranked) int { return cmp.Compare(a.tier, b.tier) })
 }
 
 // buildPalette lists the rows for in.Query. Text starting with "/" is the
@@ -244,18 +243,19 @@ func buildSkillScope(in palInput, q string) []palItem {
 	for _, g := range in.Groups {
 		matches = matches[:0]
 		key := palGroupKey(g)
-		for _, s := range g.Skills {
+		for i, s := range g.Skills {
 			if tier, ok := palTier(q, s.Name, s.Desc); ok {
-				it := skillItem(s, g.Head)
-				it.Fold = key
-				matches = append(matches, ranked{it, tier})
+				matches = append(matches, ranked{g.Items[i], tier})
 			}
 		}
 		if len(matches) == 0 {
 			continue
 		}
 		byTier(matches)
-		count := strconv.Itoa(len(matches))
+		count := g.Count
+		if len(matches) != len(g.Skills) {
+			count = strconv.Itoa(len(matches))
+		}
 		folds := key != "" // plugin groups and Other; Yours and This project never fold
 		shown := len(matches)
 		if q == "" && folds && !in.Open[key] {
@@ -294,7 +294,8 @@ func sessionItem(r sideRow) palItem {
 }
 
 func skillItem(s skills.Skill, group string) palItem {
-	it := palItem{Kind: palSkill, Key: "skill:" + s.Name, Group: group, Name: "/" + s.Name, Detail: s.Desc, Prompt: "/" + s.Name}
+	slash := "/" + s.Name
+	it := palItem{Kind: palSkill, Key: "skill:" + s.Name, Group: group, Name: slash, Detail: s.Desc, Prompt: slash}
 	if p := pluginOf(s); p != "" {
 		it.Plugin, it.Dim = p, len(p)+2
 	}
@@ -323,15 +324,18 @@ func orderSkills(list []skills.Skill, recent []string) []skills.Skill {
 		pos[strings.TrimPrefix(p, "/")] = i + 1
 	}
 	out := append([]skills.Skill(nil), list...)
-	sort.SliceStable(out, func(i, j int) bool {
-		pi, pj := pos[out[i].Name], pos[out[j].Name]
-		if (pi > 0) != (pj > 0) {
-			return pi > 0
+	slices.SortStableFunc(out, func(a, b skills.Skill) int {
+		pa, pb := pos[a.Name], pos[b.Name]
+		if (pa > 0) != (pb > 0) {
+			if pa > 0 {
+				return -1
+			}
+			return 1
 		}
-		if pi > 0 {
-			return pi < pj
+		if pa > 0 {
+			return cmp.Compare(pa, pb)
 		}
-		return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name)
+		return foldCompare(a.Name, b.Name)
 	})
 	return out
 }
@@ -381,6 +385,8 @@ type palGroup struct {
 	Head   string         // drawn header: "YOURS", "THIS PROJECT", "DEVBOX", "OTHER"
 	Plugin string         // plugin groups only: "devbox"; "" for Yours, This project, Other
 	Skills []skills.Skill // sorted by name, case-insensitively
+	Items  []palItem      // Skills' rows, built once with the group (not per frame)
+	Count  string         // len(Skills) as text
 }
 
 // pluginOf is a plugin skill's plugin: the text before its first ":"; "" for
@@ -463,6 +469,13 @@ func groupSkills(list []skills.Skill) []palGroup {
 			g.Head = strings.ToUpper(plugin)
 		default:
 			g.Head = palHeadOther
+		}
+		g.Count = strconv.Itoa(len(g.Skills))
+		key := palGroupKey(g)
+		g.Items = make([]palItem, len(g.Skills))
+		for i, s := range g.Skills {
+			g.Items[i] = skillItem(s, g.Head)
+			g.Items[i].Fold = key
 		}
 		out = append(out, g)
 		start = end

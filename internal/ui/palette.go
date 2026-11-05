@@ -600,7 +600,9 @@ func (c *chrome) palSessionRow(gtx layout.Context, it palItem, in image.Rectangl
 	x += dot + gtx.Dp(10)
 
 	if fg, bg, ok := ink.palPill(it.State); ok {
-		ink.note("pill "+it.State, fg, bg, 4.5)
+		if ink.audit != nil { // the name costs an allocation; only a test reads it
+			ink.note("pill "+it.State, fg, bg, 4.5)
+		}
 		call, ps := c.sans(gtx, it.State, 11, fg, font.SemiBold)
 		pw, ph := ps.X+2*gtx.Dp(8), max(gtx.Dp(20), ps.Y)
 		if right-pw >= x+gtx.Dp(40) {

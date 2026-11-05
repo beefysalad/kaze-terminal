@@ -521,6 +521,9 @@ func TestRecentSkillsCappedAndPresent(t *testing.T) {
 	}
 }
 
+// groupSkills runs once per scan and builds each skill's row then, so the
+// frames do not: two strings per skill ("skill:<name>", "/<name>") and a few
+// per group, nothing that grows faster.
 func TestGroupSkillsAllocsBounded(t *testing.T) {
 	var list []skills.Skill
 	for i := range skills.MaxSkills {
@@ -547,8 +550,8 @@ func TestGroupSkillsAllocsBounded(t *testing.T) {
 		t.Fatalf("%d skills grouped of %d", n, len(list))
 	}
 	allocs := testing.AllocsPerRun(5, func() { groupSkills(list) })
-	if limit := float64(len(gs) + 8); allocs > limit {
-		t.Fatalf("%.0f allocs for %d groups, want at most %.0f", allocs, len(gs), limit)
+	if limit := float64(2*len(list) + 4*len(gs) + 8); allocs > limit {
+		t.Fatalf("%.0f allocs for %d skills in %d groups, want at most %.0f", allocs, len(list), len(gs), limit)
 	}
 }
 

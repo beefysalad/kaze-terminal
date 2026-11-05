@@ -21,6 +21,11 @@ const (
 	palAllocsTyped = 129
 )
 
+// palAllocsSlash bounds the Skills scope on "/": 97 measured after the
+// final-review fixes (skill rows built once per scan, 230 before), plus a
+// small margin.
+const palAllocsSlash = 105
+
 // palAllocScene is palWindow with five sessions (one needing you) and 40 fake
 // skills: 15 user, 9 devbox, 6 superpowers, 5 v3-gauntlet, 5 project.
 func palAllocScene(t *testing.T) (*window, *input.Router) {
@@ -83,7 +88,7 @@ func TestPaletteFrameAllocs(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		return // Ruling 12: measured on Windows; other platforms only log
 	}
-	if empty > palAllocsEmpty || typed > palAllocsTyped || slash > palAllocsEmpty {
-		t.Fatalf("empty %.0f (want <= %d), typed %.0f (want <= %d), \"/\" %.0f (want <= %d)", empty, palAllocsEmpty, typed, palAllocsTyped, slash, palAllocsEmpty)
+	if empty > palAllocsEmpty || typed > palAllocsTyped || slash > palAllocsSlash {
+		t.Fatalf("empty %.0f (want <= %d), typed %.0f (want <= %d), \"/\" %.0f (want <= %d)", empty, palAllocsEmpty, typed, palAllocsTyped, slash, palAllocsSlash)
 	}
 }
