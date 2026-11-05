@@ -32,8 +32,9 @@ var reservedKeys = map[string][]Shortcut{
 	},
 }
 
-// SetReserved replaces goos's reserved keys. Call it once at startup, before
-// any key is encoded; the table is not locked.
+// SetReserved replaces goos's reserved keys: at startup, and again when the
+// shortcuts are saved. The table is not locked, so call it on the goroutine
+// that encodes keys (the UI goroutine).
 func SetReserved(goos string, keys []Shortcut) {
 	reservedKeys[goos] = append([]Shortcut(nil), keys...)
 }
