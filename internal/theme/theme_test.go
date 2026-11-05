@@ -3,8 +3,11 @@ package theme
 import (
 	"image/color"
 	"math"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/beefysalad/kaze-terminal/internal/config"
 	"github.com/beefysalad/kaze-terminal/internal/render"
 )
 
@@ -43,7 +46,7 @@ func TestMidnightMatchesTodaysColors(t *testing.T) {
 }
 
 func TestAllThemes(t *testing.T) {
-	want := []string{"midnight", "sumi", "tide", "washi", "sakura"}
+	want := []string{"midnight", "sumi", "tide", "washi", "sakura", "matcha", "koyo", "hai", "fuji", "kiri"}
 	all := All()
 	if len(all) != len(want) {
 		t.Fatalf("got %d themes, want %d", len(all), len(want))
@@ -59,8 +62,26 @@ func TestAllThemes(t *testing.T) {
 	if _, ok := ByKey("nope"); ok {
 		t.Error("ByKey(nope) should be false")
 	}
-	if w, _ := ByKey("washi"); lum(w.Term.BG) <= 0.8 {
-		t.Error("washi BG should be light")
+	// Two light themes, Washi and Kiri; the rest are dark.
+	for _, th := range all {
+		light := th.Key == "washi" || th.Key == "kiri"
+		if l := lum(th.Term.BG); light && l <= 0.7 || !light && l >= 0.1 {
+			t.Errorf("%s BG luminance %.2f, light = %v", th.Key, l, light)
+		}
+	}
+}
+
+// Every theme in the picker is one config.toml accepts without a warning.
+func TestConfigAcceptsEveryTheme(t *testing.T) {
+	for _, th := range All() {
+		path := filepath.Join(t.TempDir(), "config.toml")
+		if err := os.WriteFile(path, []byte(`theme = "`+th.Key+`"`+"\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		cfg, warns, err := config.Load(path)
+		if err != nil || len(warns) != 0 || cfg.Theme != th.Key {
+			t.Errorf("theme %q: theme %q, warnings %v, err %v", th.Key, cfg.Theme, warns, err)
+		}
 	}
 }
 

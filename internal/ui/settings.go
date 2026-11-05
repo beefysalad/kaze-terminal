@@ -694,7 +694,7 @@ func (p *page) nav(r image.Rectangle, secs []settingsSection) {
 	call, size := p.textW("Settings", 18, col.title, font.SemiBold)
 	place(ops, call, image.Pt(x0+inner, y))
 	y += size.Y + gtx.Dp(2)
-	call, size = p.text("Saved to config.toml as you go", 11, col.dim)
+	call, size = p.text("Saved to config.toml", 11, col.dim)
 	place(ops, call, image.Pt(x0+inner, y))
 	y += size.Y + gtx.Dp(14)
 	group := ""
@@ -971,8 +971,8 @@ func (p *page) blockRow(r image.Rectangle, y int, row settingRow) int {
 	call, size := p.textW(row.label, 13.5, p.col.title, font.SemiBold)
 	place(ops, call, image.Pt(r.Min.X, y))
 	y += size.Y + gtx.Dp(2)
-	if row.hint != "" {
-		hc, hs := p.text(row.hint, 12, p.col.muted)
+	for _, line := range p.wrap(row.hint, 12, r.Dx()) {
+		hc, hs := p.text(line, 12, p.col.muted)
 		place(ops, hc, image.Pt(r.Min.X, y))
 		y += hs.Y
 	}
@@ -982,14 +982,28 @@ func (p *page) blockRow(r image.Rectangle, y int, row settingRow) int {
 		return y
 	}
 	gap := gtx.Dp(10)
-	w := max((r.Dx()-(n-1)*gap)/n, 1)
+	fit := max((r.Dx()+gap)/(gtx.Dp(swatchMinW)+gap), 1)
+	cols := min(n, blockPerRow, fit)
+	w := max((r.Dx()-(cols-1)*gap)/cols, 1)
 	h := 0
 	for i, k := range row.ctrls {
+		if i > 0 && i%cols == 0 {
+			y += h + gap
+			h = 0
+		}
 		c, size, from := p.ctrl(k, w)
-		at := image.Pt(r.Min.X+i*(w+gap), y)
+		at := image.Pt(r.Min.X+(i%cols)*(w+gap), y)
 		p.st.shift(from, len(p.st.controls), at)
 		place(ops, c, at)
 		h = max(h, size.Y)
 	}
 	return y + h + gtx.Dp(10)
 }
+
+// blockPerRow is how many controls a block row puts side by side before it
+// wraps: ten theme swatches show as two rows of five. A narrow pane puts fewer
+// in a row so none gets narrower than swatchMinW.
+const (
+	blockPerRow = 5
+	swatchMinW  = unit.Dp(104)
+)

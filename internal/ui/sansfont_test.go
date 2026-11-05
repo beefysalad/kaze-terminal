@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 
 	"gioui.org/font"
@@ -32,4 +33,21 @@ func TestSettingsTextUsesJetBrainsMono(t *testing.T) {
 	if chromeFace != "JetBrains Mono" {
 		t.Fatalf("chromeFace = %q", chromeFace)
 	}
+}
+
+// The settings menu's subtitle fits inside the 220 dp menu, padding included,
+// in JetBrains Mono.
+func TestSettingsNavSubtitleFits(t *testing.T) {
+	win := appearanceWindow(t, "")
+	gtx := pageContext(800, 600)
+	room := gtx.Dp(220) - 2*gtx.Dp(12) - gtx.Dp(10)
+	for _, s := range win.set.texts {
+		if strings.HasPrefix(s, "Saved to config.toml") {
+			if _, sz := win.ui.label(gtx, s, 11, win.ui.th.Muted); sz.X > room {
+				t.Fatalf("%q is %d wide, the menu has %d", s, sz.X, room)
+			}
+			return
+		}
+	}
+	t.Fatalf("no subtitle in %q", win.set.texts)
 }

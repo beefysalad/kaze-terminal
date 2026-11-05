@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"image"
 	"image/color"
 	"os"
 	"path/filepath"
@@ -57,7 +58,7 @@ func TestAppearanceRows(t *testing.T) {
 	win := appearanceWindow(t, "")
 	all := strings.Join(win.set.texts, "|")
 	for _, want := range []string{
-		"Theme", "Midnight", "Sumi", "Tide", "Washi", "Sakura",
+		"Theme", "Midnight", "Sumi", "Tide", "Washi", "Sakura", "Matcha", "Kōyō", "Hai", "Fuji", "Kiri",
 		"Font size", "14",
 		"Line spacing", "Tight", "Normal", "Roomy",
 		"CURSOR", "Shape", "Block", "Bar", "Underline",
@@ -70,8 +71,8 @@ func TestAppearanceRows(t *testing.T) {
 	if !strings.Contains(strings.Join(win.set.texts, " "), "JetBrains Mono, with Japanese and symbol fallback.") {
 		t.Fatalf("page lacks the font line: %s", all)
 	}
-	if n := len(controlsOf(win, "theme")); n != 5 {
-		t.Fatalf("%d theme swatches, want 5", n)
+	if n := len(controlsOf(win, "theme")); n != 10 {
+		t.Fatalf("%d theme swatches, want 10", n)
 	}
 	for id, n := range map[string]int{"font": 2, "spacing": 3, "cursor": 3, "blink": 1} {
 		if got := len(controlsOf(win, id)); got != n {
@@ -271,5 +272,64 @@ func TestSaveErrorShowsNotice(t *testing.T) {
 	}
 	if win.ui.th.Accent != (color.NRGBA{0x40, 0xe0, 0xd0, 0xff}) || win.opt.Config.Theme != "tide" {
 		t.Fatal("the live theme change was undone by the failed save")
+	}
+}
+
+// Ten themes wrap into rows of at most five, so each swatch stays wide enough
+// to show its little terminal and name; none overlap.
+func TestThemeSwatchesWrapInRowsOfFive(t *testing.T) {
+	win := appearanceWindow(t, "")
+	win.set.controls = win.set.controls[:0]
+	win.drawSettings(pageContext(1000, 640), image.Rect(0, 38, 1000, 616))
+	sw := controlsOf(win, "theme")
+	rows := map[int]int{}
+	for i, a := range sw {
+		rows[a.rect.Min.Y]++
+		if a.rect.Dx() != sw[0].rect.Dx() {
+			t.Errorf("swatch %d is %d wide, swatch 0 is %d", i, a.rect.Dx(), sw[0].rect.Dx())
+		}
+		for _, b := range sw[i+1:] {
+			if a.rect.Overlaps(b.rect) {
+				t.Errorf("swatches overlap: %v %v", a.rect, b.rect)
+			}
+		}
+	}
+	for y, n := range rows {
+		if n > 5 {
+			t.Errorf("row at y=%d holds %d swatches, want at most 5", y, n)
+		}
+	}
+	if len(rows) != 2 {
+		t.Errorf("%d rows of swatches, want 2", len(rows))
+	}
+}
+
+// In a narrow window the swatches wrap into fewer columns instead of shrinking
+// until their names collide, and the row's hint wraps inside the card.
+func TestThemeSwatchesKeepTheirWidthWhenNarrow(t *testing.T) {
+	win := appearanceWindow(t, "")
+	gtx := pageContext(560, 600)
+	win.set.controls = win.set.controls[:0]
+	win.set.texts = win.set.texts[:0]
+	win.drawSettings(gtx, image.Rect(0, 38, 560, 576))
+	sw := controlsOf(win, "theme")
+	if len(sw) != 10 {
+		t.Fatalf("%d swatches", len(sw))
+	}
+	for i, a := range sw {
+		if a.rect.Dx() < gtx.Dp(swatchMinW) {
+			t.Errorf("swatch %d is %d wide, want at least %d", i, a.rect.Dx(), gtx.Dp(swatchMinW))
+		}
+		if a.rect.Max.X > 560 {
+			t.Errorf("swatch %d at %v leaves the window", i, a.rect)
+		}
+		for _, b := range sw[i+1:] {
+			if a.rect.Overlaps(b.rect) {
+				t.Errorf("swatches overlap: %v %v", a.rect, b.rect)
+			}
+		}
+	}
+	if slices.Contains(win.set.texts, "Sets the terminal colors and kaze's own chrome.") {
+		t.Errorf("the hint is one line in a narrow window: %q", win.set.texts)
 	}
 }
