@@ -160,6 +160,13 @@ and flags, and colour emoji on Linux.
 | Open settings | Ctrl+, | Cmd+, |
 | New line in Claude Code (without sending) | Shift+Enter or Alt+Enter | Shift+Enter or Option+Enter |
 
+Any of these can be changed in Settings > Shortcuts: click a shortcut, press the new keys, and it is
+saved at once. If the keys are already used, Kaze asks before taking them. Keys with no Ctrl, Alt or
+Cmd are refused. A plain Ctrl+letter works but warns you, because the shell loses it. You can reset one
+row or all of them. The same changes can be made by hand under `[keys]` in `config.toml`. Writing
+`none` leaves an action without a shortcut (it is still in the palette). Settings always keeps one,
+so it cannot be set to `none`.
+
 Closing the final session keeps Kaze open. Start again with **New session**, the title bar
 button or your configured shortcut. Settings and Workspaces stay available. Exiting the final
 plain shell shows the same empty state; stopped workspace members keep their output.
@@ -789,7 +796,7 @@ error makes kaze use all defaults.
 | `sidebar` | Show the session sidebar (the toggle saves it here) | `true` |
 | `sidebar_launcher` | Expand the sidebar branch launcher | `true` |
 | `sidebar_launcher_agent` | Last launcher choice: `claude`, `codex`, `shell` | `"claude"` |
-| `[keys]` | `new_tab`, `new_branch_session`, `close_tab`, `next_tab`, `prev_tab`, `copy`, `paste`, `find`, `toggle_sidebar`, `next_waiting`, `palette`, `agents_board`, `open_settings` (an old `scratch_shell` line is ignored with a warning) | the shortcuts above |
+| `[keys]` | `new_tab`, `new_branch_session`, `close_tab`, `next_tab`, `prev_tab`, `copy`, `paste`, `find`, `toggle_sidebar`, `next_waiting`, `palette`, `agents_board`, `open_settings` (an old `scratch_shell` line is ignored with a warning) | the shortcuts above; `none` removes one |
 | `font_family` | **Not supported yet.** Setting it only adds a warning; kaze always uses its bundled font. | |
 
 Shortcuts are written like `"ctrl+shift+t"`. Modifiers: `ctrl`, `shift`, `alt` (or `option`),
@@ -1038,6 +1045,7 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 Done:
 
+- Editable shortcuts: change any of them in Settings > Shortcuts, or write `none` to drop one (built on `feat/shortcuts-edit`, ships in 0.31 with the palette redesign).
 - Find in the terminal and the docked tabs (#155): Ctrl+Shift+F or Cmd+F, every match marked, on the whole scrollback (built on `feat/find`, release next).
 - 0.30: find in the terminal and docked tabs, Ctrl+Shift+F / Cmd+F (#155, PR #156).
 - 0.29: the battery in the status bar on macOS (#139, PR #158); a compact About page built around the refreshed logo (PR #160).
