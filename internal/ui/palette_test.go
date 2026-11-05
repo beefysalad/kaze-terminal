@@ -170,6 +170,18 @@ func TestPaletteInkReadableInEveryTheme(t *testing.T) {
 		need("done pill", k.pillDoneFG, k.pillDoneBG, 4.5)
 		need("browse tile", k.tileFG, k.tileBG, 4.5)
 		need("selection bar", k.selBar, k.sel, 3)
+		// A session row's state mark on the selected fill, as stateDot and
+		// runningMark draw it: the needs, done and resting dots and the running
+		// core. The running ring (the approved 55% accent) is a halo around the
+		// core and stays under 3:1 even on the plain background, so it is left out.
+		need("needs dot on sel", c.th.Needs, k.sel, 3)
+		need("done dot on sel", c.th.Done, k.sel, 3)
+		need("resting dot on sel", c.th.Muted, k.sel, 3)
+		core := c.th.ToastGo
+		if core == c.th.Accent {
+			core = mix(c.th.Accent, c.th.ActiveFG, 0.2)
+		}
+		need("running core on sel", core, k.sel, 3)
 		for i := range k.plugins {
 			need(fmt.Sprintf("plugin tile %d", i), k.plugins[i], k.bg, 3)
 			need(fmt.Sprintf("plugin initial %d", i), k.pluginInk[i], k.plugins[i], 4.5)
