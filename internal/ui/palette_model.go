@@ -1,9 +1,13 @@
 package ui
 
 import (
+	"cmp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/beefysalad/kaze-terminal/internal/skills"
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
@@ -224,4 +228,128 @@ func (r *recentPrompts) add(p string) {
 		}
 	}
 	r.list = out
+}
+
+const (
+	palRecentMax = 3 // recent skills shown
+	palFoldAt    = 4 // skills shown per folded plugin group
+)
+
+const (
+	palHeadYours   = "YOURS"
+	palHeadProject = "THIS PROJECT"
+	palHeadOther   = "OTHER"
+)
+
+// palGroup is one source of skills in the Skills scope.
+type palGroup struct {
+	Head   string         // drawn header: "YOURS", "THIS PROJECT", "DEVBOX", "OTHER"
+	Plugin string         // plugin groups only: "devbox"; "" for Yours, This project, Other
+	Skills []skills.Skill // sorted by name, case-insensitively
+}
+
+// pluginOf is a plugin skill's plugin: the text before its first ":"; "" for
+// any other scope, or a plugin skill without one.
+func pluginOf(s skills.Skill) string {
+	if s.Scope != skills.Plugin {
+		return ""
+	}
+	if i := strings.IndexByte(s.Name, ':'); i > 0 {
+		return s.Name[:i]
+	}
+	return ""
+}
+
+// groupRank orders the groups: Yours, This project, plugins, Other.
+func groupRank(s skills.Skill) int {
+	switch s.Scope {
+	case skills.User:
+		return 0
+	case skills.Project:
+		return 1
+	case skills.Plugin:
+		if pluginOf(s) != "" {
+			return 2
+		}
+	}
+	return 3
+}
+
+// foldCompare compares case-insensitively without allocating.
+func foldCompare(a, b string) int {
+	for a != "" && b != "" {
+		ra, na := utf8.DecodeRuneInString(a)
+		rb, nb := utf8.DecodeRuneInString(b)
+		la, lb := unicode.ToLower(ra), unicode.ToLower(rb)
+		if la != lb {
+			return cmp.Compare(la, lb)
+		}
+		a, b = a[na:], b[nb:]
+	}
+	return cmp.Compare(len(a), len(b))
+}
+
+// groupSkills splits list by where each skill comes from: Yours, This project,
+// one group per plugin A to Z (case-insensitively; two spellings are two
+// plugins), then Other. Empty groups are left out. The groups share one
+// sorted copy of list.
+func groupSkills(list []skills.Skill) []palGroup {
+	if len(list) == 0 {
+		return nil
+	}
+	sorted := slices.Clone(list)
+	slices.SortStableFunc(sorted, func(a, b skills.Skill) int {
+		if c := cmp.Compare(groupRank(a), groupRank(b)); c != 0 {
+			return c
+		}
+		pa, pb := pluginOf(a), pluginOf(b)
+		if c := foldCompare(pa, pb); c != 0 {
+			return c
+		}
+		if c := strings.Compare(pa, pb); c != 0 {
+			return c
+		}
+		return foldCompare(a.Name, b.Name)
+	})
+	var out []palGroup
+	for start := 0; start < len(sorted); {
+		rank, plugin := groupRank(sorted[start]), pluginOf(sorted[start])
+		end := start + 1
+		for end < len(sorted) && groupRank(sorted[end]) == rank && pluginOf(sorted[end]) == plugin {
+			end++
+		}
+		g := palGroup{Plugin: plugin, Skills: sorted[start:end:end]}
+		switch rank {
+		case 0:
+			g.Head = palHeadYours
+		case 1:
+			g.Head = palHeadProject
+		case 2:
+			g.Head = strings.ToUpper(plugin)
+		default:
+			g.Head = palHeadOther
+		}
+		out = append(out, g)
+		start = end
+	}
+	return out
+}
+
+// recentSkills are the recent prompts still in list, most recent first, at
+// most palRecentMax.
+func recentSkills(list []skills.Skill, recent []string) []skills.Skill {
+	var out []skills.Skill
+	for _, p := range recent {
+		if len(out) == palRecentMax {
+			break
+		}
+		name := strings.TrimPrefix(p, "/")
+		for _, s := range list {
+			if s.Name == name {
+				out = append(out, s)
+				break
+			}
+		}
+	}
+	return out
 }

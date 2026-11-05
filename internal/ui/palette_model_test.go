@@ -200,3 +200,127 @@ func TestSessionRowsGroupsThenLoose(t *testing.T) {
 		t.Fatalf("got %v", ids)
 	}
 }
+
+func groupHeads(gs []palGroup) []string {
+	var out []string
+	for _, g := range gs {
+		out = append(out, g.Head)
+	}
+	return out
+}
+
+func skillNames(list []skills.Skill) []string {
+	var out []string
+	for _, s := range list {
+		out = append(out, s.Name)
+	}
+	return out
+}
+
+func TestGroupSkillsOrder(t *testing.T) {
+	gs := groupSkills([]skills.Skill{
+		{Name: "superpowers:b", Scope: skills.Plugin},
+		{Name: "zeta", Scope: skills.User},
+		{Name: "devbox:run", Scope: skills.Plugin},
+		{Name: "local", Scope: skills.Project},
+		{Name: "Devbox:kit", Scope: skills.Plugin},
+		{Name: "alpha", Scope: skills.User},
+		{Name: "devbox:dash", Scope: skills.Plugin},
+	})
+	// Ruling 4: "Devbox" and "devbox" are two plugins, ordered next to each other.
+	want := []string{"YOURS", "THIS PROJECT", "DEVBOX", "DEVBOX", "SUPERPOWERS"}
+	if fmt.Sprint(groupHeads(gs)) != fmt.Sprint(want) {
+		t.Fatalf("heads %v, want %v", groupHeads(gs), want)
+	}
+	if got := skillNames(gs[0].Skills); fmt.Sprint(got) != "[alpha zeta]" || gs[0].Plugin != "" {
+		t.Fatalf("yours %v plugin %q", got, gs[0].Plugin)
+	}
+	if gs[1].Plugin != "" || fmt.Sprint(skillNames(gs[1].Skills)) != "[local]" {
+		t.Fatalf("project %+v", gs[1])
+	}
+	if gs[2].Plugin != "Devbox" || fmt.Sprint(skillNames(gs[2].Skills)) != "[Devbox:kit]" {
+		t.Fatalf("Devbox group %+v", gs[2])
+	}
+	if gs[3].Plugin != "devbox" || fmt.Sprint(skillNames(gs[3].Skills)) != "[devbox:dash devbox:run]" {
+		t.Fatalf("devbox group %+v", gs[3])
+	}
+	if gs[4].Plugin != "superpowers" {
+		t.Fatalf("superpowers group %+v", gs[4])
+	}
+}
+
+func TestGroupSkillsOddNames(t *testing.T) {
+	gs := groupSkills([]skills.Skill{
+		{Name: "orphan", Scope: skills.Plugin},
+		{Name: "team:review", Scope: skills.User},
+		{Name: "a:b:c", Scope: skills.Plugin},
+		{Name: ":x", Scope: skills.Plugin},
+	})
+	if fmt.Sprint(groupHeads(gs)) != "[YOURS A OTHER]" {
+		t.Fatalf("heads %v", groupHeads(gs))
+	}
+	if fmt.Sprint(skillNames(gs[0].Skills)) != "[team:review]" {
+		t.Fatalf("yours %v", skillNames(gs[0].Skills))
+	}
+	if gs[1].Plugin != "a" || fmt.Sprint(skillNames(gs[1].Skills)) != "[a:b:c]" {
+		t.Fatalf("a %+v", gs[1])
+	}
+	if gs[2].Plugin != "" || fmt.Sprint(skillNames(gs[2].Skills)) != "[:x orphan]" {
+		t.Fatalf("other %+v", gs[2])
+	}
+	if pluginOf(skills.Skill{Name: "team:review", Scope: skills.User}) != "" || pluginOf(skills.Skill{Name: "a:b:c", Scope: skills.Plugin}) != "a" {
+		t.Fatal("pluginOf")
+	}
+}
+
+func TestGroupSkillsNoProject(t *testing.T) {
+	gs := groupSkills([]skills.Skill{{Name: "x", Scope: skills.User}, {Name: "p:y", Scope: skills.Plugin}})
+	if fmt.Sprint(groupHeads(gs)) != "[YOURS P]" {
+		t.Fatalf("heads %v", groupHeads(gs))
+	}
+	if gs := groupSkills(nil); gs != nil {
+		t.Fatalf("nil list: %v", gs)
+	}
+}
+
+func TestRecentSkillsCappedAndPresent(t *testing.T) {
+	list := []skills.Skill{{Name: "a"}, {Name: "b"}, {Name: "c"}, {Name: "d"}}
+	got := recentSkills(list, []string{"/gone", "/c", "/a", "/b", "/d"})
+	if fmt.Sprint(skillNames(got)) != "[c a b]" {
+		t.Fatalf("recent %v", skillNames(got))
+	}
+	if palRecentMax != 3 || palFoldAt != 4 {
+		t.Fatal("constants")
+	}
+}
+
+func TestGroupSkillsAllocsBounded(t *testing.T) {
+	var list []skills.Skill
+	for i := range skills.MaxSkills {
+		s := skills.Skill{Name: fmt.Sprintf("p%d:skill-%04d", i%10, (i*7919)%skills.MaxSkills), Scope: skills.Plugin}
+		switch i % 5 {
+		case 0:
+			s.Name, s.Scope = fmt.Sprintf("Mine-%04d", i), skills.User
+		case 1:
+			s.Name, s.Scope = fmt.Sprintf("proj-%04d", i), skills.Project
+		}
+		list = append(list, s)
+	}
+	gs := groupSkills(list)
+	n := 0
+	for _, g := range gs {
+		n += len(g.Skills)
+		for i := 1; i < len(g.Skills); i++ {
+			if strings.ToLower(g.Skills[i-1].Name) > strings.ToLower(g.Skills[i].Name) {
+				t.Fatalf("%s not sorted at %d", g.Head, i)
+			}
+		}
+	}
+	if n != len(list) {
+		t.Fatalf("%d skills grouped of %d", n, len(list))
+	}
+	allocs := testing.AllocsPerRun(5, func() { groupSkills(list) })
+	if limit := float64(len(gs) + 8); allocs > limit {
+		t.Fatalf("%.0f allocs for %d groups, want at most %.0f", allocs, len(gs), limit)
+	}
+}
