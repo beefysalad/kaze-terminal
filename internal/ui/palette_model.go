@@ -252,10 +252,8 @@ func buildSkillScope(in palInput, q string) []palItem {
 		}
 		byTier(matches)
 		count := strconv.Itoa(len(matches))
-		key, folds := g.Plugin, g.Plugin != "" || g.Head == palHeadOther
-		if g.Head == palHeadOther {
-			key = palOtherKey
-		}
+		key := palGroupKey(g)
+		folds := key != "" // plugin groups and Other; Yours and This project never fold
 		shown := len(matches)
 		if q == "" && folds && !in.Open[key] {
 			shown = min(shown, palFoldAt)
@@ -482,4 +480,13 @@ func recentSkills(list []skills.Skill, recent []string) []skills.Skill {
 		}
 	}
 	return out
+}
+
+// palGroupKey names a group in palInput.Open and in its "more" row: the
+// plugin, or "Other"; "" for Yours and This project, which never fold.
+func palGroupKey(g palGroup) string {
+	if g.Head == palHeadOther {
+		return palOtherKey
+	}
+	return g.Plugin
 }
