@@ -1,7 +1,8 @@
-## What’s new in Kaze 0.30
+## What’s new in Kaze 0.31
 
-- **Find in the terminal:** press Ctrl+Shift+F on Windows or Cmd+F on a Mac to search the whole scrollback of Claude’s terminal or a server tab in the panel. Every match is highlighted and marked on the right edge. Enter and Shift+Enter step through them, Aa matches case, and Esc closes the bar and puts the view back where it was.
-- **Built to stay out of the way:** new output updates the count without moving what you’re reading, a click in the terminal gives you the keyboard back, plain Ctrl+F still goes to the shell, and nothing runs while the bar is closed.
+- **A cleaner palette:** it opens on what’s waiting on you, your sessions and the 3 skills you used last, with one row to browse the rest. Servers are no longer listed (they’re in the status bar and sidebar), and Kaze actions show up as you type their name.
+- **Skills behind /:** press / or Tab, or click Skills, to see every skill grouped as Yours, This project and one group per plugin. Type after the / to search by name or by what a skill does.
+- **Edit your shortcuts:** in Settings, Shortcuts, click a shortcut and press the new keys. It works at once. Kaze asks before taking keys another action uses, warns when a key belongs to your shell, and each row can be reset.
 
 ## Download
 
