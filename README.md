@@ -156,6 +156,7 @@ and flags, and colour emoji on Linux.
 | Show or hide the agents board | Ctrl+Shift+A | Cmd+Shift+A |
 | Copy the selection | Ctrl+C (with a selection) or Ctrl+Shift+C | Cmd+C |
 | Paste | Ctrl+V or Ctrl+Shift+V | Cmd+V |
+| Find in the terminal or the docked tab with the keyboard | Ctrl+Shift+F | Cmd+F |
 | Open settings | Ctrl+, | Cmd+, |
 | New line in Claude Code (without sending) | Shift+Enter or Alt+Enter | Shift+Enter or Option+Enter |
 
@@ -179,8 +180,8 @@ pastes, so it can no longer send a literal Ctrl+V to a program (such as Vim's bl
 the clipboard holds both text and an image, the text is pasted. On macOS, plain Ctrl+C always goes to the shell. Shift+Enter sends the same sequence as
 Alt+Enter (Option+Enter on macOS), adding a new line in Claude Code while plain Enter submits.
 Other terminal programs handle that sequence according to their own keybindings. The session, copy,
-paste, sidebar, next-waiting, palette, agents board and settings shortcuts can be changed under `[keys]` in the
-config. Settings, Shortcuts lists every shortcut as this machine has it.
+paste, find, sidebar, next-waiting, palette, agents board and settings shortcuts can be changed under `[keys]` in the
+config. Plain Ctrl+F on Windows still goes to the shell (and to programs such as Vim or less). Settings, Shortcuts lists every shortcut as this machine has it.
 
 ## Mouse
 
@@ -197,6 +198,30 @@ config. Settings, Shortcuts lists every shortcut as this machine has it.
   opens them inside kaze.
 - **Wheel:** scrolls back through history. Typing jumps back to the bottom. Full-screen apps
   that don't use the mouse have no history to scroll.
+
+## Find
+
+Press **Ctrl+Shift+F** (**Cmd+F** on macOS) to search the terminal that has the keyboard: the
+session's terminal, or a workspace member's tab in the panel. A small bar opens at the top right
+of that pane. In a full-screen program (vim, htop) it searches the program's screen.
+
+- **Type** to search. Every match is tinted in the text, the current one stronger, and the bar
+  says "3 of 12". It searches the whole scrollback, not only what you see. It ignores case
+  unless you turn on **Aa**. There is no regex.
+- **Enter** or **Down** jumps to the next match, **Shift+Enter** or **Up** to the previous one,
+  and both wrap around. The buttons in the bar do the same.
+- **A match can wrap.** A word the terminal split across two rows is still found.
+- **Marks on the right edge** show where every match sits in the whole scrollback, with the
+  current one brighter and a faint band for the part you can see.
+- **New output** updates the count without moving the view. The view moves only when you change
+  the text or step to another match.
+- **Esc** closes the bar and puts the view back where it was. Opening it again keeps your last
+  text, already selected, so typing replaces it. Esc in the terminal itself still goes to the
+  shell.
+- **A click in the terminal** gives the keyboard back to the terminal and leaves the bar and the
+  highlights open. A click in the bar's field takes the keyboard again.
+- **Limits:** at most 1,000 matches are kept (the newest, nearest the live screen), and the count
+  then reads "N of 1000+". Find costs nothing while the bar is closed.
 
 ## The sidebar
 
@@ -764,7 +789,7 @@ error makes kaze use all defaults.
 | `sidebar` | Show the session sidebar (the toggle saves it here) | `true` |
 | `sidebar_launcher` | Expand the sidebar branch launcher | `true` |
 | `sidebar_launcher_agent` | Last launcher choice: `claude`, `codex`, `shell` | `"claude"` |
-| `[keys]` | `new_tab`, `new_branch_session`, `close_tab`, `next_tab`, `prev_tab`, `copy`, `paste`, `toggle_sidebar`, `next_waiting`, `palette`, `agents_board`, `open_settings` (an old `scratch_shell` line is ignored with a warning) | the shortcuts above |
+| `[keys]` | `new_tab`, `new_branch_session`, `close_tab`, `next_tab`, `prev_tab`, `copy`, `paste`, `find`, `toggle_sidebar`, `next_waiting`, `palette`, `agents_board`, `open_settings` (an old `scratch_shell` line is ignored with a warning) | the shortcuts above |
 | `font_family` | **Not supported yet.** Setting it only adds a warning; kaze always uses its bundled font. | |
 
 Shortcuts are written like `"ctrl+shift+t"`. Modifiers: `ctrl`, `shift`, `alt` (or `option`),
@@ -1013,6 +1038,7 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 Done:
 
+- Find in the terminal and the docked tabs (#155): Ctrl+Shift+F or Cmd+F, every match marked, on the whole scrollback (built on `feat/find`, release next).
 - 0.29: the battery in the status bar on macOS (#139, PR #158); a compact About page built around the refreshed logo (PR #160).
 - 0.28.2: a .md link Claude printed opens the file Claude wrote or read, wherever it lives (#143, PR #153).
 - 0.28.1: the project moved to beefysalad/kaze-terminal; updates and the website follow it (PR #151).
@@ -1044,6 +1070,7 @@ Done:
 
 Next:
 
+- Find in the agent panel and the doc reader, and a regex option for find.
 - A redesign of the alert notification card (GitHub issue #9).
 - Emoji follow-ups: keep U+FE0F so `⚠️` draws as an emoji (and decide its width), then joined
   emoji sequences.

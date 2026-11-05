@@ -177,3 +177,11 @@ How they were made:
   the board, the palette and Settings, confirmed the workspace's commands, named the session rows,
   and saved the window to a PNG from inside the app. No global keyboard or mouse input was injected.
   No generated or retouched UI.
+
+## Find (#155)
+
+No existing screenshot changes: none shows the find bar. A find shot would be worth adding to the
+lander later: the `member` state of the find mockup (`docs/design/find-mockup.html`), the API
+member's tab in the panel with the bar open on "warn" and its matches marked. It needs a real run
+of the app like the other shots, so none is faked here. The development captures in
+`docs/audits/find/` are not for the lander.
