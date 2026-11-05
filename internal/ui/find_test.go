@@ -400,3 +400,16 @@ func TestFindKeysLeaveWhenPanelBodyClicked(t *testing.T) {
 		t.Fatalf("find kept the keyboard: keys %v focus %v", win.find.keys, win.focusTarget())
 	}
 }
+
+func TestFindFromSidebarFilterTakesKeyboard(t *testing.T) {
+	win, _, r, _, _, _, _ := memberWindow(t)
+	sideClick(win, r, win.side.hits.filter, pointer.ButtonPrimary)
+	twoFrames(t, win, r)
+	if !win.side.filtering {
+		t.Fatal("filter did not open")
+	}
+	findKey(t, win, r)
+	if win.side.filtering || win.focusTarget() != &win.find.ed {
+		t.Fatalf("filtering %v focus %v, want the find field", win.side.filtering, win.focusTarget())
+	}
+}
