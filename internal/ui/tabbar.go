@@ -40,12 +40,14 @@ type chrome struct {
 	th        theme.Chrome
 	ansi      [16]color.NRGBA // the terminal's ANSI colors, for workspace members
 
-	faces   []font.FontFace
-	ink     sideInk         // sideInk for inkFor and inkMag
-	inkFor  theme.Chrome    // the theme ink was worked out for
-	inkMag  color.NRGBA     // and its magenta
-	covered map[rune]bool   // rune -> some face has it
-	loaded  map[string]bool // system font files already added
+	faces     []font.FontFace
+	ink       sideInk           // sideInk for inkFor and inkMag
+	inkFor    theme.Chrome      // the theme ink was worked out for
+	inkMag    color.NRGBA       // and its magenta
+	palK      *palInk           // the palette's colours for th; nil until drawn
+	palBadges []image.Rectangle // the palette's badge rects, reused across frames
+	covered   map[rune]bool     // rune -> some face has it
+	loaded    map[string]bool   // system font files already added
 }
 
 func newChrome() *chrome {
@@ -83,6 +85,7 @@ func newChrome() *chrome {
 // setTheme switches the colors the next frame draws with.
 func (c *chrome) setTheme(t theme.Theme) {
 	c.th, c.ansi = t.UI, t.Term.ANSI
+	c.palK = nil
 }
 
 // fit makes s drawable: for each rune the bundled fonts lack, it adds the system font
