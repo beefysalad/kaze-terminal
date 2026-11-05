@@ -276,7 +276,7 @@ func (win *window) drawDockTabs(gtx layout.Context, d *dockDeck, r image.Rectang
 	// Buttons, right to left.
 	right := h.row.Max.X - dp(6)
 	button := func(label string) image.Rectangle {
-		call, sz := c.sans(gtx, label, 11.5, rc.muted, font.Medium)
+		call, sz := c.labelW(gtx, label, 11.5, rc.muted, font.Medium)
 		b := image.Rect(right-sz.X-dp(16), mid-dp(11), right, mid+dp(11))
 		place(ops, call, image.Pt(b.Min.X+dp(8), mid-sz.Y/2))
 		win.dock.texts = append(win.dock.texts, label)
@@ -401,7 +401,7 @@ func (win *window) drawDockAgent(gtx layout.Context, s *dockSession, a *subagent
 	}
 	right := h.header.Max.X - dp(6)
 	if a.State == subagents.Done {
-		call, sz := c.sans(gtx, "Copy report", 11, hc.muted, font.Medium)
+		call, sz := c.labelW(gtx, "Copy report", 11, hc.muted, font.Medium)
 		h.copy = image.Rect(right-sz.X-dp(16), h.header.Min.Y, right, h.header.Max.Y)
 		text(call, sz, h.copy.Min.X+dp(8), "Copy report")
 		right = h.copy.Min.X
@@ -424,9 +424,9 @@ func (win *window) drawDockAgent(gtx layout.Context, s *dockSession, a *subagent
 	if a.State == subagents.Waiting {
 		el, elCol = "waiting for you", hc.needs
 	}
-	eCall, eSize := c.sans(gtx, el, 11, elCol, font.Normal)
-	aCall, aSize := c.sans(gtx, "Activity", 11, hc.text, font.Medium)
-	rCall, rSize := c.sans(gtx, "Report", 11, hc.text, font.Medium)
+	eCall, eSize := c.labelW(gtx, el, 11, elCol, font.Normal)
+	aCall, aSize := c.labelW(gtx, "Activity", 11, hc.text, font.Medium)
+	rCall, rSize := c.labelW(gtx, "Report", 11, hc.text, font.Medium)
 	segW := aSize.X + rSize.X + dp(40)
 	room := max(right-dp(12)-segW-dp(12)-eSize.X-dp(8)-x, 0)
 	tCall, tSize := c.fitSide(gtx, a.Task, 11, room, hc.text)
@@ -497,7 +497,7 @@ func (win *window) drawPanelMarkdown(gtx layout.Context, l *docLayout, view imag
 // drawDockReport draws the Report tab.
 func (win *window) drawDockReport(gtx layout.Context, s *dockSession, a *subagents.Agent, inner image.Rectangle, bc dockPalette, h *dockHits, texts *[]string) {
 	if a.State != subagents.Done {
-		call, sz := win.ui.sans(gtx, "No report yet", 12, bc.muted, font.Normal)
+		call, sz := win.ui.labelW(gtx, "No report yet", 12, bc.muted, font.Normal)
 		place(gtx.Ops, call, inner.Min)
 		*texts = append(*texts, "No report yet")
 		_ = sz

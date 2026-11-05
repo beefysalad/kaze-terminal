@@ -122,7 +122,7 @@ func TestCrumbTitleNotCutWhenItFits(t *testing.T) {
 	win.mgr.SetActive(tab.ID)
 	win.drawBar(barContext(1200), 42)
 	c := win.crumb()
-	_, need := win.ui.sans(barContext(1200), c.Title, 12.5, win.ui.th.ActiveFG, font.SemiBold)
+	_, need := win.ui.labelW(barContext(1200), c.Title, 12.5, win.ui.th.ActiveFG, font.SemiBold)
 	if win.bar.Crumb.Dx() < need.X {
 		t.Fatalf("crumb %d px for %q, which needs %d", win.bar.Crumb.Dx(), c.Title, need.X)
 	}

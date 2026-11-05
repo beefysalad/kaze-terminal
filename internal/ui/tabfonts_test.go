@@ -147,15 +147,15 @@ func shapedNotdef(c *chrome, s string, f font.Font) bool {
 	return bad
 }
 
-// TestUIFontsNeverDrawBoxes covers #124: the title bar draws in Manrope at Medium and
+// TestUIFontsNeverDrawBoxes covers #124: the title bar draws at Medium and
 // SemiBold, where a rune only a fallback face has came out as an empty box.
 func TestUIFontsNeverDrawBoxes(t *testing.T) {
 	c := newChrome()
 	for _, r := range "◐◓⠂✳⏺⎇⌄日" {
 		s := c.fit(string(r) + " Epic")
 		for _, f := range []font.Font{
-			{Typeface: sansFace}, {Typeface: sansFace, Weight: font.Medium},
-			{Typeface: sansFace, Weight: font.SemiBold}, {Typeface: chromeFace},
+			{Typeface: chromeFace}, {Typeface: chromeFace, Weight: font.Medium},
+			{Typeface: chromeFace, Weight: font.SemiBold}, {Typeface: chromeFace, Weight: font.Bold},
 		} {
 			if shapedNotdef(c, s, f) {
 				t.Errorf("%q fitted to %q draws a missing-glyph box in %s weight %v", string(r), s, f.Typeface, f.Weight)

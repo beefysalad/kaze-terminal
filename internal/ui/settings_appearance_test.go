@@ -58,7 +58,7 @@ func TestAppearanceRows(t *testing.T) {
 	all := strings.Join(win.set.texts, "|")
 	for _, want := range []string{
 		"Theme", "Midnight", "Sumi", "Tide", "Washi", "Sakura",
-		"Font size", "JetBrains Mono, with Japanese and symbol fallback.", "14",
+		"Font size", "14",
 		"Line spacing", "Tight", "Normal", "Roomy",
 		"CURSOR", "Shape", "Block", "Bar", "Underline",
 		"Blinking cursor", "Off keeps idle CPU at zero",
@@ -66,6 +66,9 @@ func TestAppearanceRows(t *testing.T) {
 		if !slices.Contains(win.set.texts, want) {
 			t.Fatalf("page lacks %q: %s", want, all)
 		}
+	}
+	if !strings.Contains(strings.Join(win.set.texts, " "), "JetBrains Mono, with Japanese and symbol fallback.") {
+		t.Fatalf("page lacks the font line: %s", all)
 	}
 	if n := len(controlsOf(win, "theme")); n != 5 {
 		t.Fatalf("%d theme swatches, want 5", n)

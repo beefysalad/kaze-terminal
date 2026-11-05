@@ -658,7 +658,7 @@ type page struct {
 
 func (p *page) text(s string, size unit.Sp, col color.NRGBA) (op.CallOp, image.Point) {
 	p.st.texts = append(p.st.texts, s)
-	return p.c.sans(p.gtx, s, size, col, font.Normal)
+	return p.c.labelW(p.gtx, s, size, col, font.Normal)
 }
 
 // wrap breaks s into lines no wider than w, at spaces; a word wider than w gets its own line.
@@ -670,7 +670,7 @@ func (p *page) wrap(s string, size unit.Sp, w int) []string {
 		if cur != "" {
 			try = cur + " " + word
 		}
-		if _, sz := p.c.sans(p.gtx, try, size, p.col.dim, font.Normal); sz.X > w && cur != "" {
+		if _, sz := p.c.labelW(p.gtx, try, size, p.col.dim, font.Normal); sz.X > w && cur != "" {
 			lines = append(lines, cur)
 			try = word
 		}
@@ -908,7 +908,7 @@ func (p *page) row(r image.Rectangle, y int, row settingRow) int {
 		if w > 0 {
 			room -= w + 2*gap
 		}
-		if _, full := p.c.sans(gtx, row.hint, 12, col.muted, font.Normal); full.X > room && room > gtx.Dp(160) {
+		if _, full := p.c.labelW(gtx, row.hint, 12, col.muted, font.Normal); full.X > room && room > gtx.Dp(160) {
 			for _, l := range p.wrap(row.hint, 12, room) {
 				call, size := p.text(l, 12, col.muted)
 				extra = append(extra, text{call, size})

@@ -204,10 +204,10 @@ func (win *window) drawActMode(gtx layout.Context, s *dockSession, a *subagents.
 		return x + sz.X
 	}
 	x := h.mode.Min.X
-	lc, ls := c.sans(gtx, "ACTIVITY", 11, ink.meta, font.SemiBold)
+	lc, ls := c.labelW(gtx, "ACTIVITY", 11, ink.meta, font.SemiBold)
 	x = put(lc, ls, x, "ACTIVITY") + dp(10)
-	rCall, rSize := c.sans(gtx, "Readable", 12, ink.strong, font.Normal)
-	eCall, eSize := c.sans(gtx, "Every step", 12, ink.strong, font.Normal)
+	rCall, rSize := c.labelW(gtx, "Readable", 12, ink.strong, font.Normal)
+	eCall, eSize := c.labelW(gtx, "Every step", 12, ink.strong, font.Normal)
 	segW := rSize.X + eSize.X + dp(4) + 2*dp(20)
 	seg := image.Rect(h.mode.Max.X-segW, mid-dp(11), h.mode.Max.X, mid+dp(11))
 	cc, cs := c.fitSans(gtx, s.read.counts, 12, max(seg.Min.X-dp(10)-x, 0), ink.meta, font.Normal)
@@ -229,10 +229,10 @@ func (win *window) drawActMode(gtx layout.Context, s *dockSession, a *subagents.
 		rc, ec = offCol, ink.strong
 	}
 	if rc != ink.strong { // the colour changed: lay out again in it
-		rCall, rSize = c.sans(gtx, "Readable", 12, rc, font.Normal)
+		rCall, rSize = c.labelW(gtx, "Readable", 12, rc, font.Normal)
 	}
 	if ec != ink.strong {
-		eCall, eSize = c.sans(gtx, "Every step", 12, ec, font.Normal)
+		eCall, eSize = c.labelW(gtx, "Every step", 12, ec, font.Normal)
 	}
 	put(rCall, rSize, h.modeRead.Min.X+(h.modeRead.Dx()-rSize.X)/2, "Readable")
 	put(eCall, eSize, h.modeEvery.Min.X+(h.modeEvery.Dx()-eSize.X)/2, "Every step")
@@ -322,9 +322,9 @@ func (win *window) drawReadable(gtx layout.Context, s *dockSession, a *subagents
 			call, sz := c.fitSans(gtx, "⏸ "+it.text, 12, box.Dx()-dp(20), wc.needs, font.Normal)
 			put(call, sz, x0+dp(10), box.Min.Y+box.Dy()/2, "⏸ "+it.text)
 		case readFinished:
-			call, sz := c.sans(gtx, "✓ "+it.text+" · ", 12, bc.done, font.Normal)
+			call, sz := c.labelW(gtx, "✓ "+it.text+" · ", 12, bc.done, font.Normal)
 			x := put(call, sz, x0, rowMid, "✓ "+it.text+" · ")
-			call, sz = c.sans(gtx, "read the report", 12, bc.accent, font.Normal)
+			call, sz = c.labelW(gtx, "read the report", 12, bc.accent, font.Normal)
 			end := put(call, sz, x, rowMid, "read the report")
 			h.finish = image.Rect(x, top, end, y).Intersect(inner)
 		case readLive:
@@ -332,10 +332,10 @@ func (win *window) drawReadable(gtx layout.Context, s *dockSession, a *subagents
 			ring := image.Rect(x0+dp(3), rowMid-d/2, x0+dp(3)+d, rowMid-d/2+d)
 			paint.FillShape(ops, bc.accent, clip.Ellipse(ring).Op(ops))
 			paint.FillShape(ops, win.pal.BG, clip.Ellipse(ring.Inset(dp(2))).Op(ops))
-			call, sz := c.sans(gtx, it.text, 13, ink.step, font.Normal)
+			call, sz := c.labelW(gtx, it.text, 13, ink.step, font.Normal)
 			put(call, sz, x0+dp(readChevDp), rowMid, it.text)
 		case readDropped:
-			call, sz := c.sans(gtx, it.text, 12, ink.meta, font.Normal)
+			call, sz := c.labelW(gtx, it.text, 12, ink.meta, font.Normal)
 			put(call, sz, x0, rowMid, it.text)
 		}
 	}
@@ -353,7 +353,7 @@ func (win *window) drawReadStep(gtx layout.Context, s *dockSession, it *readItem
 		if open {
 			chev = "⌄"
 		}
-		call, sz := c.sans(gtx, chev, 12, ink.meta, font.Normal)
+		call, sz := c.labelW(gtx, chev, 12, ink.meta, font.Normal)
 		place(ops, call, image.Pt(row.Min.X+dp(3), mid-sz.Y/2))
 		if hit := row.Intersect(list); !hit.Empty() {
 			h.steps = append(h.steps, readHit{id: it.id, rect: hit})
@@ -506,7 +506,7 @@ func (win *window) drawEveryStep(gtx layout.Context, s *dockSession, a *subagent
 			if mono {
 				call, sz = c.fitSide(gtx, s, 11, room, col)
 			} else {
-				call, sz = c.sans(gtx, s, 11, col, font.Normal)
+				call, sz = c.labelW(gtx, s, 11, col, font.Normal)
 			}
 			place(ops, call, image.Pt(x, mid-sz.Y/2))
 			*texts = append(*texts, s)

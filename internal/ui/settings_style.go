@@ -28,7 +28,7 @@ func mix(a, b color.NRGBA, t float32) color.NRGBA {
 // textW is text at a weight.
 func (p *page) textW(s string, size unit.Sp, col color.NRGBA, w font.Weight) (op.CallOp, image.Point) {
 	p.st.texts = append(p.st.texts, s)
-	return p.c.sans(p.gtx, s, size, col, w)
+	return p.c.labelW(p.gtx, s, size, col, w)
 }
 
 // mono is text in the terminal's font, for keys, paths, commands and versions.

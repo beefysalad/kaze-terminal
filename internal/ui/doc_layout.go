@@ -302,7 +302,7 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 			}
 			l.headY = append(l.headY, y)
 			sz := spx(unit.Sp([]float32{24, 20, 17, 15, 14, 13}[max(0, min(b.Level-1, 5))]))
-			y = wrap(b.Spans, x0, width, y, gtx.Sp(sz)+dp(8), sz, font.Font{Typeface: sansFace, Weight: font.SemiBold}, roleHeading, false)
+			y = wrap(b.Spans, x0, width, y, gtx.Sp(sz)+dp(8), sz, font.Font{Typeface: chromeFace, Weight: font.SemiBold}, roleHeading, false)
 			if b.Level <= 2 {
 				l.boxes = append(l.boxes, docBox{image.Rect(x0, y, width, y+1), boxRule})
 				y += dp(4)
@@ -329,7 +329,7 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 			for c := range natural {
 				natural[c] = minW
 			}
-			face := font.Font{Typeface: sansFace}
+			face := font.Font{Typeface: chromeFace}
 			for _, row := range b.Table.Rows {
 				for c, cell := range row {
 					if c >= n {
@@ -419,16 +419,16 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 				} else {
 					mw := 0
 					for _, q := range b.Marker {
-						mw += win.runeAdv(gtx, font.Font{Typeface: sansFace}, spx(14), q).Ceil()
+						mw += win.runeAdv(gtx, font.Font{Typeface: chromeFace}, spx(14), q).Ceil()
 					}
-					l.lines = append(l.lines, docLine{y: y, h: dp(22), runs: []docRun{{text: b.Marker, x: max(0, x0-dp(8)-mw), w: mw, face: font.Font{Typeface: sansFace}, size: spx(14), role: roleMuted, link: -1}}})
+					l.lines = append(l.lines, docLine{y: y, h: dp(22), runs: []docRun{{text: b.Marker, x: max(0, x0-dp(8)-mw), w: mw, face: font.Font{Typeface: chromeFace}, size: spx(14), role: roleMuted, link: -1}}})
 				}
 			}
 			role := roleBody
 			if b.Quote > 0 {
 				role = roleMuted
 			}
-			y = wrap(b.Spans, x0, width, y, dp(22), spx(14), font.Font{Typeface: sansFace}, role, false)
+			y = wrap(b.Spans, x0, width, y, dp(22), spx(14), font.Font{Typeface: chromeFace}, role, false)
 			y += dp(10)
 		}
 		if b.Quote > 0 {

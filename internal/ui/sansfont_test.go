@@ -6,16 +6,30 @@ import (
 	"gioui.org/font"
 )
 
-func TestSettingsTextUsesTheSansFont(t *testing.T) {
+// JetBrains Mono is kaze's only UI font; Noto Sans JP is there only as the
+// fallback for Japanese characters JetBrains Mono does not have.
+func TestChromeBundlesOnlyJetBrainsMono(t *testing.T) {
+	c := newChrome()
+	for _, f := range c.faces {
+		if tf := string(f.Font.Typeface); tf != chromeFace && tf != "Noto Sans JP" {
+			t.Errorf("bundled UI face %q: JetBrains Mono is the only UI font", tf)
+		}
+	}
+}
+
+// Settings text, at every weight it uses, is drawn in JetBrains Mono: as wide
+// as the mono label, and Bold still reads heavier than Normal.
+func TestSettingsTextUsesJetBrainsMono(t *testing.T) {
 	c := newChrome()
 	gtx := pageContext(800, 600)
-	_, regular := c.sans(gtx, "Appearance Settings", 13, c.th.ActiveFG, font.Normal)
-	_, semi := c.sans(gtx, "Appearance Settings", 13, c.th.ActiveFG, font.SemiBold)
-	_, mono := c.label(gtx, "Appearance Settings", 13, c.th.ActiveFG)
-	if regular.X == 0 || semi.X <= regular.X {
-		t.Fatalf("regular %v, semibold %v: the weights are not distinct faces", regular, semi)
+	const s = "Appearance Settings"
+	_, mono := c.label(gtx, s, 13, c.th.ActiveFG)
+	for _, w := range []font.Weight{font.Normal, font.Medium, font.SemiBold, font.Bold} {
+		if _, sz := c.labelW(gtx, s, 13, c.th.ActiveFG, w); sz.X != mono.X {
+			t.Errorf("weight %v is %d wide, mono is %d: not drawn in JetBrains Mono", w, sz.X, mono.X)
+		}
 	}
-	if regular.X >= mono.X {
-		t.Fatalf("sans %v is not narrower than mono %v: the sans face did not load", regular, mono)
+	if chromeFace != "JetBrains Mono" {
+		t.Fatalf("chromeFace = %q", chromeFace)
 	}
 }

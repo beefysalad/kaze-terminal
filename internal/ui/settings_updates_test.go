@@ -64,7 +64,7 @@ func TestUpdateConfirmationWrapsInsideCard(t *testing.T) {
 				t.Fatalf("confirmation did not wrap completely: %q", lines)
 			}
 			for _, line := range lines {
-				_, size := p.c.sans(gtx, line, 13, p.col.title, font.Normal)
+				_, size := p.c.labelW(gtx, line, 13, p.col.title, font.Normal)
 				if size.X > width-80 {
 					t.Fatalf("line %q is %dpx wide in a %dpx card", line, size.X, width)
 				}

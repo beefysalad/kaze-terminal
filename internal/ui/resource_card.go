@@ -129,7 +129,7 @@ func (win *window) drawResourceCard(gtx layout.Context) {
 	p := &page{gtx: gtx, c: c, st: &settingsState{}, col: c.pageColors()}
 	footer := resourceFooter(s)
 	lines := p.wrap(footer, 10.5, inner)
-	_, fs := c.sans(gtx, "Ag", 10.5, muted, font.Normal)
+	_, fs := c.labelW(gtx, "Ag", 10.5, muted, font.Normal)
 	lineH := max(fs.Y, gtx.Dp(14))
 	rowH := gtx.Dp(22)
 	age := "Waiting for a reading"
@@ -169,14 +169,14 @@ func (win *window) drawResourceCard(gtx layout.Context) {
 	}
 	top := y
 	text := func(s string, size unit.Sp, col color.NRGBA, weight font.Weight) {
-		call, sz := c.sans(gtx, s, size, col, weight)
+		call, sz := c.labelW(gtx, s, size, col, weight)
 		place(ops, call, image.Pt(box.Min.X+pad, y))
 		y += sz.Y + gtx.Dp(6)
 	}
 	text("Kaze resource usage", 12.5, th.ToastFG, font.SemiBold)
 	cpu, ram := resourceValues(s.Total, s.Partial)
 	value := func(label, v string, meter bool) {
-		call, sz := c.sans(gtx, label, 11.5, muted, font.Medium)
+		call, sz := c.labelW(gtx, label, 11.5, muted, font.Medium)
 		place(ops, call, image.Pt(box.Min.X+pad, y))
 		vc, vs := c.label(gtx, v, 11, th.ToastFG)
 		place(ops, vc, image.Pt(box.Max.X-pad-vs.X, y))
@@ -203,7 +203,7 @@ func (win *window) drawResourceCard(gtx layout.Context) {
 		text  string
 		right int
 	}{{"CPU", cpuRight}, {"RAM", ramRight}} {
-		call, sz := c.sans(gtx, col.text, 9.5, muted, font.Bold)
+		call, sz := c.labelW(gtx, col.text, 9.5, muted, font.Bold)
 		place(ops, call, image.Pt(col.right-sz.X, top+headerH-rowH))
 	}
 	rowTop := top + headerH
@@ -239,14 +239,14 @@ func (win *window) drawResourceCard(gtx layout.Context) {
 		place(ops, bc, image.Pt(ramRight-bs.X, yy))
 		ac, as := c.label(gtx, a, 11, th.ToastFG)
 		place(ops, ac, image.Pt(cpuRight-as.X, yy))
-		nc, _ := c.sans(gtx, p.fitSans(name, 11.5, max(1, inner-gtx.Dp(156)), font.Medium), 11.5, th.ToastFG, font.Medium)
+		nc, _ := c.labelW(gtx, p.fitSans(name, 11.5, max(1, inner-gtx.Dp(156)), font.Medium), 11.5, th.ToastFG, font.Medium)
 		place(ops, nc, image.Pt(box.Min.X+pad, yy))
 	}
 	rowClip.Pop()
 	y = footerTop + gtx.Dp(8)
 	paint.FillShape(ops, th.ToastLine, clip.Rect(image.Rect(box.Min.X+pad, footerTop, box.Max.X-pad, footerTop+1)).Op())
 	for _, line := range lines {
-		fc, _ := c.sans(gtx, line, 10.5, muted, font.Normal)
+		fc, _ := c.labelW(gtx, line, 10.5, muted, font.Normal)
 		place(ops, fc, image.Pt(box.Min.X+pad, y))
 		y += lineH
 	}

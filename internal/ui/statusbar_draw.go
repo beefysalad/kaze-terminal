@@ -60,7 +60,7 @@ func (win *window) statusRect(g statusGroup) image.Rectangle {
 // statusText measures text the way the status bar draws it.
 func (c *chrome) statusMeasure(gtx layout.Context) func(string, bool) int {
 	return func(s string, mono bool) int {
-		face := font.Font{Typeface: sansFace, Weight: font.SemiBold}
+		face := font.Font{Typeface: chromeFace, Weight: font.SemiBold}
 		if mono {
 			face = font.Font{Typeface: chromeFace}
 		}
@@ -104,7 +104,7 @@ func (win *window) drawStatus(gtx layout.Context, y int, now time.Time) {
 		if mono {
 			call, sz = c.label(gtx, s, 11, col)
 		} else {
-			call, sz = c.sans(gtx, s, 11, col, font.SemiBold)
+			call, sz = c.labelW(gtx, s, 11, col, font.SemiBold)
 		}
 		place(ops, call, image.Pt(x, mid-sz.Y/2))
 		return x + sz.X
@@ -249,7 +249,7 @@ func (win *window) drawStatus(gtx layout.Context, y int, now time.Time) {
 
 // statusLabel draws a small uppercase label and returns its right edge.
 func (c *chrome) statusLabel(gtx layout.Context, x, mid int, s string) int {
-	call, sz := c.sans(gtx, s, 9.5, c.statusLabelColor(), font.Bold)
+	call, sz := c.labelW(gtx, s, 9.5, c.statusLabelColor(), font.Bold)
 	place(gtx.Ops, call, image.Pt(x, mid-sz.Y/2))
 	return x + sz.X
 }
@@ -366,12 +366,12 @@ func (win *window) drawUsageCard(gtx layout.Context) {
 	rr := clip.UniformRRect(box, rad)
 	paint.FillShape(ops, th.ToastLine, clip.Stroke{Path: rr.Path(ops), Width: float32(max(gtx.Dp(1), 1))}.Op())
 	y := box.Min.Y + pad
-	call, sz := c.sans(gtx, "Claude usage", 12.5, th.ToastFG, font.SemiBold)
+	call, sz := c.labelW(gtx, "Claude usage", 12.5, th.ToastFG, font.SemiBold)
 	place(ops, call, image.Pt(box.Min.X+pad, y))
 	y += sz.Y + gtx.Dp(8)
 	for _, u := range win.stat.m.Usage {
 		mid := y + lh/2
-		call, sz := c.sans(gtx, u.Name, 11.5, th.Muted, font.Medium)
+		call, sz := c.labelW(gtx, u.Name, 11.5, th.Muted, font.Medium)
 		place(ops, call, image.Pt(box.Min.X+pad, mid-sz.Y/2))
 		col := c.levelColor(u.Level)
 		mx := box.Min.X + pad + gtx.Dp(72)
@@ -384,14 +384,14 @@ func (win *window) drawUsageCard(gtx layout.Context) {
 		place(ops, pcall, image.Pt(box.Max.X-pad-psz.X, mid-psz.Y/2))
 		y += lh
 		if u.Reset != "" {
-			rc, rs := c.sans(gtx, u.Reset, 10.5, mix(th.Muted, th.ToastBG, 0.3), font.Normal)
+			rc, rs := c.labelW(gtx, u.Reset, 10.5, mix(th.Muted, th.ToastBG, 0.3), font.Normal)
 			place(ops, rc, image.Pt(mx, y-gtx.Dp(4)))
 			_ = rs
 		}
 		y += gtx.Dp(14)
 	}
 	paint.FillShape(ops, th.ToastLine, clip.Rect(image.Rect(box.Min.X+pad, y, box.Max.X-pad, y+1)).Op())
-	fc, fs := c.sans(gtx, "From Claude Code's status line.", 10.5, th.Muted, font.Normal)
+	fc, fs := c.labelW(gtx, "From Claude Code's status line.", 10.5, th.Muted, font.Normal)
 	place(ops, fc, image.Pt(box.Min.X+pad, y+(box.Max.Y-y-fs.Y)/2))
 }
 

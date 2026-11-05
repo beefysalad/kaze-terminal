@@ -121,7 +121,7 @@ func (win *window) drawDocOutline(gtx layout.Context, d *docView, r image.Rectan
 	h.outline = out
 	paint.FillShape(gtx.Ops, win.ui.th.Chrome, clip.Rect(out).Op())
 	paint.FillShape(gtx.Ops, win.ui.th.Border, clip.Rect(image.Rect(out.Max.X-1, out.Min.Y, out.Max.X, out.Max.Y)).Op())
-	call, _ := win.ui.sans(gtx, "Outline", 18, win.ui.th.ActiveFG, font.SemiBold)
+	call, _ := win.ui.labelW(gtx, "Outline", 18, win.ui.th.ActiveFG, font.SemiBold)
 	place(gtx.Ops, call, out.Min.Add(image.Pt(gtx.Dp(20), gtx.Dp(24))))
 	win.docs.texts = append(win.docs.texts, "Outline")
 	list := out

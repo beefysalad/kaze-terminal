@@ -42,7 +42,7 @@ type boardCardHit struct {
 
 // fitSans is sans cut with a trailing "…" to fit room px.
 func (c *chrome) fitSans(gtx layout.Context, s string, size unit.Sp, room int, col color.NRGBA, w font.Weight) (op.CallOp, image.Point) {
-	call, sz := c.sans(gtx, s, size, col, w)
+	call, sz := c.labelW(gtx, s, size, col, w)
 	for i := 0; i < 6 && sz.X > room && s != ""; i++ {
 		n := utf8.RuneCountInString(s)
 		if keep := min(n*max(room, 0)/max(sz.X, 1), n-1); keep < 2 {
@@ -50,10 +50,10 @@ func (c *chrome) fitSans(gtx layout.Context, s string, size unit.Sp, room int, c
 		} else {
 			s = cutRunes(s, keep)
 		}
-		call, sz = c.sans(gtx, s, size, col, w)
+		call, sz = c.labelW(gtx, s, size, col, w)
 	}
 	if sz.X > room {
-		call, sz = c.sans(gtx, "", size, col, w)
+		call, sz = c.labelW(gtx, "", size, col, w)
 		sz.X = 0
 	}
 	return call, sz
@@ -64,7 +64,7 @@ func (c *chrome) spaced(gtx layout.Context, s string, size unit.Sp, col color.NR
 	m := op.Record(gtx.Ops)
 	x, h := 0, 0
 	for _, r := range s {
-		call, sz := c.sans(gtx, string(r), size, col, font.SemiBold)
+		call, sz := c.labelW(gtx, string(r), size, col, font.SemiBold)
 		place(gtx.Ops, call, image.Pt(x, 0))
 		x += sz.X + track
 		h = max(h, sz.Y)
@@ -91,7 +91,7 @@ func (win *window) drawBoardList(gtx layout.Context, r image.Rectangle, v *board
 	x0, x1 := r.Min.X+dp(22), r.Max.X-dp(22)
 	y := r.Min.Y + dp(20)
 	rec("Agents")
-	tc, ts := c.sans(gtx, "Agents", 22, pg.text, font.SemiBold)
+	tc, ts := c.labelW(gtx, "Agents", 22, pg.text, font.SemiBold)
 	place(ops, tc, image.Pt(x0, y))
 	right := x1
 	if back, _ := win.sessionName(win.boardBack()); back != "" {
@@ -134,7 +134,7 @@ func (win *window) drawBoardList(gtx layout.Context, r image.Rectangle, v *board
 		}
 		rec(name)
 		s := &segs[i]
-		s.lab, s.labSz = c.sans(gtx, name, 12, lc, font.Medium)
+		s.lab, s.labSz = c.labelW(gtx, name, 12, lc, font.Medium)
 		s.cnt, s.cntSz = c.label(gtx, strconv.Itoa(v.counts[i]), 11, cc)
 		w += s.labSz.X + dp(6) + s.cntSz.X + 2*dp(10) + dp(2)
 	}
@@ -192,10 +192,10 @@ func (win *window) drawBoardList(gtx layout.Context, r image.Rectangle, v *board
 	if b.missing {
 		hint := "kaze needs three more Claude Code hooks to see subagents."
 		rec(hint)
-		hc, hs := c.sans(gtx, hint, 13, pg.needs, font.Medium)
+		hc, hs := c.labelW(gtx, hint, 13, pg.needs, font.Medium)
 		place(ops, hc, image.Pt(x0, y+dp(6)))
 		rec("Set up in Settings")
-		bc, bs := c.sans(gtx, "Set up in Settings", 12, pg.text, font.Medium)
+		bc, bs := c.labelW(gtx, "Set up in Settings", 12, pg.text, font.Medium)
 		bx := x0 + hs.X + dp(12)
 		b.setup = image.Rect(bx, y, bx+bs.X+2*dp(12), y+bs.Y+2*dp(6))
 		pill(gtx, b.setup, ink.raised, ink.line, dp(7))
@@ -217,7 +217,7 @@ func (win *window) drawBoardList(gtx layout.Context, r image.Rectangle, v *board
 		}
 		rec(head)
 		rec(line)
-		hc, hs := c.sans(gtx, head, 14, pg.text, font.SemiBold)
+		hc, hs := c.labelW(gtx, head, 14, pg.text, font.SemiBold)
 		lc, ls := c.fitSans(gtx, line, 13, body.Dx()-2*dp(24), pg.muted, font.Normal)
 		cy := body.Min.Y + dp(56)
 		place(ops, hc, image.Pt(body.Min.X+(body.Dx()-hs.X)/2, cy))
@@ -264,7 +264,7 @@ func (win *window) drawBoardCard(gtx layout.Context, x0, x1, y int, body image.R
 	if needs {
 		pal, fill, line, hover = ink.onNeeds, ink.needsBG, ink.needsLine, ink.needsRaised
 	}
-	_, lh := c.sans(gtx, "Ag", 12.5, pal.text, font.SemiBold)
+	_, lh := c.labelW(gtx, "Ag", 12.5, pal.text, font.SemiBold)
 	headH := dp(10) + lh.Y + dp(8)
 	meterH := 0
 	if !needs {
@@ -303,7 +303,7 @@ func (win *window) drawBoardCard(gtx layout.Context, x0, x1, y int, body image.R
 		hit.tab = g.tab
 		btn := func(label string) image.Rectangle {
 			b.texts = append(b.texts, label)
-			call, sz := c.sans(gtx, label, 11.5, pal.muted, font.Medium)
+			call, sz := c.labelW(gtx, label, 11.5, pal.muted, font.Medium)
 			r := image.Rect(hr-sz.X-2*dp(6), mid-sz.Y/2-dp(3), hr, mid+sz.Y/2+dp(3))
 			place(ops, call, image.Pt(r.Min.X+dp(6), mid-sz.Y/2))
 			hr = r.Min.X - dp(4)
@@ -370,14 +370,14 @@ func (win *window) drawBoardCard(gtx layout.Context, x0, x1, y int, body image.R
 		fx := x0 + dp(40)
 		if unfolded {
 			b.texts = append(b.texts, "Hide finished")
-			call, sz := c.sans(gtx, "Hide finished", 11.5, pal.muted, font.Normal)
+			call, sz := c.labelW(gtx, "Hide finished", 11.5, pal.muted, font.Normal)
 			place(ops, call, image.Pt(fx, fr.Min.Y+(fr.Dy()-sz.Y)/2))
 		} else {
 			rest := strconv.Itoa(g.done) + " finished ›"
 			b.texts = append(b.texts, "✓ "+rest)
-			kc, ks := c.sans(gtx, "✓", 11.5, pal.done, font.Normal)
+			kc, ks := c.labelW(gtx, "✓", 11.5, pal.done, font.Normal)
 			place(ops, kc, image.Pt(fx, fr.Min.Y+(fr.Dy()-ks.Y)/2))
-			call, sz := c.sans(gtx, rest, 11.5, pal.muted, font.Normal)
+			call, sz := c.labelW(gtx, rest, 11.5, pal.muted, font.Normal)
 			place(ops, call, image.Pt(fx+ks.X+dp(6), fr.Min.Y+(fr.Dy()-sz.Y)/2))
 		}
 		hit.fold = fr.Intersect(body)
@@ -436,7 +436,7 @@ func (win *window) drawBoardRow(gtx layout.Context, rr image.Rectangle, row boar
 	x += dp(84) + dp(10)
 
 	if row.state == subagents.Done && !row.session && (sel || is(b.hover)) {
-		xc, xs := c.sans(gtx, "×", 14, pal.muted, font.Normal)
+		xc, xs := c.labelW(gtx, "×", 14, pal.muted, font.Normal)
 		place(ops, xc, image.Pt(right-xs.X, mid-xs.Y/2))
 		close = image.Rect(right-xs.X-dp(8), rr.Min.Y, rr.Max.X, rr.Max.Y)
 		right -= xs.X + dp(10)

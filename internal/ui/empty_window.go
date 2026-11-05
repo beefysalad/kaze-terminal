@@ -118,7 +118,7 @@ func (win *window) drawEmpty(gtx layout.Context, r image.Rectangle) {
 		material := mat.Stop()
 		lg := gtx
 		lg.Constraints = layout.Constraints{Max: image.Pt(width, 1<<16)}
-		dims := widget.Label{Alignment: text.Middle}.Layout(lg, c.shaper, font.Font{Typeface: sansFace, Weight: weight}, size, c.fit(s), material)
+		dims := widget.Label{Alignment: text.Middle}.Layout(lg, c.shaper, font.Font{Typeface: chromeFace, Weight: weight}, size, c.fit(s), material)
 		return rec.Stop(), dims.Size
 	}
 	title, ts := label("No open sessions", 22, col.title, font.SemiBold)
@@ -129,7 +129,7 @@ func (win *window) drawEmpty(gtx layout.Context, r image.Rectangle) {
 	if win.empty.shortcut != "" {
 		shortcut, ss = label(win.empty.shortcut, 11.5, c.emptyMuted(), font.Medium)
 	}
-	buttonLabel, bs := c.sans(gtx, "New session", 12.5, col.title, font.SemiBold)
+	buttonLabel, bs := c.labelW(gtx, "New session", 12.5, col.title, font.SemiBold)
 	buttonSize := image.Pt(min(bs.X+gtx.Dp(32), width), gtx.Dp(36))
 	total := ts.Y + gtx.Dp(8) + hs.Y + gtx.Dp(24) + buttonSize.Y
 	if win.empty.shortcut != "" {
