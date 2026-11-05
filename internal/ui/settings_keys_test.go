@@ -90,7 +90,12 @@ func TestReloadKeysTouchesNothingElse(t *testing.T) {
 
 func TestApplyKeysReturnsWarnings(t *testing.T) {
 	win := keysWindow(t, "")
-	warns := win.applyKeys(map[string]string{"find": "ctrl+shift+k"})
+	// Clash with the palette's default on this OS (Ctrl+Shift+K on Windows, Cmd+K on macOS).
+	pal, ok := shortcutText(defaultBindings(runtime.GOOS)["palette"])
+	if !ok {
+		t.Fatal("palette default has no text form")
+	}
+	warns := win.applyKeys(map[string]string{"find": pal})
 	if len(warns) != 1 || win.binds["find"] != defaultBindings(runtime.GOOS)["find"] {
 		t.Fatalf("warns %q find %v", warns, win.binds["find"])
 	}
