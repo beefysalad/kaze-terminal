@@ -10,7 +10,7 @@ keys without Ctrl, Alt or Cmd are refused, and a plain Ctrl+letter warns. Reset 
 Plan: `docs/superpowers/plans/2026-11-05-kaze-editable-shortcuts.md`; spec:
 `docs/superpowers/specs/2026-11-05-kaze-editable-shortcuts-design.md`. Next: release 0.31 (version,
 changelog and What's new are not done yet). The contrast minimums for the strip colours:
-TBD (filled after Task 8). Owner checks by hand: change Find to Ctrl+Alt+F and use it without a restart;
+Lowest contrast across the five themes: text 4.51:1, marks 3.02:1. Captures: `docs/audits/shortcuts/`. Owner checks by hand: change Find to Ctrl+Alt+F and use it without a restart;
 Replace a clash; the Ctrl+R warning; Reset all; the strips readable on Washi (the light theme); and on the
 Mac, Cmd keys recorded as `cmd`.
 
