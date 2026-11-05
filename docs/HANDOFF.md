@@ -10,7 +10,7 @@ finds Kaze actions and up to 3 skills. `/`, Tab or the switch opens the Skills v
 project, then one group per plugin (4 shown, "N more in ..." for the rest). Servers are no longer listed.
 Plan: `docs/superpowers/plans/2026-11-05-kaze-palette-redesign.md`; spec:
 `docs/superpowers/specs/2026-11-05-kaze-palette-redesign-design.md`; mockup: `docs/design/palette-mockup.html`. The allocation
-cost of a palette frame (three numbers, before and after Task 7): TBD (filled after Task 7). The lander's
+cost of a palette frame (still frame at 1000x700 on Windows, allocations per frame): empty field 281 before, 93 after; typed "re" 129 before, 115 after; "/" (Skills scope) 230 after, bounded by the old empty figure of 281 (the old palette had no "/" measure). The lander's
 `kaze-palette.png` needs retaking (see SCREENSHOTS.md). No "What's new", changelog or version yet.
 Rulings the owner may want to revisit (numbers are in the plan's Rulings): 5 (Browse row header), 6 ("Other"
 folds at 4), 7 (pills for done and shell; no " · /command" text), 9 (which actions get icons), 10 (clicking

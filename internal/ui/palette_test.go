@@ -157,6 +157,8 @@ func TestPaletteInkReadableInEveryTheme(t *testing.T) {
 		}
 		need("muted on foot", k.muted, k.foot, 4.5)
 		need("muted on switch", k.muted, k.switchBG, 4.5)
+		need("faint on switch", k.faint, k.switchBG, 4.5)
+		need("action icon on raised", k.muted, k.raised, 3)
 		need("text on raised", k.text, k.raised, 4.5)
 		need("go on raised", k.goInk, k.raised, 4.5)
 		need("chip", k.chipFG, k.chipBG, 4.5)

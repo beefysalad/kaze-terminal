@@ -20,6 +20,23 @@ type palInk struct {
 	plugins                                              [6]color.NRGBA // tile colours: ansi 1..6, readable on bg
 	pluginInk                                            [6]color.NRGBA // the initial on each
 	hairline                                             color.NRGBA    // the top line's bright middle
+	under                                                color.NRGBA    // the surface of the row being drawn
+	audit                                                *[]palPair     // a test sets it to collect what is drawn
+}
+
+// palPair is a colour the drawing used, the surface it sat on and the
+// contrast it needs (4.5 for text, 3 for marks).
+type palPair struct {
+	what   string
+	fg, bg color.NRGBA
+	min    float64
+}
+
+// note records a pair when a test is collecting them; otherwise it costs nothing.
+func (k *palInk) note(what string, fg, bg color.NRGBA, min float64) {
+	if k.audit != nil {
+		*k.audit = append(*k.audit, palPair{what, fg, bg, min})
+	}
 }
 
 // palInk is built once per theme: setTheme drops it.
@@ -61,7 +78,7 @@ func buildPalInk(th theme.Chrome, ansi [16]color.NRGBA) *palInk {
 	k.keyBG = k.raised
 	k.text = readableOn(th.ToastFG, k.sel, bg, k.raised)
 	k.muted = readableOn(th.Muted, k.sel, bg, k.foot, k.switchBG)
-	k.faint = readableOn(mix(th.Muted, bg, 0.15), k.sel, bg)
+	k.faint = readableOn(mix(th.Muted, bg, 0.15), k.sel, bg, k.switchBG)
 	k.goInk = readableOn(th.ToastGo, k.sel, bg, k.raised)
 	k.badge = k.muted
 	k.chipFG = render.Readable(th.ToastGo, k.chipBG)

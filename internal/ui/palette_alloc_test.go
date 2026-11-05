@@ -75,11 +75,15 @@ func TestPaletteFrameAllocs(t *testing.T) {
 	empty := palStillAllocs(t, win, r, 1000, 700)
 	palType(t, win, r, "re")
 	typed := palStillAllocs(t, win, r, 1000, 700)
-	t.Logf("palette allocs per still frame: empty %.0f, typed \"re\" %.0f", empty, typed)
+	win.palette.ed.SetText("")
+	sideFrame(t, win, r)
+	palType(t, win, r, "/")
+	slash := palStillAllocs(t, win, r, 1000, 700)
+	t.Logf("palette allocs per still frame: empty %.0f, typed \"re\" %.0f, \"/\" (Skills) %.0f", empty, typed, slash)
 	if runtime.GOOS != "windows" {
 		return // Ruling 12: measured on Windows; other platforms only log
 	}
-	if empty > palAllocsEmpty || typed > palAllocsTyped {
-		t.Fatalf("empty %.0f (want <= %d), typed %.0f (want <= %d)", empty, palAllocsEmpty, typed, palAllocsTyped)
+	if empty > palAllocsEmpty || typed > palAllocsTyped || slash > palAllocsEmpty {
+		t.Fatalf("empty %.0f (want <= %d), typed %.0f (want <= %d), \"/\" %.0f (want <= %d)", empty, palAllocsEmpty, typed, palAllocsTyped, slash, palAllocsEmpty)
 	}
 }

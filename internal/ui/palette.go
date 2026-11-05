@@ -238,6 +238,7 @@ func (c *chrome) palField(gtx layout.Context, st palState, h *palHits, ink *palI
 	pad, gap := gtx.Dp(14), gtx.Dp(10)
 	mid := f.Min.Y + f.Dy()/2
 	g := gtx.Dp(16)
+	ink.note("search icon", ink.muted, ink.bg, 3)
 	c.icon(gtx, "search", image.Rect(f.Min.X+pad, mid-g/2, f.Min.X+pad+g, mid-g/2+g), ink.muted)
 	x := f.Min.X + pad + g + gap
 	right := f.Max.X - pad
@@ -257,14 +258,17 @@ func (c *chrome) palField(gtx layout.Context, st palState, h *palHits, ink *palI
 	room := h.editor.Dx()
 	switch {
 	case st.ed.Len() == 0:
+		ink.note("placeholder", ink.faint, ink.bg, 4.5)
 		call, _ := c.fitSideW(gtx, palPlaceSessions, fieldSp, room, ink.faint, font.Normal)
 		place(ops, call, h.editor.Min)
 	case st.skills && strings.TrimSpace(st.query) == "/":
+		ink.note("skills placeholder", ink.faint, ink.bg, 4.5)
 		_, qs := c.sans(gtx, st.query, fieldSp, ink.text, font.Normal)
 		at := qs.X + gtx.Dp(6)
 		call, _ := c.fitSideW(gtx, palPlaceSkills, fieldSp, room-at, ink.faint, font.Normal)
 		place(ops, call, h.editor.Min.Add(image.Pt(at, 0)))
 	}
+	ink.note("field text", ink.text, ink.bg, 4.5)
 	rec := op.Record(ops)
 	paint.ColorOp{Color: ink.text}.Add(ops)
 	fg := rec.Stop()
@@ -290,6 +294,7 @@ func (c *chrome) palChip(gtx layout.Context, x, right, mid int, h *palHits, ink 
 		return x
 	}
 	chip := image.Rect(x, mid-ch/2, x+cw, mid-ch/2+ch)
+	ink.note("chip", ink.chipFG, ink.chipBG, 4.5)
 	r, line := gtx.Dp(6), max(gtx.Dp(1), 1)
 	paint.FillShape(ops, ink.chipLine, clip.UniformRRect(chip, r).Op(ops))
 	paint.FillShape(ops, ink.chipBG, clip.UniformRRect(chip.Inset(line), max(r-line, 0)).Op(ops))
@@ -308,6 +313,13 @@ func (c *chrome) palSwitch(gtx layout.Context, skills bool, right, mid int, h *p
 	if skills {
 		sFG, kFG, keyFG = ink.muted, ink.text, ink.goInk
 	}
+	sessBG, skillBG := ink.raised, ink.switchBG // the chosen part is raised
+	if skills {
+		sessBG, skillBG = skillBG, sessBG
+	}
+	ink.note("switch Sessions", sFG, sessBG, 4.5)
+	ink.note("switch Skills", kFG, skillBG, 4.5)
+	ink.note("switch slash", keyFG, skillBG, 4.5)
 	sess, ssz := c.sans(gtx, "Sessions", 12, sFG, font.Medium)
 	sk, ksz := c.sans(gtx, "Skills", 12, kFG, font.Medium)
 	slash, lsz := c.label(gtx, "/", 11, keyFG)
@@ -344,6 +356,7 @@ func (c *chrome) palKeycapW(gtx layout.Context, s string, ink *palInk) int {
 // returns its width: mono 11 sp, a 1 dp line with a 2 dp bottom, 5 dp corners.
 func (c *chrome) palKeycap(gtx layout.Context, s string, x, mid int, ink *palInk) int {
 	ops := gtx.Ops
+	ink.note("keycap", ink.keyFG, ink.keyBG, 4.5)
 	call, sz := c.label(gtx, s, 11, ink.keyFG)
 	line := max(gtx.Dp(1), 1)
 	kh := gtx.Dp(17) + 3*line
@@ -378,6 +391,7 @@ func (c *chrome) palFootHint(gtx layout.Context, k palFootKeys, x, mid int, ink 
 		}
 		x += c.palKeycap(gtx, s, x, mid, ink)
 	}
+	ink.note("footer word", ink.muted, ink.foot, 4.5)
 	call, ws := c.sans(gtx, k.word, 12, ink.muted, font.Normal)
 	place(gtx.Ops, call, image.Pt(x+gtx.Dp(6), mid-ws.Y/2))
 }
@@ -422,6 +436,8 @@ func (c *chrome) palEmpty(gtx layout.Context, st palState, h *palHits, r image.R
 		second = palEmptySkills
 	}
 	h.lines = []string{first, second}
+	ink.note("empty line", ink.text, ink.bg, 4.5)
+	ink.note("empty hint", ink.muted, ink.bg, 4.5)
 	room := r.Dx() - 2*gtx.Dp(10)
 	a, as := c.fitSideW(gtx, first, 14, room, ink.text, font.Normal)
 	b, bs := c.fitSideW(gtx, second, 13, room, ink.muted, font.Normal)
@@ -475,6 +491,7 @@ func (c *chrome) palHeader(gtx layout.Context, it palItem, r image.Rectangle, in
 	head, hs := c.sans(gtx, "Ag", 11, ink.faint, font.SemiBold)
 	base := r.Max.Y - gtx.Dp(5) // the text's bottom
 	mid := base - hs.Y/2
+	ink.note("header", ink.faint, ink.bg, 4.5)
 	if it.GroupCount != "" { // skill groups only (Ruling 8)
 		call, cs := c.fitSide(gtx, it.GroupCount, 11, max(right-x, 0)/3, ink.faint)
 		place(ops, call, image.Pt(right-cs.X, base-cs.Y))
@@ -486,6 +503,8 @@ func (c *chrome) palHeader(gtx layout.Context, it palItem, r image.Rectangle, in
 			tile := image.Rect(x, mid-ts/2, x+ts, mid-ts/2+ts)
 			i := palPluginColor(it.Plugin)
 			paint.FillShape(ops, ink.plugins[i], clip.UniformRRect(tile, gtx.Dp(4)).Op(ops))
+			ink.note("plugin tile", ink.plugins[i], ink.bg, 3)
+			ink.note("plugin initial", ink.pluginInk[i], ink.plugins[i], 4.5)
 			call, is := c.labelW(gtx, palInitial(it.Plugin), 9, ink.pluginInk[i], font.Bold)
 			place(ops, call, image.Pt(tile.Min.X+(ts-is.X)/2, tile.Min.Y+(ts-is.Y)/2))
 			h.tiles++
@@ -522,6 +541,10 @@ func (c *chrome) palRow(gtx layout.Context, it palItem, r image.Rectangle, selec
 		if bar := image.Rect(r.Min.X, r.Min.Y+bi, r.Min.X+max(gtx.Dp(2), 1), r.Max.Y-bi); bar.Dy() > 0 {
 			paint.FillShape(ops, ink.selBar, clip.UniformRRect(bar, gtx.Dp(1)).Op(ops))
 		}
+	}
+	ink.under = ink.bg
+	if selected {
+		ink.under = ink.sel
 	}
 	pad := gtx.Dp(10)
 	in := image.Rect(r.Min.X+pad, r.Min.Y, r.Max.X-pad, r.Max.Y)
@@ -575,6 +598,7 @@ func (c *chrome) palSessionRow(gtx layout.Context, it palItem, in image.Rectangl
 	x += dot + gtx.Dp(10)
 
 	if fg, bg, ok := ink.palPill(it.State); ok {
+		ink.note("pill "+it.State, fg, bg, 4.5)
 		call, ps := c.sans(gtx, it.State, 11, fg, font.SemiBold)
 		pw, ph := ps.X+2*gtx.Dp(8), max(gtx.Dp(20), ps.Y)
 		if right-pw >= x+gtx.Dp(40) {
@@ -586,6 +610,7 @@ func (c *chrome) palSessionRow(gtx layout.Context, it palItem, in image.Rectangl
 		}
 	}
 	if selected {
+		ink.note("go to session", ink.faint, ink.under, 4.5)
 		call, gs := c.sans(gtx, "go to session ↵", 12, ink.faint, font.Normal)
 		if right-gs.X >= x+gtx.Dp(60) {
 			place(ops, call, image.Pt(right-gs.X, mid-gs.Y/2))
@@ -599,6 +624,7 @@ func (c *chrome) palSessionRow(gtx layout.Context, it palItem, in image.Rectangl
 	var badge op.CallOp
 	var bs image.Point
 	if it.Agent != "" {
+		ink.note("agent badge", ink.badge, ink.under, 4.5)
 		badge, bs = c.label(gtx, it.Agent, 11, ink.badge)
 		bw = bs.X + 2*gtx.Dp(6)
 		if right-bw-gtx.Dp(10) < x+gtx.Dp(24) {
@@ -609,6 +635,7 @@ func (c *chrome) palSessionRow(gtx layout.Context, it palItem, in image.Rectangl
 	if bw > 0 {
 		room -= bw + gtx.Dp(10)
 	}
+	ink.note("session title", ink.text, ink.under, 4.5)
 	call, ts := c.fitSideW(gtx, it.Name, 13.5, max(room, 0), ink.text, font.Normal)
 	place(ops, call, image.Pt(x, mid-ts.Y/2))
 	if bw > 0 {
@@ -634,12 +661,14 @@ func (c *chrome) palSkillRow(gtx layout.Context, it palItem, in image.Rectangle,
 	mid := in.Min.Y + in.Dy()/2
 	x, right := in.Min.X, in.Max.X
 	gap := gtx.Dp(16)
+	ink.note("skill name", ink.goInk, ink.under, 4.5)
 	_, nsz, name := c.fitSideText(gtx, it.Name, 13.5, right-x, ink.goInk, font.Normal)
 	if it.Detail != "" {
 		room := min(in.Dx()*56/100, right-x-nsz.X-gap)
 		if floor := in.Dx() * 30 / 100; room < floor {
 			room = min(floor, in.Dx()*56/100)
 		}
+		ink.note("skill description", ink.muted, ink.under, 4.5)
 		call, ds := c.fitSideW(gtx, it.Detail, 12.5, max(room, 0), ink.muted, font.Normal)
 		if ds.X > 0 {
 			place(ops, call, image.Pt(right-ds.X, mid-ds.Y/2))
@@ -654,6 +683,7 @@ func (c *chrome) palSkillRow(gtx layout.Context, it palItem, in image.Rectangle,
 		dim = len(name) // the cut fell inside the prefix
 	}
 	if dim > 0 {
+		ink.note("skill prefix", ink.faint, ink.under, 4.5)
 		call, ps := c.label(gtx, name[:dim], 13.5, ink.faint)
 		place(ops, call, image.Pt(x, mid-ps.Y/2))
 		x += ps.X
@@ -691,6 +721,7 @@ func (c *chrome) palActionRow(gtx layout.Context, it palItem, in image.Rectangle
 	}
 	if it.Icon != "" {
 		tile := c.palTile(gtx, x, mid, ink.raised, ink.line)
+		ink.note("action icon", ink.muted, ink.raised, 3)
 		is := gtx.Dp(14)
 		c.icon(gtx, it.Icon, image.Rect(tile.Min.X+(ts-is)/2, tile.Min.Y+(ts-is)/2, tile.Min.X+(ts-is)/2+is, tile.Min.Y+(ts-is)/2+is), ink.muted)
 	}
@@ -717,6 +748,7 @@ func (c *chrome) palActionRow(gtx layout.Context, it palItem, in image.Rectangle
 			right -= kw + gtx.Dp(12)
 		}
 	}
+	ink.note("action name", ink.text, ink.under, 4.5)
 	call, ns := c.fitSideW(gtx, it.Name, 13.5, max(right-x, 0), ink.text, font.Normal)
 	place(ops, call, image.Pt(x, mid-ns.Y/2))
 }
@@ -738,6 +770,7 @@ func (c *chrome) palBrowseRow(gtx layout.Context, it palItem, in image.Rectangle
 	if it.Kind == palBrowse {
 		glyph = "/"
 	}
+	ink.note("browse tile", ink.tileFG, ink.tileBG, 4.5)
 	call, gs := c.labelW(gtx, glyph, 12, ink.tileFG, font.Bold)
 	place(ops, call, image.Pt(tile.Min.X+(ts-gs.X)/2, tile.Min.Y+(ts-gs.Y)/2))
 	x += ts + gtx.Dp(10)
@@ -745,9 +778,11 @@ func (c *chrome) palBrowseRow(gtx layout.Context, it palItem, in image.Rectangle
 	if it.Kind == palBrowse && strings.HasPrefix(it.Name, palBrowsePrefix) {
 		lead, count = palBrowsePrefix, it.Name[len(palBrowsePrefix):]
 	}
+	ink.note("browse text", ink.muted, ink.under, 4.5)
 	call, ls := c.fitSideW(gtx, lead, 13.5, max(right-x, 0), ink.muted, font.Normal)
 	place(ops, call, image.Pt(x, mid-ls.Y/2))
 	if count != "" {
+		ink.note("browse count", ink.goInk, ink.under, 4.5)
 		call, cs := c.fitSideW(gtx, count, 13.5, max(right-x-ls.X, 0), ink.goInk, font.SemiBold)
 		place(ops, call, image.Pt(x+ls.X, mid-cs.Y/2))
 	}
