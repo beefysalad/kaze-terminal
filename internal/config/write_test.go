@@ -1,10 +1,12 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestSetReplacesKeepingComments(t *testing.T) {
@@ -271,5 +273,201 @@ func TestCheckUpdatesDefaultsOnAndCanBeTurnedOff(t *testing.T) {
 	cfg, warns, err := Load(p)
 	if err != nil || len(warns) != 0 || cfg.CheckUpdates {
 		t.Fatalf("cfg %v warns %v err %v", cfg.CheckUpdates, warns, err)
+	}
+}
+
+// setKeysCase writes in, applies edits and wants the whole file to read want.
+func setKeysCase(t *testing.T, in string, edits map[string]string, want string) string {
+	t.Helper()
+	p := write(t, in)
+	if err := SetKeys(p, edits); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := os.ReadFile(p)
+	if string(got) != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+	return p
+}
+
+// agedFile backdates p so a write would show in its mod time.
+func agedFile(t *testing.T, p string) time.Time {
+	t.Helper()
+	old := time.Now().Add(-time.Hour).Truncate(time.Second)
+	if err := os.Chtimes(p, old, old); err != nil {
+		t.Fatal(err)
+	}
+	return old
+}
+
+func TestSetKeysReplacesKeepingComment(t *testing.T) {
+	setKeysCase(t, "[keys]\nfind = \"f5\" # mine\n", map[string]string{"find": "ctrl+alt+f"},
+		"[keys]\nfind = \"ctrl+alt+f\" # mine\n")
+}
+
+const keysFile = "theme = \"washi\"\n\n[keys]\npalette = \"ctrl+shift+p\"\n\n# colours\n[colors]\nbg = \"#000000\"\n"
+
+func TestSetKeysAddsAfterLastLineOfTable(t *testing.T) {
+	setKeysCase(t, keysFile, map[string]string{"find": "f5"},
+		strings.Replace(keysFile, "palette = \"ctrl+shift+p\"\n", "palette = \"ctrl+shift+p\"\nfind = \"f5\"\n", 1))
+}
+
+func TestSetKeysAddsRightAfterEmptyHeader(t *testing.T) {
+	setKeysCase(t, "[keys]\n\n[colors]\nbg = \"#000000\"\n", map[string]string{"find": "f5"},
+		"[keys]\nfind = \"f5\"\n\n[colors]\nbg = \"#000000\"\n")
+}
+
+func TestSetKeysRemovesLine(t *testing.T) {
+	p := setKeysCase(t, keysFile, map[string]string{"palette": ""},
+		strings.Replace(keysFile, "palette = \"ctrl+shift+p\"\n", "", 1))
+	old := agedFile(t, p)
+	if err := SetKeys(p, map[string]string{"palette": ""}); err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Stat(p); err != nil || !fi.ModTime().Equal(old) {
+		t.Fatalf("a no-op remove wrote the file: %v %v", fi.ModTime(), err)
+	}
+}
+
+func TestSetKeysSameValueWritesNothing(t *testing.T) {
+	p := write(t, "[keys]\nfind = \"f5\"\n")
+	old := agedFile(t, p)
+	if err := SetKeys(p, map[string]string{"find": "f5"}); err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Stat(p); err != nil || !fi.ModTime().Equal(old) {
+		t.Fatalf("an unchanged set wrote the file: %v %v", fi.ModTime(), err)
+	}
+}
+
+func TestSetKeysCreatesTable(t *testing.T) {
+	const in = "theme = \"tide\"\n[colors]\nbg = \"#000000\"\n"
+	setKeysCase(t, in, map[string]string{"find": "f5"}, in+"\n[keys]\nfind = \"f5\"\n")
+}
+
+func TestSetKeysCreatesTableAfterBlankLineOnce(t *testing.T) {
+	setKeysCase(t, "theme = \"tide\"\n\n", map[string]string{"palette": "ctrl+k", "find": "f5"},
+		"theme = \"tide\"\n\n[keys]\nfind = \"f5\"\npalette = \"ctrl+k\"\n")
+}
+
+func TestSetKeysKeepsCRLF(t *testing.T) {
+	const in = "# mine\r\ntheme = \"tide\"\r\n\r\n[keys]\r\nfind = \"f5\" # x\r\n"
+	setKeysCase(t, in, map[string]string{"find": "f6", "palette": "ctrl+k"},
+		"# mine\r\ntheme = \"tide\"\r\n\r\n[keys]\r\nfind = \"f6\" # x\r\npalette = \"ctrl+k\"\r\n")
+}
+
+func TestSetKeysTwoLinesOneWrite(t *testing.T) {
+	p := setKeysCase(t, "[keys]\nfind = \"f5\"\n", map[string]string{"find": "ctrl+shift+b", "toggle_sidebar": "none"},
+		"[keys]\nfind = \"ctrl+shift+b\"\ntoggle_sidebar = \"none\"\n")
+	cfg, warns, err := Load(p)
+	if err != nil || len(warns) != 0 || cfg.Keys["find"] != "ctrl+shift+b" || cfg.Keys["toggle_sidebar"] != "none" {
+		t.Fatalf("keys %v warns %v err %v", cfg.Keys, warns, err)
+	}
+}
+
+func TestSetKeysRefusesOtherForms(t *testing.T) {
+	for _, body := range []string{"keys = { find = \"f5\" }\n", "keys.find = \"f5\"\n", "[\"keys\"]\nfind = \"f5\"\n"} {
+		p := write(t, body)
+		if err := SetKeys(p, map[string]string{"find": "f6"}); !errors.Is(err, ErrKeysForm) {
+			t.Fatalf("%q: err %v, want ErrKeysForm", body, err)
+		}
+		if got, _ := os.ReadFile(p); string(got) != body {
+			t.Fatalf("%q: file changed to %q", body, got)
+		}
+	}
+}
+
+func TestSetKeysRefusesBrokenFile(t *testing.T) {
+	const body = "[keys\n"
+	p := write(t, body)
+	if err := SetKeys(p, map[string]string{"find": "f5"}); err == nil {
+		t.Fatal("no error for an unparsable file")
+	}
+	if got, _ := os.ReadFile(p); string(got) != body {
+		t.Fatalf("file changed: %q", got)
+	}
+}
+
+func TestSetKeysRefusesBadName(t *testing.T) {
+	p := write(t, "")
+	for _, name := range []string{"Find", "find = 1", "", "a.b"} {
+		if err := SetKeys(p, map[string]string{name: "f5"}); err == nil {
+			t.Fatalf("no error for name %q", name)
+		}
+	}
+	if got, _ := os.ReadFile(p); string(got) != "" {
+		t.Fatalf("file changed: %q", got)
+	}
+}
+
+func TestSetKeysMissingFile(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "sub", "config.toml")
+	if err := SetKeys(p, map[string]string{"find": ""}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(p); !os.IsNotExist(err) {
+		t.Fatalf("a remove created the file: %v", err)
+	}
+	if err := SetKeys(p, map[string]string{"find": "f5"}); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := os.ReadFile(p); string(got) != "[keys]\nfind = \"f5\"\n" {
+		t.Fatalf("file %q", got)
+	}
+}
+
+func TestSetKeysHandWrittenShapes(t *testing.T) {
+	setKeysCase(t, "[keys] # mine\n\"find\" = \"f5\"\npalette = \"ctrl+k\"   # k",
+		map[string]string{"find": "f6", "palette": ""}, "[keys] # mine\nfind = \"f6\"\n")
+}
+
+func TestSetKeysAddsAfterLineWithoutFinalNewline(t *testing.T) {
+	setKeysCase(t, "[keys]\nfind = \"f5\"", map[string]string{"palette": "ctrl+k"},
+		"[keys]\nfind = \"f5\"\npalette = \"ctrl+k\"\n")
+}
+
+func TestSetKeysSkipsMultilineString(t *testing.T) {
+	const in = "script = '''\n[keys]\nfind = \"x\"\n'''\n"
+	p := setKeysCase(t, in, map[string]string{"find": "f5"}, in+"\n[keys]\nfind = \"f5\"\n")
+	cfg, _, err := Load(p)
+	if err != nil || cfg.Keys["find"] != "f5" {
+		t.Fatalf("keys %v err %v", cfg.Keys, err)
+	}
+}
+
+func TestKeysEditable(t *testing.T) {
+	if err := KeysEditable(write(t, "theme = \"tide\"\n[keys]\nfind = \"f5\"\n")); err != nil {
+		t.Fatalf("good file: %v", err)
+	}
+	if err := KeysEditable(filepath.Join(t.TempDir(), "nope.toml")); err != nil {
+		t.Fatalf("missing file: %v", err)
+	}
+	if err := KeysEditable(write(t, "[keys\n")); err == nil || errors.Is(err, ErrKeysForm) {
+		t.Fatalf("broken file: %v", err)
+	}
+	if err := KeysEditable(write(t, "keys.find = \"f5\"\n")); !errors.Is(err, ErrKeysForm) {
+		t.Fatalf("dotted keys: %v", err)
+	}
+}
+
+func TestSetKeysFollowsASymlink(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "dotfiles", "config.toml")
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(target, []byte("[keys]\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "config.toml")
+	symlinkOrSkip(t, target, link)
+	if err := SetKeys(link, map[string]string{"find": "f5"}); err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Lstat(link); err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("the link was replaced by a plain file: %v %v", fi, err)
+	}
+	if b, _ := os.ReadFile(target); string(b) != "[keys]\nfind = \"f5\"\n" {
+		t.Fatalf("target %q", b)
 	}
 }

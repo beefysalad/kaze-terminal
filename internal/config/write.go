@@ -1,10 +1,12 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -81,6 +83,12 @@ func Set(path, key string, value any) error {
 		return fmt.Errorf("config %s: edit would not parse: %w", path, err)
 	}
 
+	return writeFile(path, out)
+}
+
+// writeFile replaces path with out atomically, following a symlink and
+// creating the folder when needed.
+func writeFile(path, out string) error {
 	// A symlinked config (a dotfiles repo) is updated in place, not replaced by a plain file.
 	if real, err := filepath.EvalSymlinks(path); err == nil {
 		path = real
@@ -269,4 +277,175 @@ func assignsKey(line, key string) bool {
 		}
 	}
 	return false
+}
+
+// ErrKeysForm is wrapped when the shortcuts are in config.toml, but not in a
+// plain [keys] table that SetKeys can edit line by line.
+var ErrKeysForm = errors.New("shortcuts are not written in a [keys] table")
+
+var (
+	keysHeader = regexp.MustCompile(`^\s*\[\s*keys\s*\]\s*(#.*)?\r?$`)
+	keysName   = regexp.MustCompile(`^[a-z_]+$`)
+)
+
+// SetKeys sets (value != "") or removes (value == "") each named line inside
+// [keys], in one write. Names are applied in sorted order. Every other line,
+// comment and line ending stays as it is. A file that does not parse, or
+// whose shortcuts are written another way (ErrKeysForm), is never written.
+func SetKeys(path string, edits map[string]string) error {
+	names := make([]string, 0, len(edits))
+	for name := range edits {
+		if !keysName.MatchString(name) {
+			return fmt.Errorf("config: %q is not a shortcut name", name)
+		}
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	lits := make(map[string]string, len(edits))
+	for _, name := range names {
+		if v := edits[name]; v != "" {
+			lit, err := tomlLiteral(v)
+			if err != nil {
+				return err
+			}
+			lits[name] = lit
+		}
+	}
+
+	src, err := readKeysFile(path)
+	if err != nil {
+		return err
+	}
+	eol := "\n"
+	if strings.Contains(src, "\r\n") {
+		eol = "\r\n"
+	}
+	lines := strings.SplitAfter(src, "\n")
+	if lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+	for _, name := range names {
+		lines = editKeyLine(lines, name, lits[name], eol)
+	}
+	out := strings.Join(lines, "")
+	if out == src {
+		return nil
+	}
+	var probe map[string]any
+	if _, err := toml.Decode(out, &probe); err != nil {
+		return fmt.Errorf("config %s: edit would not parse: %w", path, err)
+	}
+	return writeFile(path, out)
+}
+
+// KeysEditable is nil when SetKeys can edit path (a missing file counts),
+// a parse error for a broken file, or an error wrapping ErrKeysForm.
+func KeysEditable(path string) error {
+	_, err := readKeysFile(path)
+	return err
+}
+
+// readKeysFile reads path ("" when missing) and checks that SetKeys may edit it.
+func readKeysFile(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil && !os.IsNotExist(err) {
+		return "", err
+	}
+	src := string(data)
+	var probe map[string]any
+	if _, err := toml.Decode(src, &probe); err != nil {
+		return "", fmt.Errorf("config %s: %w", path, err)
+	}
+	if _, has := probe["keys"]; has {
+		lines := strings.SplitAfter(src, "\n")
+		if h, _ := keysTable(lines, topStarts(lines)); h < 0 {
+			return "", fmt.Errorf("config %s: %w", path, ErrKeysForm)
+		}
+	}
+	return src, nil
+}
+
+// topStarts reports, per line, whether it starts outside any string or
+// container, so that it can hold a table header or a new assignment.
+func topStarts(lines []string) []bool {
+	top := make([]bool, len(lines))
+	var scan tomlScan
+	for i, l := range lines {
+		top[i] = scan.topLevel()
+		scan.line(l)
+	}
+	return top
+}
+
+// keysTable finds the [keys] header and the index of the next table header
+// (or len(lines)). h is -1 when there is no plain [keys] header.
+func keysTable(lines []string, top []bool) (h, end int) {
+	h, end = -1, len(lines)
+	for i, l := range lines {
+		if !top[i] || !tableHeader.MatchString(l) {
+			continue
+		}
+		if h >= 0 {
+			return h, i
+		}
+		if keysHeader.MatchString(strings.TrimSuffix(l, "\n")) {
+			h = i
+		}
+	}
+	return h, end
+}
+
+// editKeyLine sets name to lit (or removes it when lit is "") in [keys],
+// creating the table at the end of the file when a line must be added.
+func editKeyLine(lines []string, name, lit, eol string) []string {
+	top := topStarts(lines)
+	h, end := keysTable(lines, top)
+	// span returns the end of the assignment starting at i (its value may run on).
+	span := func(i int) int {
+		j := i + 1
+		for j < end && !top[j] {
+			j++
+		}
+		return j
+	}
+	if h >= 0 {
+		after := h + 1 // where a new line goes: after the last assignment
+		for i := h + 1; i < end; i++ {
+			if !top[i] {
+				continue
+			}
+			t := strings.TrimSpace(lines[i])
+			if t == "" || strings.HasPrefix(t, "#") {
+				continue
+			}
+			j := span(i)
+			if assignsKey(lines[i], name) {
+				if lit == "" {
+					return append(lines[:i:i], lines[j:]...)
+				}
+				repl := name + " = " + lit + commentOf(lines[i]) + eol
+				return append(append(lines[:i:i], repl), lines[j:]...)
+			}
+			after = j
+		}
+		if lit == "" {
+			return lines
+		}
+		if !strings.HasSuffix(lines[after-1], "\n") {
+			lines[after-1] += eol
+		}
+		return append(append(lines[:after:after], name+" = "+lit+eol), lines[after:]...)
+	}
+	if lit == "" {
+		return lines
+	}
+	if n := len(lines); n > 0 {
+		if !strings.HasSuffix(lines[n-1], "\n") {
+			lines[n-1] += eol
+		}
+		if strings.TrimSpace(lines[n-1]) != "" {
+			lines = append(lines, eol)
+		}
+	}
+	return append(lines, "[keys]"+eol, name+" = "+lit+eol)
 }
