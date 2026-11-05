@@ -131,6 +131,7 @@ var iconNames = map[string]bool{
 	"doc": true, "appearance": true, "workspaces": true, "claude": true, "shortcuts": true, "updates": true,
 	"about": true, "check": true, "alert": true, "prompt": true, "chart": true, "download": true,
 	"panel": true, "search": true, "terminal": true, "cog": true, "agents": true, "plus": true, "folder": true, "branch": true, "chip": true, "tabs": true, "up": true,
+	"chevup": true, "down": true, "close": true,
 }
 
 // toolIcon draws one of the sidebar and title bar buttons' icons (panel,
@@ -261,6 +262,13 @@ func (c *chrome) icon(gtx layout.Context, name string, r image.Rectangle, col co
 	case "up":
 		line(12, 19, 12, 5)
 		line(6.5, 10.5, 12, 5, 17.5, 10.5)
+	case "chevup": // the find bar's chevrons and ×, from the mockup's 16-unit paths
+		line(6, 15, 12, 9, 18, 15)
+	case "down":
+		line(6, 9, 12, 15, 18, 9)
+	case "close":
+		line(6.75, 6.75, 17.25, 17.25)
+		line(17.25, 6.75, 6.75, 17.25)
 	case "plus":
 		line(12, 5, 12, 19)
 		line(5, 12, 19, 12)

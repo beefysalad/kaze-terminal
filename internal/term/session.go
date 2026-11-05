@@ -63,6 +63,7 @@ type Session struct {
 	// For WaitEcho: writes made through Write, output chunks applied, and a
 	// wake for the one UI goroutine that waits.
 	inSeq, outSeq atomic.Uint64
+	resizeSeq     atomic.Uint64
 	outSig        chan struct{}
 }
 
@@ -267,6 +268,7 @@ func (s *Session) Resize(cols, rows int) {
 	defer s.resizeMu.Unlock()
 	s.mu.Lock()
 	s.scr.Resize(cols, rows)
+	s.resizeSeq.Add(1)
 	s.mu.Unlock()
 	_ = s.pty.Resize(cols, rows) // fails only once the PTY is gone, when the size no longer matters
 }
@@ -394,3 +396,7 @@ func (s *Session) RootPID() int {
 	}
 	return 0
 }
+
+// ResizeSeq counts the grid resizes; it moves whenever the screen changed size.
+// It does not take the lock.
+func (s *Session) ResizeSeq() uint64 { return s.resizeSeq.Load() }

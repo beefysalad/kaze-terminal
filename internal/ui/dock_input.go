@@ -91,7 +91,7 @@ loop:
 				continue
 			}
 			pass = append(pass, ev)
-			if e.State == key.Press && win.km[input.Shortcut{Name: e.Name, Mods: e.Modifiers}] == actPalette {
+			if e.State == key.Press && takesKeys(win.km[input.Shortcut{Name: e.Name, Mods: e.Modifiers}]) {
 				// As in termEvents: leave the rest in Gio's queue for the
 				// palette's editor, so typing after the shortcut lands there.
 				break loop
@@ -260,6 +260,7 @@ func (win *window) dockBody(gtx layout.Context, owner tabs.TabID, s *dockSession
 		if win.dock.keysMember != 0 {
 			win.dropDockKeys()
 		}
+		win.find.keys = false // the panel has the keyboard now, not the find bar
 		win.dock.keys, win.wantFocus = true, true
 	case pointer.Scroll:
 		s.scroll = min(max(s.scroll+int(e.Scroll.Y), 0), win.dock.hits.scrollMax)

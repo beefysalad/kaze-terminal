@@ -212,6 +212,7 @@ type window struct {
 	skillCache *skills.Cache
 	skillsFn   func(skills.Sources) []skills.Skill // nil reads through skillCache; tests fake it
 	dock       dockState                           // the docked agent panel; UI goroutine only
+	find       findState                           // the find bar; UI goroutine only
 	side       sideUI                              // the sidebar; UI goroutine only
 	wsp        wsPage                              // the Workspaces section: its list and the open draft; UI goroutine only
 	actEvery   bool                                // agent Activity shows every step, not the readable view (dock and board); UI goroutine only
@@ -654,6 +655,7 @@ func (win *window) frame(gtx layout.Context) error {
 		win.branchEvents(gtx)
 		win.toastEvents(gtx)
 		win.bannerEvents(gtx)
+		win.findEvents(gtx) // before the panel and the terminal
 		active = win.mgr.Active()
 		if win.set.shown {
 			win.settingsEvents(gtx) // the terminal gets no input; its shell keeps running
@@ -672,6 +674,7 @@ func (win *window) frame(gtx layout.Context) error {
 	}
 	active = win.mgr.Active()
 	win.switchedTo(active)
+	win.findCheck()
 	list := win.mgr.Tabs()
 	win.pruneDocs(list)
 	win.pruneDock(list)
@@ -703,6 +706,7 @@ func (win *window) frame(gtx layout.Context) error {
 		win.visit(v.tab) // the docked member being typed into is seen too
 	}
 	win.autoScrollSelection(gtx, active, cw, ch)
+	win.findTick(gtx) // nothing while the bar is closed
 	win.drainUpdates()
 	if at, ok := win.updTick(gtx.Now); ok {
 		gtx.Execute(op.InvalidateCmd{At: at}) // one wake per update check, a day apart
@@ -779,6 +783,7 @@ func (win *window) frame(gtx layout.Context) error {
 		win.drawTerminal(gtx, active, termRect, grid, &sel)
 		win.drawWsBanner(gtx, active, termRect) // after the terminal, so it takes the clicks it covers
 		win.drawShownDock(gtx)
+		win.drawFind(gtx, win.findPane(termRect)) // over its pane, so it takes the clicks it covers
 	}
 	win.syncDockMember()
 
@@ -848,6 +853,7 @@ func (win *window) drawTerminal(gtx layout.Context, active *tabs.Tab, termRect, 
 		win.benchBeforeDraw(active)
 	}
 	if win.rend != nil { // frame builds it first; a nil here must not take the window down
+		win.rend.SetMarks(win.findMarksFor(active.ID, false))
 		win.rend.Layout(tg, active.Session, sel)
 	}
 	if win.bench != nil {
@@ -855,6 +861,9 @@ func (win *window) drawTerminal(gtx layout.Context, active *tabs.Tab, termRect, 
 	}
 	off.Pop()
 	g.Pop()
+	if win.rend != nil {
+		win.rend.DrawScrollMarks(gtx, findTrack(gtx, grid, termRect)) // nothing without marks
+	}
 }
 
 // shownTab is the terminal tab in front of the user, or nil while settings is shown.
@@ -1018,6 +1027,9 @@ func (win *window) focusTarget() event.Tag {
 	if win.docs.shown != 0 {
 		return &win.docs.tag
 	}
+	if win.find.open && win.find.keys {
+		return &win.find.ed
+	}
 	if win.dock.keys && !win.dock.hits.panel.Empty() {
 		if win.dockMemberKeys() {
 			return &win.dock.term
@@ -1096,10 +1108,10 @@ func (win *window) termEvents(gtx layout.Context, v termView, cw, ch int) {
 		}
 		batch = append(batch, ev)
 		if e, ok := ev.(key.Event); ok && e.State == key.Press &&
-			win.km[input.Shortcut{Name: e.Name, Mods: e.Modifiers}] == actPalette {
-			// Leave subsequent events in Gio's queue. The palette's focus
-			// command replays them to its editor, preserving fast typing and
-			// IME edits that arrived with the opening shortcut.
+			takesKeys(win.km[input.Shortcut{Name: e.Name, Mods: e.Modifiers}]) {
+			// Leave subsequent events in Gio's queue. The palette's (or the
+			// find bar's) focus command replays them to its editor, preserving
+			// fast typing and IME edits that arrived with the opening shortcut.
 			break
 		}
 	}
@@ -1108,6 +1120,11 @@ func (win *window) termEvents(gtx layout.Context, v termView, cw, ch int) {
 	}
 	for _, ev := range batch {
 		if e, ok := ev.(pointer.Event); ok && e.Kind == pointer.Press && !win.bench.IgnoreInput() {
+			// A press in a terminal takes the keyboard from the find bar, which
+			// stays open with its highlights (Ruling 10).
+			if win.find.keys {
+				win.find.keys, win.wantFocus = false, true
+			}
 			// A press in a docked member takes the keyboard there; one in the session takes it back.
 			switch v.tag {
 			case win.termTag:
@@ -1275,6 +1292,8 @@ func (win *window) runShortcut(gtx layout.Context, a action) {
 		win.togglePalette()
 	case actAgentsBoard:
 		win.toggleBoard()
+	case actFind:
+		win.openFind()
 	case actPaste:
 		if v, ok := win.keyView(); ok {
 			gtx.Execute(clipboard.ReadCmd{Tag: v.tag})

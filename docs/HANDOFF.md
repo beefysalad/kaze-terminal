@@ -4,6 +4,17 @@ Last updated: 2026-11-04, release 0.29 (battery on macOS, #139 / PR #158; the Ab
 
 ## Where things stand
 
+**Find (#155) is built on `feat/find` (draft PR), ships as release 0.30.** Ctrl+Shift+F (Cmd+F on macOS) opens a
+find bar on the session's terminal or on a workspace member's tab in the panel. Every match is tinted,
+the current one stronger, with marks on the right edge. Plan: `docs/superpowers/plans/2026-11-04-kaze-find.md`;
+mockup `docs/design/find-mockup.html`; audit `docs/audits/2026-11-04-kaze-find.md`. README, the lander's
+"Make it yours" card and the SCREENSHOTS note are updated; no "What's new", changelog or version yet (the
+release PR does that). Full test run and `go vet` pass on Windows. Left: the whole-branch review and its
+fixes, then mark the PR ready and release per CLAUDE.md. Delete the `kaze-find*` worktrees when done.
+Owner checks by hand: Ctrl+Shift+F in Claude's terminal and in a member's log; Esc puts the view back;
+Aa; the marks on the right edge; match text readable on Washi (the light theme); and idle CPU with the bar
+open and closed (not measured yet).
+
 **The repo moved to `beefysalad/kaze-terminal` (2026-11-04).** GitHub redirects the old repo, git and API
 addresses, but not the website: it is now https://beefysalad.github.io/kaze-terminal/. The Go module, the
 update checker (`internal/update.LatestURL`), the lander, README and release notes name the new owner.
@@ -590,6 +601,12 @@ setup/checklist is historical; unresolved platform checks are listed above.
 - **Claude Code features left unanswered** (kitty keyboard protocol, XTVERSION, some OSCs): Claude falls back fine. Shift+Enter now aliases Alt/Option+Enter for a newline (issue #114); full kitty keyboard support remains deferred.
 - **Fonts:** JetBrains Mono + Noto Sans JP subset bundled (OFL); missing symbols and rare kanji come from system fonts, loaded lazily, memoized, malformed fonts skipped.
 - **Low-contrast text** is nudged just enough to reach 4.5:1, not forced to white (keeps dim text dim).
+- **Stable line numbers (find):** a match is stored as `screen.Evicted()` plus its row, a number that never
+  changes while the line exists, so eviction only drops matches and never shifts them. Use the same pattern
+  for anything that must survive the scrollback ring.
+- **Step budget (find):** one search step reads at most `find.StepBudget` = 1,000,000 cells under the session
+  lock (about 2 to 2.5 ms here, 2,000,000 took 7 ms, over the 5 ms a frame may spend), then asks for another
+  frame. No background goroutine.
 - **Benchmarks** measure keypress latency inside kaze (`KAZE_BENCH`), never with global input.
 
 ## Known gaps (deferred, not blocking)
@@ -619,6 +636,9 @@ setup/checklist is historical; unresolved platform checks are listed above.
   touched files is in memory only (gone on restart, dropped with the tab). The Codex `apply_patch`
   payload shape the hook reads is unverified against a real Codex session (it could not be captured:
   no network in the build sandbox).
+- Find: no regex; no find in the agent panel or the doc reader (the shortcut does nothing there); case is
+  simple lowercase folding, so "ß" does not find "SS" (Ruling 3); only the newest 1,000 matches are kept
+  (Ruling 9); no F3 or Cmd+G for next match, Enter and the arrows do it (Ruling 22).
 - Smaller items: the full later-fix backlog is below, and every "minor (deferred)" line is in `docs/history/plan-1-ledger.md`.
 
 ## Where kaze came from

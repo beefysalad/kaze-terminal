@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Find in the terminal: clickable mockup</title>
+<style>
+  @font-face { font-family:Manrope; src:url(../site-assets/Manrope.ttf) format('truetype'); font-weight:200 800; }
+  @font-face { font-family:JB; src:url(../site-assets/JetBrainsMono-Regular.ttf) format('truetype'); }
+  :root { --mono:JB,"JetBrains Mono",ui-monospace,monospace; --sans:Manrope,"Segoe UI",sans-serif;
+    --chrome:#0b0d12; --active:#0f1117; --panel:#0c0e14; --raised:#151925; --raised2:#1a1f2c; --line:#1d2230; --line2:#2a3142;
+    --fg:#e9ebf2; --t2:#a7adbd; --muted:#8a90a2; --dim:#6f7587; --acc:#8b7bff; --acc2:#b9a6ff; --ok:#62d39a; --cyan:#4fc3d9; --claude:#d97757;
+    --hit:#1c5080; --hitfg:#f2f6ff; --cur:#f2b84b; --curfg:#1a1405; }
+  * { box-sizing:border-box; } [hidden] { display:none !important; }
+  html,body { margin:0; background:#040507; }
+  body { color:var(--fg); font:13px/1.5 var(--mono); display:flex; flex-direction:column; align-items:center; padding:12px; gap:10px; -webkit-font-smoothing:antialiased; }
+  .hint { width:100%; max-width:1480px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; font:12px/1.5 var(--sans); color:#8a90a2; }
+  .hint b { color:#e7e9f0; font-weight:600; }
+  .hint kbd, .notes kbd { font:11px var(--mono); color:#e9ebf2; background:#1a1f2c; border:1px solid #2a3142; border-bottom-width:2px; border-radius:4px; padding:0 5px; }
+  .stage { width:100%; max-width:1480px; display:grid; grid-template-columns:1fr 300px; gap:12px; }
+  .win { position:relative; height:min(820px, calc(100vh - 70px)); min-height:600px; background:var(--active); border:1px solid var(--line2); border-radius:10px; overflow:hidden; display:grid; grid-template-columns:230px 1fr; grid-template-rows:36px 1fr 26px; }
+  .bar { grid-column:1/-1; background:var(--chrome); border-bottom:1px solid var(--line); display:flex; align-items:center; gap:12px; padding:0 12px; font-size:12px; color:var(--muted); }
+  .bar .k { color:var(--acc); font:700 13px var(--sans); } .bar b { color:var(--fg); font-weight:400; }
+  .side { background:var(--chrome); border-right:1px solid var(--line); padding:8px 0; font-size:12px; }
+  .grp { padding:7px 12px 3px; color:var(--fg); font-weight:700; font-size:11.5px; }
+  .row { margin:0 6px; padding:5px 8px; border-radius:6px; position:relative; }
+  .row.on { background:var(--raised); } .row.on::before { content:""; position:absolute; left:0; top:6px; bottom:6px; width:2px; border-radius:2px; background:var(--acc); }
+  .row .l1 { display:flex; gap:6px; align-items:center; } .row .l2 { padding-left:19px; font-size:11px; color:var(--ok); }
+  .mk { width:13px; height:13px; border-radius:4px; background:var(--claude); display:grid; place-items:center; color:#fff; font:700 9px var(--sans); }
+  .ws { margin-top:14px; padding:8px 12px 2px; font:600 10px var(--sans); letter-spacing:.08em; color:var(--dim); }
+  .mem { display:flex; gap:8px; align-items:center; padding:3px 14px; font-size:11.5px; } .mem .st { margin-left:auto; color:var(--dim); font-size:10.5px; }
+  .bl { width:2px; height:12px; border-radius:2px; background:var(--cyan); }
+  .main { display:flex; flex-direction:column; min-width:0; min-height:0; }
+  .pane { position:relative; min-height:0; overflow:hidden; }
+  .pane.focus { box-shadow:inset 0 0 0 1px #2c2752; }
+  .term { flex:0 0 38%; }
+  .split { height:5px; background:var(--chrome); border-top:1px solid var(--line2); }
+  .dock { flex:1; display:flex; flex-direction:column; background:var(--panel); min-height:0; }
+  .tabs { display:flex; align-items:center; height:32px; padding:0 10px; background:var(--chrome); border-bottom:1px solid var(--line); font-size:12px; }
+  .tab { position:relative; display:flex; align-items:center; gap:8px; height:32px; padding:0 12px; color:#f2f3f8; }
+  .tab::before { content:""; position:absolute; left:10px; right:10px; top:0; height:2px; background:var(--acc); border-radius:0 0 2px 2px; }
+  .tab .dot { width:7px; height:7px; border-radius:50%; background:var(--ok); }
+  .tabs .r { margin-left:auto; display:flex; gap:16px; color:var(--muted); font:11.5px var(--sans); }
+  .lines { position:absolute; inset:0; overflow:hidden; padding:8px 18px 8px 12px; white-space:pre; font-size:12.5px; line-height:20px; color:#d9dce6; }
+  .lines .ln { height:20px; }
+  .lines .svc { color:var(--cyan); } .lines .svc2 { color:#c39be0; }
+  .lines .d { color:#747a8c; } .lines .a { color:var(--acc2); }
+  mark { background:var(--hit); color:var(--hitfg); border-radius:2px; }
+  mark.cur { background:var(--cur); color:var(--curfg); }
+  .ticks { position:absolute; right:3px; top:6px; bottom:6px; width:6px; }
+  .ticks i { position:absolute; left:0; width:6px; height:2px; border-radius:1px; background:#4f8fd6; }
+  .ticks i.cur { background:var(--cur); height:3px; }
+  .ticks .view { position:absolute; left:-1px; width:8px; border-radius:3px; background:rgba(255,255,255,.07); }
+
+  /* The find bar */
+  .find { position:absolute; top:8px; right:18px; z-index:4; display:flex; align-items:center; gap:4px; height:34px; padding:0 4px 0 10px; background:#121520; border:1px solid #2c3244; border-radius:10px; box-shadow:0 14px 30px -16px #000; font:12px var(--sans); }
+  .find .ic { width:14px; height:14px; fill:none; stroke:#7b8296; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  .find input { width:220px; height:26px; border:0; outline:0; background:transparent; color:var(--fg); font:12.5px var(--mono); }
+  .find input::placeholder { color:#5d6477; }
+  .find .cnt { min-width:64px; text-align:right; padding-right:6px; color:var(--muted); font:11.5px var(--mono); white-space:nowrap; }
+  .find .cnt.none { color:#f3a0a8; }
+  .find .sep { width:1px; height:18px; background:#262b3b; margin:0 2px; }
+  .find button { width:26px; height:26px; display:grid; place-items:center; border:0; border-radius:6px; background:none; color:#9097a9; cursor:pointer; font:600 11.5px var(--mono); }
+  .find button:hover { background:#1a1f2c; color:#fff; }
+  .find button.on { background:#211d3f; color:#cfc5ff; }
+  .find button .ic { stroke:currentColor; }
+  .status { grid-column:1/-1; background:var(--chrome); border-top:1px solid var(--line); display:flex; align-items:center; gap:16px; padding:0 12px; font-size:11px; color:#7d8394; }
+  .status .g { color:var(--ok); } .status .sp { margin-left:auto; }
+  .notes { background:#0b0d12; border:1px solid #1d2230; border-radius:10px; padding:14px 16px; color:#a7adbd; font:12.5px/1.55 var(--sans); overflow:auto; height:min(820px, calc(100vh - 70px)); min-height:600px; }
+  .notes h3 { margin:14px 0 6px; color:#e9ebf2; font-size:13px; } .notes h3:first-child { margin-top:0; }
+  .notes ul { margin:0; padding-left:16px; } .notes li { margin:3px 0; } .notes b { color:#e9ebf2; font-weight:600; }
+  .q { border:1px solid #2a3142; border-radius:8px; padding:8px 10px; margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="hint"><b>Find (Ctrl+Shift+F / Cmd+F)</b><span>Click a pane to give it the keyboard, then press <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>F</kbd>. Try “warn”, “passed”, “INFO”.</span></div>
+<div class="stage">
+  <div class="win">
+    <div class="bar"><span class="k">K</span><span>samurai / <b>V3-3154</b></span></div>
+    <div class="side">
+      <div class="grp">samurai_cart_v3</div>
+      <div class="row on"><div class="l1"><span class="mk">✳</span>V3-3154 · /ship-ticket</div><div class="l2">feature/V3-3154 +212 −40</div></div>
+      <div class="ws">WORKSPACES</div>
+      <div class="mem"><span class="bl"></span>api<span class="st">Ready</span></div>
+      <div class="mem"><span class="bl" style="background:#c39be0"></span>admin<span class="st">Running</span></div>
+      <div class="mem"><span class="bl" style="background:#f2b84b"></span>storefront<span class="st">Running</span></div>
+      <div class="mem"><span class="bl"></span>api logs<span class="st">Running</span></div>
+    </div>
+    <div class="main">
+      <div class="pane term" data-pane="term"><div class="lines" data-lines></div><div class="ticks" data-ticks></div></div>
+      <div class="split"></div>
+      <div class="dock">
+        <div class="tabs"><span class="tab"><span class="dot"></span>api logs <span style="color:#6f7587">×</span></span><span class="r"><span>Expand</span><span>Hide ⌄</span></span></div>
+        <div class="pane focus" data-pane="logs" style="flex:1"><div class="lines" data-lines></div><div class="ticks" data-ticks></div></div>
+      </div>
+    </div>
+    <div class="status"><span>~\code\samurai_cart_v3</span><span class="g">⎇ feature/V3-3154</span><span class="sp">●●●● 3/4 up</span><span>CPU 3% · 5.2 GB</span><span>8 tabs</span></div>
+  </div>
+  <aside class="notes">
+    <h3>How it works</h3>
+    <ul>
+      <li><b><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>F</kbd></b> (<kbd>Cmd</kbd> <kbd>F</kbd> on Mac) opens find in whatever has the keyboard: Claude’s terminal or a docked tab. Plain Ctrl+F stays with the shell.</li>
+      <li><b>Searches the whole scrollback</b>, not just the screen. Matches are tinted violet; the current one is amber, and the view scrolls to it.</li>
+      <li><b>Enter</b> / <b>↓</b> next, <b>Shift+Enter</b> / <b>↑</b> previous, <b>Aa</b> case-sensitive, <b>Esc</b> closes and returns to where you were.</li>
+      <li><b>Marks on the right edge</b> show where every match sits in the scrollback, like an editor’s scrollbar.</li>
+      <li>Opening find again keeps the last search, selected, so you can type over it.</li>
+    </ul>
+    <h3>Cost</h3>
+    <ul>
+      <li>Nothing runs while the bar is closed.</li>
+      <li>It searches once per change of the text (and again when new output arrives while it’s open), capped at 1,000 matches.</li>
+    </ul>
+    <h3>Decided for you (say if you disagree)</h3>
+    <div class="q"><b>Case-insensitive by default</b>, with Aa to switch. No regex in the first version.</div>
+    <div class="q"><b>Terminals and docked tabs first.</b> The markdown reader and the agent panel come later.</div>
+    <div class="q"><b>New output while searching</b> updates the count but doesn’t jump the view; the current match stays put.</div>
+  </aside>
+</div>
+<script>
+const termLines = [
+  '<span class="a">●</span> Running the backend tests before pushing.',
+  '',
+  '<span class="d">  Bash(docker compose exec api pytest -q)</span>',
+  '<span class="d">  ⎿ 110 passed in 803.38s (0:13:23)</span>',
+  '',
+  '<span class="a">●</span> All 110 tests passed. Opening the draft PR #154.',
+  '',
+  '<span class="d">  Bash(gh pr create --draft --title "V3-3154: Sony renewal reconcile")</span>',
+  '<span class="d">  ⎿ https://github.com/f-i-d/samurai_cart_v3/pull/154</span>',
+  '',
+  '<span class="d">❯ </span>',
+];
+const L = [];
+const push = (svc, cls, text) => L.push(`<span class="${cls}">${svc.padEnd(22)}</span>| ${text}`);
+for (let i = 0; i < 6; i++) {
+  push('samurai_cart_api', 'svc', `INFO:     127.0.0.1:5${i}12 - "GET /api/v1/orders?page=${i + 1} HTTP/1.1" 200 OK`);
+  push('samurai_cart_api', 'svc', `INFO:     127.0.0.1:5${i}13 - "GET /api/v1/reply_templates HTTP/1.1" 200 OK`);
+}
+push('samurai_cart_api', 'svc', "* 'orm_mode' has been renamed to 'from_attributes'");
+push('samurai_cart_api', 'svc', '  warnings.warn(message, UserWarning)');
+push('samurai_cart_api', 'svc', '/usr/local/lib/python3.11/site-packages/pydantic/_internal/_config.py:334: UserWarning: Valid config keys have changed in V2:');
+push('samurai_cart_api', 'svc', "* 'schema_extra' has been renamed to 'json_schema_extra'");
+push('samurai_cart_api', 'svc', '  warnings.warn(message, UserWarning)');
+push('samurai_cart_api', 'svc', '/app/app/api/api_v1/endpoints/reply_templates.py:95: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead');
+push('samurai_cart_api', 'svc', 'INFO:     Started server process [67]');
+push('samurai_cart_api', 'svc', 'INFO:     Waiting for application startup.');
+push('samurai_cart_api', 'svc', 'INFO:     Application startup complete.');
+push('romantic_herschel', 'svc2', 'tests/services/test_sony_reconcile_sweep_db.py ......................... [ 22%]');
+push('romantic_herschel', 'svc2', '...........................................................         [ 77%]');
+push('romantic_herschel', 'svc2', 'tests/integration/api/test_v3_3154_sony_renewal.py .................... [ 96%]');
+push('romantic_herschel', 'svc2', '....                                                                 [100%]');
+push('romantic_herschel', 'svc2', '');
+push('romantic_herschel', 'svc2', '====================== 110 passed in 803.38s (0:13:23) ======================');
+L.push('<span class="svc2">romantic_herschel exited with code 0</span>');
+const panes = {
+  term: { el: document.querySelector('[data-pane=term]'), lines: termLines, top: 0, q: '', cur: -1, hits: [] },
+  logs: { el: document.querySelector('[data-pane=logs]'), lines: L, top: Math.max(0, L.length - 20), q: '', cur: -1, hits: [] },
+};
+let focus = 'logs', open = null, matchCase = false;
+const plain = h => h.replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+function visible(p) { return Math.max(1, Math.floor((p.el.clientHeight - 16) / 20)); }
+function search(p) {
+  p.hits = [];
+  if (!p.q) return;
+  const needle = matchCase ? p.q : p.q.toLowerCase();
+  p.lines.forEach((h, i) => {
+    const t = matchCase ? plain(h) : plain(h).toLowerCase();
+    let at = t.indexOf(needle);
+    while (at >= 0 && p.hits.length < 1000) { p.hits.push({ line: i, at }); at = t.indexOf(needle, at + needle.length); }
+  });
+}
+function markLine(h, i, p) {
+  const hits = p.hits.map((x, n) => ({ ...x, n })).filter(x => x.line === i);
+  if (!hits.length) return h;
+  // Rebuild the line from plain text, keeping the leading colour span for the service name.
+  const text = plain(h), len = p.q.length;
+  let out = '', last = 0;
+  for (const x of hits) {
+    out += esc(text.slice(last, x.at)) + `<mark class="${x.n === p.cur ? 'cur' : ''}">${esc(text.slice(x.at, x.at + len))}</mark>`;
+    last = x.at + len;
+  }
+  out += esc(text.slice(last));
+  const m = h.match(/^<span class="(svc2?)">/);
+  return m ? colourSvc(out, m[1]) : out;
+}
+function colourSvc(out, cls) { const i = out.indexOf('|'); return i < 0 ? out : `<span class="${cls}">${out.slice(0, i)}</span>${out.slice(i)}`; }
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function draw(name) {
+  const p = panes[name];
+  const n = visible(p);
+  p.top = Math.max(0, Math.min(p.top, p.lines.length - n));
+  const rows = [];
+  for (let i = p.top; i < Math.min(p.lines.length, p.top + n); i++) rows.push(`<div class="ln">${markLine(p.lines[i], i, p) || ' '}</div>`);
+  p.el.querySelector('[data-lines]').innerHTML = rows.join('');
+  const ticks = p.el.querySelector('[data-ticks]');
+  const total = Math.max(p.lines.length, 1);
+  ticks.innerHTML = (p.lines.length > n ? `<span class="view" style="top:${p.top / total * 100}%;height:${n / total * 100}%"></span>` : '') +
+    p.hits.map((x, k) => `<i class="${k === p.cur ? 'cur' : ''}" style="top:${x.line / total * 100}%"></i>`).join('');
+  p.el.classList.toggle('focus', name === focus);
+  let bar = p.el.querySelector('.find');
+  if (open !== name) { if (bar) bar.remove(); return; }
+  if (!bar) {
+    p.el.insertAdjacentHTML('beforeend', `<div class="find" role="search">
+      <svg class="ic" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
+      <input data-q placeholder="Find in ${name === 'term' ? 'terminal' : 'api logs'}" aria-label="Find">
+      <span class="cnt" data-cnt></span><span class="sep"></span>
+      <button data-case title="Match case">Aa</button>
+      <button data-prev title="Previous (Shift+Enter)"><svg class="ic" viewBox="0 0 16 16"><path d="m4 10 4-4 4 4"/></svg></button>
+      <button data-next title="Next (Enter)"><svg class="ic" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg></button>
+      <button data-close title="Close (Esc)"><svg class="ic" viewBox="0 0 16 16"><path d="m4.5 4.5 7 7m0-7-7 7"/></svg></button></div>`);
+    bar = p.el.querySelector('.find');
+    const input = bar.querySelector('[data-q]');
+    input.value = p.q; input.focus(); input.select();
+    input.addEventListener('input', () => { p.q = input.value; search(p); p.cur = p.hits.length ? nearest(p) : -1; reveal(p); draw(name); });
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); step(p, (e.shiftKey || e.key === 'ArrowUp') ? -1 : 1); draw(name); }
+      if (e.key === 'Escape') { e.preventDefault(); open = null; draw(name); }
+    });
+    bar.querySelector('[data-prev]').onclick = () => { step(p, -1); draw(name); };
+    bar.querySelector('[data-next]').onclick = () => { step(p, 1); draw(name); };
+    bar.querySelector('[data-close]').onclick = () => { open = null; draw(name); };
+    bar.querySelector('[data-case]').onclick = () => { matchCase = !matchCase; search(p); p.cur = p.hits.length ? nearest(p) : -1; reveal(p); draw(name); bar.querySelector('[data-q]').focus(); };
+  }
+  bar.querySelector('[data-case]').classList.toggle('on', matchCase);
+  const cnt = bar.querySelector('[data-cnt]');
+  cnt.textContent = !p.q ? '' : p.hits.length ? `${p.cur + 1} of ${p.hits.length}` : 'No results';
+  cnt.classList.toggle('none', !!p.q && !p.hits.length);
+}
+function nearest(p) { const bottom = p.top + visible(p); let k = p.hits.findIndex(x => x.line >= p.top && x.line < bottom); if (k < 0) k = p.hits.length - 1; return k; }
+function reveal(p) { if (p.cur < 0) return; const line = p.hits[p.cur].line, n = visible(p); if (line < p.top || line >= p.top + n) p.top = Math.max(0, line - Math.floor(n / 2)); }
+function step(p, d) { if (!p.hits.length) return; p.cur = (p.cur + d + p.hits.length) % p.hits.length; reveal(p); }
+document.querySelectorAll('[data-pane]').forEach(el => el.addEventListener('mousedown', e => { if (e.target.closest('.find')) return; focus = el.dataset.pane; draw('term'); draw('logs'); }));
+document.querySelectorAll('[data-pane]').forEach(el => el.addEventListener('wheel', e => { e.preventDefault(); const p = panes[el.dataset.pane]; p.top += Math.sign(e.deltaY) * 3; draw(el.dataset.pane); }, { passive: false }));
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'f') || (e.metaKey && e.key.toLowerCase() === 'f')) {
+    e.preventDefault(); const prev = open; open = focus; if (prev && prev !== focus) draw(prev); draw(focus);
+  }
+});
+const start = location.hash.slice(1);
+if (start) { open = 'logs'; draw('term'); draw('logs'); const i = document.querySelector('[data-q]'); i.value = start; i.dispatchEvent(new Event('input')); }
+else { draw('term'); draw('logs'); }
+addEventListener('resize', () => { draw('term'); draw('logs'); });
+</script>
+</body>
+</html>

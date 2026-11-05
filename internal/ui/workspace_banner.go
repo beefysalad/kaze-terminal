@@ -73,7 +73,7 @@ func bannerShown(m *wsMember) bool {
 // drawWsBanner draws the shown tab's launch banner over the top of the
 // terminal area, never into the shell, and records its buttons.
 func (win *window) drawWsBanner(gtx layout.Context, t *tabs.Tab, termRect image.Rectangle) {
-	win.wsr.hits = win.wsr.hits[:0]
+	win.wsr.hits, win.wsr.rect = win.wsr.hits[:0], image.Rectangle{}
 	m := win.bannerMember(t)
 	if !bannerShown(m) {
 		return
@@ -107,6 +107,7 @@ func (win *window) drawWsBanner(gtx layout.Context, t *tabs.Tab, termRect image.
 	if r.Dx() <= 0 {
 		return
 	}
+	win.wsr.rect = r
 	paint.FillShape(ops, c.th.ToastLine, clip.UniformRRect(r, radius).Op(ops))
 	paint.FillShape(ops, c.th.ToastBG, clip.UniformRRect(r.Inset(line), max(radius-line, 0)).Op(ops))
 	text := clip.Rect(image.Rect(r.Min.X+padX, r.Min.Y, r.Min.X+padX+max(room, 0), r.Max.Y)).Push(ops)

@@ -161,7 +161,7 @@ func TestShellRejectsEmptyProgram(t *testing.T) {
 }
 
 func TestKnownActionsAreTheRealOnes(t *testing.T) {
-	want := []string{"agents_board", "close_tab", "copy", "new_branch_session", "new_tab", "next_tab", "next_waiting", "open_settings", "palette", "paste", "prev_tab", "toggle_sidebar"}
+	want := []string{"agents_board", "close_tab", "copy", "find", "new_branch_session", "new_tab", "next_tab", "next_waiting", "open_settings", "palette", "paste", "prev_tab", "toggle_sidebar"}
 	var got []string
 	for k := range KnownActions {
 		got = append(got, k)
@@ -169,6 +169,13 @@ func TestKnownActionsAreTheRealOnes(t *testing.T) {
 	sort.Strings(got)
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Fatalf("KnownActions = %v, want %v", got, want)
+	}
+}
+
+func TestFindKeyLoads(t *testing.T) {
+	cfg, warns, err := Load(write(t, "[keys]\nfind = \"ctrl+alt+f\"\n"))
+	if err != nil || len(warns) != 0 || cfg.Keys["find"] != "ctrl+alt+f" {
+		t.Fatalf("keys.find: %v, warns %v, err %v", cfg.Keys, warns, err)
 	}
 }
 
