@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"gioui.org/f32"
+	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/unit"
 	"gioui.org/widget"
@@ -388,5 +389,30 @@ func TestSwitchAndChipClicks(t *testing.T) {
 	text("/rev")
 	if !win.wantFocus {
 		t.Fatal("a click on the switch did not keep the keyboard in the field")
+	}
+}
+
+// Clicking the switch is the same switch as Tab: a plugin group opened by its
+// "more" row folds again and the list starts from its first row.
+func TestSwitchClicksFoldAndSelectFirst(t *testing.T) {
+	win, _, r, _ := palWindow(t)
+	openPal(t, win, r)
+	palType(t, win, r, "/")
+	devbox := func() int { return len(palOf(win.palette.items, "DEVBOX", palSkill)) }
+	palSelect(t, win, r, "more:devbox")
+	pressKey(t, win, r, key.NameReturn, 0)
+	if devbox() != 6 {
+		t.Fatalf("%d devbox rows after its more row", devbox())
+	}
+	clickAt(t, win, r, centre(win.palette.hits.switchSessions))
+	clickAt(t, win, r, centre(win.palette.hits.switchSkills))
+	if got := win.palette.ed.Text(); got != "/" {
+		t.Fatalf("text %q after the clicks", got)
+	}
+	if devbox() != palFoldAt {
+		t.Fatalf("%d devbox rows after the switch, want it folded to %d", devbox(), palFoldAt)
+	}
+	if i := win.palette.selIndex(); i != 0 {
+		t.Fatalf("selected row %d (%s), want the first", i, selected(win).Key)
 	}
 }
