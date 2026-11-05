@@ -3,10 +3,13 @@ package ui
 import (
 	"fmt"
 	"image"
+	"image/color"
 	"slices"
 	"strings"
 	"testing"
 
+	"gioui.org/f32"
+	"gioui.org/io/pointer"
 	"gioui.org/unit"
 	"gioui.org/widget"
 
@@ -15,11 +18,20 @@ import (
 
 func palDraw(t *testing.T, c *chrome, items []palItem, main image.Rectangle, scale float32) palHits {
 	t.Helper()
+	return palDrawSt(t, c, palState{items: items, hover: -1}, main, scale)
+}
+
+// palDrawSt draws st (its editor holding st.query) over main at scale.
+func palDrawSt(t *testing.T, c *chrome, st palState, main image.Rectangle, scale float32) palHits {
+	t.Helper()
 	gtx := pageContext(main.Max.X+40, main.Max.Y+40)
 	gtx.Metric = unit.Metric{PxPerDp: scale, PxPerSp: scale}
 	var ed widget.Editor
 	ed.SingleLine = true
-	return c.layoutPalette(gtx, palState{items: items, ed: &ed, hover: -1}, main)
+	ed.SetText(st.query)
+	st.ed = &ed
+	st.skills = palSkillScope(st.query)
+	return c.layoutPalette(gtx, st, main)
 }
 
 func skillItems(n int) []palItem {
@@ -39,7 +51,7 @@ func TestPaletteBoxIsCentered(t *testing.T) {
 			main = image.Rect(520, 76, 2920, 1676)
 		}
 		h := palDraw(t, c, skillItems(3), main, scale)
-		w := int(560 * scale)
+		w := int(600 * scale)
 		if h.box.Dx() != w {
 			t.Errorf("scale %v: box %d wide, want %d", scale, h.box.Dx(), w)
 		}
@@ -52,6 +64,135 @@ func TestPaletteBoxIsCentered(t *testing.T) {
 		if !h.field.In(h.box) || !h.list.In(h.box) {
 			t.Errorf("field %v or list %v outside the box %v", h.field, h.list, h.box)
 		}
+		if h.field.Dy() != int(54*scale) {
+			t.Errorf("scale %v: field %d high, want %d", scale, h.field.Dy(), int(54*scale))
+		}
+	}
+}
+
+// Review Focus 5: a narrow box hides the switch; a wide one shows both parts
+// right of the editor, and the chip never runs into them.
+func TestPaletteNarrowHidesSwitch(t *testing.T) {
+	c := newChrome()
+	narrow := palDrawSt(t, c, palState{items: skillItems(3), hover: -1, query: "/"}, image.Rect(0, 38, 470, 700), 1)
+	if narrow.box.Dx() >= 440 {
+		t.Fatalf("narrow box %d wide", narrow.box.Dx())
+	}
+	if !narrow.switchSkills.Empty() || !narrow.switchSessions.Empty() {
+		t.Fatalf("switch drawn in a %d wide box: %v %v", narrow.box.Dx(), narrow.switchSessions, narrow.switchSkills)
+	}
+	if narrow.chip.Empty() || !narrow.chip.In(narrow.field) {
+		t.Fatalf("chip %v not in the field %v", narrow.chip, narrow.field)
+	}
+	main := image.Rect(260, 38, 1460, 838)
+	for _, q := range []string{"", "/"} {
+		h := palDrawSt(t, c, palState{items: skillItems(3), hover: -1, query: q}, main, 1)
+		if h.box.Dx() != 600 {
+			t.Fatalf("box %d wide", h.box.Dx())
+		}
+		for _, r := range []image.Rectangle{h.switchSessions, h.switchSkills} {
+			if r.Empty() || !r.In(h.field) {
+				t.Fatalf("%q: switch part %v not inside the field %v", q, r, h.field)
+			}
+			if r.Min.X < h.editor.Max.X {
+				t.Fatalf("%q: switch part %v left of the editor's end %v", q, r, h.editor)
+			}
+		}
+		if h.switchSessions.Max.X > h.switchSkills.Min.X {
+			t.Fatalf("Sessions %v not left of Skills %v", h.switchSessions, h.switchSkills)
+		}
+		if q == "" {
+			if !h.chip.Empty() {
+				t.Fatalf("chip %v drawn in Sessions", h.chip)
+			}
+			continue
+		}
+		if h.chip.Empty() || h.chip.Max.X > h.editor.Min.X || h.chip.Overlaps(h.switchSessions) {
+			t.Fatalf("chip %v, editor %v, switch %v", h.chip, h.editor, h.switchSessions)
+		}
+	}
+}
+
+func TestPaletteEmptyLines(t *testing.T) {
+	c := newChrome()
+	main := image.Rect(260, 38, 1460, 838)
+	h := palDrawSt(t, c, palState{hover: -1, query: "zzz"}, main, 1)
+	if h.headers != nil || len(h.rows) != 0 {
+		t.Fatalf("headers %v, rows %d", h.headers, len(h.rows))
+	}
+	if want := []string{`No results for "zzz"`, "Press / to search skills instead."}; !slices.Equal(h.lines, want) {
+		t.Fatalf("lines %q, want %q", h.lines, want)
+	}
+	h = palDrawSt(t, c, palState{hover: -1, query: "/zzz"}, main, 1)
+	if want := []string{`No results for "zzz"`, "Try part of what the skill does, like /review."}; !slices.Equal(h.lines, want) {
+		t.Fatalf("lines %q, want %q", h.lines, want)
+	}
+	h = palDrawSt(t, c, palState{items: skillItems(2), hover: -1, query: "s"}, main, 1)
+	if h.lines != nil {
+		t.Fatalf("lines %q with rows shown", h.lines)
+	}
+}
+
+// spec 8.10 and section 4: text 4.5:1 on its surfaces, marks and tiles 3:1.
+func TestPaletteInkReadableInEveryTheme(t *testing.T) {
+	for _, th := range theme.All() {
+		c := newChrome()
+		c.setTheme(th)
+		k := c.palInk()
+		need := func(what string, fg, bg color.NRGBA, min float64) {
+			t.Helper()
+			if r := contrast(fg, bg); r < min {
+				t.Errorf("%s: %s %.2f:1, want %.1f", th.Key, what, r, min)
+			}
+		}
+		for _, s := range []struct {
+			name string
+			bg   color.NRGBA
+		}{{"bg", k.bg}, {"sel", k.sel}} {
+			need("text on "+s.name, k.text, s.bg, 4.5)
+			need("muted on "+s.name, k.muted, s.bg, 4.5)
+			need("faint on "+s.name, k.faint, s.bg, 4.5)
+			need("go on "+s.name, k.goInk, s.bg, 4.5)
+			need("badge on "+s.name, k.badge, s.bg, 4.5)
+		}
+		need("muted on foot", k.muted, k.foot, 4.5)
+		need("muted on switch", k.muted, k.switchBG, 4.5)
+		need("text on raised", k.text, k.raised, 4.5)
+		need("go on raised", k.goInk, k.raised, 4.5)
+		need("chip", k.chipFG, k.chipBG, 4.5)
+		need("keycap", k.keyFG, k.keyBG, 4.5)
+		need("needs pill", k.pillNeedsFG, k.pillNeedsBG, 4.5)
+		need("running pill", k.pillRunFG, k.pillRunBG, 4.5)
+		need("idle pill", k.pillIdleFG, k.pillIdleBG, 4.5)
+		need("done pill", k.pillDoneFG, k.pillDoneBG, 4.5)
+		need("browse tile", k.tileFG, k.tileBG, 4.5)
+		need("selection bar", k.selBar, k.sel, 3)
+		for i := range k.plugins {
+			need(fmt.Sprintf("plugin tile %d", i), k.plugins[i], k.bg, 3)
+			need(fmt.Sprintf("plugin initial %d", i), k.pluginInk[i], k.plugins[i], 4.5)
+		}
+	}
+}
+
+func TestPalPluginColorStable(t *testing.T) {
+	a := palPluginColor("devbox")
+	if a != palPluginColor("devbox") || a < 0 || a >= 6 {
+		t.Fatalf("devbox: %d", a)
+	}
+	if a != 3 || palPluginColor("superpowers") != 4 {
+		t.Fatalf("devbox %d (want 3), superpowers %d (want 4)", a, palPluginColor("superpowers"))
+	}
+}
+
+func TestPalInkCachedPerTheme(t *testing.T) {
+	c := newChrome()
+	a := c.palInk()
+	if b := c.palInk(); a != b {
+		t.Fatal("palInk rebuilt for the same theme")
+	}
+	c.setTheme(theme.All()[3])
+	if b := c.palInk(); a == b || b.bg != theme.All()[3].UI.ToastBG {
+		t.Fatal("palInk not rebuilt after setTheme")
 	}
 }
 
@@ -89,11 +230,11 @@ func TestPaletteListScrolls(t *testing.T) {
 	c := newChrome()
 	main := image.Rect(260, 38, 1460, 838)
 	h := palDraw(t, c, skillItems(200), main, 1)
-	if h.scrollMax <= 0 || h.list.Dy() > 380 {
+	if h.scrollMax <= 0 || h.list.Dy() > 420 {
 		t.Fatalf("scrollMax %d, list %d high", h.scrollMax, h.list.Dy())
 	}
-	if len(h.rows) > 380/28+2 {
-		t.Fatalf("%d rows laid out for a 380dp list", len(h.rows))
+	if len(h.rows) > 420/38+2 {
+		t.Fatalf("%d rows laid out for a 420dp list", len(h.rows))
 	}
 	gtx := pageContext(1500, 900)
 	var ed widget.Editor
@@ -122,13 +263,6 @@ func TestPaletteLongTextStaysInside(t *testing.T) {
 	}
 }
 
-func TestPaletteNoMatchesLine(t *testing.T) {
-	h := palDraw(t, newChrome(), nil, image.Rect(260, 38, 1460, 838), 1)
-	if len(h.rows) != 0 || !slices.Equal(h.headers, []string{"NO MATCHES"}) {
-		t.Fatalf("rows %d, headers %v", len(h.rows), h.headers)
-	}
-}
-
 func TestPaletteDrawsInEveryTheme(t *testing.T) {
 	win, _ := alertWindow(t, 1)
 	items := append([]palItem{
@@ -145,5 +279,44 @@ func TestPaletteDrawsInEveryTheme(t *testing.T) {
 			t.Errorf("%s: the selected row would not show", th.Key)
 		}
 		palDraw(t, win.ui, items, image.Rect(260, 38, 1460, 838), 1)
+	}
+}
+
+// spec 8.8, Ruling 10: the switch parts set the scope they name, the chip
+// leaves Skills; the palette stays open with the keyboard in the field.
+func TestSwitchAndChipClicks(t *testing.T) {
+	win, _, r, _ := palWindow(t)
+	openPal(t, win, r)
+	text := func(want string) {
+		t.Helper()
+		if !win.palette.open {
+			t.Fatal("the palette closed")
+		}
+		if got := win.palette.ed.Text(); got != want {
+			t.Fatalf("text %q, want %q", got, want)
+		}
+	}
+	if win.palette.hits.switchSkills.Empty() {
+		t.Fatalf("no switch in a %d wide box", win.palette.hits.box.Dx())
+	}
+	clickAt(t, win, r, centre(win.palette.hits.switchSkills))
+	text("/")
+	if win.palette.hits.chip.Empty() {
+		t.Fatal("no chip in Skills")
+	}
+	clickAt(t, win, r, centre(win.palette.hits.chip))
+	text("")
+	palType(t, win, r, "/rev")
+	clickAt(t, win, r, centre(win.palette.hits.switchSessions))
+	text("rev")
+	clickAt(t, win, r, centre(win.palette.hits.switchSessions)) // already there: no change
+	text("rev")
+
+	gtx := pageContext(1000, 600)
+	win.wantFocus = false
+	win.palettePointer(gtx, pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: f32.Pt(float32(centre(win.palette.hits.switchSkills).X), float32(centre(win.palette.hits.switchSkills).Y))})
+	text("/rev")
+	if !win.wantFocus {
+		t.Fatal("a click on the switch did not keep the keyboard in the field")
 	}
 }

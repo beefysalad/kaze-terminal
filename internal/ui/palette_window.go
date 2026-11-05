@@ -361,6 +361,10 @@ func (win *window) palettePointer(gtx layout.Context, e pointer.Event) {
 	at := e.Position.Round()
 	switch e.Kind {
 	case pointer.Press:
+		if skills, ok := p.hits.scopeAt(at); ok {
+			win.setPaletteScope(skills)
+			return
+		}
 		if i, ok := p.hits.rowAt(at); ok && i < len(p.items) {
 			win.palAct(gtx, p.items[i], e.Modifiers.Contain(key.ModShift))
 			return
@@ -445,7 +449,9 @@ func (win *window) drawPalette(gtx layout.Context, main image.Rectangle) {
 	}
 	eg := gtx
 	eg.Source = p.edInput.Source()
-	p.hits = win.ui.layoutPalette(eg, palState{items: p.items, sel: sel, scroll: p.scroll, hover: p.hover, reveal: p.reveal, ed: &p.ed}, main)
+	q := p.ed.Text()
+	p.hits = win.ui.layoutPalette(eg, palState{items: p.items, sel: sel, scroll: p.scroll, hover: p.hover, reveal: p.reveal, ed: &p.ed,
+		skills: palSkillScope(q), query: q, footSkill: sel >= 0 && p.items[sel].Kind == palSkill}, main)
 	win.syncPaletteEditor(gtx)
 	p.scroll, p.reveal = p.hits.scroll, false
 	area := clip.Rect{Max: gtx.Constraints.Max}.Push(gtx.Ops)
