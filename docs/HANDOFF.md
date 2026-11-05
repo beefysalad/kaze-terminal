@@ -4,7 +4,7 @@ Last updated: 2026-11-04, release 0.29 (battery on macOS, #139 / PR #158; the Ab
 
 ## Where things stand
 
-**Find (#155) is built on `feat/find` (draft PR), release 0.29 next.** Ctrl+Shift+F (Cmd+F on macOS) opens a
+**Find (#155) is built on `feat/find` (draft PR), ships as release 0.30.** Ctrl+Shift+F (Cmd+F on macOS) opens a
 find bar on the session's terminal or on a workspace member's tab in the panel. Every match is tinted,
 the current one stronger, with marks on the right edge. Plan: `docs/superpowers/plans/2026-11-04-kaze-find.md`;
 mockup `docs/design/find-mockup.html`; audit `docs/audits/2026-11-04-kaze-find.md`. README, the lander's
