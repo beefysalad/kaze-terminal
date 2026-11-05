@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Kaze palette, v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Midnight tokens, straight from internal/theme: chrome 0b0d12, active 0f1117, toast 1a1f2c / 2a3142,
+     fg e7e9f0, muted 8a90a2, accent 8b7bff, go b9a6ff, branch 62d39a */
+  :root{--chrome:#0b0d12;--term:#0f1117;--box:#161a25;--box2:#1a1f2c;--line:#2a3142;--hair:#222838;
+        --fg:#e7e9f0;--muted:#959bad;--faint:#8a90a2;--accent:#8b7bff;--go:#b9a6ff;--green:#62d39a;--amber:#f0ad4e;
+        --sel:rgba(139,123,255,.13);--ui:"Manrope","Segoe UI",system-ui,sans-serif;--mono:"JetBrains Mono","Cascadia Code",Consolas,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:#07080c;color:var(--fg);font:14px/1.45 var(--ui);padding:28px 36px}
+  h1{font-weight:600;font-size:18px;margin:0 0 4px;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 20px;max-width:900px}
+  .wrap{display:flex;gap:36px;align-items:flex-start;flex-wrap:wrap}
+
+  /* a Kaze window behind the palette */
+  .win{width:700px;height:600px;background:var(--chrome);border:1px solid var(--hair);border-radius:12px;position:relative;overflow:hidden}
+  .titlebar{height:34px;border-bottom:1px solid var(--hair);display:flex;align-items:center;padding:0 12px;gap:8px;color:var(--faint);font-size:12px}
+  .titlebar b{color:var(--fg);font-weight:500}
+  .term{position:absolute;inset:34px 0 0 0;background:var(--term);padding:14px 16px;font:13px/1.55 var(--mono);color:#6f7689}
+  .scrim{position:absolute;inset:34px 0 0 0;background:rgba(5,6,10,.55)}
+
+  /* the palette */
+  .pal{position:absolute;left:50%;top:70px;transform:translateX(-50%);width:600px;background:var(--box);
+       border:1px solid var(--line);border-radius:14px;overflow:hidden;
+       box-shadow:0 0 0 1px rgba(0,0,0,.35),0 24px 60px rgba(0,0,0,.55)}
+  .pal::before{content:"";position:absolute;left:14px;right:14px;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(185,166,255,.45),transparent)}
+
+  .top{display:flex;align-items:center;gap:10px;padding:0 14px;height:54px}
+  .glass{width:16px;height:16px;flex:none;color:var(--faint)}
+  .chip{display:none;align-items:center;gap:4px;font:600 12px var(--ui);color:var(--go);background:rgba(139,123,255,.16);
+        border:1px solid rgba(139,123,255,.35);border-radius:6px;padding:2px 8px 2px 6px}
+  .chip.on{display:inline-flex}
+  .chip i{font-style:normal;font-family:var(--mono);opacity:.9}
+  .top input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--fg);font:16px var(--ui)}
+  .top input::placeholder{color:var(--faint)}
+
+  /* the signature: two scopes, one keystroke apart */
+  .scope{display:flex;gap:2px;background:var(--chrome);border:1px solid var(--hair);border-radius:8px;padding:2px}
+  .scope button{font:500 12px var(--ui);color:var(--muted);background:none;border:0;border-radius:6px;padding:4px 10px;cursor:pointer;display:flex;gap:6px;align-items:center}
+  .scope button.on{background:var(--box2);color:var(--fg);box-shadow:inset 0 0 0 1px var(--line)}
+  .scope kbd{font:11px var(--mono);color:var(--faint)}
+  .scope button.on kbd{color:var(--go)}
+
+  .list{max-height:392px;overflow:auto;padding:4px 6px 8px;border-top:1px solid var(--hair);scrollbar-width:thin;scrollbar-color:#2a3142 transparent}
+  .hd{display:flex;align-items:center;gap:8px;padding:12px 10px 5px;font:600 11px var(--ui);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+  .hd .n{margin-left:auto;font:500 11px var(--mono);letter-spacing:0;color:var(--faint)}
+  .hd .tile{width:16px;height:16px;border-radius:4px;display:grid;place-items:center;font:700 9px var(--mono);letter-spacing:0;color:#0b0d12}
+
+  .row{position:relative;display:flex;align-items:center;gap:10px;height:38px;padding:0 10px;border-radius:8px;cursor:pointer;white-space:nowrap}
+  .row.on{background:var(--sel)}
+  .row.on::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:2px;border-radius:2px;background:var(--accent)}
+  .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .ring{width:10px;height:10px;border-radius:50%;flex:none;border:2px solid var(--accent);box-shadow:inset 0 0 0 1.5px var(--term);background:var(--accent)}
+  .nm{overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .badge{font:500 11px var(--mono);color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:0 6px;line-height:18px;flex:none}
+  .st{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12.5px;flex:none;padding-left:12px}
+  .pill{font:600 11px var(--ui);border-radius:999px;padding:1px 8px;line-height:18px}
+  .pill.need{color:#ffd59a;background:rgba(240,173,78,.16)}
+  .pill.run{color:var(--go);background:rgba(139,123,255,.16)}
+  .pill.idle{color:var(--muted);background:rgba(138,144,162,.12)}
+  .go{opacity:0;color:var(--faint);font-size:12px}
+  .row.on .go{opacity:1}
+
+  .row.sk .nm{font:13.5px var(--mono);color:var(--go)}
+  .row.sk .nm span{color:var(--faint)}
+  .row .ds{margin-left:auto;padding-left:16px;color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;max-width:56%}
+  .row.act .ic{width:22px;height:22px;border-radius:6px;background:var(--box2);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);font-size:12px;flex:none}
+  .keys{margin-left:auto;display:flex;gap:3px}
+  kbd.k{font:500 11px var(--mono);color:#c3c8d6;background:var(--box2);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;line-height:17px}
+  .row.more .nm,.row.browse .nm{color:var(--muted)}
+  .row.browse .nm b{color:var(--go);font-weight:600}
+  .row.browse .ic,.row.more .ic{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;flex:none;color:var(--go);background:rgba(139,123,255,.12);font:600 12px var(--mono)}
+
+  .empty{padding:28px 16px;text-align:center;color:var(--muted)}
+  .empty b{display:block;color:var(--fg);font-weight:500;margin-bottom:4px}
+
+  .foot{display:flex;gap:16px;align-items:center;padding:9px 14px;border-top:1px solid var(--hair);background:rgba(11,13,18,.6);color:var(--muted);font-size:12px}
+  .foot span{display:flex;gap:6px;align-items:center}
+  .foot .r{margin-left:auto}
+
+  .notes{width:340px}
+  .notes .nh{font-size:13px;font-weight:600;margin:0 0 8px;color:var(--fg)}
+  .try{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+  .try button{font:13px var(--ui);background:var(--box);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer}
+  .try button:hover,.try button:focus-visible{border-color:var(--accent);outline:none}
+  .notes ul{padding-left:18px;margin:0 0 14px;color:#c9cdd8}
+  .notes li{margin-bottom:6px}
+  .last{color:var(--go);font-size:13px;min-height:20px}
+  @media (prefers-reduced-motion:no-preference){.row{transition:background .08s}}
+</style></head><body>
+<h1>Palette, v3: Kaze's own fonts (Manrope for words, JetBrains Mono for names and keys)</h1>
+<p class="sub">Clickable. Type, use ↑ ↓ and Enter, press <b>/</b> or Tab to switch between Sessions and Skills, or use the buttons on the right. Colours are Midnight's own tokens, so it would look like this in Kaze.</p>
+<div class="wrap">
+  <div class="win" aria-label="A Kaze window">
+    <div class="titlebar"><b>Epic V3-3347 tickets</b> · ~\Desktop\samurai_cart_v3 · <span style="color:#62d39a">V3-3347</span></div>
+    <div class="term">❯ claude<br>⏺ Reading the ticket and the rulings…<br>⎿ Read 4 files</div>
+    <div class="scrim"></div>
+    <div class="pal" role="dialog" aria-label="Palette">
+      <div class="top">
+        <svg class="glass" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="4.8"/><path d="M10.6 10.6 14 14" stroke-linecap="round"/></svg>
+        <span class="chip" id="chip"><i>/</i>Skills</span>
+        <input id="q" aria-label="Search" autocomplete="off" autofocus>
+        <div class="scope" role="tablist" aria-label="What to search">
+          <button id="tS" role="tab">Sessions</button>
+          <button id="tK" role="tab">Skills <kbd>/</kbd></button>
+        </div>
+      </div>
+      <div class="list" id="list" role="listbox"></div>
+      <div class="foot" id="foot"></div>
+    </div>
+  </div>
+  <div class="notes">
+    <h2 class="nh">Try these</h2>
+    <div class="try">
+      <button data-q="">Just opened</button>
+      <button data-q="v3">Type "v3"</button>
+      <button data-q="ci">Type "ci"</button>
+      <button data-q="/">Press /</button>
+      <button data-q="/review">Type "/review"</button>
+      <button data-q="/devbox">Type "/devbox"</button>
+      <button data-q="zzz">No results</button>
+    </div>
+    <h2 class="nh">What's new in the look</h2>
+    <ul>
+      <li>A taller search field with a magnifier, and a <b>Sessions | Skills</b> switch at its right. <b>/</b> or Tab flips it, and a "/ Skills" chip sits in the field while you're in skills.</li>
+      <li>Rows are taller, with rounded highlights and a thin accent bar on the selected one.</li>
+      <li>Session state is a coloured pill (needs you, running, idle). "go to session" only shows on the selected row, so the list reads quieter.</li>
+      <li>Skill groups get a small coloured tile per plugin and a count. Kaze actions show their shortcut as keycaps.</li>
+      <li>The footer changes with the selected row, and every key is a keycap.</li>
+    </ul>
+    <div class="last" id="last" aria-live="polite"></div>
+  </div>
+</div>
+<script>
+const sessions=[
+ {n:"Review PR 835 V3-425",ag:"claude",st:"needs",wait:true},
+ {n:"Epic V3-3347 tickets",ag:"claude",st:"idle"},
+ {n:"Lap questions V3-3550 and V3-3551",ag:"claude",st:"idle"},
+ {n:"Issues 143 and 112",ag:"claude",st:"run"},
+ {n:"kaze-browser-p1",ag:"codex",st:"idle"},
+];
+const stTxt={needs:"needs you",run:"running",idle:"idle"};
+const actions=[
+ {n:"New session",k:["Ctrl","Shift","T"],i:"+"},{n:"New branch session",k:["Ctrl","Shift","B"],i:"⑂"},
+ {n:"Open settings",k:["Ctrl",","],i:"⚙"},{n:"Toggle sidebar",k:["Ctrl","Shift","E"],i:"▤"},
+ {n:"Run workspace: samurai",k:[],i:"▶"},{n:"Find in terminal",k:["Ctrl","Shift","F"],i:"⌕"},
+];
+const S=(n,d,g)=>({n,d,g});
+const skills=[
+ S("chat-digest","Morning V3 chat brief from saved Chatwork messages","Yours"),
+ S("ci-watch","Babysit CI on my open PRs until each is green","Yours"),
+ S("fix-conflicts","Find your open PRs that conflict with master and fix them","Yours"),
+ S("green-ci","Get your open PRs' red CI to green","Yours"),
+ S("handoff","Capture a per-ticket end-of-session handoff","Yours"),
+ S("my-prs","A triaged dashboard of your open PRs","Yours"),
+ S("open-pr","Open the draft PR","Yours"),
+ S("open-tickets","Morning census of your open Jira tickets","Yours"),
+ S("review-mine","Deep pre-merge review of your own branch","Yours"),
+ S("review-teammate-pr","Shallow review of a teammate's PR","Yours"),
+ S("ship-ticket","Execute the plan, review, open the draft PR","Yours"),
+ S("start-ticket","Scaffold a new Jira ticket","Yours"),
+ S("test-plan","Generate a manual test plan","Yours"),
+ S("work-ticket","Context, brainstorm and plan for a ticket","Yours"),
+ S("wrap-ticket","Close out a merged ticket","Yours"),
+ S("devbox:dashboard","Open your devbox board in the browser","devbox"),
+ S("devbox:devbox","Send work that can run without you","devbox"),
+ S("devbox:devs","Every devbox space with its usage","devbox"),
+ S("devbox:jobs","Your devbox jobs, one line each","devbox"),
+ S("devbox:kit","What a devbox job lacks","devbox"),
+ S("devbox:lead","Send a bigger task to a lead agent","devbox"),
+ S("devbox:result","Bring back a job's result","devbox"),
+ S("devbox:run","Send a task to a worker agent","devbox"),
+ S("devbox:schedule","Run a task on a schedule","devbox"),
+ S("superpowers:brainstorming","Use before any creative work","superpowers"),
+ S("superpowers:writing-plans","Write a plan from a spec","superpowers"),
+ S("superpowers:systematic-debugging","Use on any bug before fixing","superpowers"),
+ S("superpowers:test-driven-development","Write the test first","superpowers"),
+ S("superpowers:requesting-code-review","Review before merging","superpowers"),
+ S("superpowers:subagent-driven-development","Execute a plan with fresh subagents","superpowers"),
+ S("v3-gauntlet:v3-ticket","Plan a ticket without stopping","v3-gauntlet"),
+ S("v3-gauntlet:v3-lap","Run the queued tickets as a lap","v3-gauntlet"),
+ S("v3-gauntlet:v3-feedback","Work reviewer feedback on your PRs","v3-gauntlet"),
+ S("v3-gauntlet:v3-review","Builder and critic review loop","v3-gauntlet"),
+ S("v3-gauntlet:ticket-close","Close a merged ticket's workspace","v3-gauntlet"),
+ S("impeccable:impeccable","Design and polish a frontend","impeccable"),
+ S("ralph-loop:ralph-loop","Start Ralph Loop in this session","ralph-loop"),
+ S("ralph-loop:cancel-ralph","Cancel the active Ralph Loop","ralph-loop"),
+];
+const tileCol={devbox:"#62d39a",superpowers:"#b9a6ff","v3-gauntlet":"#f0ad4e",impeccable:"#7cc4ff","ralph-loop":"#ff9db8"};
+const recent=["ci-watch","review-mine","superpowers:brainstorming"];
+const open={}; let sel=0, rows=[];
+const $=id=>document.getElementById(id), q=$("q");
+const has=(s,t)=>s.toLowerCase().includes(t);
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+const push=(L,kind,o)=>L.push(Object.assign({kind},o||{}));
+function skillName(n){const i=n.indexOf(":");return i<0?"/"+esc(n):"/<span>"+esc(n.slice(0,i+1))+"</span>"+esc(n.slice(i+1));}
+function build(){
+  const v=q.value, isSkill=v.startsWith("/"), t=(isSkill?v.slice(1):v).trim().toLowerCase(), L=[];
+  $("chip").classList.toggle("on",isSkill); $("tS").classList.toggle("on",!isSkill); $("tK").classList.toggle("on",isSkill);
+  $("tS").setAttribute("aria-selected",!isSkill); $("tK").setAttribute("aria-selected",isSkill);
+  q.placeholder=isSkill?"Search skills by name or what they do":"Search sessions and Kaze actions";
+  if(!isSkill){
+    const ok=s=>!t||has(s.n,t)||has(s.ag,t);
+    const w=sessions.filter(s=>s.wait&&ok(s)), ss=sessions.filter(s=>!s.wait&&ok(s));
+    if(w.length){push(L,"hd",{n:"Waiting on you"});w.forEach(s=>push(L,"ses",s));}
+    if(ss.length){push(L,"hd",{n:"Sessions"});ss.forEach(s=>push(L,"ses",s));}
+    if(!t){
+      push(L,"hd",{n:"Recent skills"});
+      recent.forEach(r=>push(L,"sk",skills.find(s=>s.n===r)));
+      push(L,"browse",{n:"Browse all <b>"+skills.length+" skills</b>"});
+    }else{
+      const a=actions.filter(x=>has(x.n,t)); if(a.length){push(L,"hd",{n:"Kaze"});a.forEach(x=>push(L,"act",x));}
+      const k=skills.filter(s=>has(s.n,t)||has(s.d,t));
+      if(k.length){push(L,"hd",{n:"Skills",c:k.length});k.slice(0,3).forEach(s=>push(L,"sk",s));
+        if(k.length>3)push(L,"more",{n:(k.length-3)+" more matching skills",to:"/"+t});}
+    }
+  }else{
+    const k=skills.filter(s=>!t||has(s.n,t)||has(s.d,t));
+    if(!t){push(L,"hd",{n:"Recent"});recent.forEach(r=>push(L,"sk",skills.find(s=>s.n===r)));}
+    [...new Set(skills.map(s=>s.g))].forEach(g=>{
+      const gs=k.filter(s=>s.g===g); if(!gs.length)return;
+      push(L,"hd",{n:g,c:gs.length,tile:g==="Yours"?null:g});
+      const cap=(g==="Yours"||t||open[g])?gs.length:4;
+      gs.slice(0,cap).forEach(s=>push(L,"sk",s));
+      if(gs.length>cap)push(L,"more",{n:(gs.length-cap)+" more in "+g,grp:g});
+    });
+  }
+  rows=L; const pick=selectable(); if(!pick.includes(sel))sel=pick[0]??-1; draw();
+}
+const selectable=()=>rows.map((r,i)=>r.kind==="hd"?-1:i).filter(i=>i>=0);
+function draw(){
+  const el=$("list"); el.innerHTML="";
+  if(!selectable().length){el.innerHTML='<div class="empty"><b>No results for "'+esc(q.value.replace(/^\//,""))+'"</b>'+(q.value.startsWith("/")?"Try part of what the skill does, like /review.":"Press / to search skills instead.")+'</div>';}
+  rows.forEach((r,i)=>{
+    const d=document.createElement("div");
+    if(r.kind==="hd"){d.className="hd";d.innerHTML=(r.tile?'<span class="tile" style="background:'+tileCol[r.tile]+'">'+r.tile[0].toUpperCase()+'</span>':"")+"<span>"+esc(r.n)+"</span>"+(r.c?'<span class="n">'+r.c+'</span>':"");el.appendChild(d);return;}
+    d.className="row "+r.kind+(i===sel?" on":""); d.setAttribute("role","option"); d.setAttribute("aria-selected",i===sel);
+    if(r.kind==="ses"){
+      const mark=r.st==="run"?'<span class="ring"></span>':'<span class="dot" style="background:'+(r.st==="needs"?"var(--amber)":"#5a6072")+'"></span>';
+      d.innerHTML=mark+'<span class="nm">'+esc(r.n)+'</span><span class="badge">'+r.ag+'</span><span class="st"><span class="go">go to session ↵</span><span class="pill '+(r.st==="needs"?"need":r.st)+'">'+stTxt[r.st]+'</span></span>';
+    }else if(r.kind==="act"){
+      d.innerHTML='<span class="ic">'+r.i+'</span><span class="nm">'+esc(r.n)+'</span><span class="keys">'+r.k.map(k=>'<kbd class="k">'+k+'</kbd>').join("")+'</span>';
+    }else if(r.kind==="sk"){
+      d.innerHTML='<span class="nm">'+skillName(r.n)+'</span><span class="ds">'+esc(r.d)+'</span>';
+    }else{
+      d.innerHTML='<span class="ic">'+(r.kind==="browse"?"/":"+")+'</span><span class="nm">'+r.n+'</span>';
+    }
+    d.onmouseenter=()=>{if(sel!==i){sel=i;draw();}};
+    d.onclick=()=>{sel=i;enter(false);};
+    el.appendChild(d); if(i===sel)d.scrollIntoView({block:"nearest"});
+  });
+  const r=rows[sel], K=k=>'<kbd class="k">'+k+'</kbd>';
+  $("foot").innerHTML=(r&&r.kind==="sk")
+    ?'<span>'+K("↑")+K("↓")+' move</span><span>'+K("↵")+' run here</span><span>'+K("Shift")+K("↵")+' new session</span><span class="r">'+K("Esc")+' close</span>'
+    :'<span>'+K("↑")+K("↓")+' move</span><span>'+K("↵")+' open</span><span>'+K("/")+' skills</span><span class="r">'+K("Esc")+' close</span>';
+}
+function say(s){$("last").textContent="Would do: "+s;}
+function scope(sk){const t=q.value.replace(/^\//,"");q.value=sk?"/"+t:t;sel=0;build();q.focus();}
+function enter(shift){
+  const r=rows[sel]; if(!r)return;
+  if(r.kind==="ses")say("go to "+r.n);
+  else if(r.kind==="act")say(r.n);
+  else if(r.kind==="sk")say(shift?"start a new session running /"+r.n:"type /"+r.n+" into this session");
+  else if(r.kind==="browse")scope(true);
+  else if(r.kind==="more"){if(r.grp){open[r.grp]=true;build();}else{q.value=r.to;sel=0;build();}}
+  q.focus();
+}
+$("tS").onclick=()=>scope(false); $("tK").onclick=()=>scope(true);
+q.addEventListener("input",()=>{sel=0;build();});
+q.addEventListener("keydown",e=>{
+  const p=selectable(), at=p.indexOf(sel);
+  if(e.key==="ArrowDown"){e.preventDefault();sel=p[Math.min(at+1,p.length-1)];draw();}
+  else if(e.key==="ArrowUp"){e.preventDefault();sel=p[Math.max(at-1,0)];draw();}
+  else if(e.key==="Enter"){e.preventDefault();enter(e.shiftKey);}
+  else if(e.key==="Tab"){e.preventDefault();scope(!q.value.startsWith("/"));}
+  else if(e.key==="Escape"){q.value="";sel=0;build();say("close the palette");}
+});
+document.querySelectorAll(".try button").forEach(b=>b.onclick=()=>{q.value=b.dataset.q;sel=0;Object.keys(open).forEach(k=>delete open[k]);build();q.focus();});
+build();
+</script>
+</body></html>

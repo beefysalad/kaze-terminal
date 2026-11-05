@@ -128,12 +128,14 @@ func TestReloadRefreshesShownKeys(t *testing.T) {
 	}
 	win.openPalette()
 	waitSkills(t, win, r)
+	win.setPaletteQuery("branch") // Kaze actions show once you type (palette redesign)
+	win.refreshPalette()
 	found := false
 	for _, it := range win.palette.items {
 		if it.Act == actNewBranchSession {
 			found = true
-			if it.Detail != branch {
-				t.Fatalf("palette shows %q for a new branch session, want %q", it.Detail, branch)
+			if want := splitShortcut(branch); !slices.Equal(it.Keys, want) {
+				t.Fatalf("palette shows %q for a new branch session, want %q", it.Keys, want)
 			}
 		}
 	}

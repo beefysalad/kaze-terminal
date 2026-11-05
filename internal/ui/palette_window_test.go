@@ -3,6 +3,7 @@ package ui
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -19,6 +20,15 @@ import (
 	"github.com/beefysalad/kaze-terminal/internal/workspaces"
 )
 
+// palTestSkills are palWindow's skills: two of yours and six devbox ones.
+func palTestSkills() []skills.Skill {
+	list := []skills.Skill{{Name: "review-mine", Desc: "Review a branch", Scope: skills.User}, {Name: "ship-ticket", Desc: "Open the PR", Scope: skills.User}}
+	for _, c := range "abcdef" {
+		list = append(list, skills.Skill{Name: "devbox:" + string(c), Desc: "A job", Scope: skills.Plugin})
+	}
+	return list
+}
+
 // palWindow has three sessions a, b, c with a shown, fake skills, and its
 // config and Claude folders in a temp dir.
 func palWindow(t *testing.T) (*window, *recStarter, *input.Router, [3]*tabs.Tab) {
@@ -29,7 +39,7 @@ func palWindow(t *testing.T) (*window, *recStarter, *input.Router, [3]*tabs.Tab)
 	win.claudePath = filepath.Join(tmp, ".claude", "settings.json")
 	win.opt.Shell = []string{"/bin/zsh"}
 	win.skillsFn = func(skills.Sources) []skills.Skill {
-		return []skills.Skill{{Name: "review-mine", Desc: "Review a branch"}, {Name: "ship-ticket", Desc: "Open the PR"}}
+		return palTestSkills()
 	}
 	a := openIn(t, win, osPath("/code/alpha/aaa"))
 	b := openIn(t, win, osPath("/code/alpha/bbb"))
@@ -114,6 +124,7 @@ func TestPaletteListsSkillsFromTheTree(t *testing.T) {
 		t.Fatal(err)
 	}
 	openPal(t, win, r)
+	palType(t, win, r, "/") // skills are behind the slash
 	if !strings.Contains(strings.Join(palKeys(win), ","), "skill:review-mine") {
 		t.Fatalf("items %v", palKeys(win))
 	}
@@ -297,7 +308,7 @@ func TestKazeActionRuns(t *testing.T) {
 	win, _, r, _ := palWindow(t)
 	openPal(t, win, r)
 	palType(t, win, r, "new session")
-	if got := selected(win); got.Key != "act:new_tab" || got.Detail != "Ctrl+Shift+T" {
+	if got := selected(win); got.Key != "act:new_tab" || strings.Join(got.Keys, "+") != "Ctrl+Shift+T" {
 		t.Fatalf("selected %+v", got)
 	}
 	pressKey(t, win, r, key.NameReturn, 0)
@@ -309,6 +320,7 @@ func TestKazeActionRuns(t *testing.T) {
 func TestPaletteLeavesItselfOut(t *testing.T) {
 	win, _, r, _ := palWindow(t)
 	openPal(t, win, r)
+	palType(t, win, r, "palette")
 	if strings.Contains(strings.Join(palKeys(win), ","), "act:palette") {
 		t.Fatal("the palette lists Open the palette")
 	}
@@ -350,7 +362,7 @@ func TestQueryFiltersLive(t *testing.T) {
 	pressKey(t, win, r, key.NameDownArrow, 0)
 	palType(t, win, r, "rev")
 	keys := palKeys(win)
-	if len(keys) == 0 || keys[0] != "skill:review-mine" {
+	if !slices.Contains(keys, "skill:review-mine") {
 		t.Fatalf("items %v", keys)
 	}
 	for _, k := range keys {
@@ -379,4 +391,249 @@ func TestSelectionFollowsItsItem(t *testing.T) {
 	if selected(win).Tab != tb[2].ID {
 		t.Fatalf("selection moved to %+v", selected(win))
 	}
+}
+
+func TestActionsBuiltOncePerOpen(t *testing.T) {
+	win, _, r, _ := palWindow(t)
+	openPal(t, win, r)
+	palType(t, win, r, "new")
+	acts := win.palette.actions
+	if len(acts) == 0 {
+		t.Fatal("no actions built on open")
+	}
+	for range 10 {
+		sideFrame(t, win, r)
+	}
+	if got := win.palette.actions; len(got) != len(acts) || &got[0] != &acts[0] {
+		t.Fatal("the actions were built again on a still frame")
+	}
+}
+
+// palSelect moves the selection with the arrows to the row with key, bounded.
+func palSelect(t *testing.T, win *window, r *input.Router, k string) {
+	t.Helper()
+	for range 40 {
+		if selected(win).Key == k {
+			return
+		}
+		pressKey(t, win, r, key.NameDownArrow, 0)
+	}
+	t.Fatalf("no row %s in %v", k, palKeys(win))
+}
+
+func TestTabTogglesScopeKeepingText(t *testing.T) {
+	win, _, r, _ := palWindow(t)
+	openPal(t, win, r)
+	palType(t, win, r, "rev")
+	pressKey(t, win, r, key.NameTab, 0)
+	if got := win.palette.ed.Text(); got != "/rev" {
+		t.Fatalf("after Tab %q", got)
+	}
+	if s, e := win.palette.ed.Selection(); s != 4 || e != 4 {
+		t.Fatalf("caret %d,%d, want at the end", s, e)
+	}
+	pressKey(t, win, r, key.NameTab, 0)
+	if got := win.palette.ed.Text(); got != "rev" {
+		t.Fatalf("after Tab again %q", got)
+	}
+	pressKey(t, win, r, key.NameTab, key.ModShift)
+	if got := win.palette.ed.Text(); got != "rev" || !win.palette.open {
+		t.Fatalf("after Shift+Tab %q, open %v", got, win.palette.open)
+	}
+}
+
+func TestTypingSlashEntersSkills(t *testing.T) {
+	win, _, r, _ := palWindow(t)
+	openPal(t, win, r)
+	palType(t, win, r, "/")
+	if g := selected(win).Group; g != "YOURS" && g != palHeadRecent {
+		t.Fatalf("first row under %q: %v", g, palKeys(win))
+	}
+}
+
+func TestBackspaceAtStartLeavesSkills(t *testing.T) {
+	win, _, r, _ := palWindow(t)
+	openPal(t, win, r)
+	palType(t, win, r, "/x")
+	win.palette.ed.SetCaret(2, 2)
+	pressKey(t, win, r, key.NameDeleteBackward, 0)
+	if got := win.palette.ed.Text(); got != "/" {
+		t.Fatalf("native Backspace at the end: %q", got)
+	}
+	palType(t, win, r, "x")
+	win.palette.ed.SetCaret(1, 1)
+	pressKey(t, win, r, key.NameDeleteBackward, 0)
+	if got := win.palette.ed.Text(); got != "x" {
+		t.Fatalf("native Backspace after the slash: %q", got)
+	}
+	win.setPaletteQuery("/x")
+	win.palette.ed.SetCaret(0, 0)
+	pressKey(t, win, r, key.NameDeleteBackward, 0)
+	if got := win.palette.ed.Text(); got != "x" {
+		t.Fatalf("Backspace at the start: %q", got)
+	}
+	win.palette.ed.SetCaret(0, 0)
+	pressKey(t, win, r, key.NameDeleteBackward, 0) // at the start of Sessions text: nothing
+	if got := win.palette.ed.Text(); got != "x" {
+		t.Fatalf("Backspace at the start of x: %q", got)
+	}
+	win.setPaletteQuery(" /x") // spaces before the "/" are still Skills (palSkillScope)
+	win.palette.ed.SetCaret(0, 0)
+	pressKey(t, win, r, key.NameDeleteBackward, 0)
+	if got := win.palette.ed.Text(); got != " x" {
+		t.Fatalf("Backspace at the start of \" /x\": %q, want \" x\"", got)
+	}
+}
+
+func TestBrowseRowSwitchesScope(t *testing.T) {
+	win, _, r, _ := palWindow(t)
+	openPal(t, win, r)
+	palSelect(t, win, r, "browse")
+	if it := selected(win); it.Name != "Browse all 8 skills" {
+		t.Fatalf("browse row %+v", it)
+	}
+	pressKey(t, win, r, key.NameReturn, 0)
+	if got := win.palette.ed.Text(); got != "/" || !win.palette.open {
+		t.Fatalf("text %q, open %v", got, win.palette.open)
+	}
+}
+
+func TestMoreMatchingRowSwitchesWithText(t *testing.T) {
+	win, _, r, _ := palWindow(t)
+	openPal(t, win, r)
+	palType(t, win, r, "e")
+	palSelect(t, win, r, "more:matches")
+	pressKey(t, win, r, key.NameReturn, 0)
+	if got := win.palette.ed.Text(); got != "/e" || !win.palette.open {
+		t.Fatalf("text %q, open %v", got, win.palette.open)
+	}
+}
+
+func TestMoreInPluginOpensAndSelects(t *testing.T) {
+	win, _, r, _ := palWindow(t)
+	openPal(t, win, r)
+	palType(t, win, r, "/")
+	devbox := func() int { return len(palOf(win.palette.items, "DEVBOX", palSkill)) }
+	if devbox() != palFoldAt {
+		t.Fatalf("%d devbox rows folded", devbox())
+	}
+	palSelect(t, win, r, "more:p:devbox")
+	pressKey(t, win, r, key.NameReturn, 0)
+	if !win.palette.open || devbox() != 6 {
+		t.Fatalf("open %v, %d devbox rows", win.palette.open, devbox())
+	}
+	if _, ok := palFind(win.palette.items, "more:p:devbox"); ok {
+		t.Fatal("the more row stayed")
+	}
+	if got := selected(win).Key; got != "skill:devbox:e" {
+		t.Fatalf("selected %s, want the first newly shown skill", got)
+	}
+	palType(t, win, r, "x")
+	win.palette.ed.SetCaret(2, 2) // as the IME leaves it after typing
+	pressKey(t, win, r, key.NameDeleteBackward, 0)
+	if win.palette.ed.Text() != "/" || devbox() != palFoldAt {
+		t.Fatalf("text %q, %d devbox rows after a text change", win.palette.ed.Text(), devbox())
+	}
+}
+
+func TestScopeSwitchSelectsFirstRow(t *testing.T) {
+	win, _, r, _ := palWindow(t)
+	openPal(t, win, r)
+	pressKey(t, win, r, key.NameDownArrow, 0)
+	pressKey(t, win, r, key.NameDownArrow, 0)
+	pressKey(t, win, r, key.NameTab, 0)
+	if win.palette.ed.Text() != "/" || win.palette.selIndex() != 0 || win.palette.sel != win.palette.items[0].Key || win.palette.scroll != 0 {
+		t.Fatalf("text %q, selected %d after Tab", win.palette.ed.Text(), win.palette.selIndex())
+	}
+}
+
+func TestEnterAndShiftEnterOnSkillUnchanged(t *testing.T) {
+	win, st, r, tb := palWindow(t)
+	win.noteAgent(notify.Msg{Tab: int(tb[0].ID), Kind: notify.KindDone}, tb[0].ID, shellSeq(tb[0]))
+	openPal(t, win, r)
+	palType(t, win, r, "/ship")
+	if got := selected(win); got.Key != "skill:ship-ticket" {
+		t.Fatalf("selected %+v", got)
+	}
+	pressKey(t, win, r, key.NameReturn, 0)
+	waitSent(t, st.ptys[0], "/ship-ticket ")
+	openPal(t, win, r)
+	palType(t, win, r, "/ship")
+	pressKey(t, win, r, key.NameReturn, key.ModShift)
+	if n := len(win.mgr.Tabs()); n != 4 || len(win.launches) != 1 || win.palette.open {
+		t.Fatalf("%d tabs, %d launches, open %v", n, len(win.launches), win.palette.open)
+	}
+}
+
+func TestPaletteGroupsFollowALateScan(t *testing.T) {
+	win, _, r, _ := palWindow(t)
+	release := make(chan struct{})
+	win.skillsFn = func(skills.Sources) []skills.Skill {
+		select {
+		case <-release:
+		case <-time.After(3 * time.Second):
+		}
+		return palTestSkills()
+	}
+	sc := shortcutFor(t, win, actPalette)
+	pressKey(t, win, r, sc.Name, sc.Modifiers)
+	sideFrame(t, win, r)
+	if _, ok := palFind(win.palette.items, "browse"); ok || !win.palette.scanning {
+		t.Fatalf("before the scan: %v, scanning %v", palKeys(win), win.palette.scanning)
+	}
+	close(release)
+	waitSkills(t, win, r)
+	if b, ok := palFind(win.palette.items, "browse"); !ok || b.Name != "Browse all 8 skills" {
+		t.Fatalf("after the scan: %v", palKeys(win))
+	}
+	builds := win.palette.groupBuilds
+	palType(t, win, r, "/")
+	if len(palOf(win.palette.items, "DEVBOX", palSkill)) == 0 {
+		t.Fatalf("no DEVBOX group: %v", palKeys(win))
+	}
+	for range 10 {
+		sideFrame(t, win, r)
+	}
+	if win.palette.groupBuilds != builds || builds != 1 {
+		t.Fatalf("groups built %d times, then %d more", builds, win.palette.groupBuilds-builds)
+	}
+}
+
+// With no skills at all, none installed or the scan not back yet, the Skills
+// scope says so instead of "No results" for the empty text.
+func TestSkillsScopeWithoutSkills(t *testing.T) {
+	want := []string{palNoSkills}
+	t.Run("none installed", func(t *testing.T) {
+		win, _, r, _ := palWindow(t)
+		win.skillsFn = func(skills.Sources) []skills.Skill { return nil }
+		openPal(t, win, r)
+		palType(t, win, r, "/")
+		if !slices.Equal(win.palette.hits.lines, want) {
+			t.Fatalf("lines %q, want %q", win.palette.hits.lines, want)
+		}
+		palType(t, win, r, "rev")
+		if !slices.Equal(win.palette.hits.lines, want) {
+			t.Fatalf("on /rev: lines %q, want %q", win.palette.hits.lines, want)
+		}
+	})
+	t.Run("before the scan", func(t *testing.T) {
+		win, _, r, _ := palWindow(t)
+		release := make(chan struct{})
+		defer close(release)
+		win.skillsFn = func(skills.Sources) []skills.Skill { <-release; return nil }
+		win.openPalette()
+		sideFrame(t, win, r)
+		palType(t, win, r, "/")
+		if !slices.Equal(win.palette.hits.lines, want) {
+			t.Fatalf("lines %q, want %q", win.palette.hits.lines, want)
+		}
+	})
+	t.Run("skills but no match", func(t *testing.T) {
+		win, _, r, _ := palWindow(t)
+		openPal(t, win, r)
+		palType(t, win, r, "/zzz")
+		if w := []string{`No results for "zzz"`, palEmptySkills}; !slices.Equal(win.palette.hits.lines, w) {
+			t.Fatalf("lines %q, want %q", win.palette.hits.lines, w)
+		}
+	})
 }

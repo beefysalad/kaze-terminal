@@ -482,14 +482,20 @@ Doc rows are not saved or restored after restart, and do not count as terminal t
 ## The palette
 
 One key finds and starts things: Ctrl+Shift+K (Cmd+K on macOS), or the search field in the
-middle of the title bar. Type to
-narrow the list; a leading `/` is ignored and the text can match anywhere in a name or
-description. It has four sections:
+middle of the title bar. It opens on:
 
 - **Waiting on you:** sessions where Claude is asking for something.
 - **Sessions:** every other session and workspace member, with its state. Enter shows it.
-- **Skills:** every skill and slash command in your Claude Code setup, recently used ones first.
-- **Kaze:** kaze's own actions, and "Run workspace" for each saved workspace.
+- **Recent skills:** up to 3 skills you started lately, then a "Browse all N skills" row.
+
+Type to narrow the list. The text can match anywhere in a name or description. Typing also finds
+Kaze's own actions (and "Run workspace" for each saved workspace), plus up to 3 matching skills.
+Servers are not listed here; use the status bar or the sidebar for those.
+
+To see every skill, type `/`, press Tab, or click "Skills" on the switch beside the box. Skills
+are grouped as **Yours**, **This project**, then one group per plugin. Each group shows 4 and ends
+with a row like "N more in plugin-name" that opens the rest. Tab or the switch goes back to the
+short list. On a narrow window the switch hides, and Tab still works.
 
 Up and Down move, Enter acts, Esc or a click outside closes. On a skill:
 
@@ -503,8 +509,8 @@ Up and Down move, Enter acts, Esc or a click outside closes. On a skill:
 Skills come from `~/.claude/skills/*/SKILL.md`, `~/.claude/commands/**/*.md`, the same folders
 under the current session's repo (`.claude/`, which win over yours), and enabled plugins in
 `~/.claude/settings.json` (newest installed version only, shown as `plugin:name`). kaze only
-reads these files, when the palette opens, and rereads only the ones that changed. The last 10
-skills you started stay at the top while kaze runs.
+reads these files, when the palette opens, and rereads only the ones that changed. The last 3
+skills you started show under Recent while kaze runs.
 
 ## Settings
 

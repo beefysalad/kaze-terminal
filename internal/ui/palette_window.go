@@ -5,6 +5,9 @@ import (
 	"image"
 	"io"
 	"path/filepath"
+	"runtime"
+	"strings"
+	"unicode/utf8"
 
 	"gioui.org/io/clipboard"
 	"gioui.org/io/event"
@@ -26,25 +29,30 @@ import (
 // paletteUI is the palette's state; UI goroutine only, except loaded, which
 // the skill scan sends on.
 type paletteUI struct {
-	open     bool
-	ed       widget.Editor // the query
-	sel      string        // the selected item's Key; "" or a gone key is the first item
-	scroll   int
-	reveal   bool // scroll the selection into view next frame
-	hover    int  // the item index under the pointer, -1 for none
-	hits     palHits
-	items    []palItem // as last built, the ones hits refer to
-	tag      int       // pointer events anywhere in the window while open
-	filters  []event.Filter
-	edInput  input.Router // feeds the native editor one ordered event at a time
-	edOps    op.Ops       // the editor's keyboard handler for the private router
-	edReady  bool
-	skills   []skills.Skill // the last list loaded, kept across opens
-	scanning bool
-	loaded   chan []skills.Skill // buffered 1; the scan sends, the frame drains
-	recent   recentPrompts
-	spaces   []workspaces.Workspace // read on open
-	redraws  int                    // frames the palette's pointer input asked for; tests count them
+	open        bool
+	ed          widget.Editor // the query
+	sel         string        // the selected item's Key; "" or a gone key is the first item
+	scroll      int
+	reveal      bool // scroll the selection into view next frame
+	hover       int  // the item index under the pointer, -1 for none
+	hits        palHits
+	items       []palItem // as last built, the ones hits refer to
+	tag         int       // pointer events anywhere in the window while open
+	filters     []event.Filter
+	edInput     input.Router // feeds the native editor one ordered event at a time
+	edOps       op.Ops       // the editor's keyboard handler for the private router
+	edReady     bool
+	skills      []skills.Skill // the last list loaded, kept across opens
+	scanning    bool
+	loaded      chan []skills.Skill // buffered 1; the scan sends, the frame drains
+	recent      recentPrompts
+	spaces      []workspaces.Workspace // read on open
+	actions     []palAction            // built once per open
+	groups      []palGroup             // groupSkills(skills), built when a scan delivers
+	opened      map[string]bool        // plugin groups opened; cleared on any text or scope change, open and close
+	edShift     int                    // rune offset for edit ranges taken before a scope switch this frame
+	redraws     int                    // frames the palette's pointer input asked for; tests count them
+	groupBuilds int                    // groupSkills runs; tests count them
 }
 
 // selIndex is the selected item's index: its Key's, else the first; -1 for none.
@@ -76,7 +84,7 @@ func (win *window) openPalette() {
 		return
 	}
 	win.dropSideEdit()
-	p.open, p.sel, p.scroll, p.hover, p.reveal = true, "", 0, -1, false
+	p.open, p.sel, p.scroll, p.hover, p.reveal, p.opened = true, "", 0, -1, false, nil
 	p.ed.SetText("")
 	p.edInput, p.edReady = input.Router{}, false
 	p.spaces = nil
@@ -85,6 +93,7 @@ func (win *window) openPalette() {
 			p.spaces = doc.Workspaces
 		}
 	}
+	p.actions = win.palActions()
 	win.startSkillScan()
 	win.wantFocus = true
 	win.w.Invalidate()
@@ -95,7 +104,7 @@ func (win *window) closePalette() {
 	if !p.open {
 		return
 	}
-	p.open, p.hits, p.items, p.hover = false, palHits{}, nil, -1
+	p.open, p.hits, p.items, p.hover, p.opened = false, palHits{}, nil, -1, nil
 	p.ed.SetText("")
 	win.wantFocus = true
 	win.w.Invalidate()
@@ -148,25 +157,39 @@ func (win *window) skillSources() (skills.Sources, string) {
 
 // palInput is the palette's live input: states change while it is open.
 func (win *window) palInput() palInput {
-	in := palInput{
-		Query:    win.palette.ed.Text(),
+	p := &win.palette
+	return palInput{
+		Query:    p.ed.Text(),
 		Sessions: sessionRows(buildSide(win.sideIn())),
-		Skills:   win.palette.skills,
-		Recent:   win.palette.recent.list,
+		Skills:   p.skills,
+		Groups:   p.groups,
+		Recent:   p.recent.list,
+		Actions:  p.actions,
+		Open:     p.opened,
 	}
-	for _, r := range win.curRuns() {
-		in.Members = append(in.Members, r.Members...)
-	}
+}
+
+// palActionIcons are the action tiles' icons (Ruling 9); others get none.
+var palActionIcons = map[string]string{
+	"new_tab": "plus", "new_branch_session": "branch", "open_settings": "cog",
+	"toggle_sidebar": "panel", "find": "search", "agents_board": "agents",
+}
+
+// palActions are the Kaze actions the palette can run, with their shortcuts
+// as keycaps, and "Run workspace <name>" for each workspace.
+func (win *window) palActions() []palAction {
+	var out []palAction
 	for _, c := range kazeCommands {
 		if c.Act == actPalette {
 			continue // it is open already
 		}
-		a := palAction{Name: c.Label, Config: c.Config, Act: c.Act}
-		a.Key = win.keyText(c.Config)
-		in.Actions = append(in.Actions, a)
+		a := palAction{Name: c.Label, Config: c.Config, Act: c.Act, Icon: palActionIcons[c.Config]}
+		if sc, ok := win.binds[c.Config]; ok {
+			a.Keys = splitShortcut(formatShortcut(runtime.GOOS, sc))
+		}
+		out = append(out, a)
 	}
-	in.Actions = append(in.Actions, workspaceActions(win.palette.spaces)...)
-	return in
+	return append(out, workspaceActions(win.palette.spaces)...)
 }
 
 func (win *window) refreshPalette() {
@@ -180,12 +203,15 @@ func (win *window) paletteEvents(gtx layout.Context) {
 	select {
 	case list := <-p.loaded:
 		p.skills, p.scanning = list, false
+		p.groups = groupSkills(list)
+		p.groupBuilds++
 	default:
 	}
 	if !p.open {
 		return
 	}
 	win.initPaletteEditor(gtx)
+	p.edShift = 0 // the window's editor state caught up with last frame's switch
 	// One stream preserves ordering between text, native editing keys and
 	// palette actions. The private router lets the native Editor handle each
 	// edit without reaching ahead past Enter or a palette navigation key.
@@ -204,7 +230,7 @@ func (win *window) paletteEvents(gtx layout.Context) {
 			}
 			continue
 		}
-		p.edInput.Queue(ev)
+		p.edInput.Queue(shiftEdit(ev, p.edShift))
 		win.updatePaletteEditor(gtx)
 	}
 	kinds := pointer.Press | pointer.Move | pointer.Scroll
@@ -254,7 +280,7 @@ func (win *window) updatePaletteEditor(gtx layout.Context) {
 		}
 		if _, ok := ev.(widget.ChangeEvent); ok {
 			win.ui.fit(p.ed.Text())
-			p.sel, p.scroll = "", 0
+			p.sel, p.scroll, p.opened = "", 0, nil
 			win.w.Invalidate()
 		}
 	}
@@ -286,8 +312,16 @@ func (win *window) syncPaletteEditor(gtx layout.Context) {
 
 func (win *window) isPaletteKey(e key.Event) bool {
 	switch e.Name {
-	case key.NameUpArrow, key.NameDownArrow, key.NameReturn, key.NameEnter, key.NameEscape:
+	case key.NameUpArrow, key.NameDownArrow, key.NameReturn, key.NameEnter, key.NameEscape, key.NameTab:
 		return true
+	case key.NameDeleteBackward:
+		// Backspace at the start of Skills text ("/...", spaces before it
+		// too) leaves Skills; anywhere else it edits.
+		if e.Modifiers == 0 && palSkillScope(win.palette.ed.Text()) {
+			if s, end := win.palette.ed.Selection(); s == 0 && end == 0 {
+				return true
+			}
+		}
 	}
 	_, ok := win.km[kinput.Shortcut{Name: e.Name, Mods: e.Modifiers}]
 	return ok
@@ -318,6 +352,17 @@ func (win *window) paletteKey(gtx layout.Context, e key.Event) {
 	case key.NameEscape:
 		win.closePalette()
 		return
+	case key.NameDeleteBackward:
+		if e.Modifiers == 0 {
+			win.togglePaletteScope()
+			return
+		}
+	case key.NameTab:
+		if e.Modifiers == 0 {
+			win.togglePaletteScope()
+			return
+		}
+		// Shift+Tab does nothing; another modifier runs its shortcut, if bound.
 	}
 	a, ok := win.km[kinput.Shortcut{Name: e.Name, Mods: e.Modifiers}]
 	if !ok {
@@ -345,6 +390,10 @@ func (win *window) palettePointer(gtx layout.Context, e pointer.Event) {
 	at := e.Position.Round()
 	switch e.Kind {
 	case pointer.Press:
+		if skills, ok := p.hits.scopeAt(at); ok {
+			win.setPaletteScope(skills)
+			return
+		}
 		if i, ok := p.hits.rowAt(at); ok && i < len(p.items) {
 			win.palAct(gtx, p.items[i], e.Modifiers.Contain(key.ModShift))
 			return
@@ -380,28 +429,93 @@ func (win *window) paletteRedraw() {
 	win.w.Invalidate()
 }
 
-// palAct closes the palette and does what the item is for.
+// palAct does what the item is for; going somewhere or running something
+// closes the palette first.
 func (win *window) palAct(gtx layout.Context, it palItem, shift bool) {
-	win.closePalette()
-	switch it.Section {
-	case palWaiting, palSessions:
+	switch it.Kind {
+	case palSession:
+		win.closePalette()
 		if win.mgr.Lookup(it.Tab) == nil {
 			return
 		}
-		if it.Member {
-			win.dockMember(it.Tab, false)
-		} else {
-			win.selectSession(it.Tab)
-		}
-	case palSkills:
+		win.selectSession(it.Tab)
+	case palSkill:
+		win.closePalette()
 		win.startPrompt(it.Prompt, shift)
 	case palKaze:
+		win.closePalette()
 		if it.Workspace != "" {
 			win.runWorkspace(it.Workspace)
 		} else {
 			win.runShortcut(gtx, it.Act)
 		}
+	case palBrowse:
+		win.setPaletteQuery("/")
+	case palMoreMatches:
+		win.setPaletteQuery(it.Query)
+	case palMoreGroup:
+		p := &win.palette
+		if p.opened == nil {
+			p.opened = map[string]bool{}
+		}
+		p.opened[it.Fold] = true
+		for _, g := range p.groups {
+			if palGroupKey(g) == it.Fold && len(g.Skills) > palFoldAt {
+				// The first newly shown skill: on an empty "/" a group lists
+				// in name order, so it is the one at palFoldAt.
+				p.sel, p.reveal = "skill:"+g.Skills[palFoldAt].Name, true
+				break
+			}
+		}
+		win.w.Invalidate()
 	}
+}
+
+// setPaletteQuery replaces the field's text with the caret at its end, starts
+// the list from its first row and folds every group again.
+func (win *window) setPaletteQuery(text string) {
+	p := &win.palette
+	before := utf8.RuneCountInString(p.ed.Text())
+	p.ed.SetText(text)
+	n := p.ed.Len()
+	p.ed.SetCaret(n, n)
+	// Edits queued this frame were placed against the old text: a "/" put in
+	// front or taken away moves them by one.
+	if d := n - before; d == 1 || d == -1 {
+		p.edShift += d
+	}
+	p.sel, p.scroll, p.opened, p.hover = "", 0, nil, -1
+	win.ui.fit(text)
+	win.w.Invalidate()
+}
+
+// togglePaletteScope puts a "/" in front of the text (Skills) or takes the
+// leading one away (Sessions), keeping the rest.
+func (win *window) togglePaletteScope() {
+	text := win.palette.ed.Text()
+	if palSkillScope(text) {
+		i := strings.IndexByte(text, '/')
+		win.setPaletteQuery(text[:i] + text[i+1:])
+		return
+	}
+	win.setPaletteQuery("/" + text)
+}
+
+// shiftEdit moves an edit or selection event's offsets, taken from the
+// window's editor state before a scope switch, onto the text after it.
+func shiftEdit(ev event.Event, d int) event.Event {
+	if d == 0 {
+		return ev
+	}
+	at := func(i int) int { return max(i+d, 0) }
+	switch e := ev.(type) {
+	case key.EditEvent:
+		e.Range = key.Range{Start: at(e.Range.Start), End: at(e.Range.End)}
+		return e
+	case key.SelectionEvent:
+		return key.SelectionEvent{Start: at(e.Start), End: at(e.End)}
+	}
+	return ev
 }
 
 // drawPalette draws the open palette over main and takes every pointer event
@@ -430,7 +544,9 @@ func (win *window) drawPalette(gtx layout.Context, main image.Rectangle) {
 	}
 	eg := gtx
 	eg.Source = p.edInput.Source()
-	p.hits = win.ui.layoutPalette(eg, palState{items: p.items, sel: sel, scroll: p.scroll, hover: p.hover, reveal: p.reveal, ed: &p.ed}, main)
+	q := p.ed.Text()
+	p.hits = win.ui.layoutPalette(eg, palState{items: p.items, sel: sel, scroll: p.scroll, hover: p.hover, reveal: p.reveal, ed: &p.ed,
+		skills: palSkillScope(q), query: q, footSkill: sel >= 0 && p.items[sel].Kind == palSkill, noSkills: len(p.skills) == 0}, main)
 	win.syncPaletteEditor(gtx)
 	p.scroll, p.reveal = p.hits.scroll, false
 	area := clip.Rect{Max: gtx.Constraints.Max}.Push(gtx.Ops)

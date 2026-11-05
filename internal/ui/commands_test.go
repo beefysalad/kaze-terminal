@@ -151,13 +151,13 @@ func TestEveryReaderWithNoBindings(t *testing.T) {
 	win.openPalette()
 	waitSkills(t, win, r)
 	for _, a := range win.palInput().Actions {
-		if a.Key != "" {
-			t.Fatalf("palette action %s has keys %q", a.Config, a.Key)
+		if len(a.Keys) != 0 {
+			t.Fatalf("palette action %s has keys %q", a.Config, a.Keys)
 		}
 	}
 	for _, it := range win.palette.items {
-		if it.Section == palKaze && it.Workspace == "" && it.Detail != "" {
-			t.Fatalf("palette row %s shows %q", it.Name, it.Detail)
+		if it.Kind == palKaze && it.Workspace == "" && len(it.Keys) != 0 {
+			t.Fatalf("palette row %s shows %q", it.Name, it.Keys)
 		}
 	}
 	win.closePalette()
