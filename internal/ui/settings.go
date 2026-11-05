@@ -313,6 +313,10 @@ func (win *window) settingsEvents(gtx layout.Context) {
 			win.settingsKey(gtx, e)
 		case key.EditEvent:
 			edited = true
+		case key.FocusEvent:
+			if !e.Focus {
+				win.stopRecording() // the keyboard went elsewhere: the sidebar, a field
+			}
 		case pointer.Event:
 			win.settingsPointer(e)
 		}
