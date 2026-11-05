@@ -34,16 +34,6 @@ func (a agentState) agentName() string {
 	return ""
 }
 
-func agentCommand(agent, command string) string {
-	if agent == "" {
-		return command
-	}
-	if command == "" {
-		return agent
-	}
-	return agent + " · " + command
-}
-
 // agentOf is the zero value for an unknown tab.
 func (win *window) agentOf(id tabs.TabID) agentState { return win.agents[id] }
 
