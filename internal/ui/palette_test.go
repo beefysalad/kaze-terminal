@@ -26,7 +26,7 @@ func skillItems(n int) []palItem {
 	var out []palItem
 	for i := 0; i < n; i++ {
 		name := fmt.Sprintf("/skill-%03d", i)
-		out = append(out, palItem{Section: palSkills, Key: "skill:" + name, Name: name, Detail: "does a thing", Prompt: name})
+		out = append(out, palItem{Kind: palSkill, Group: palHeadSkills, Key: "skill:" + name, Name: name, Detail: "does a thing", Prompt: name})
 	}
 	return out
 }
@@ -67,8 +67,8 @@ func TestPaletteNarrowMainView(t *testing.T) {
 
 func TestPaletteRowsAndHeaders(t *testing.T) {
 	items := []palItem{
-		{Section: palSessions, Key: "tab:1", Name: "api", Detail: "running · go to session", Running: true},
-		{Section: palSessions, Key: "tab:2", Name: "misc", Command: "/ship", Detail: "shell · go to session"},
+		{Kind: palSession, Group: palHeadSessions, Key: "tab:1", Name: "api", State: "running", Running: true},
+		{Kind: palSession, Group: palHeadSessions, Key: "tab:2", Name: "misc", State: "shell"},
 	}
 	items = append(items, skillItems(3)...)
 	h := palDraw(t, newChrome(), items, image.Rect(260, 38, 1460, 838), 1)
@@ -110,8 +110,9 @@ func TestPaletteListScrolls(t *testing.T) {
 
 func TestPaletteLongTextStaysInside(t *testing.T) {
 	items := []palItem{
-		{Section: palSkills, Key: "skill:x", Name: "/" + strings.Repeat("長い名前", 30), Detail: strings.Repeat("description ", 30)},
-		{Section: palSessions, Key: "tab:1", Name: strings.Repeat("title", 40), Command: strings.Repeat("/cmd", 30), Detail: "shell · go to session"},
+		{Kind: palSkill, Group: palHeadSkills, Key: "skill:x", Name: "/" + strings.Repeat("長い名前", 30), Detail: strings.Repeat("description ", 30)},
+		{Kind: palSession, Group: palHeadSessions, Key: "tab:1", Name: strings.Repeat("title", 40), State: "shell"},
+		{Kind: palKaze, Group: palHeadKaze, Key: "act:x", Name: "Act", Keys: strings.Split(strings.Repeat("Ctrl+", 11)+"T", "+")},
 	}
 	h := palDraw(t, newChrome(), items, image.Rect(0, 38, 700, 700), 1)
 	for _, r := range h.rows {
@@ -131,8 +132,12 @@ func TestPaletteNoMatchesLine(t *testing.T) {
 func TestPaletteDrawsInEveryTheme(t *testing.T) {
 	win, _ := alertWindow(t, 1)
 	items := append([]palItem{
-		{Section: palWaiting, Key: "tab:1", Name: "a", Mark: markNeeds, Detail: "needs you · go to session"},
-		{Section: palSessions, Key: "tab:2", Name: "web", Member: true, Color: "cyan", Detail: "server · running"},
+		{Kind: palSession, Group: palHeadWaiting, Key: "tab:1", Name: "a", Mark: markNeeds, State: "needs you", Agent: "claude"},
+		{Kind: palSession, Group: palHeadSessions, Key: "tab:2", Name: "web", State: "idle"},
+		{Kind: palKaze, Group: palHeadKaze, Key: "act:new_tab", Name: "New session", Keys: []string{"Ctrl", "Shift", "T"}, Icon: "plus"},
+		{Kind: palBrowse, Group: palHeadSkills, Key: "browse", Name: "Browse all 2 skills", Count: 2},
+		{Kind: palMoreGroup, Group: "DEVBOX", Key: "more:devbox", Name: "2 more in devbox", Count: 2, Plugin: "devbox"},
+		{Kind: palMoreMatches, Group: palHeadSkills, Key: "more:matches", Name: "2 more matching skills", Count: 2, Query: "/x"},
 	}, skillItems(2)...)
 	for _, th := range theme.All() {
 		win.applyTheme(th)

@@ -45,6 +45,7 @@ type paletteUI struct {
 	loaded   chan []skills.Skill // buffered 1; the scan sends, the frame drains
 	recent   recentPrompts
 	spaces   []workspaces.Workspace // read on open
+	actions  []palAction            // built once per open
 	redraws  int                    // frames the palette's pointer input asked for; tests count them
 }
 
@@ -86,6 +87,7 @@ func (win *window) openPalette() {
 			p.spaces = doc.Workspaces
 		}
 	}
+	p.actions = win.palActions()
 	win.startSkillScan()
 	win.wantFocus = true
 	win.w.Invalidate()
@@ -149,27 +151,38 @@ func (win *window) skillSources() (skills.Sources, string) {
 
 // palInput is the palette's live input: states change while it is open.
 func (win *window) palInput() palInput {
-	in := palInput{
-		Query:    win.palette.ed.Text(),
+	p := &win.palette
+	return palInput{
+		Query:    p.ed.Text(),
 		Sessions: sessionRows(buildSide(win.sideIn())),
-		Skills:   win.palette.skills,
-		Recent:   win.palette.recent.list,
+		Skills:   p.skills,
+		Groups:   groupSkills(p.skills),
+		Recent:   p.recent.list,
+		Actions:  p.actions,
 	}
-	for _, r := range win.curRuns() {
-		in.Members = append(in.Members, r.Members...)
-	}
+}
+
+// palActionIcons are the action tiles' icons (Ruling 9); others get none.
+var palActionIcons = map[string]string{
+	"new_tab": "plus", "new_branch_session": "branch", "open_settings": "cog",
+	"toggle_sidebar": "panel", "find": "search", "agents_board": "agents",
+}
+
+// palActions are the Kaze actions the palette can run, with their shortcuts
+// as keycaps, and "Run workspace <name>" for each workspace.
+func (win *window) palActions() []palAction {
+	var out []palAction
 	for _, c := range kazeCommands {
 		if c.Act == actPalette {
 			continue // it is open already
 		}
-		a := palAction{Name: c.Label, Config: c.Config, Act: c.Act}
+		a := palAction{Name: c.Label, Config: c.Config, Act: c.Act, Icon: palActionIcons[c.Config]}
 		if sc, ok := win.binds[c.Config]; ok {
-			a.Key = formatShortcut(runtime.GOOS, sc)
+			a.Keys = splitShortcut(formatShortcut(runtime.GOOS, sc))
 		}
-		in.Actions = append(in.Actions, a)
+		out = append(out, a)
 	}
-	in.Actions = append(in.Actions, workspaceActions(win.palette.spaces)...)
-	return in
+	return append(out, workspaceActions(win.palette.spaces)...)
 }
 
 func (win *window) refreshPalette() {
@@ -383,22 +396,21 @@ func (win *window) paletteRedraw() {
 	win.w.Invalidate()
 }
 
-// palAct closes the palette and does what the item is for.
+// palAct does what the item is for; going somewhere or running something
+// closes the palette first.
 func (win *window) palAct(gtx layout.Context, it palItem, shift bool) {
-	win.closePalette()
-	switch it.Section {
-	case palWaiting, palSessions:
+	switch it.Kind {
+	case palSession:
+		win.closePalette()
 		if win.mgr.Lookup(it.Tab) == nil {
 			return
 		}
-		if it.Member {
-			win.dockMember(it.Tab, false)
-		} else {
-			win.selectSession(it.Tab)
-		}
-	case palSkills:
+		win.selectSession(it.Tab)
+	case palSkill:
+		win.closePalette()
 		win.startPrompt(it.Prompt, shift)
 	case palKaze:
+		win.closePalette()
 		if it.Workspace != "" {
 			win.runWorkspace(it.Workspace)
 		} else {

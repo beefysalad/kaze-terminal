@@ -3,6 +3,7 @@ package ui
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -114,6 +115,7 @@ func TestPaletteListsSkillsFromTheTree(t *testing.T) {
 		t.Fatal(err)
 	}
 	openPal(t, win, r)
+	palType(t, win, r, "/") // skills are behind the slash
 	if !strings.Contains(strings.Join(palKeys(win), ","), "skill:review-mine") {
 		t.Fatalf("items %v", palKeys(win))
 	}
@@ -297,7 +299,7 @@ func TestKazeActionRuns(t *testing.T) {
 	win, _, r, _ := palWindow(t)
 	openPal(t, win, r)
 	palType(t, win, r, "new session")
-	if got := selected(win); got.Key != "act:new_tab" || got.Detail != "Ctrl+Shift+T" {
+	if got := selected(win); got.Key != "act:new_tab" || strings.Join(got.Keys, "+") != "Ctrl+Shift+T" {
 		t.Fatalf("selected %+v", got)
 	}
 	pressKey(t, win, r, key.NameReturn, 0)
@@ -309,6 +311,7 @@ func TestKazeActionRuns(t *testing.T) {
 func TestPaletteLeavesItselfOut(t *testing.T) {
 	win, _, r, _ := palWindow(t)
 	openPal(t, win, r)
+	palType(t, win, r, "palette")
 	if strings.Contains(strings.Join(palKeys(win), ","), "act:palette") {
 		t.Fatal("the palette lists Open the palette")
 	}
@@ -350,7 +353,7 @@ func TestQueryFiltersLive(t *testing.T) {
 	pressKey(t, win, r, key.NameDownArrow, 0)
 	palType(t, win, r, "rev")
 	keys := palKeys(win)
-	if len(keys) == 0 || keys[0] != "skill:review-mine" {
+	if !slices.Contains(keys, "skill:review-mine") {
 		t.Fatalf("items %v", keys)
 	}
 	for _, k := range keys {
@@ -378,5 +381,21 @@ func TestSelectionFollowsItsItem(t *testing.T) {
 	}
 	if selected(win).Tab != tb[2].ID {
 		t.Fatalf("selection moved to %+v", selected(win))
+	}
+}
+
+func TestActionsBuiltOncePerOpen(t *testing.T) {
+	win, _, r, _ := palWindow(t)
+	openPal(t, win, r)
+	palType(t, win, r, "new")
+	acts := win.palette.actions
+	if len(acts) == 0 {
+		t.Fatal("no actions built on open")
+	}
+	for range 10 {
+		sideFrame(t, win, r)
+	}
+	if got := win.palette.actions; len(got) != len(acts) || &got[0] != &acts[0] {
+		t.Fatal("the actions were built again on a still frame")
 	}
 }

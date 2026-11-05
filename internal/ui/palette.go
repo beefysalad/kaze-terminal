@@ -2,6 +2,7 @@ package ui
 
 import (
 	"image"
+	"strings"
 
 	"gioui.org/font"
 	"gioui.org/layout"
@@ -26,8 +27,6 @@ const (
 const palPlaceholder = "Type to search waiting items, sessions and skills…"
 
 const palFooter = "↑↓ move    Enter run in this session    Shift+Enter new session    Esc close"
-
-var palHeaders = [...]string{palWaiting: "WAITING ON YOU", palSessions: "SESSIONS", palSkills: "SKILLS", palKaze: "KAZE"}
 
 // palState is what the drawing needs from the window.
 type palState struct {
@@ -82,11 +81,9 @@ func (c *chrome) layoutPalette(gtx layout.Context, st palState, main image.Recta
 	rowH, headH := gtx.Dp(palRowH), gtx.Dp(palHeadH)
 	var entries []palEntry
 	y := 0
-	last := palSection(-1)
 	for i, it := range st.items {
-		if it.Section != last {
-			last = it.Section
-			entries = append(entries, palEntry{y: y, h: headH, header: palHeaders[it.Section], index: -1})
+		if i == 0 || it.Group != st.items[i-1].Group {
+			entries = append(entries, palEntry{y: y, h: headH, header: it.Group, index: -1})
 			y += headH
 		}
 		entries = append(entries, palEntry{y: y, h: rowH, index: i})
@@ -149,8 +146,8 @@ func (c *chrome) layoutPalette(gtx layout.Context, st palState, main image.Recta
 		for _, e := range entries {
 			if e.index == st.sel {
 				top := e.y
-				if e.index == firstInSection(st.items, e.index) {
-					top -= headH // keep the section's header in view with its first row
+				if e.index == firstInGroup(st.items, e.index) {
+					top -= headH // keep the group's header in view with its first row
 				}
 				sc = max(min(sc, top), e.y+e.h-h.list.Dy())
 				sc = min(max(sc, 0), h.scrollMax)
@@ -188,15 +185,16 @@ func (c *chrome) layoutPalette(gtx layout.Context, st palState, main image.Recta
 	return h
 }
 
-func firstInSection(items []palItem, i int) int {
-	for i > 0 && items[i-1].Section == items[i].Section {
+func firstInGroup(items []palItem, i int) int {
+	for i > 0 && items[i-1].Group == items[i].Group {
 		i--
 	}
 	return i
 }
 
-// palRow draws one item in r: its mark, name, " · /command", and the detail
-// right-aligned in at most 60% of the row.
+// palRow draws one item in r: a session's mark, the name, and at the right
+// the session's state, the skill's description or the action's shortcut, in
+// at most 60% of the row.
 func (c *chrome) palRow(gtx layout.Context, it palItem, r image.Rectangle, selected bool) {
 	ops, th := gtx.Ops, c.th
 	if selected {
@@ -206,41 +204,38 @@ func (c *chrome) palRow(gtx layout.Context, it palItem, r image.Rectangle, selec
 	pad := gtx.Dp(8)
 	x := r.Min.X + pad
 	mid := r.Min.Y + r.Dy()/2
-	if it.Section == palWaiting || it.Section == palSessions {
+	detail := it.Detail
+	switch it.Kind {
+	case palSession:
 		dot := gtx.Dp(8)
 		d := image.Rect(x, mid-dot/2, x+dot, mid+dot/2)
-		switch {
-		case it.Member:
-			paint.FillShape(ops, c.memberColor(it.Color), clip.Ellipse(d).Op(ops))
-		case it.Section == palWaiting:
+		if it.Mark == markNeeds {
 			paint.FillShape(ops, th.Needs, clip.Ellipse(d).Op(ops))
-		default:
+		} else {
 			c.sideDot(gtx, d, it.Mark, it.Running)
 		}
 		x += dot + gtx.Dp(10)
+		detail = it.State
+	case palKaze:
+		detail = strings.Join(it.Keys, "+")
 	}
 	right := r.Max.X - pad
 	detailW := 0
-	if it.Detail != "" {
-		call, dsz := c.fitSide(gtx, it.Detail, 11.5, (r.Dx()*60)/100, th.Muted)
+	if detail != "" {
+		call, dsz := c.fitSide(gtx, detail, 11.5, (r.Dx()*60)/100, th.Muted)
 		place(ops, call, image.Pt(right-dsz.X, mid-dsz.Y/2))
 		detailW = dsz.X + gtx.Dp(16)
 	}
 	room := max(right-detailW-x, 0)
 	fg := th.ToastFG
-	if it.Section == palSkills {
+	switch {
+	case it.Kind == palSkill:
 		fg = c.memberColor("magenta")
-	}
-	if selected {
+	case it.Kind == palBrowse || it.Kind == palMoreMatches || it.Kind == palMoreGroup:
+		fg = th.Muted
+	case selected:
 		fg = th.ActiveFG
-		if it.Section == palSkills {
-			fg = c.memberColor("magenta")
-		}
 	}
 	call, nsz := c.fitSide(gtx, it.Name, sz, room, fg)
 	place(ops, call, image.Pt(x, mid-nsz.Y/2))
-	if command := agentCommand(it.Agent, it.Command); command != "" && nsz.X > 0 {
-		call, csz := c.fitSide(gtx, " · "+command, sz, room-nsz.X, th.Muted)
-		place(ops, call, image.Pt(x+nsz.X, mid-csz.Y/2))
-	}
 }
