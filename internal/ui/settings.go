@@ -49,6 +49,8 @@ type settingsState struct {
 	texts    []string          // every string drawn, so tests can read the page
 	cards    []image.Rectangle // every card drawn this frame, for tests
 	about    aboutGeom         // the About page's layout this frame, for tests
+	keyRows  []keyRowGeom      // the Shortcuts page's rows this frame, for tests
+	keyStrip keyStripGeom      // its message strip this frame, for tests
 	// memberFolderX is where each list member's folder starts, so tests can check the columns.
 	memberFolderX []int
 
@@ -469,6 +471,7 @@ func (win *window) drawSettings(gtx layout.Context, r image.Rectangle) {
 	s := &win.set
 	s.controls, s.nav, s.texts, s.cards = s.controls[:0], s.nav[:0], s.texts[:0], s.cards[:0]
 	s.memberFolderX = s.memberFolderX[:0]
+	s.keyRows, s.keyStrip = s.keyRows[:0], keyStripGeom{}
 	p := &page{gtx: gtx, c: win.ui, win: win, st: s, col: win.ui.pageColors()}
 	ops := gtx.Ops
 	cl := clip.Rect(r).Push(ops)

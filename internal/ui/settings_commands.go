@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strings"
 
-	"gioui.org/font"
 	"gioui.org/io/clipboard"
 	"gioui.org/op"
 	"gioui.org/op/clip"
@@ -114,7 +113,7 @@ func drawCommands(p *page, r image.Rectangle, win *window) int {
 	if win.set.keysErr != "" {
 		hint = win.set.keysErr
 	}
-	lines := p.wrap(hint, 13, max(r.Dx()-gtx.Dp(236), gtx.Dp(200))) // clear of the search field
+	lines := p.wrap(hint, 13, max(r.Dx(), 1)) // under the title, clear of the search field
 	y := p.heading(r, sec.title, lines[0])
 	for _, l := range lines[1:] {
 		call, size := p.text(l, 13, col.muted)
@@ -222,170 +221,6 @@ func drawCommands(p *page, r image.Rectangle, win *window) int {
 	return y + gtx.Dp(16)
 }
 
-// shortcutCard draws rows of label, key caps and config name in one card.
-func (p *page) shortcutCard(r image.Rectangle, y int, rows []shortcutRow) int {
-	gtx, ops, col := p.gtx, p.gtx.Ops, p.col
-	rec := op.Record(ops)
-	top := y
-	pad := gtx.Dp(18)
-	idW := gtx.Dp(130)
-	for i, row := range rows {
-		if i > 0 {
-			paint.FillShape(ops, col.line, clip.Rect(image.Rect(r.Min.X, y, r.Max.X, y+1)).Op())
-		}
-		h := gtx.Dp(46)
-		lc, ls := p.text(row.label, 13, col.title)
-		place(ops, lc, image.Pt(r.Min.X+pad, y+(h-ls.Y)/2))
-		right := r.Max.X - pad
-		if row.config != "" {
-			cc, cs := p.mono(row.config, 11, col.dim)
-			place(ops, cc, image.Pt(right-cs.X, y+(h-cs.Y)/2))
-		}
-		right -= idW
-		editing := row.idx >= 0 && p.st.keysErr == ""
-		if editing && p.win.keyChanged(row.config) {
-			tc, ts := p.textW("changed", 10.5, col.accent, font.SemiBold)
-			place(ops, tc, image.Pt(r.Min.X+pad+ls.X+gtx.Dp(8), y+(h-ts.Y)/2))
-			rs := gtx.Dp(28)
-			p.c.icon(gtx, "reset", image.Rect(right-rs+gtx.Dp(6), y+(h-rs)/2+gtx.Dp(6), right-gtx.Dp(6), y+(h+rs)/2-gtx.Dp(6)), col.muted)
-			p.hit(ctlButton, image.Rect(right-rs, y+(h-rs)/2, right, y+(h+rs)/2), "key_reset", row.idx, false)
-		}
-		if row.idx >= 0 {
-			right -= gtx.Dp(28) + gtx.Dp(6) // the reset slot, kept on every row so the caps line up
-		}
-		if row.idx >= 0 {
-			// The keys are a button: a click (or Enter) records new ones.
-			bw := gtx.Dp(150)
-			if row.config == p.st.keyRec {
-				tc, ts := p.text(recordingText, 13, col.accent)
-				bw = max(bw, ts.X+gtx.Dp(16))
-				place(ops, tc, image.Pt(right-ts.X-gtx.Dp(8), y+(h-ts.Y)/2))
-			}
-			bh := gtx.Dp(32)
-			p.hit(ctlButton, image.Rect(right-bw, y+(h-bh)/2, right, y+(h+bh)/2), "key_rec", row.idx, p.st.keysErr != "")
-		}
-		if row.config == p.st.keyRec && row.idx >= 0 {
-			// The recording text is the button's whole content.
-		} else if row.config != "" && row.keys == "" {
-			// An action without a shortcut ("none" in [keys]).
-			nc, ns := p.text("None", 12, col.muted)
-			place(ops, nc, image.Pt(right-ns.X, y+(h-ns.Y)/2))
-		} else if row.config == "" {
-			// A mouse gesture: plain words, no caps.
-			kc, ks := p.mono(row.keys, 11.5, col.fg)
-			place(ops, kc, image.Pt(right-ks.X, y+(h-ks.Y)/2))
-		} else {
-			caps := strings.Split(row.keys, "+")
-			if strings.HasSuffix(row.keys, "++") {
-				caps = append(strings.Split(strings.TrimSuffix(row.keys, "++"), "+"), "+")
-			}
-			type cap struct {
-				call op.CallOp
-				size image.Point
-			}
-			var cs []cap
-			w := 0
-			for _, k := range caps {
-				call, size := p.keyCap(k)
-				cs = append(cs, cap{call, size})
-				w += size.X + gtx.Dp(4)
-			}
-			x := right - w + gtx.Dp(4)
-			for _, c := range cs {
-				place(ops, c.call, image.Pt(x, y+(h-c.size.Y)/2))
-				x += c.size.X + gtx.Dp(4)
-			}
-		}
-		y += h
-		if m := p.st.keyMsg; m.kind != msgNone && m.action == row.config && row.idx >= 0 {
-			y = p.keyStrip(r, y, m, row.idx)
-		}
-	}
-	call := rec.Stop()
-	card := image.Rect(r.Min.X, top, r.Max.X, y)
-	paint.FillShape(ops, col.card, clip.UniformRRect(card, gtx.Dp(12)).Op(ops))
-	call.Add(ops)
-	stroke(ops, card, gtx.Dp(12), col.line)
-	p.st.cards = append(p.st.cards, card)
-	return y
-}
-
-// keyStrip draws the message under a shortcut row from y and returns where
-// the next row starts: its text, then OK, or Cancel and Replace.
-func (p *page) keyStrip(r image.Rectangle, y int, m keyMessage, idx int) int {
-	gtx, ops, col := p.gtx, p.gtx.Ops, p.col
-	box := image.Rect(r.Min.X+gtx.Dp(16), y, r.Max.X-gtx.Dp(10), y)
-	padX, padY, gap := gtx.Dp(12), gtx.Dp(10), gtx.Dp(10)
-	btns := []ctrl{{kind: ctlButton, id: "key_ok", arg: idx, text: "OK"}}
-	if m.kind == msgClash {
-		btns = []ctrl{{kind: ctlButton, id: "key_cancel", arg: idx, text: "Cancel"}, {kind: ctlButton, id: "key_replace", arg: idx, text: "Replace", strong: true}}
-	}
-	type laid struct {
-		call     op.CallOp
-		size     image.Point
-		from, to int
-	}
-	var bs []laid
-	bw, bh := 0, 0
-	for i, b := range btns {
-		call, size, from := p.ctrl(b, 0)
-		bs = append(bs, laid{call, size, from, len(p.st.controls)})
-		if i > 0 {
-			bw += gtx.Dp(8)
-		}
-		bw += size.X
-		bh = max(bh, size.Y)
-	}
-	inner := box.Dx() - 2*padX
-	room := inner - bw - gap
-	below := room < gtx.Dp(200) // too narrow: the buttons go under the text
-	if below {
-		room = inner
-	}
-	var lines []op.CallOp
-	var sizes []image.Point
-	th := 0
-	for _, l := range p.wrap(m.text, 13, max(room, 1)) {
-		call, size := p.text(l, 13, col.title)
-		lines, sizes = append(lines, call), append(sizes, size)
-		th += size.Y
-	}
-	h := max(th, bh)
-	if below {
-		h = th + gap + bh
-	}
-	box.Max.Y = y + h + 2*padY
-	fill := col.err
-	switch m.kind {
-	case msgClash:
-		fill = col.accent
-	case msgWarn:
-		fill = col.needs
-	}
-	radius := gtx.Dp(9)
-	paint.FillShape(ops, tint(fill, 0x1a), clip.UniformRRect(box, radius).Op(ops))
-	stroke(ops, box, radius, tint(fill, 0x59))
-	ty := y + padY + (h-th)/2
-	if below {
-		ty = y + padY
-	}
-	for i, call := range lines {
-		place(ops, call, image.Pt(box.Min.X+padX, ty))
-		ty += sizes[i].Y
-	}
-	x, by := box.Max.X-padX-bw, y+padY+(h-bh)/2
-	if below {
-		x, by = box.Min.X+padX, y+padY+th+gap
-	}
-	for _, b := range bs {
-		at := image.Pt(x, by+(bh-b.size.Y)/2)
-		p.st.shift(b.from, b.to, at)
-		place(ops, b.call, at)
-		x += b.size.X + gtx.Dp(8)
-	}
-	return box.Max.Y + gtx.Dp(10)
-}
-
 // resetAllLink draws "Reset all to defaults" right-aligned from y and returns
 // where the next thing starts.
 func (p *page) resetAllLink(r image.Rectangle, y int) int {
@@ -402,20 +237,3 @@ func (p *page) resetAllLink(r image.Rectangle, y int) int {
 
 // recordingText is what a recording row's button reads.
 const recordingText = "Press the new keys… Esc cancels"
-
-// keyCap draws one key as a small cap at the origin, a thicker edge at its bottom.
-func (p *page) keyCap(k string) (op.CallOp, image.Point) {
-	gtx, col := p.gtx, p.col
-	rec := op.Record(gtx.Ops)
-	tc, ts := p.mono(k, 11.5, col.title)
-	h := ts.Y + gtx.Dp(8)
-	w := max(ts.X+gtx.Dp(14), gtx.Dp(26))
-	box := image.Rect(0, 0, w, h)
-	radius := gtx.Dp(6)
-	paint.FillShape(gtx.Ops, col.line2, clip.UniformRRect(box, radius).Op(gtx.Ops))
-	face := image.Rect(0, 0, w, h-gtx.Dp(2))
-	paint.FillShape(gtx.Ops, col.raised, clip.UniformRRect(face, radius).Op(gtx.Ops))
-	stroke(gtx.Ops, box, radius, col.line2)
-	place(gtx.Ops, tc, image.Pt((w-ts.X)/2, (face.Dy()-ts.Y)/2))
-	return rec.Stop(), box.Size()
-}

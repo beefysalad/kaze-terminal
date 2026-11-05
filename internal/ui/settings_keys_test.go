@@ -2,6 +2,7 @@ package ui
 
 import (
 	"image"
+	"image/color"
 	"maps"
 	"os"
 	"path/filepath"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/beefysalad/kaze-terminal/internal/input"
 	"github.com/beefysalad/kaze-terminal/internal/skills"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
 
 // keysWindow is a sidebar window whose config.toml (in a temp dir) holds body.
@@ -818,5 +820,110 @@ func TestResetAllRemovesOnlyKnownLines(t *testing.T) {
 	}
 	if win.dialogShown() {
 		t.Fatal("the question is still up")
+	}
+}
+
+func TestShortcutsContrast(t *testing.T) {
+	for _, th := range theme.All() {
+		c := newChrome()
+		c.setTheme(th)
+		k := c.shortcutInk()
+		low, lowMark := 99.0, 99.0
+		text := func(label string, fg, bg color.NRGBA) {
+			got := contrast(fg, bg)
+			low = min(low, got)
+			if got < 4.5 {
+				t.Errorf("%s: %s contrast %.2f, want at least 4.5", th.Key, label, got)
+			}
+		}
+		mark := func(label string, fg color.NRGBA) {
+			got := contrast(fg, k.card)
+			lowMark = min(lowMark, got)
+			if got < 3 {
+				t.Errorf("%s: %s against the card %.2f, want at least 3", th.Key, label, got)
+			}
+		}
+		text("label", k.label, k.card)
+		text("action", k.action, k.card)
+		text("none", k.none, k.card)
+		text("tag", k.tagText, k.tagBG)
+		text("cap", k.capText, k.capFace)
+		text("recording", k.recText, k.recBG)
+		for kind, name := range map[msgKind]string{msgRefused: "refused", msgClash: "clash", msgWarn: "warning"} {
+			text(name+" strip", k.strip[kind].text, k.strip[kind].bg)
+			mark(name+" strip line", k.strip[kind].line)
+		}
+		text("button", k.btnText, k.btnBG)
+		text("strong button", k.strongText, k.strongBG)
+		mark("recording line", k.recLine)
+		mark("recording dot", k.recDot)
+		mark("reset icon", k.resetIcon)
+		t.Logf("%s: lowest text contrast %.2f, lowest mark %.2f", th.Key, low, lowMark)
+	}
+}
+
+func TestRowLayout(t *testing.T) {
+	win, _, _, _ := shortcutsWindow(t, "[keys]\nfind = \"ctrl+alt+f\"\n")
+	rows := win.set.keyRows
+	if len(rows) != len(editableActions(runtime.GOOS))+len(mouseLines) {
+		t.Fatalf("%d rows laid out", len(rows))
+	}
+	for _, g := range rows {
+		if g.action == "" {
+			continue
+		}
+		if g.name.Y <= g.label.Y || g.name.X != g.label.X {
+			t.Errorf("%s: name at %v, label at %v", g.action, g.name, g.label)
+		}
+	}
+	for _, g := range rows[1:] {
+		if g.reset.Max.X != rows[0].reset.Max.X || g.keys.Max.X != rows[0].keys.Max.X {
+			t.Errorf("%q: keys end %d, reset slot %d; first row %d, %d", g.action, g.keys.Max.X, g.reset.Max.X, rows[0].keys.Max.X, rows[0].reset.Max.X)
+		}
+	}
+	if rows[0].keys.Max.X > rows[0].reset.Min.X {
+		t.Fatal("the keys overlap the reset slot")
+	}
+}
+
+func TestNoneDrawn(t *testing.T) {
+	win, _, _, _ := shortcutsWindow(t, "[keys]\ncopy = \"none\"\n")
+	tx := win.set.texts
+	i := slices.Index(tx, "Copy")
+	if i < 0 || i+2 >= len(tx) || tx[i+1] != "copy" || tx[i+2] != "None" {
+		t.Fatalf("the Copy row reads %q", tx[i:min(i+5, len(tx))])
+	}
+	if i+3 < len(tx) && tx[i+3] != "changed" {
+		t.Fatalf("after None comes %q, want the changed tag", tx[i+3])
+	}
+}
+
+func TestNarrowStripWraps(t *testing.T) {
+	win, r, _, _ := shortcutsWindow(t, "")
+	clickKeys(t, win, r, "find")
+	pressKeys(t, win, r, defaultOf("toggle_sidebar"))
+	if win.set.keyMsg.kind != msgClash {
+		t.Fatalf("no clash: %+v", win.set.keyMsg)
+	}
+	win.set.scroll = 0
+	win.drawSettings(pageContext(520, 900), image.Rect(0, 38, 520, 876)) // a 520 dp page: menu and column
+	s := win.set.keyStrip
+	if s.box.Empty() {
+		t.Fatal("no strip laid out")
+	}
+	in := false
+	for _, c := range win.set.cards {
+		if s.box.In(c) {
+			in = true
+		}
+	}
+	if !in {
+		t.Fatalf("strip %v is outside every card %v", s.box, win.set.cards)
+	}
+	for _, id := range []string{"key_cancel", "key_replace"} {
+		c := controlsOf(win, id)
+		if len(c) != 1 || c[0].rect.Min.Y < s.textBottom || !c[0].rect.In(s.box) {
+			t.Fatalf("%s at %v, text ends at %d, strip %v", id, c, s.textBottom, s.box)
+		}
 	}
 }

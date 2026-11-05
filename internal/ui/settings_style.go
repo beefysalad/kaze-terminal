@@ -131,7 +131,7 @@ var iconNames = map[string]bool{
 	"doc": true, "appearance": true, "workspaces": true, "claude": true, "shortcuts": true, "updates": true,
 	"about": true, "check": true, "alert": true, "prompt": true, "chart": true, "download": true,
 	"panel": true, "search": true, "terminal": true, "cog": true, "agents": true, "plus": true, "folder": true, "branch": true, "chip": true, "tabs": true, "up": true,
-	"chevup": true, "down": true, "close": true,
+	"chevup": true, "down": true, "close": true, "reset": true,
 }
 
 // toolIcon draws one of the sidebar and title bar buttons' icons (panel,
@@ -210,6 +210,9 @@ func (c *chrome) icon(gtx layout.Context, name string, r image.Rectangle, col co
 	case "updates":
 		circle(12, 12, 9, 1.72*math.Pi, -0.22*math.Pi)
 		line(21, 4, 21, 9, 16, 9)
+	case "reset": // the updates arrow mirrored: an open circle turning back, ↺
+		circle(12, 12, 8, -1.72*math.Pi, 1.22*math.Pi)
+		line(3.5, 4.5, 3.5, 9.5, 8.5, 9.5)
 	case "about":
 		circle(12, 12, 9, 2*math.Pi, 0)
 		line(12, 11, 12, 16)
