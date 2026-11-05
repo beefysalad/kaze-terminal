@@ -315,8 +315,9 @@ func (win *window) isPaletteKey(e key.Event) bool {
 	case key.NameUpArrow, key.NameDownArrow, key.NameReturn, key.NameEnter, key.NameEscape, key.NameTab:
 		return true
 	case key.NameDeleteBackward:
-		// Backspace at the start of "/..." leaves Skills; anywhere else it edits.
-		if e.Modifiers == 0 && strings.HasPrefix(win.palette.ed.Text(), "/") {
+		// Backspace at the start of Skills text ("/...", spaces before it
+		// too) leaves Skills; anywhere else it edits.
+		if e.Modifiers == 0 && palSkillScope(win.palette.ed.Text()) {
 			if s, end := win.palette.ed.Selection(); s == 0 && end == 0 {
 				return true
 			}

@@ -477,6 +477,12 @@ func TestBackspaceAtStartLeavesSkills(t *testing.T) {
 	if got := win.palette.ed.Text(); got != "x" {
 		t.Fatalf("Backspace at the start of x: %q", got)
 	}
+	win.setPaletteQuery(" /x") // spaces before the "/" are still Skills (palSkillScope)
+	win.palette.ed.SetCaret(0, 0)
+	pressKey(t, win, r, key.NameDeleteBackward, 0)
+	if got := win.palette.ed.Text(); got != " x" {
+		t.Fatalf("Backspace at the start of \" /x\": %q, want \" x\"", got)
+	}
 }
 
 func TestBrowseRowSwitchesScope(t *testing.T) {
