@@ -846,6 +846,7 @@ func TestShortcutsContrast(t *testing.T) {
 		text("label", k.label, k.card)
 		text("action", k.action, k.card)
 		text("none", k.none, k.card)
+		text("none on a focused button", k.noneFocus, k.btnFocusBG)
 		text("tag", k.tagText, k.tagBG)
 		text("cap", k.capText, k.capFace)
 		text("recording", k.recText, k.recBG)

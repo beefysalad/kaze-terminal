@@ -23,7 +23,7 @@ import (
 // shortcutInk is the Shortcuts page's colours for one theme: every text nudged
 // to at least 4.5:1 on what it sits on, every mark at least 3:1 on the card.
 type shortcutInk struct {
-	label, action, none, capText, capFace, capEdge, tagText, tagBG,
+	label, action, none, noneFocus, capText, capFace, capEdge, tagText, tagBG,
 	btnFocusLine, btnFocusBG, recLine, recBG, recText, recDot,
 	resetIcon, card color.NRGBA
 	strip                                         [4]struct{ bg, line, text color.NRGBA } // by msgKind; [msgNone] unused
@@ -48,6 +48,7 @@ func (c *chrome) shortcutInk() shortcutInk {
 	k.label = on(col.title, card)
 	k.action = on(col.dim, card)
 	k.none = on(col.muted, card)
+	k.noneFocus = on(col.muted, k.btnFocusBG) // "None" on a focused button
 	k.capText = on(col.title, col.raised)
 	k.tagBG = flatten(tint(col.accent, 0x24), card)
 	k.tagText = on(col.accent, k.tagBG)
@@ -212,6 +213,7 @@ func (p *page) keysButton(row shortcutRow, ink shortcutInk, editing bool) (op.Ca
 	macro := op.Record(ops)
 	padX, padY := gtx.Dp(8), gtx.Dp(5)
 	recording := row.idx >= 0 && row.config == p.st.keyRec
+	focused := row.idx >= 0 && len(p.st.controls) == p.st.focus
 	type piece struct {
 		call op.CallOp
 		size image.Point
@@ -235,7 +237,11 @@ func (p *page) keysButton(row shortcutRow, ink shortcutInk, editing bool) (op.Ca
 	case row.idx < 0:
 		add(p.text(row.keys, 13, ink.none))
 	case row.keys == "":
-		add(p.oblique("None", 13, ink.none))
+		none := ink.none
+		if focused {
+			none = ink.noneFocus
+		}
+		add(p.oblique("None", 13, none))
 	default:
 		for _, k := range capsOf(row.keys) {
 			add(p.keyCap(k, ink))
@@ -243,7 +249,6 @@ func (p *page) keysButton(row shortcutRow, ink shortcutInk, editing bool) (op.Ca
 	}
 	box := image.Rect(0, 0, max(w+2*padX, gtx.Dp(150)), h+2*padY)
 	radius := gtx.Dp(8)
-	focused := row.idx >= 0 && len(p.st.controls) == p.st.focus
 	switch {
 	case recording:
 		paint.FillShape(ops, ink.recBG, clip.UniformRRect(box, radius).Op(ops))
