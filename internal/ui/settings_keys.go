@@ -23,10 +23,13 @@ func (win *window) applyKeys(keys map[string]string) []string {
 	// The launcher caches its label; the title bar, palette and Settings read
 	// keyText every time, and the alert caps are keyed by the shortcut itself.
 	win.side.launch.work.shortcutReady = false
-	// Settings' text fields keep filters for kaze's keys; they rebuild them.
+	// Every text field keeps filters for kaze's keys, built once from win.km:
+	// drop them all so each rebuilds from the new keymap.
 	for _, f := range win.set.fields {
 		f.filters = nil
 	}
+	win.side.filters, win.side.renKeys, win.side.launch.filters = nil, nil, nil
+	win.find.edKeys, win.board.edKeys = nil, nil
 	if win.w != nil {
 		win.w.Invalidate()
 	}
