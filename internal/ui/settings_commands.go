@@ -3,6 +3,8 @@ package ui
 import (
 	"image"
 	"io"
+	"runtime"
+	"slices"
 	"strings"
 
 	"gioui.org/io/clipboard"
@@ -41,9 +43,10 @@ var shortcutGroups = []struct {
 func commandsSection() settingsSection {
 	return settingsSection{
 		title: "Shortcuts",
-		hint:  "Change any of them under [keys] in config.toml.",
+		hint:  keysHint,
 		draw:  drawCommands,
 		act:   commandsAct,
+		show:  (*window).checkKeys,
 	}
 }
 
@@ -51,10 +54,29 @@ func commandsAct(win *window, id string, arg int) {
 	if id == "cmd_copy" && arg >= 0 && arg < len(commandLines) {
 		win.set.cmdCopy = commandLines[arg].Copy
 	}
+	if strings.HasPrefix(id, "key") {
+		win.keysAct(id, arg)
+	}
 }
 
-// shortcutRow is one line of a shortcuts card.
-type shortcutRow struct{ label, keys, config string }
+// keysAct runs the Shortcuts page's own controls; arg is an editableActions index.
+func (win *window) keysAct(id string, arg int) {
+	names := editableActions(runtime.GOOS)
+	if arg < 0 || arg >= len(names) {
+		return
+	}
+	switch id {
+	case "key_rec":
+		win.startRecording(names[arg])
+	}
+}
+
+// shortcutRow is one line of a shortcuts card; idx is the action's
+// editableActions index, -1 for a mouse gesture.
+type shortcutRow struct {
+	label, keys, config string
+	idx                 int
+}
 
 // drawCommands lists kaze's shortcuts as this machine has them, overrides
 // included, in grouped cards with key caps, then kaze's command line.
@@ -70,7 +92,17 @@ func drawCommands(p *page, r image.Rectangle, win *window) int {
 		win.note("Copied: " + text)
 	}
 	sec := commandsSection()
-	y := p.heading(r, sec.title, sec.hint)
+	hint := keysHint
+	if win.set.keysErr != "" {
+		hint = win.set.keysErr
+	}
+	lines := p.wrap(hint, 13, max(r.Dx()-gtx.Dp(236), gtx.Dp(200))) // clear of the search field
+	y := p.heading(r, sec.title, lines[0])
+	for _, l := range lines[1:] {
+		call, size := p.text(l, 13, col.muted)
+		place(ops, call, image.Pt(r.Min.X, y-gtx.Dp(22)))
+		y += size.Y
+	}
 	p.headerActions(r, []ctrl{{kind: ctlText, id: "cmd_filter", val: win.set.cmdFilter, placeholder: "Search shortcuts", width: 220,
 		set: func(s string) { win.set.cmdFilter = s }}})
 
@@ -79,6 +111,10 @@ func drawCommands(p *page, r image.Rectangle, win *window) int {
 		return q == "" || strings.Contains(strings.ToLower(r.label+" "+r.keys+" "+r.config), q)
 	}
 	keysOf := win.keyText // "" for an action without a shortcut
+	editable := editableActions(runtime.GOOS)
+	row := func(c kazeCommand) shortcutRow {
+		return shortcutRow{c.Label, keysOf(c.Config), c.Config, slices.Index(editable, c.Config)}
+	}
 	grouped := map[string]bool{}
 	var groups [][]shortcutRow
 	var titles []string
@@ -88,13 +124,13 @@ func drawCommands(p *page, r image.Rectangle, win *window) int {
 			grouped[cfg] = true
 			for _, c := range kazeCommands {
 				if c.Config == cfg {
-					rows = append(rows, shortcutRow{c.Label, keysOf(cfg), cfg})
+					rows = append(rows, row(c))
 				}
 			}
 		}
 		if g.title == "Editing and mouse" {
 			for _, m := range mouseLines {
-				rows = append(rows, shortcutRow{label: m[0], keys: m[1]})
+				rows = append(rows, shortcutRow{label: m[0], keys: m[1], idx: -1})
 			}
 		}
 		groups, titles = append(groups, rows), append(titles, g.title)
@@ -102,7 +138,7 @@ func drawCommands(p *page, r image.Rectangle, win *window) int {
 	var other []shortcutRow
 	for _, c := range kazeCommands {
 		if !grouped[c.Config] {
-			other = append(other, shortcutRow{c.Label, keysOf(c.Config), c.Config})
+			other = append(other, row(c))
 		}
 	}
 	if len(other) > 0 {
@@ -185,7 +221,20 @@ func (p *page) shortcutCard(r image.Rectangle, y int, rows []shortcutRow) int {
 			place(ops, cc, image.Pt(right-cs.X, y+(h-cs.Y)/2))
 		}
 		right -= idW
-		if row.config != "" && row.keys == "" {
+		if row.idx >= 0 {
+			// The keys are a button: a click (or Enter) records new ones.
+			bw := gtx.Dp(150)
+			if row.config == p.st.keyRec {
+				tc, ts := p.text(recordingText, 13, col.accent)
+				bw = max(bw, ts.X+gtx.Dp(16))
+				place(ops, tc, image.Pt(right-ts.X-gtx.Dp(8), y+(h-ts.Y)/2))
+			}
+			bh := gtx.Dp(32)
+			p.hit(ctlButton, image.Rect(right-bw, y+(h-bh)/2, right, y+(h+bh)/2), "key_rec", row.idx, p.st.keysErr != "")
+		}
+		if row.config == p.st.keyRec && row.idx >= 0 {
+			// The recording text is the button's whole content.
+		} else if row.config != "" && row.keys == "" {
 			// An action without a shortcut ("none" in [keys]).
 			nc, ns := p.text("None", 12, col.muted)
 			place(ops, nc, image.Pt(right-ns.X, y+(h-ns.Y)/2))
@@ -225,6 +274,9 @@ func (p *page) shortcutCard(r image.Rectangle, y int, rows []shortcutRow) int {
 	p.st.cards = append(p.st.cards, card)
 	return y
 }
+
+// recordingText is what a recording row's button reads.
+const recordingText = "Press the new keys… Esc cancels"
 
 // keyCap draws one key as a small cap at the origin, a thicker edge at its bottom.
 func (p *page) keyCap(k string) (op.CallOp, image.Point) {

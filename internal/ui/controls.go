@@ -335,6 +335,9 @@ func (p *page) textField(k ctrl) image.Point {
 		if on && s.editing != k.id {
 			s.editing, s.focus, s.navFocus = k.id, len(s.controls), false
 		}
+		if on {
+			p.win.stopRecording() // a field has the keyboard, so no row waits for keys
+		}
 	}
 
 	w := k.width

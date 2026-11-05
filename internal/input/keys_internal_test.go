@@ -88,3 +88,29 @@ func TestShiftEnterUsesMultilineSequence(t *testing.T) {
 		}
 	}
 }
+
+// A save swaps the reserved keys while the UI goroutine may be encoding a key;
+// with the table locked, -race (CI) finds nothing here. Bounded: 50 rounds.
+func TestSetReservedIsSafeAcrossGoroutines(t *testing.T) {
+	saved := append([]Shortcut(nil), reservedKeys["windows"]...)
+	t.Cleanup(func() { SetReserved("windows", saved) })
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for i := 0; i < 50; i++ {
+			SetReserved("windows", []Shortcut{{Name: "T", Mods: key.ModCtrl | key.ModAlt}})
+		}
+	}()
+	for i := 0; i < 50; i++ {
+		IsReserved("T", key.ModCtrl|key.ModAlt, "windows")
+		EncodeKey("T", key.ModCtrl|key.ModShift, term.Modes{})
+	}
+	<-done
+}
+
+// The lock keeps the key path free of allocations.
+func TestIsReservedDoesNotAllocate(t *testing.T) {
+	if n := testing.AllocsPerRun(50, func() { IsReserved("T", key.ModCtrl|key.ModShift, "windows") }); n != 0 {
+		t.Fatalf("IsReserved allocates %v times", n)
+	}
+}

@@ -25,9 +25,12 @@ import (
 // settingsState is the Settings page: a special tab with no shell behind it.
 // open means its row is in the sidebar; shown means it is in front instead of the terminal.
 type settingsState struct {
-	aboutCopy string // pending clipboard content, consumed by the About layout
-	cmdCopy   string // the same for the Shortcuts section
-	cmdFilter string // the Shortcuts section's search text
+	aboutCopy string     // pending clipboard content, consumed by the About layout
+	cmdCopy   string     // the same for the Shortcuts section
+	cmdFilter string     // the Shortcuts section's search text
+	keyRec    string     // the shortcut row waiting for keys; "" none
+	keyMsg    keyMessage // the strip under one shortcut row; zero value none
+	keysErr   string     // why shortcuts can't be changed; "" when they can
 
 	open, shown       bool
 	section           int             // index into the sections; never a later one
@@ -170,6 +173,7 @@ func (win *window) openSettings() {
 
 // hideSettings puts the terminal back in front; the Settings tab stays open.
 func (win *window) hideSettings() {
+	win.dropKeyEdit()
 	if win.set.shown {
 		win.set.shown = false
 		win.wantFocus = true
@@ -267,6 +271,7 @@ func (win *window) selectSection(i int) {
 		win.w.Invalidate()
 		return
 	}
+	win.dropKeyEdit()
 	win.set.section, win.set.focus = i, -1
 	if win.set.editing != "" {
 		win.editField("")
@@ -331,6 +336,7 @@ func (win *window) settingsPointer(e pointer.Event) {
 	}
 	win.wantFocus = true
 	win.dropSideEdit()
+	win.stopRecording()  // a click anywhere cancels; one on a shortcut starts it again
 	win.set.editing = "" // a press the page gets is off every field's editor
 	p := e.Position.Round()
 	for i, n := range win.set.nav {
@@ -360,10 +366,14 @@ func (win *window) settingsPointer(e pointer.Event) {
 // settingsKey handles a key on the page: kaze's own shortcuts, Tab / Shift+Tab
 // between controls, and Enter / Space to press the focused one.
 func (win *window) settingsKey(gtx layout.Context, e key.Event) {
+	s := &win.set
+	if s.keyRec != "" {
+		win.recordKey(e) // before the keymap: the press is the row's new keys
+		return
+	}
 	if e.State != key.Press {
 		return
 	}
-	s := &win.set
 	if a, ok := win.km[input.Shortcut{Name: e.Name, Mods: e.Modifiers}]; ok {
 		win.runShortcut(gtx, a)
 		return

@@ -443,6 +443,7 @@ func (win *window) setFocused(f bool) {
 	}
 	win.snapFocused.Store(f)
 	if !f {
+		win.dropKeyEdit()
 		// Windows may never send Leave once another window takes the pointer.
 		win.caption.hover = capNone
 		win.side.st.hover = 0

@@ -1,14 +1,19 @@
 package ui
 
 import (
+	"image"
 	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
+	"strings"
 	"testing"
+	"time"
 
 	gioinput "gioui.org/io/input"
 	"gioui.org/io/key"
+	"gioui.org/io/pointer"
 
 	"github.com/beefysalad/kaze-terminal/internal/input"
 	"github.com/beefysalad/kaze-terminal/internal/skills"
@@ -127,5 +132,342 @@ func TestReloadRefreshesShownKeys(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("no new branch session row in the palette")
+	}
+}
+
+// shortcutsWindow is a window with one session, its config.toml (a temp file)
+// holding cfg and its keymap loaded from it, and Settings open on Shortcuts,
+// laid out once at 1000x900.
+func shortcutsWindow(t *testing.T, cfg string) (*window, *gioinput.Router, *recStarter, string) {
+	t.Helper()
+	t.Cleanup(func() {
+		km, _ := buildKeymap(runtime.GOOS, nil)
+		input.SetReserved(runtime.GOOS, km.shortcuts())
+	})
+	win, st := sideWindow(t, true)
+	if _, err := win.mgr.New(); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "config.toml")
+	if err := os.WriteFile(path, []byte(cfg), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	win.cfgPath = path
+	win.applyKeys(nil)
+	win.reloadKeys() // a broken file keeps the defaults
+	win.openSettings()
+	win.selectSection(slices.IndexFunc(win.sections(), func(s settingsSection) bool { return s.title == "Shortcuts" }))
+	r := new(gioinput.Router)
+	sizedFrame(t, win, r, 1000, 900)
+	return win, r, st, path
+}
+
+// keysFrames runs the two frames a queued batch needs, at the page's size.
+func keysFrames(t *testing.T, win *window, r *gioinput.Router) {
+	t.Helper()
+	sizedFrame(t, win, r, 1000, 900)
+	sizedFrame(t, win, r, 1000, 900)
+}
+
+// keysControl is control id for action (its arg is the editableActions
+// index), scrolled into the pane first.
+func keysControl(t *testing.T, win *window, r *gioinput.Router, id, action string) control {
+	t.Helper()
+	arg := slices.Index(editableActions(runtime.GOOS), action)
+	if arg < 0 {
+		t.Fatalf("%s is not editable", action)
+	}
+	for range 20 {
+		c := controlsOf(win, id)
+		k := slices.IndexFunc(c, func(c control) bool { return c.arg == arg })
+		if k < 0 {
+			t.Fatalf("no %s control for %s in %+v", id, action, win.set.controls)
+		}
+		pane := win.set.pane
+		switch rect := c[k].rect; {
+		case rect.Max.Y > pane.Max.Y:
+			win.set.scroll += rect.Max.Y - pane.Max.Y + 8
+		case rect.Min.Y < pane.Min.Y:
+			win.set.scroll -= pane.Min.Y - rect.Min.Y + 8
+		default:
+			return c[k]
+		}
+		sizedFrame(t, win, r, 1000, 900)
+	}
+	t.Fatalf("%s for %s never scrolled into view", id, action)
+	return control{}
+}
+
+// clickRect presses and releases the primary button in the middle of rect.
+func clickRect(t *testing.T, win *window, r *gioinput.Router, rect image.Rectangle) {
+	t.Helper()
+	p := at(centre(rect))
+	r.Queue(
+		pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: p},
+		pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: p},
+	)
+	keysFrames(t, win, r)
+}
+
+// clickKeys clicks action's shortcut button.
+func clickKeys(t *testing.T, win *window, r *gioinput.Router, action string) {
+	t.Helper()
+	clickRect(t, win, r, keysControl(t, win, r, "key_rec", action).rect)
+}
+
+// pressIn queues a press and a release of name with mods, then two frames.
+func pressIn(t *testing.T, win *window, r *gioinput.Router, name key.Name, mods key.Modifiers) {
+	t.Helper()
+	r.Queue(
+		key.Event{Name: name, Modifiers: mods, State: key.Press},
+		key.Event{Name: name, Modifiers: mods, State: key.Release},
+	)
+	keysFrames(t, win, r)
+}
+
+// fileText is the file at path, "" when there is none.
+func fileText(t *testing.T, path string) string {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+	return string(b)
+}
+
+func pageText(win *window) string { return strings.Join(win.set.texts, "\n") }
+
+// flatText is the page's texts joined by single spaces, so a wrapped line reads whole.
+func flatText(win *window) string {
+	return strings.Join(strings.Fields(strings.Join(win.set.texts, " ")), " ")
+}
+
+func flat(s string) string { return strings.Join(strings.Fields(s), " ") }
+
+func TestClickStartsRecording(t *testing.T) {
+	win, r, _, _ := shortcutsWindow(t, "")
+	clickKeys(t, win, r, "find")
+	if win.set.keyRec != "find" {
+		t.Fatalf("recording %q, want find", win.set.keyRec)
+	}
+	if !strings.Contains(pageText(win), recordingText) {
+		t.Fatalf("no recording text in:\n%s", pageText(win))
+	}
+}
+
+func TestEnterStartsRecording(t *testing.T) {
+	win, r, _, path := shortcutsWindow(t, "")
+	want := keysControl(t, win, r, "key_rec", "find")
+	focused := func() bool {
+		f := win.set.focus
+		return f >= 0 && f < len(win.set.controls) && win.set.controls[f].id == "key_rec" && win.set.controls[f].arg == want.arg
+	}
+	for i := 0; i < 60 && !focused(); i++ {
+		pressIn(t, win, r, key.NameTab, 0)
+	}
+	if !focused() {
+		t.Fatal("Tab never reached find's shortcut")
+	}
+	pressIn(t, win, r, key.NameReturn, 0)
+	if win.set.keyRec != "find" {
+		t.Fatalf("recording %q after Enter, want find", win.set.keyRec)
+	}
+	if got := fileText(t, path); got != "" {
+		t.Fatalf("Enter was saved: %q", got)
+	}
+}
+
+func TestEscCancels(t *testing.T) {
+	for _, mods := range []key.Modifiers{0, key.ModShift} {
+		win, r, _, path := shortcutsWindow(t, "")
+		km := maps.Clone(win.km)
+		clickKeys(t, win, r, "find")
+		pressIn(t, win, r, key.NameEscape, mods)
+		if win.set.keyRec != "" {
+			t.Fatalf("%v+Esc: still recording %q", mods, win.set.keyRec)
+		}
+		if fileText(t, path) != "" || !maps.Equal(win.km, km) {
+			t.Fatalf("%v+Esc changed the file or the keymap", mods)
+		}
+	}
+}
+
+func TestClickElsewhereCancels(t *testing.T) {
+	win, r, _, _ := shortcutsWindow(t, "")
+	clickKeys(t, win, r, "find")
+	clickRect(t, win, r, controlsOf(win, "cmd_filter")[0].rect)
+	if win.set.keyRec != "" {
+		t.Fatalf("a click on the search field left %q recording", win.set.keyRec)
+	}
+	clickKeys(t, win, r, "find")
+	clickKeys(t, win, r, "palette")
+	if win.set.keyRec != "palette" {
+		t.Fatalf("recording %q after clicking palette's keys", win.set.keyRec)
+	}
+}
+
+func TestLeavingTheSectionCancels(t *testing.T) {
+	win, r, _, _ := shortcutsWindow(t, "")
+	shortcuts := win.set.section
+	clickKeys(t, win, r, "find")
+	win.selectSection(0)
+	if win.set.keyRec != "" {
+		t.Fatal("still recording after another section was chosen")
+	}
+	win.selectSection(shortcuts)
+	sizedFrame(t, win, r, 1000, 900)
+	clickKeys(t, win, r, "find")
+	win.hideSettings()
+	if win.set.keyRec != "" {
+		t.Fatal("still recording after Settings was hidden")
+	}
+	win.openSettings()
+	keysFrames(t, win, r)
+	clickKeys(t, win, r, "find")
+	win.setFocused(false)
+	if win.set.keyRec != "" {
+		t.Fatal("still recording after the window lost focus")
+	}
+}
+
+func TestIgnoredPressesKeepRecording(t *testing.T) {
+	win, r, _, path := shortcutsWindow(t, "")
+	clickKeys(t, win, r, "find")
+	for _, p := range []struct {
+		name key.Name
+		mods key.Modifiers
+	}{
+		{key.NameCtrl, key.ModCtrl}, {key.NameShift, key.ModShift}, {"+", key.ModCtrl},
+		{key.NameEnter, 0}, {"K", key.ModCtrl | key.ModSuper},
+	} {
+		pressIn(t, win, r, p.name, p.mods)
+		if win.set.keyRec != "find" || fileText(t, path) != "" {
+			t.Fatalf("%v+%q: recording %q, file %q", p.mods, p.name, win.set.keyRec, fileText(t, path))
+		}
+	}
+	r.Queue(key.EditEvent{Text: "€"})
+	keysFrames(t, win, r)
+	if win.set.keyRec != "find" || fileText(t, path) != "" {
+		t.Fatalf("typed text: recording %q, file %q", win.set.keyRec, fileText(t, path))
+	}
+}
+
+func TestPlainPressSaves(t *testing.T) {
+	win, r, _, path := shortcutsWindow(t, "")
+	clickKeys(t, win, r, "find")
+	ca := key.ModCtrl | key.ModAlt
+	pressIn(t, win, r, "F", ca)
+	if got := fileText(t, path); !strings.Contains(got, "find = \"ctrl+alt+f\"") {
+		t.Fatalf("file %q", got)
+	}
+	if win.km[input.Shortcut{Name: "F", Mods: ca}] != actFind {
+		t.Fatal("Ctrl+Alt+F does not find")
+	}
+	if _, ok := win.km[defaultBindings(runtime.GOOS)["find"]]; ok {
+		t.Fatal("the old keys still act")
+	}
+	if win.set.keyRec != "" {
+		t.Fatalf("still recording %q", win.set.keyRec)
+	}
+}
+
+func TestSavedKeysActInTheSameBatch(t *testing.T) {
+	win, r, _, path := shortcutsWindow(t, "")
+	rect := keysControl(t, win, r, "key_rec", "toggle_sidebar").rect
+	p := at(centre(rect))
+	ca := key.ModCtrl | key.ModAlt
+	r.Queue(
+		pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: p},
+		pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: p},
+		key.Event{Name: "B", Modifiers: ca, State: key.Press},
+	)
+	sizedFrame(t, win, r, 1000, 900)
+	if got := fileText(t, path); !strings.Contains(got, "toggle_sidebar = \"ctrl+alt+b\"") {
+		t.Fatalf("file %q", got)
+	}
+	if win.km[input.Shortcut{Name: "B", Mods: ca}] != actToggleSidebar {
+		t.Fatal("Ctrl+Alt+B does not toggle the sidebar")
+	}
+	if _, ok := win.km[defaultBindings(runtime.GOOS)["toggle_sidebar"]]; ok {
+		t.Fatal("the old keys still act")
+	}
+	if win.set.keyRec != "" {
+		t.Fatalf("still recording %q", win.set.keyRec)
+	}
+}
+
+func TestRecordingReachesNoActionOrShell(t *testing.T) {
+	win, r, st, _ := shortcutsWindow(t, "")
+	n := len(win.mgr.Tabs())
+	clickKeys(t, win, r, "find")
+	nt := defaultBindings(runtime.GOOS)["new_tab"]
+	pressIn(t, win, r, nt.Name, nt.Mods)
+	if got := len(win.mgr.Tabs()); got != n {
+		t.Fatalf("%d sessions after the new session's keys, want %d", got, n)
+	}
+	time.Sleep(50 * time.Millisecond)
+	if got := ptyOf(st, 0).sent(); got != "" {
+		t.Fatalf("the shell got %q", got)
+	}
+}
+
+func TestRecordingAfterTypingInSearch(t *testing.T) {
+	win, r, _, path := shortcutsWindow(t, "")
+	clickRect(t, win, r, controlsOf(win, "cmd_filter")[0].rect)
+	r.Queue(key.EditEvent{Text: "fi"})
+	keysFrames(t, win, r)
+	if win.set.cmdFilter != "fi" {
+		t.Fatalf("search text %q", win.set.cmdFilter)
+	}
+	clickKeys(t, win, r, "find")
+	pressIn(t, win, r, "F", key.ModCtrl|key.ModAlt)
+	if got := fileText(t, path); !strings.Contains(got, "find = \"ctrl+alt+f\"") {
+		t.Fatalf("file %q", got)
+	}
+	if win.set.cmdFilter != "fi" {
+		t.Fatalf("search text %q after recording", win.set.cmdFilter)
+	}
+}
+
+func TestEditingOff(t *testing.T) {
+	for _, c := range []struct{ cfg, want string }{
+		{"", "Shortcuts can't be saved: Kaze has no config folder on this computer."},
+		{"[keys\n", "config.toml has an error, so shortcuts can't be changed here: "},
+		{"keys.find = \"f5\"\n", "Your shortcuts are written outside a [keys] table in config.toml. Move them into a [keys] table to change them here."},
+	} {
+		win, r, _, _ := shortcutsWindow(t, c.cfg)
+		if c.cfg == "" {
+			win.cfgPath = ""
+			win.checkKeys()
+			keysFrames(t, win, r)
+		}
+		if !strings.HasPrefix(win.set.keysErr, c.want) {
+			t.Fatalf("%q: hint %q, want %q", c.cfg, win.set.keysErr, c.want)
+		}
+		if !strings.Contains(flatText(win), flat(win.set.keysErr)) {
+			t.Fatalf("%q: the page does not show %q:\n%s", c.cfg, win.set.keysErr, pageText(win))
+		}
+		clickKeys(t, win, r, "find")
+		if win.set.keyRec != "" {
+			t.Fatalf("%q: recording with editing off", c.cfg)
+		}
+		if !hasKeys(win, strings.Split(win.keyText("palette"), "+")...) {
+			t.Fatalf("%q: the rows lost their keys", c.cfg)
+		}
+	}
+}
+
+// The search field's editor keeps its own copy of kaze's keys; a save must
+// make it take the new ones.
+func TestApplyKeysDropsFieldFilters(t *testing.T) {
+	win, r, _, _ := shortcutsWindow(t, "")
+	clickRect(t, win, r, controlsOf(win, "cmd_filter")[0].rect)
+	f := win.set.fields["cmd_filter"]
+	if f == nil || f.filters == nil {
+		t.Fatal("the search field has no key filters yet")
+	}
+	win.applyKeys(map[string]string{"find": "ctrl+alt+f"})
+	if f.filters != nil {
+		t.Fatal("the field still filters the old keys")
 	}
 }

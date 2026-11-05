@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 
 	"gioui.org/io/key"
 	"github.com/beefysalad/kaze-terminal/internal/term"
@@ -32,15 +33,23 @@ var reservedKeys = map[string][]Shortcut{
 	},
 }
 
+// reservedMu guards reservedKeys: a save swaps the table, which may happen on
+// another goroutine than the one encoding keys.
+var reservedMu sync.RWMutex
+
 // SetReserved replaces goos's reserved keys: at startup, and again when the
-// shortcuts are saved. The table is not locked, so call it on the goroutine
-// that encodes keys (the UI goroutine).
+// shortcuts are saved. Safe from any goroutine.
 func SetReserved(goos string, keys []Shortcut) {
-	reservedKeys[goos] = append([]Shortcut(nil), keys...)
+	keys = append([]Shortcut(nil), keys...)
+	reservedMu.Lock()
+	reservedKeys[goos] = keys
+	reservedMu.Unlock()
 }
 
 // IsReserved reports whether kaze handles the key itself on the given GOOS.
 func IsReserved(name key.Name, mods key.Modifiers, goos string) bool {
+	reservedMu.RLock()
+	defer reservedMu.RUnlock()
 	for _, s := range reservedKeys[goos] {
 		if s.Name == name && s.Mods == mods {
 			return true
