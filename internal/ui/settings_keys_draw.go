@@ -24,7 +24,7 @@ import (
 // to at least 4.5:1 on what it sits on, every mark at least 3:1 on the card.
 type shortcutInk struct {
 	label, action, none, noneFocus, capText, capFace, capEdge, tagText, tagBG,
-	btnFocusLine, btnFocusBG, recLine, recBG, recText, recDot,
+	btnFocusLine, btnFocusBG, recRow, recLabel, recAction, recLine, recBG, recText, recDot,
 	resetIcon, card color.NRGBA
 	strip                                         [4]struct{ bg, line, text color.NRGBA } // by msgKind; [msgNone] unused
 	btnText, btnBG, btnLine, strongText, strongBG color.NRGBA
@@ -40,6 +40,9 @@ func flatten(c, bg color.NRGBA) color.NRGBA {
 // The strips' fill and border alphas (Ruling 7).
 const stripFill, stripLine = 0x1a, 0x59
 
+// recRowFill is the recording row's accent tint, about 8% as in the mockup.
+const recRowFill = 0x14
+
 func (c *chrome) shortcutInk() shortcutInk {
 	col := c.pageColors()
 	card := col.card
@@ -52,7 +55,10 @@ func (c *chrome) shortcutInk() shortcutInk {
 	k.capText = on(col.title, col.raised)
 	k.tagBG = flatten(tint(col.accent, 0x24), card)
 	k.tagText = on(col.accent, k.tagBG)
-	k.recBG = flatten(tint(col.accent, 0x1f), card)
+	k.recRow = flatten(tint(col.accent, recRowFill), card) // the mockup's .row.rec
+	k.recLabel = on(col.title, k.recRow)
+	k.recAction = on(col.dim, k.recRow)
+	k.recBG = flatten(tint(col.accent, 0x1f), k.recRow)
 	k.recText = on(col.accent, k.recBG)
 	k.recLine = markInk(col.accent, 0xff, card)
 	k.recDot = k.recLine
@@ -106,6 +112,7 @@ type keyRowGeom struct {
 	action      string          // "" for a mouse gesture
 	label, name image.Point     // where the label and the action name start
 	keys, reset image.Rectangle // the keys button and the reset slot
+	tint        image.Rectangle // the recording row's accent fill; empty on other rows
 }
 
 // keyStripGeom is the shown message strip's layout this frame, for tests.
@@ -130,6 +137,11 @@ func (p *page) shortcutCard(r image.Rectangle, y int, rows []shortcutRow) int {
 		}
 		editable := row.idx >= 0
 		editing := editable && p.st.keysErr == ""
+		recording := editable && row.config == p.st.keyRec
+		labelInk, actionInk := ink.label, ink.action
+		if recording {
+			labelInk, actionInk = ink.recLabel, ink.recAction
+		}
 		changed := editing && p.win.keyChanged(row.config)
 		right := r.Max.X - padR
 		n0 := len(p.st.texts)
@@ -152,17 +164,32 @@ func (p *page) shortcutCard(r image.Rectangle, y int, rows []shortcutRow) int {
 		var lss []image.Point
 		labelH, lastW := 0, 0
 		for _, l := range p.wrap(row.label, 13, max(room-tagW, 1)) {
-			c, s := p.text(l, 13, ink.label)
+			c, s := p.text(l, 13, labelInk)
 			lcs, lss = append(lcs, c), append(lss, s)
 			labelH, lastW = labelH+s.Y, s.X
 		}
 		var nc op.CallOp
 		var ns image.Point
 		if editable {
-			nc, ns = p.mono(row.config, 11.5, ink.action)
+			nc, ns = p.mono(row.config, 11.5, actionInk)
 		}
 		h := max(labelH+ns.Y+gtx.Dp(12), gtx.Dp(44), ks.Y+gtx.Dp(8))
 		g := keyRowGeom{action: row.config}
+		if recording {
+			// Under the separator line; the card's round corners clip the first and last rows.
+			g.tint = image.Rect(r.Min.X, y, r.Max.X, y+h)
+			if i > 0 {
+				g.tint.Min.Y++
+			}
+			var top, bottom int
+			if i == 0 {
+				top = gtx.Dp(12)
+			}
+			if i == len(rows)-1 {
+				bottom = gtx.Dp(12)
+			}
+			paint.FillShape(ops, ink.recRow, clip.RRect{Rect: g.tint, NW: top, NE: top, SW: bottom, SE: bottom}.Op(ops))
+		}
 		ly := y + (h-labelH-ns.Y)/2
 		g.label, g.name = image.Pt(lx, ly), image.Pt(lx, ly+labelH)
 		for i, c := range lcs {

@@ -850,6 +850,14 @@ func TestShortcutsContrast(t *testing.T) {
 		text("tag", k.tagText, k.tagBG)
 		text("cap", k.capText, k.capFace)
 		text("recording", k.recText, k.recBG)
+		text("label on the recording row", k.recLabel, k.recRow)
+		text("action on the recording row", k.recAction, k.recRow)
+		if got := contrast(k.resetIcon, k.recRow); got < 3 {
+			t.Errorf("%s: reset icon on the recording row %.2f, want at least 3", th.Key, got)
+		}
+		if k.recRow == k.card {
+			t.Errorf("%s: the recording row has no tint", th.Key)
+		}
 		for kind, name := range map[msgKind]string{msgRefused: "refused", msgClash: "clash", msgWarn: "warning"} {
 			text(name+" strip", k.strip[kind].text, k.strip[kind].bg)
 			mark(name+" strip line", k.strip[kind].line)
@@ -925,6 +933,34 @@ func TestNarrowStripWraps(t *testing.T) {
 		c := controlsOf(win, id)
 		if len(c) != 1 || c[0].rect.Min.Y < s.textBottom || !c[0].rect.In(s.box) {
 			t.Fatalf("%s at %v, text ends at %d, strip %v", id, c, s.textBottom, s.box)
+		}
+	}
+}
+
+// The recording row is tinted across the card, as in the mockup's .row.rec;
+// the other rows are not.
+func TestRecordingRowTinted(t *testing.T) {
+	win, r, _, _ := shortcutsWindow(t, "")
+	clickKeys(t, win, r, "find")
+	if win.set.keyRec != "find" {
+		t.Fatalf("not recording find (keyRec %q)", win.set.keyRec)
+	}
+	var card image.Rectangle
+	for _, c := range win.set.cards {
+		for _, g := range win.set.keyRows {
+			if g.action == "find" && g.keys.In(c) {
+				card = c
+			}
+		}
+	}
+	for _, g := range win.set.keyRows {
+		switch {
+		case g.action == "find":
+			if g.tint.Empty() || g.tint.Min.X != card.Min.X || g.tint.Max.X != card.Max.X || !g.keys.In(g.tint) {
+				t.Errorf("find's recording row tint %v, want the card's width %v around its keys %v", g.tint, card, g.keys)
+			}
+		case !g.tint.Empty():
+			t.Errorf("%q is tinted %v while find records", g.action, g.tint)
 		}
 	}
 }
