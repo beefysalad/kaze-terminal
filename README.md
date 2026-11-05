@@ -162,7 +162,7 @@ and flags, and colour emoji on Linux.
 
 Any of these can be changed in Settings > Shortcuts: click a shortcut, press the new keys, and it is
 saved at once. If the keys are already used, Kaze asks before taking them. Keys with no Ctrl, Alt or
-Cmd are refused. A plain Ctrl+letter works but warns you, because the shell loses it. You can reset one
+Cmd are refused, except the F-keys (F1 to F12), which work on their own. A plain Ctrl+letter works but warns you, because the shell loses it. You can reset one
 row or all of them. The same changes can be made by hand under `[keys]` in `config.toml`. Writing
 `none` leaves an action without a shortcut (it is still in the palette). Settings always keeps one,
 so it cannot be set to `none`.

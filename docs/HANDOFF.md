@@ -6,11 +6,12 @@ Last updated: 2026-11-05, editable shortcuts built on `feat/shortcuts-edit`, shi
 
 **Editable shortcuts ship in 0.31 with the palette redesign (built on `feat/shortcuts-edit`).** Settings >
 Shortcuts now lets you change every shortcut: click, press the keys, saved at once. A clash asks first,
-keys without Ctrl, Alt or Cmd are refused, and a plain Ctrl+letter warns. Reset works per row or for all.
+keys without Ctrl, Alt or Cmd are refused (F-keys are fine on their own), and a plain Ctrl+letter warns. Reset works per row or for all.
 Plan: `docs/superpowers/plans/2026-11-05-kaze-editable-shortcuts.md`; spec:
 `docs/superpowers/specs/2026-11-05-kaze-editable-shortcuts-design.md`. Next: release 0.31 (version,
-changelog and What's new are not done yet). The contrast minimums for the strip colours:
-Lowest contrast across the five themes: text 4.51:1, marks 3.02:1. Captures: `docs/audits/shortcuts/`. Owner checks by hand: change Find to Ctrl+Alt+F and use it without a restart;
+changelog and What's new are not done yet). The page's colours, strips included, pass the contrast
+test in all five themes: the lowest text contrast is 4.51:1 and the lowest mark 3.02:1. The page's
+captures are in `docs/audits/shortcuts/`. Owner checks by hand: change Find to Ctrl+Alt+F and use it without a restart;
 Replace a clash; the Ctrl+R warning; Reset all; the strips readable on Washi (the light theme); and on the
 Mac, Cmd keys recorded as `cmd`.
 
