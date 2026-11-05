@@ -153,34 +153,164 @@ func (win *window) recordKey(e key.Event) {
 	win.keyPressed(action, sc)
 }
 
-// keyPressed decides what the keys pressed on action's row do.
+const settingsNeedsKeys = "Settings needs a shortcut. Pick other keys."
+
+// needsModifier is true for keys that would stop the person typing them: no
+// Ctrl, Alt or Cmd, and not an F-key (spec 3.2 step 1).
+func needsModifier(sc input.Shortcut) bool {
+	switch sc.Name {
+	case key.NameF1, key.NameF2, key.NameF3, key.NameF4, key.NameF5, key.NameF6,
+		key.NameF7, key.NameF8, key.NameF9, key.NameF10, key.NameF11, key.NameF12:
+		return false
+	}
+	return sc.Mods&(key.ModCtrl|key.ModAlt|key.ModCommand) == 0
+}
+
+// refusedText says why sc can't be label's keys and what it keeps (Ruling 4:
+// macOS names Option and Cmd, as its caps do).
+func refusedText(goos, label string, sc, old input.Shortcut, hasOld bool) string {
+	need := "Ctrl or Alt"
+	if goos == "darwin" {
+		need = "Ctrl, Option or Cmd"
+	}
+	end := label + " stays without a shortcut."
+	if hasOld {
+		end = label + " keeps " + formatShortcut(goos, old) + "."
+	}
+	return formatShortcut(goos, sc) + " needs " + need + " with it, or it would stop you typing it. " + end
+}
+
+// clashText asks whether sc should move here from otherLabel.
+func clashText(goos string, sc input.Shortcut, otherLabel string) string {
+	return formatShortcut(goos, sc) + " is used by " + otherLabel + ". Use it here instead? " + otherLabel + " will have no shortcut."
+}
+
+// shellKeyUse is what the shell or Claude Code does with Ctrl+<letter>.
+var shellKeyUse = map[key.Name]string{"R": "reverse search", "C": "stop a command", "D": "end input",
+	"L": "clear the screen", "A": "go to line start", "E": "go to line end",
+	"U": "delete the line", "W": "delete a word", "Z": "suspend"}
+
+// warnText is the warning for plain Ctrl+<letter>, which the shell loses.
+func warnText(sc input.Shortcut) (string, bool) {
+	n := string(sc.Name)
+	if sc.Mods != key.ModCtrl || len(n) != 1 || n[0] < 'A' || n[0] > 'Z' {
+		return "", false
+	}
+	use := ""
+	if u, ok := shellKeyUse[sc.Name]; ok {
+		use = " (" + u + ")"
+	}
+	return "Saved. Your shell and Claude Code use Ctrl+" + n + use + ". Kaze will take it from them.", true
+}
+
+// actionLabel is name's label on the page.
+func actionLabel(name string) string {
+	for _, c := range kazeCommands {
+		if c.Config == name {
+			return c.Label
+		}
+	}
+	return name
+}
+
+// keyPressed decides what the keys pressed on action's row do (spec 3.2):
+// refused, nothing, a clash question, or saved (with a warning when the shell
+// loses the keys).
 func (win *window) keyPressed(action string, sc input.Shortcut) {
-	win.saveFor(action, sc)
+	s := &win.set
+	old, hasOld := win.binds[action]
+	if needsModifier(sc) {
+		s.keyMsg = keyMessage{action: action, kind: msgRefused, keys: sc,
+			text: refusedText(runtime.GOOS, actionLabel(action), sc, old, hasOld)}
+		return
+	}
+	if hasOld && old == sc {
+		return
+	}
+	if o, ok := win.boundTo(sc, action); ok {
+		if o == "open_settings" {
+			s.keyMsg = keyMessage{action: action, kind: msgRefused, text: settingsNeedsKeys} // Ruling 2
+			return
+		}
+		s.keyMsg = keyMessage{action: action, kind: msgClash, keys: sc, other: o,
+			text: clashText(runtime.GOOS, sc, actionLabel(o))}
+		return
+	}
+	win.saveFor(action, sc, map[string]string{action: keysValue(action, sc)})
 }
 
-// saveFor saves sc as action's keys: the line goes when sc is the default
-// (Ruling 1). A save error shows in the row.
-func (win *window) saveFor(action string, sc input.Shortcut) {
-	text := ""
-	if sc != defaultBindings(runtime.GOOS)[action] {
-		text, _ = shortcutText(sc)
+// boundTo is the action other than except that has sc.
+func (win *window) boundTo(sc input.Shortcut, except string) (string, bool) {
+	for _, o := range sortedNames(win.binds) {
+		if o != except && win.binds[o] == sc {
+			return o, true
+		}
 	}
-	if err := win.saveKeys(map[string]string{action: text}); err != nil {
-		win.set.keyMsg = keyMessage{action: action, kind: msgRefused, text: "Couldn't save: " + err.Error()}
+	return "", false
+}
+
+// keysValue is action's [keys] value for sc: "" (no line) when sc is the
+// default (Ruling 1).
+func keysValue(action string, sc input.Shortcut) string {
+	if sc == defaultBindings(runtime.GOOS)[action] {
+		return ""
+	}
+	text, _ := shortcutText(sc)
+	return text
+}
+
+// saveFor saves edits, which give action the keys sc, and puts what the person
+// should know in action's row: a save error, a warning the keymap gave about
+// an edited action, or the shell-keys warning. A plain save shows nothing
+// (Ruling 11).
+func (win *window) saveFor(action string, sc input.Shortcut, edits map[string]string) {
+	s := &win.set
+	s.keyMsg = keyMessage{}
+	warns, err := win.saveKeys(edits)
+	if err != nil {
+		s.keyMsg = keyMessage{action: action, kind: msgRefused, text: "Couldn't save: " + err.Error()}
+		return
+	}
+	for _, w := range warns {
+		for name := range edits {
+			if strings.HasPrefix(w, "keys."+name+":") {
+				s.keyMsg = keyMessage{action: action, kind: msgWarn, text: "Saved, with a warning: " + w}
+				return
+			}
+		}
+	}
+	if text, ok := warnText(sc); ok {
+		s.keyMsg = keyMessage{action: action, kind: msgWarn, keys: sc, text: text}
 	}
 }
 
-// saveKeys writes edits to [keys] and rebuilds the keymap from the file. On a
-// write error the live keymap stays as it was.
-func (win *window) saveKeys(edits map[string]string) error {
+// saveKeys writes edits to [keys] and rebuilds the keymap from the file,
+// returning its warnings. On a write error the live keymap stays as it was.
+func (win *window) saveKeys(edits map[string]string) ([]string, error) {
 	if win.cfgPath == "" {
-		return errors.New("kaze has no config file")
+		return nil, errors.New("kaze has no config file")
 	}
 	err := config.SetKeys(win.cfgPath, edits)
+	var warns []string
 	if err == nil {
-		_, err = win.loadKeys()
+		warns, err = win.loadKeys()
 	}
 	win.checkKeys()
 	win.w.Invalidate()
-	return err
+	return warns, err
+}
+
+// keysStrip runs a strip button: OK and Cancel close it, Replace moves the keys.
+func (win *window) keysStrip(id string) {
+	s := &win.set
+	m := s.keyMsg
+	s.keyMsg = keyMessage{}
+	if id != "key_replace" || m.kind != msgClash {
+		return
+	}
+	value := keysValue(m.action, m.keys)
+	if m.reset {
+		value = ""
+	}
+	win.saveFor(m.action, m.keys, map[string]string{m.action: value, m.other: "none"})
 }

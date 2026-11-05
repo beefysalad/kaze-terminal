@@ -471,3 +471,253 @@ func TestApplyKeysDropsFieldFilters(t *testing.T) {
 		t.Fatal("the field still filters the old keys")
 	}
 }
+
+func TestRefusedTexts(t *testing.T) {
+	k := input.Shortcut{Name: "K"}
+	cs := input.Shortcut{Name: "C", Mods: key.ModCtrl | key.ModShift}
+	cmd := input.Shortcut{Name: "C", Mods: key.ModCommand}
+	for _, c := range []struct {
+		goos   string
+		old    input.Shortcut
+		hasOld bool
+		want   string
+	}{
+		{"windows", cs, true, "K needs Ctrl or Alt with it, or it would stop you typing it. Copy keeps Ctrl+Shift+C."},
+		{"darwin", cmd, true, "K needs Ctrl, Option or Cmd with it, or it would stop you typing it. Copy keeps Cmd+C."},
+		{"windows", input.Shortcut{}, false, "K needs Ctrl or Alt with it, or it would stop you typing it. Copy stays without a shortcut."},
+	} {
+		if got := refusedText(c.goos, "Copy", k, c.old, c.hasOld); got != c.want {
+			t.Errorf("%s: %q, want %q", c.goos, got, c.want)
+		}
+	}
+}
+
+func TestNeedsModifier(t *testing.T) {
+	for _, sc := range []input.Shortcut{
+		{Name: "K"}, {Name: "K", Mods: key.ModShift}, {Name: key.NameReturn}, {Name: key.NameEscape},
+		{Name: key.NameTab}, {Name: key.NameSpace}, {Name: key.NameUpArrow}, {Name: key.NameUpArrow, Mods: key.ModShift},
+		{Name: "1"}, {Name: ","},
+	} {
+		if !needsModifier(sc) {
+			t.Errorf("%v+%q does not need a modifier", sc.Mods, sc.Name)
+		}
+	}
+	for _, sc := range []input.Shortcut{
+		{Name: key.NameF5}, {Name: key.NameF5, Mods: key.ModShift}, {Name: "K", Mods: key.ModCtrl},
+		{Name: "K", Mods: key.ModAlt}, {Name: "K", Mods: key.ModCommand},
+	} {
+		if needsModifier(sc) {
+			t.Errorf("%v+%q needs a modifier", sc.Mods, sc.Name)
+		}
+	}
+}
+
+func TestWarnTexts(t *testing.T) {
+	for sc, want := range map[input.Shortcut]string{
+		{Name: "R", Mods: key.ModCtrl}: "Saved. Your shell and Claude Code use Ctrl+R (reverse search). Kaze will take it from them.",
+		{Name: "Q", Mods: key.ModCtrl}: "Saved. Your shell and Claude Code use Ctrl+Q. Kaze will take it from them.",
+	} {
+		if got, ok := warnText(sc); !ok || got != want {
+			t.Errorf("%q: %q %v, want %q", sc.Name, got, ok, want)
+		}
+	}
+	for _, sc := range []input.Shortcut{
+		{Name: "R", Mods: key.ModCtrl | key.ModShift}, {Name: "R", Mods: key.ModAlt}, {Name: "1", Mods: key.ModCtrl}, {Name: key.NameF5},
+	} {
+		if got, ok := warnText(sc); ok {
+			t.Errorf("%v+%q warns %q", sc.Mods, sc.Name, got)
+		}
+	}
+}
+
+func TestClashText(t *testing.T) {
+	got := clashText("windows", input.Shortcut{Name: "B", Mods: key.ModCtrl | key.ModShift}, "Toggle sidebar")
+	if want := "Ctrl+Shift+B is used by Toggle sidebar. Use it here instead? Toggle sidebar will have no shortcut."; got != want {
+		t.Fatalf("%q, want %q", got, want)
+	}
+}
+
+// stripText is the text of the shown strip, as the page drew it (wrapped lines joined).
+func stripHas(t *testing.T, win *window, want string) {
+	t.Helper()
+	if !strings.Contains(flatText(win), flat(want)) {
+		t.Fatalf("the page does not show %q:\n%s", want, pageText(win))
+	}
+}
+
+// pressKeys presses sc while a row records.
+func pressKeys(t *testing.T, win *window, r *gioinput.Router, sc input.Shortcut) {
+	t.Helper()
+	pressIn(t, win, r, sc.Name, sc.Mods)
+}
+
+func defaultOf(action string) input.Shortcut { return defaultBindings(runtime.GOOS)[action] }
+
+func TestRefusedOnThePage(t *testing.T) {
+	win, r, _, path := shortcutsWindow(t, "")
+	clickKeys(t, win, r, "copy")
+	pressIn(t, win, r, "K", 0)
+	want := refusedText(runtime.GOOS, "Copy", input.Shortcut{Name: "K"}, defaultOf("copy"), true)
+	if runtime.GOOS == "windows" && want != "K needs Ctrl or Alt with it, or it would stop you typing it. Copy keeps Ctrl+Shift+C." {
+		t.Fatalf("refused text %q", want)
+	}
+	stripHas(t, win, want)
+	if fileText(t, path) != "" || win.set.keyMsg.kind != msgRefused {
+		t.Fatalf("file %q, strip %+v", fileText(t, path), win.set.keyMsg)
+	}
+	clickRect(t, win, r, keysControl(t, win, r, "key_ok", "copy").rect)
+	if win.set.keyMsg.kind != msgNone || len(controlsOf(win, "key_ok")) != 0 {
+		t.Fatalf("OK left the strip: %+v", win.set.keyMsg)
+	}
+}
+
+func TestFKeyAllowed(t *testing.T) {
+	win, r, _, path := shortcutsWindow(t, "")
+	clickKeys(t, win, r, "find")
+	pressIn(t, win, r, key.NameF5, 0)
+	if got := fileText(t, path); !strings.Contains(got, "find = \"f5\"") {
+		t.Fatalf("file %q", got)
+	}
+}
+
+func TestSamePressChangesNothing(t *testing.T) {
+	win, r, _, path := shortcutsWindow(t, "")
+	clickKeys(t, win, r, "find")
+	pressKeys(t, win, r, defaultOf("find"))
+	if got := fileText(t, path); got != "" || win.set.keyMsg.kind != msgNone || win.set.keyRec != "" {
+		t.Fatalf("file %q, strip %+v, recording %q", got, win.set.keyMsg, win.set.keyRec)
+	}
+}
+
+// clashOnFind records find and presses Toggle sidebar's keys.
+func clashOnFind(t *testing.T) (*window, *gioinput.Router, string) {
+	t.Helper()
+	win, r, _, path := shortcutsWindow(t, "")
+	clickKeys(t, win, r, "find")
+	pressKeys(t, win, r, defaultOf("toggle_sidebar"))
+	want := clashText(runtime.GOOS, defaultOf("toggle_sidebar"), "Toggle sidebar")
+	if runtime.GOOS == "windows" && want != "Ctrl+Shift+B is used by Toggle sidebar. Use it here instead? Toggle sidebar will have no shortcut." {
+		t.Fatalf("clash text %q", want)
+	}
+	stripHas(t, win, want)
+	if len(controlsOf(win, "key_cancel")) != 1 || len(controlsOf(win, "key_replace")) != 1 {
+		t.Fatal("no Cancel and Replace")
+	}
+	return win, r, path
+}
+
+func TestClashCancel(t *testing.T) {
+	win, r, path := clashOnFind(t)
+	km := maps.Clone(win.km)
+	clickRect(t, win, r, keysControl(t, win, r, "key_cancel", "find").rect)
+	if fileText(t, path) != "" || !maps.Equal(win.km, km) || win.set.keyMsg.kind != msgNone {
+		t.Fatalf("Cancel: file %q, strip %+v", fileText(t, path), win.set.keyMsg)
+	}
+}
+
+func TestClashReplace(t *testing.T) {
+	win, r, path := clashOnFind(t)
+	clickRect(t, win, r, keysControl(t, win, r, "key_replace", "find").rect)
+	text, _ := shortcutText(defaultOf("toggle_sidebar"))
+	got := fileText(t, path)
+	if !strings.Contains(got, "find = \""+text+"\"") || !strings.Contains(got, "toggle_sidebar = \"none\"") {
+		t.Fatalf("file %q", got)
+	}
+	if win.km[defaultOf("toggle_sidebar")] != actFind {
+		t.Fatal("the keys do not find")
+	}
+	if _, ok := win.binds["toggle_sidebar"]; ok {
+		t.Fatal("Toggle sidebar still has keys")
+	}
+	if win.set.keyMsg.kind != msgNone {
+		t.Fatalf("strip %+v after Replace", win.set.keyMsg)
+	}
+	i := slices.Index(win.set.texts, "Toggle sidebar")
+	if i < 0 || !slices.Contains(win.set.texts[i:min(i+4, len(win.set.texts))], "None") {
+		t.Fatalf("the Toggle sidebar row does not read None:\n%s", pageText(win))
+	}
+}
+
+func TestClashWithSettingsRefused(t *testing.T) {
+	win, r, _, path := shortcutsWindow(t, "")
+	clickKeys(t, win, r, "palette")
+	pressKeys(t, win, r, defaultOf("open_settings"))
+	stripHas(t, win, "Settings needs a shortcut. Pick other keys.")
+	if len(controlsOf(win, "key_replace")) != 0 || fileText(t, path) != "" || len(controlsOf(win, "key_ok")) != 1 {
+		t.Fatalf("Replace shown or file %q", fileText(t, path))
+	}
+}
+
+func TestWarningOnThePage(t *testing.T) {
+	win, r, _, path := shortcutsWindow(t, "")
+	clickKeys(t, win, r, "palette")
+	pressIn(t, win, r, "R", key.ModCtrl)
+	if got := fileText(t, path); !strings.Contains(got, "palette = \"ctrl+r\"") {
+		t.Fatalf("file %q", got)
+	}
+	stripHas(t, win, "Saved. Your shell and Claude Code use Ctrl+R (reverse search). Kaze will take it from them.")
+	if len(controlsOf(win, "key_ok")) != 1 {
+		t.Fatal("no OK")
+	}
+	clickKeys(t, win, r, "find")
+	if win.set.keyMsg.kind != msgNone {
+		t.Fatalf("recording another row left the strip %+v", win.set.keyMsg)
+	}
+}
+
+func TestDefaultKeysRemoveTheLine(t *testing.T) {
+	win, r, _, path := shortcutsWindow(t, "[keys]\nfind = \"ctrl+alt+f\"\n")
+	clickKeys(t, win, r, "find")
+	pressKeys(t, win, r, defaultOf("find"))
+	if got := fileText(t, path); got != "[keys]\n" {
+		t.Fatalf("file %q", got)
+	}
+}
+
+func TestSaveFailureKeepsKeymap(t *testing.T) {
+	win, r, _, path := shortcutsWindow(t, "")
+	if err := os.WriteFile(path, []byte("[keys\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	km := maps.Clone(win.km)
+	clickKeys(t, win, r, "find")
+	pressIn(t, win, r, "F", key.ModCtrl|key.ModAlt)
+	if !strings.HasPrefix(win.set.keyMsg.text, "Couldn't save: ") || win.set.keyMsg.kind != msgRefused {
+		t.Fatalf("strip %+v", win.set.keyMsg)
+	}
+	if !maps.Equal(win.km, km) {
+		t.Fatal("a failed save changed the keymap")
+	}
+}
+
+func TestPageSaveKeepsAHandEdit(t *testing.T) {
+	win, r, _, path := shortcutsWindow(t, "[keys]\n")
+	if err := os.WriteFile(path, []byte("[keys]\npalette = \"ctrl+alt+p\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	clickKeys(t, win, r, "find")
+	pressIn(t, win, r, "F", key.ModCtrl|key.ModAlt)
+	got := fileText(t, path)
+	if !strings.Contains(got, "palette = \"ctrl+alt+p\"") || !strings.Contains(got, "find = \"ctrl+alt+f\"") {
+		t.Fatalf("file %q", got)
+	}
+	if win.binds["palette"] != (input.Shortcut{Name: "P", Mods: key.ModCtrl | key.ModAlt}) {
+		t.Fatalf("palette %v", win.binds["palette"])
+	}
+}
+
+// A save the keymap could not take as asked (a hand edit put another action on
+// the same keys meanwhile) says so in the row instead of dropping the warning.
+func TestSaveWarningShownInTheRow(t *testing.T) {
+	win, r, _, path := shortcutsWindow(t, "[keys]\n")
+	if err := os.WriteFile(path, []byte("[keys]\npalette = \"ctrl+alt+f\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	clickKeys(t, win, r, "find")
+	pressIn(t, win, r, "F", key.ModCtrl|key.ModAlt)
+	m := win.set.keyMsg
+	if m.kind != msgWarn || m.action != "find" || !strings.Contains(m.text, "keys.find") {
+		t.Fatalf("strip %+v", m)
+	}
+	stripHas(t, win, m.text)
+}

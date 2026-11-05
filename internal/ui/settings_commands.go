@@ -68,6 +68,8 @@ func (win *window) keysAct(id string, arg int) {
 	switch id {
 	case "key_rec":
 		win.startRecording(names[arg])
+	case "key_ok", "key_cancel", "key_replace":
+		win.keysStrip(id)
 	}
 }
 
@@ -265,6 +267,9 @@ func (p *page) shortcutCard(r image.Rectangle, y int, rows []shortcutRow) int {
 			}
 		}
 		y += h
+		if m := p.st.keyMsg; m.kind != msgNone && m.action == row.config && row.idx >= 0 {
+			y = p.keyStrip(r, y, m, row.idx)
+		}
 	}
 	call := rec.Stop()
 	card := image.Rect(r.Min.X, top, r.Max.X, y)
@@ -273,6 +278,82 @@ func (p *page) shortcutCard(r image.Rectangle, y int, rows []shortcutRow) int {
 	stroke(ops, card, gtx.Dp(12), col.line)
 	p.st.cards = append(p.st.cards, card)
 	return y
+}
+
+// keyStrip draws the message under a shortcut row from y and returns where
+// the next row starts: its text, then OK, or Cancel and Replace.
+func (p *page) keyStrip(r image.Rectangle, y int, m keyMessage, idx int) int {
+	gtx, ops, col := p.gtx, p.gtx.Ops, p.col
+	box := image.Rect(r.Min.X+gtx.Dp(16), y, r.Max.X-gtx.Dp(10), y)
+	padX, padY, gap := gtx.Dp(12), gtx.Dp(10), gtx.Dp(10)
+	btns := []ctrl{{kind: ctlButton, id: "key_ok", arg: idx, text: "OK"}}
+	if m.kind == msgClash {
+		btns = []ctrl{{kind: ctlButton, id: "key_cancel", arg: idx, text: "Cancel"}, {kind: ctlButton, id: "key_replace", arg: idx, text: "Replace", strong: true}}
+	}
+	type laid struct {
+		call     op.CallOp
+		size     image.Point
+		from, to int
+	}
+	var bs []laid
+	bw, bh := 0, 0
+	for i, b := range btns {
+		call, size, from := p.ctrl(b, 0)
+		bs = append(bs, laid{call, size, from, len(p.st.controls)})
+		if i > 0 {
+			bw += gtx.Dp(8)
+		}
+		bw += size.X
+		bh = max(bh, size.Y)
+	}
+	inner := box.Dx() - 2*padX
+	room := inner - bw - gap
+	below := room < gtx.Dp(200) // too narrow: the buttons go under the text
+	if below {
+		room = inner
+	}
+	var lines []op.CallOp
+	var sizes []image.Point
+	th := 0
+	for _, l := range p.wrap(m.text, 13, max(room, 1)) {
+		call, size := p.text(l, 13, col.title)
+		lines, sizes = append(lines, call), append(sizes, size)
+		th += size.Y
+	}
+	h := max(th, bh)
+	if below {
+		h = th + gap + bh
+	}
+	box.Max.Y = y + h + 2*padY
+	fill := col.err
+	switch m.kind {
+	case msgClash:
+		fill = col.accent
+	case msgWarn:
+		fill = col.needs
+	}
+	radius := gtx.Dp(9)
+	paint.FillShape(ops, tint(fill, 0x1a), clip.UniformRRect(box, radius).Op(ops))
+	stroke(ops, box, radius, tint(fill, 0x59))
+	ty := y + padY + (h-th)/2
+	if below {
+		ty = y + padY
+	}
+	for i, call := range lines {
+		place(ops, call, image.Pt(box.Min.X+padX, ty))
+		ty += sizes[i].Y
+	}
+	x, by := box.Max.X-padX-bw, y+padY+(h-bh)/2
+	if below {
+		x, by = box.Min.X+padX, y+padY+th+gap
+	}
+	for _, b := range bs {
+		at := image.Pt(x, by+(bh-b.size.Y)/2)
+		p.st.shift(b.from, b.to, at)
+		place(ops, b.call, at)
+		x += b.size.X + gtx.Dp(8)
+	}
+	return box.Max.Y + gtx.Dp(10)
 }
 
 // recordingText is what a recording row's button reads.
