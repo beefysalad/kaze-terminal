@@ -1039,6 +1039,7 @@ scrolling, idle CPU, memory), including the goals it missed:
 Done:
 
 - Find in the terminal and the docked tabs (#155): Ctrl+Shift+F or Cmd+F, every match marked, on the whole scrollback (built on `feat/find`, release next).
+- 0.30: find in the terminal and docked tabs, Ctrl+Shift+F / Cmd+F (#155, PR #156).
 - 0.29: the battery in the status bar on macOS (#139, PR #158); a compact About page built around the refreshed logo (PR #160).
 - 0.28.2: a .md link Claude printed opens the file Claude wrote or read, wherever it lives (#143, PR #153).
 - 0.28.1: the project moved to beefysalad/kaze-terminal; updates and the website follow it (PR #151).

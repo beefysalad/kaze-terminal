@@ -1,10 +1,10 @@
 # kaze handoff
 
-Last updated: 2026-11-04, release 0.29 (battery on macOS, #139 / PR #158; the About page redesign, PR #160; the lander's `kaze-about.png` still shows the old page and needs retaking). Before that, release 0.28.2 (.md links open the file the agent touched, #143 / PR #153; uninstall page #112 designed and planned on `feat/uninstall`). Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-05, release 0.30 (find in the terminal and docked tabs, #155 / PR #156). Before that, release 0.29 (battery on macOS, #139 / PR #158; the About page redesign, PR #160; the lander's `kaze-about.png` still shows the old page and needs retaking). Before that, release 0.28.2 (.md links open the file the agent touched, #143 / PR #153; uninstall page #112 designed and planned on `feat/uninstall`). Read this first when you pick up kaze on another machine.
 
 ## Where things stand
 
-**Find (#155) is built on `feat/find` (draft PR), ships as release 0.30.** Ctrl+Shift+F (Cmd+F on macOS) opens a
+**Release 0.30 ships find (#155, PR #156, merged 2026-11-05).** Ctrl+Shift+F (Cmd+F on macOS) opens a
 find bar on the session's terminal or on a workspace member's tab in the panel. Every match is tinted,
 the current one stronger, with marks on the right edge. Plan: `docs/superpowers/plans/2026-11-04-kaze-find.md`;
 mockup `docs/design/find-mockup.html`; audit `docs/audits/2026-11-04-kaze-find.md`. README, the lander's

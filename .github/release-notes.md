@@ -1,7 +1,7 @@
-## What’s new in Kaze 0.29
+## What’s new in Kaze 0.30
 
-- **Battery on macOS:** MacBooks now show the battery at the far right of the status bar too, just like Windows laptops: the level and percent, a bolt while charging, amber at 20% and red at 10%. It updates when macOS says the level or the charger changed, so it costs nothing while idle. Mac desktops show nothing.
-- **A new About page:** Settings, About is now a compact page built around the refreshed logo, with the tagline, what the name means, and one card for the version, update status, platform and license. Copy build info, View on GitHub and Report an issue sit right under them, and stack neatly in a narrow window.
+- **Find in the terminal:** press Ctrl+Shift+F on Windows or Cmd+F on a Mac to search the whole scrollback of Claude’s terminal or a server tab in the panel. Every match is highlighted and marked on the right edge. Enter and Shift+Enter step through them, Aa matches case, and Esc closes the bar and puts the view back where it was.
+- **Built to stay out of the way:** new output updates the count without moving what you’re reading, a click in the terminal gives you the keyboard back, plain Ctrl+F still goes to the shell, and nothing runs while the bar is closed.
 
 ## Download
 
