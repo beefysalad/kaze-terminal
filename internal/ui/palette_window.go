@@ -5,7 +5,6 @@ import (
 	"image"
 	"io"
 	"path/filepath"
-	"runtime"
 
 	"gioui.org/io/clipboard"
 	"gioui.org/io/event"
@@ -163,9 +162,7 @@ func (win *window) palInput() palInput {
 			continue // it is open already
 		}
 		a := palAction{Name: c.Label, Config: c.Config, Act: c.Act}
-		if sc, ok := win.binds[c.Config]; ok {
-			a.Key = formatShortcut(runtime.GOOS, sc)
-		}
+		a.Key = win.keyText(c.Config)
 		in.Actions = append(in.Actions, a)
 	}
 	in.Actions = append(in.Actions, workspaceActions(win.palette.spaces)...)

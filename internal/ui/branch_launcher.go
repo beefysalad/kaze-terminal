@@ -4,7 +4,6 @@ import (
 	"context"
 	"image"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -492,7 +491,5 @@ func (win *window) initBranchShortcut() {
 		return
 	}
 	w.shortcutReady = true
-	if sc, ok := win.binds["new_branch_session"]; ok {
-		w.shortcut = formatShortcut(runtime.GOOS, sc)
-	}
+	w.shortcut = win.keyText("new_branch_session")
 }

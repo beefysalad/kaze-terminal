@@ -3,7 +3,6 @@ package ui
 import (
 	"image"
 	"io"
-	"runtime"
 	"strings"
 
 	"gioui.org/io/clipboard"
@@ -79,12 +78,7 @@ func drawCommands(p *page, r image.Rectangle, win *window) int {
 	match := func(r shortcutRow) bool {
 		return q == "" || strings.Contains(strings.ToLower(r.label+" "+r.keys+" "+r.config), q)
 	}
-	keysOf := func(config string) string {
-		if sc, ok := win.binds[config]; ok {
-			return formatShortcut(runtime.GOOS, sc)
-		}
-		return "none"
-	}
+	keysOf := win.keyText // "" for an action without a shortcut
 	grouped := map[string]bool{}
 	var groups [][]shortcutRow
 	var titles []string
@@ -191,7 +185,11 @@ func (p *page) shortcutCard(r image.Rectangle, y int, rows []shortcutRow) int {
 			place(ops, cc, image.Pt(right-cs.X, y+(h-cs.Y)/2))
 		}
 		right -= idW
-		if row.config == "" {
+		if row.config != "" && row.keys == "" {
+			// An action without a shortcut ("none" in [keys]).
+			nc, ns := p.text("None", 12, col.muted)
+			place(ops, nc, image.Pt(right-ns.X, y+(h-ns.Y)/2))
+		} else if row.config == "" {
 			// A mouse gesture: plain words, no caps.
 			kc, ks := p.mono(row.keys, 11.5, col.fg)
 			place(ops, kc, image.Pt(right-ks.X, y+(h-ks.Y)/2))
