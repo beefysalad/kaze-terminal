@@ -43,6 +43,7 @@ const (
 const (
 	palEmptySessions = "Press / to search skills instead."
 	palEmptySkills   = "Try part of what the skill does, like /review."
+	palNoSkills      = "No skills found"
 )
 
 // palFootKeys is one footer hint: its keycaps, then its word.
@@ -67,6 +68,7 @@ type palState struct {
 	skills      bool   // the Skills scope: the text starts with "/"
 	query       string // the text, for the empty list's line
 	footSkill   bool   // the selected row is a skill: the footer's skill keys
+	noSkills    bool   // no skills at all: none found, or the scan has not answered
 }
 
 // palHits is where the last frame drew the palette, in window pixels.
@@ -426,17 +428,24 @@ func (c *chrome) palFoot(gtx layout.Context, st palState, foot image.Rectangle, 
 	}
 }
 
-// palEmpty is the empty list: No results for the text, then the scope's line.
+// palEmpty is the empty list: No results for the text, then the scope's line;
+// in Skills with no skills at all, only that there are none.
 func (c *chrome) palEmpty(gtx layout.Context, st palState, h *palHits, r image.Rectangle, ink *palInk) {
+	ink.note("empty line", ink.text, ink.bg, 4.5)
+	room := r.Dx() - 2*gtx.Dp(10)
+	if st.skills && st.noSkills {
+		h.lines = []string{palNoSkills}
+		a, as := c.fitSideW(gtx, palNoSkills, 14, room, ink.text, font.Normal)
+		place(gtx.Ops, a, image.Pt(r.Min.X+(r.Dx()-as.X)/2, r.Min.Y+(r.Dy()-as.Y)/2))
+		return
+	}
 	q := strings.TrimPrefix(strings.TrimLeft(st.query, " "), "/")
 	first, second := `No results for "`+q+`"`, palEmptySessions
 	if st.skills {
 		second = palEmptySkills
 	}
 	h.lines = []string{first, second}
-	ink.note("empty line", ink.text, ink.bg, 4.5)
 	ink.note("empty hint", ink.muted, ink.bg, 4.5)
-	room := r.Dx() - 2*gtx.Dp(10)
 	a, as := c.fitSideW(gtx, first, 14, room, ink.text, font.Normal)
 	b, bs := c.fitSideW(gtx, second, 13, room, ink.muted, font.Normal)
 	gap := gtx.Dp(4)

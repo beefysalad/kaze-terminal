@@ -592,3 +592,42 @@ func TestPaletteGroupsFollowALateScan(t *testing.T) {
 		t.Fatalf("groups built %d times, then %d more", builds, win.palette.groupBuilds-builds)
 	}
 }
+
+// With no skills at all, none installed or the scan not back yet, the Skills
+// scope says so instead of "No results" for the empty text.
+func TestSkillsScopeWithoutSkills(t *testing.T) {
+	want := []string{palNoSkills}
+	t.Run("none installed", func(t *testing.T) {
+		win, _, r, _ := palWindow(t)
+		win.skillsFn = func(skills.Sources) []skills.Skill { return nil }
+		openPal(t, win, r)
+		palType(t, win, r, "/")
+		if !slices.Equal(win.palette.hits.lines, want) {
+			t.Fatalf("lines %q, want %q", win.palette.hits.lines, want)
+		}
+		palType(t, win, r, "rev")
+		if !slices.Equal(win.palette.hits.lines, want) {
+			t.Fatalf("on /rev: lines %q, want %q", win.palette.hits.lines, want)
+		}
+	})
+	t.Run("before the scan", func(t *testing.T) {
+		win, _, r, _ := palWindow(t)
+		release := make(chan struct{})
+		defer close(release)
+		win.skillsFn = func(skills.Sources) []skills.Skill { <-release; return nil }
+		win.openPalette()
+		sideFrame(t, win, r)
+		palType(t, win, r, "/")
+		if !slices.Equal(win.palette.hits.lines, want) {
+			t.Fatalf("lines %q, want %q", win.palette.hits.lines, want)
+		}
+	})
+	t.Run("skills but no match", func(t *testing.T) {
+		win, _, r, _ := palWindow(t)
+		openPal(t, win, r)
+		palType(t, win, r, "/zzz")
+		if w := []string{`No results for "zzz"`, palEmptySkills}; !slices.Equal(win.palette.hits.lines, w) {
+			t.Fatalf("lines %q, want %q", win.palette.hits.lines, w)
+		}
+	})
+}

@@ -545,7 +545,7 @@ func (win *window) drawPalette(gtx layout.Context, main image.Rectangle) {
 	eg.Source = p.edInput.Source()
 	q := p.ed.Text()
 	p.hits = win.ui.layoutPalette(eg, palState{items: p.items, sel: sel, scroll: p.scroll, hover: p.hover, reveal: p.reveal, ed: &p.ed,
-		skills: palSkillScope(q), query: q, footSkill: sel >= 0 && p.items[sel].Kind == palSkill}, main)
+		skills: palSkillScope(q), query: q, footSkill: sel >= 0 && p.items[sel].Kind == palSkill, noSkills: len(p.skills) == 0}, main)
 	win.syncPaletteEditor(gtx)
 	p.scroll, p.reveal = p.hits.scroll, false
 	area := clip.Rect{Max: gtx.Constraints.Max}.Push(gtx.Ops)
