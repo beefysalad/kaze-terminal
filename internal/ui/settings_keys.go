@@ -113,7 +113,7 @@ func (win *window) startRecording(action string) {
 	if win.set.keysErr != "" {
 		return
 	}
-	win.set.keyRec, win.set.keyMsg = action, keyMessage{}
+	win.set.keyRec, win.set.keyMsg, win.set.keyRecHeld = action, keyMessage{}, ""
 	win.w.Invalidate()
 }
 
@@ -137,9 +137,16 @@ var modifierNames = map[key.Name]bool{
 }
 
 // recordKey takes a key event while a row records. Releases, modifiers alone,
-// the Windows / Super key and keys [keys] can't name keep it recording; Esc
-// cancels; anything else ends recording and is the row's new keys.
+// the Windows / Super key, keys [keys] can't name and the auto-repeats of a
+// held key that started recording keep it recording; Esc cancels; anything
+// else ends recording and is the row's new keys.
 func (win *window) recordKey(e key.Event) {
+	if h := win.set.keyRecHeld; h != "" && e.Name == h {
+		if e.State == key.Release {
+			win.set.keyRecHeld = ""
+		}
+		return
+	}
 	if e.State != key.Press || modifierNames[e.Name] || e.Modifiers.Contain(key.ModSuper) {
 		return
 	}

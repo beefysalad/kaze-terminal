@@ -29,6 +29,7 @@ type settingsState struct {
 	cmdCopy     string     // the same for the Shortcuts section
 	cmdFilter   string     // the Shortcuts section's search text
 	keyRec      string     // the shortcut row waiting for keys; "" none
+	keyRecHeld  key.Name   // the key that started recording, until it is let go; "" none
 	keyMsg      keyMessage // the strip under one shortcut row; zero value none
 	keysErr     string     // why shortcuts can't be changed; "" when they can
 	keysConfirm bool       // the Reset all question is up
@@ -406,6 +407,9 @@ func (win *window) settingsKey(gtx layout.Context, e key.Event) {
 		} else if s.focus >= 0 && !s.controls[s.focus].dead {
 			c := s.controls[s.focus]
 			win.activate(c.id, c.arg)
+			if s.keyRec != "" {
+				s.keyRecHeld = e.Name // its auto-repeats are not the row's new keys
+			}
 		}
 	default:
 		return

@@ -964,3 +964,35 @@ func TestRecordingRowTinted(t *testing.T) {
 		}
 	}
 }
+
+// Holding Enter on a shortcut button starts recording once; the held key's
+// auto-repeats are not the new keys, so no refusal shows. Once Enter is let
+// go, the next keys record as usual.
+func TestHeldEnterDoesNotRecordItself(t *testing.T) {
+	win, r, _, path := shortcutsWindow(t, "")
+	want := keysControl(t, win, r, "key_rec", "find")
+	focused := func() bool {
+		f := win.set.focus
+		return f >= 0 && f < len(win.set.controls) && win.set.controls[f].id == "key_rec" && win.set.controls[f].arg == want.arg
+	}
+	for i := 0; i < 60 && !focused(); i++ {
+		pressIn(t, win, r, key.NameTab, 0)
+	}
+	if !focused() {
+		t.Fatal("Tab never reached find's shortcut")
+	}
+	press := key.Event{Name: key.NameReturn, State: key.Press}
+	r.Queue(press)
+	keysFrames(t, win, r)
+	r.Queue(press, press, press) // the key held down: Gio repeats the press
+	keysFrames(t, win, r)
+	if win.set.keyRec != "find" || win.set.keyMsg.kind != msgNone {
+		t.Fatalf("after a held Enter: recording %q, message %q", win.set.keyRec, win.set.keyMsg.text)
+	}
+	r.Queue(key.Event{Name: key.NameReturn, State: key.Release})
+	keysFrames(t, win, r)
+	pressIn(t, win, r, "G", key.ModCtrl|key.ModAlt)
+	if win.set.keyRec != "" || !strings.Contains(fileText(t, path), `find = "ctrl+alt+g"`) {
+		t.Fatalf("Ctrl+Alt+G after the release: recording %q, file %q", win.set.keyRec, fileText(t, path))
+	}
+}
