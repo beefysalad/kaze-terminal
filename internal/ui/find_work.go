@@ -25,6 +25,7 @@ type findWork struct {
 	fresh  bool // the bar opened again: search from scratch
 
 	seq        uint64 // the session's OutputSeq the search last saw
+	resizeSeq  uint64 // the session's ResizeSeq: the pane may be sized apart from the shared grid
 	cols, rows int    // the view's grid the search last saw
 	set        bool   // text and matchCase were given to the search
 	text       string
@@ -37,7 +38,7 @@ type findWork struct {
 	pick   bool     // choose the current match nearest the view once the scan settles
 	reveal bool     // scroll the current match into view once it is known
 
-	queries, locks, marksGiven int // counters for tests
+	queries, locks, marksGiven, outputs int // counters for tests
 }
 
 // findTick runs the search for one frame while the bar is open (Ruling 7, 8, 11).
@@ -53,9 +54,10 @@ func (win *window) findTick(gtx layout.Context) {
 	w := &f.work
 	s := v.tab.Session
 	seq := s.OutputSeq()
+	rs := s.ResizeSeq()
 	if w.set && !w.fresh && w.tab == v.tab.ID && w.member == f.member &&
 		w.text == f.text && w.matchCase == f.matchCase && seq == w.seq &&
-		v.cols == w.cols && v.rows == w.rows && w.settled && !w.pick && !w.reveal &&
+		v.cols == w.cols && v.rows == w.rows && rs == w.resizeSeq && w.settled && !w.pick && !w.reveal &&
 		w.search.Gen() == w.gen {
 		return // a still frame: no lock, no allocation
 	}
@@ -76,9 +78,10 @@ func (win *window) findTick(gtx layout.Context) {
 		w.cur, w.pick = -1, true
 		w.reveal = w.reveal || changed // a typed change or Aa scrolls; opening does not
 	}
-	if seq != w.seq || v.cols != w.cols || v.rows != w.rows {
+	if seq != w.seq || v.cols != w.cols || v.rows != w.rows || rs != w.resizeSeq {
+		w.outputs++
 		w.search.Output(scr)
-		w.seq, w.cols, w.rows = seq, v.cols, v.rows
+		w.seq, w.cols, w.rows, w.resizeSeq = seq, v.cols, v.rows, rs
 	}
 	w.settled = w.search.Step(scr, find.StepBudget)
 	if g := w.search.Gen(); g != w.gen || (w.pick && w.settled) {

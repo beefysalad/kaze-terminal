@@ -390,3 +390,18 @@ func TestSelectionStillWorksWithFindOpen(t *testing.T) {
 		t.Fatalf("copied %q, want [hello]", clip)
 	}
 }
+
+func TestFindPanelResizeSearchesAgain(t *testing.T) {
+	win, st, r, a, _, _, _ := memberWindow(t)
+	lines(t, st, 0, a, filler(50, "warn")...)
+	findFor(t, win, r, "warn")
+	w := &win.find.work
+	before := w.outputs
+	win.openDock(a.ID, dockAgent(t, win, int(a.ID), ""))
+	for range 6 {
+		sideFrame(t, win, r)
+	}
+	if w.outputs == before {
+		t.Fatal("opening the agent panel resized the session but the search did not run again")
+	}
+}
