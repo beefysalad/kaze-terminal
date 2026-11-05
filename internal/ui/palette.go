@@ -447,23 +447,15 @@ func (h palHits) scopeAt(p image.Point) (skills, ok bool) {
 // Sessions (the "/" taken off), keeping the rest of the text and the
 // keyboard in the field.
 func (win *window) setPaletteScope(skills bool) {
-	p := &win.palette
 	win.wantFocus = true
-	t := p.ed.Text()
-	if palSkillScope(t) == skills {
+	if palSkillScope(win.palette.ed.Text()) == skills {
 		return
 	}
-	if skills {
-		t = "/" + t
-	} else {
-		t = strings.TrimPrefix(strings.TrimLeft(t, " "), "/")
+	// The same switch as Tab, so an opened plugin group and the selection reset too.
+	win.togglePaletteScope()
+	if win.w != nil {
+		win.w.Invalidate()
 	}
-	p.ed.SetText(t)
-	n := utf8.RuneCountInString(t)
-	p.ed.SetCaret(n, n)
-	win.ui.fit(t)
-	p.sel, p.scroll = "", 0
-	win.w.Invalidate()
 }
 
 func firstInGroup(items []palItem, i int) int {
