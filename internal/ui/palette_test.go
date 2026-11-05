@@ -260,8 +260,8 @@ func TestPluginHeaderHasTile(t *testing.T) {
 		t.Fatalf("YOURS drew %d tiles", h.tiles)
 	}
 	devbox := []palItem{
-		{Kind: palSkill, Group: "DEVBOX", GroupCount: "2", Plugin: "devbox", Key: "skill:devbox:a", Name: "/devbox:a", Dim: 8},
-		{Kind: palMoreGroup, Group: "DEVBOX", GroupCount: "2", Plugin: "devbox", Key: "more:devbox", Name: "1 more in devbox", Count: 1},
+		{Kind: palSkill, Group: "DEVBOX", GroupCount: "2", Plugin: "devbox", Fold: "p:devbox", Key: "skill:devbox:a", Name: "/devbox:a", Dim: 8},
+		{Kind: palMoreGroup, Group: "DEVBOX", GroupCount: "2", Plugin: "devbox", Fold: "p:devbox", Key: "more:p:devbox", Name: "1 more in devbox", Count: 1},
 	}
 	if h := palDraw(t, newChrome(), devbox, main, 1); h.tiles != 1 {
 		t.Fatalf("DEVBOX drew %d tiles, want 1", h.tiles)
@@ -332,8 +332,8 @@ func TestPaletteDrawsInEveryTheme(t *testing.T) {
 		{Kind: palKaze, Group: palHeadKaze, Key: "act:new_tab", Name: "New session", Keys: []string{"Ctrl", "Shift", "T"}, Icon: "plus"},
 		{Kind: palKaze, Group: palHeadKaze, Key: "act:x", Name: "No icon"},
 		{Kind: palBrowse, Group: palHeadRecentSkills, Key: "browse", Name: "Browse all 2 skills", Count: 2},
-		{Kind: palSkill, Group: "DEVBOX", GroupCount: "3", Plugin: "devbox", Key: "skill:devbox:a", Name: "/devbox:a", Dim: 8, Detail: "does a"},
-		{Kind: palMoreGroup, Group: "DEVBOX", GroupCount: "3", Plugin: "devbox", Key: "more:devbox", Name: "2 more in devbox", Count: 2},
+		{Kind: palSkill, Group: "DEVBOX", GroupCount: "3", Plugin: "devbox", Fold: "p:devbox", Key: "skill:devbox:a", Name: "/devbox:a", Dim: 8, Detail: "does a"},
+		{Kind: palMoreGroup, Group: "DEVBOX", GroupCount: "3", Plugin: "devbox", Fold: "p:devbox", Key: "more:p:devbox", Name: "2 more in devbox", Count: 2},
 		{Kind: palMoreMatches, Group: palHeadSkills, Key: "more:matches", Name: "2 more matching skills", Count: 2, Query: "/x"},
 	}
 	items = append(items, skillItems(2)...)
@@ -399,7 +399,7 @@ func TestSwitchClicksFoldAndSelectFirst(t *testing.T) {
 	openPal(t, win, r)
 	palType(t, win, r, "/")
 	devbox := func() int { return len(palOf(win.palette.items, "DEVBOX", palSkill)) }
-	palSelect(t, win, r, "more:devbox")
+	palSelect(t, win, r, "more:p:devbox")
 	pressKey(t, win, r, key.NameReturn, 0)
 	if devbox() != 6 {
 		t.Fatalf("%d devbox rows after its more row", devbox())

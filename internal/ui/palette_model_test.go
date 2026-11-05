@@ -195,7 +195,7 @@ func TestEmptySkillsScope(t *testing.T) {
 	if dev[0].GroupCount != "6" || dev[0].Plugin != "devbox" {
 		t.Fatalf("devbox row %+v", dev[0])
 	}
-	more, ok := palFind(got, "more:devbox")
+	more, ok := palFind(got, "more:p:devbox")
 	if !ok || more.Kind != palMoreGroup || more.Name != "2 more in devbox" || more.Count != 2 || more.Plugin != "devbox" || more.Group != "DEVBOX" {
 		t.Fatalf("more row %+v (ok %v)", more, ok)
 	}
@@ -208,12 +208,12 @@ func TestEmptySkillsScope(t *testing.T) {
 
 func TestOpenGroupShowsAll(t *testing.T) {
 	in := withQuery("/")
-	in.Open = map[string]bool{"devbox": true}
+	in.Open = map[string]bool{"p:devbox": true}
 	got := buildPalette(in)
 	if n := len(palOf(got, "DEVBOX", palSkill)); n != 6 {
 		t.Fatalf("%d devbox rows, want 6", n)
 	}
-	if _, ok := palFind(got, "more:devbox"); ok {
+	if _, ok := palFind(got, "more:p:devbox"); ok {
 		t.Fatal("an open group still has its more row")
 	}
 }
@@ -225,7 +225,7 @@ func TestOtherFoldsLikeAPlugin(t *testing.T) {
 	}
 	got := buildPalette(palInput{Query: "/", Skills: list, Groups: groupSkills(list)})
 	more, ok := palFind(got, "more:Other")
-	if len(palOf(got, "OTHER", palSkill)) != palFoldAt || !ok || more.Name != "2 more in Other" || more.Plugin != "Other" {
+	if len(palOf(got, "OTHER", palSkill)) != palFoldAt || !ok || more.Name != "2 more in Other" || more.Fold != "Other" {
 		t.Fatalf("other %v, more %+v", palNames(got), more)
 	}
 }
@@ -549,5 +549,65 @@ func TestGroupSkillsAllocsBounded(t *testing.T) {
 	allocs := testing.AllocsPerRun(5, func() { groupSkills(list) })
 	if limit := float64(len(gs) + 8); allocs > limit {
 		t.Fatalf("%.0f allocs for %d groups, want at most %.0f", allocs, len(gs), limit)
+	}
+}
+
+// palHeaders are the headers drawn above items: where a group starts.
+func palHeaders(items []palItem) []string {
+	var out []string
+	for i, it := range items {
+		if firstInGroup(items, i) == i {
+			out = append(out, it.Group)
+		}
+	}
+	return out
+}
+
+// A plugin named "Other" and the Other group are two groups, and so are two
+// spellings of one plugin: each folds, opens and gets its header on its own.
+func TestPluginGroupsNeverShareAKey(t *testing.T) {
+	var list []skills.Skill
+	add := func(prefix string, scope skills.Scope) {
+		for i := range 6 {
+			list = append(list, skills.Skill{Name: fmt.Sprintf("%sskill-%d", prefix, i), Scope: scope})
+		}
+	}
+	add("Other:", skills.Plugin)
+	add("orphan-", skills.Plugin) // no plugin name: the Other group
+	add("Devbox:", skills.Plugin)
+	add("devbox:", skills.Plugin)
+	in := palInput{Query: "/", Skills: list, Groups: groupSkills(list)}
+	got := buildPalette(in)
+	if h := palHeaders(got); fmt.Sprint(h) != "[DEVBOX DEVBOX OTHER OTHER]" {
+		t.Fatalf("headers %v", h)
+	}
+	keys := map[string]bool{}
+	for _, it := range got {
+		if keys[it.Key] {
+			t.Fatalf("key %s twice in %v", it.Key, palNames(got))
+		}
+		keys[it.Key] = true
+	}
+	var mores []palItem
+	for _, it := range got {
+		if it.Kind == palMoreGroup {
+			mores = append(mores, it)
+		}
+	}
+	if len(mores) != 4 {
+		t.Fatalf("%d more rows, want 4", len(mores))
+	}
+	for _, m := range mores {
+		in.Open = map[string]bool{m.Fold: true}
+		opened := buildPalette(in)
+		n := 0
+		for _, it := range opened {
+			if it.Kind == palMoreGroup {
+				n++
+			}
+		}
+		if n != 3 {
+			t.Fatalf("opening %q (%s) left %d more rows, want 3", m.Fold, m.Name, n)
+		}
 	}
 }

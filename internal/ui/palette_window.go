@@ -457,9 +457,9 @@ func (win *window) palAct(gtx layout.Context, it palItem, shift bool) {
 		if p.opened == nil {
 			p.opened = map[string]bool{}
 		}
-		p.opened[it.Plugin] = true
+		p.opened[it.Fold] = true
 		for _, g := range p.groups {
-			if palGroupKey(g) == it.Plugin && len(g.Skills) > palFoldAt {
+			if palGroupKey(g) == it.Fold && len(g.Skills) > palFoldAt {
 				// The first newly shown skill: on an empty "/" a group lists
 				// in name order, so it is the one at palFoldAt.
 				p.sel, p.reveal = "skill:"+g.Skills[palFoldAt].Name, true

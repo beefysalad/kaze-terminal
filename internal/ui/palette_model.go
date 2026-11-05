@@ -45,7 +45,8 @@ type palItem struct {
 	Key        string // stable across rebuilds: "tab:<id>", "skill:<name>", "recent:<name>", "act:<config>", "ws:<id>", "browse", "more:matches", "more:<plugin>"
 	Group      string // header text above it (upper case); a header is drawn where it changes
 	GroupCount string // count right of the header, "" for none
-	Plugin     string // plugin group: tile initial and colour; palMoreGroup: which group to open
+	Plugin     string // plugin group: tile initial and colour
+	Fold       string // Skills scope: the group's palGroupKey, "" outside a folding group; palMoreGroup: which group to open
 	Name       string // title, action name, "/plugin:skill", or the row text for browse and more
 	Dim        int    // bytes of Name drawn dim: len("/devbox:") for a plugin skill, else 0
 	Agent      string // badge: "claude", "codex"; "" none
@@ -242,9 +243,12 @@ func buildSkillScope(in palInput, q string) []palItem {
 	var matches []ranked
 	for _, g := range in.Groups {
 		matches = matches[:0]
+		key := palGroupKey(g)
 		for _, s := range g.Skills {
 			if tier, ok := palTier(q, s.Name, s.Desc); ok {
-				matches = append(matches, ranked{skillItem(s, g.Head), tier})
+				it := skillItem(s, g.Head)
+				it.Fold = key
+				matches = append(matches, ranked{it, tier})
 			}
 		}
 		if len(matches) == 0 {
@@ -252,7 +256,6 @@ func buildSkillScope(in palInput, q string) []palItem {
 		}
 		byTier(matches)
 		count := strconv.Itoa(len(matches))
-		key := palGroupKey(g)
 		folds := key != "" // plugin groups and Other; Yours and This project never fold
 		shown := len(matches)
 		if q == "" && folds && !in.Open[key] {
@@ -263,9 +266,13 @@ func buildSkillScope(in palInput, q string) []palItem {
 			out = append(out, r.palItem)
 		}
 		if n := len(matches) - shown; n > 0 {
+			name := g.Plugin
+			if name == "" {
+				name = palOtherKey
+			}
 			out = append(out, palItem{
-				Kind: palMoreGroup, Key: "more:" + key, Group: g.Head, GroupCount: count, Plugin: key,
-				Name: strconv.Itoa(n) + " more in " + key, Count: n,
+				Kind: palMoreGroup, Key: "more:" + key, Group: g.Head, GroupCount: count, Plugin: g.Plugin, Fold: key,
+				Name: strconv.Itoa(n) + " more in " + name, Count: n,
 			})
 		}
 	}
@@ -482,11 +489,16 @@ func recentSkills(list []skills.Skill, recent []string) []skills.Skill {
 	return out
 }
 
-// palGroupKey names a group in palInput.Open and in its "more" row: the
-// plugin, or "Other"; "" for Yours and This project, which never fold.
+// palGroupKey names a group in palInput.Open, in its rows' Fold and in its
+// "more" row's Key: "p:" and the plugin as spelled, or "Other"; "" for Yours
+// and This project, which never fold. The prefix keeps a plugin named
+// "Other" apart from the Other group.
 func palGroupKey(g palGroup) string {
-	if g.Head == palHeadOther {
+	switch {
+	case g.Plugin != "":
+		return "p:" + g.Plugin
+	case g.Head == palHeadOther:
 		return palOtherKey
 	}
-	return g.Plugin
+	return ""
 }

@@ -511,12 +511,12 @@ func TestMoreInPluginOpensAndSelects(t *testing.T) {
 	if devbox() != palFoldAt {
 		t.Fatalf("%d devbox rows folded", devbox())
 	}
-	palSelect(t, win, r, "more:devbox")
+	palSelect(t, win, r, "more:p:devbox")
 	pressKey(t, win, r, key.NameReturn, 0)
 	if !win.palette.open || devbox() != 6 {
 		t.Fatalf("open %v, %d devbox rows", win.palette.open, devbox())
 	}
-	if _, ok := palFind(win.palette.items, "more:devbox"); ok {
+	if _, ok := palFind(win.palette.items, "more:p:devbox"); ok {
 		t.Fatal("the more row stayed")
 	}
 	if got := selected(win).Key; got != "skill:devbox:e" {

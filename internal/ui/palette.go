@@ -128,7 +128,7 @@ func (c *chrome) layoutPalette(gtx layout.Context, st palState, main image.Recta
 	var entries []palEntry
 	y := gtx.Dp(4) // the list's top padding (mockup .list)
 	for i, it := range st.items {
-		if i == 0 || it.Group != st.items[i-1].Group {
+		if i == 0 || !sameGroup(it, st.items[i-1]) {
 			entries = append(entries, palEntry{y: y, h: headH, header: it.Group, index: -1, of: i})
 			y += headH
 		}
@@ -472,8 +472,12 @@ func (win *window) setPaletteScope(skills bool) {
 	}
 }
 
+// sameGroup: a and b sit under one header. Two groups can share a header's
+// text (two spellings of a plugin, a plugin named "Other"); Fold tells them apart.
+func sameGroup(a, b palItem) bool { return a.Group == b.Group && a.Fold == b.Fold }
+
 func firstInGroup(items []palItem, i int) int {
-	for i > 0 && items[i-1].Group == items[i].Group {
+	for i > 0 && sameGroup(items[i-1], items[i]) {
 		i--
 	}
 	return i
