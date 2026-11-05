@@ -260,6 +260,7 @@ func (win *window) dockBody(gtx layout.Context, owner tabs.TabID, s *dockSession
 		if win.dock.keysMember != 0 {
 			win.dropDockKeys()
 		}
+		win.find.keys = false // the panel has the keyboard now, not the find bar
 		win.dock.keys, win.wantFocus = true, true
 	case pointer.Scroll:
 		s.scroll = min(max(s.scroll+int(e.Scroll.Y), 0), win.dock.hits.scrollMax)

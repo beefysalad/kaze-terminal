@@ -8,6 +8,7 @@ import (
 
 	"gioui.org/io/input"
 	"gioui.org/io/key"
+	"gioui.org/io/pointer"
 
 	kinput "github.com/beefysalad/kaze-terminal/internal/input"
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
@@ -374,5 +375,28 @@ func TestEscInTerminalGoesToShell(t *testing.T) {
 	waitSent(t, ptyOf(st, 0), "\x1b")
 	if !win.find.open {
 		t.Fatal("Esc in the terminal closed the bar")
+	}
+}
+
+func TestFindKeysLeaveWhenSidebarMemberClicked(t *testing.T) {
+	win, _, r, _, _, m1, _ := memberWindow(t)
+	findKey(t, win, r)
+	clickMember(t, win, r, m1.ID)
+	if !win.dockMemberKeys() {
+		t.Fatal("member click did not give the member the keyboard")
+	}
+	if win.find.keys || win.focusTarget() == &win.find.ed {
+		t.Fatalf("find kept the keyboard: keys %v focus %v", win.find.keys, win.focusTarget())
+	}
+}
+
+func TestFindKeysLeaveWhenPanelBodyClicked(t *testing.T) {
+	win, _, r, a, _, _, _ := memberWindow(t)
+	findKey(t, win, r)
+	win.openDock(a.ID, dockAgent(t, win, int(a.ID), ""))
+	twoFrames(t, win, r)
+	clickAt(t, win, r, centre(win.dock.hits.body))
+	if win.find.keys || win.focusTarget() == &win.find.ed {
+		t.Fatalf("find kept the keyboard: keys %v focus %v", win.find.keys, win.focusTarget())
 	}
 }

@@ -118,6 +118,7 @@ func (win *window) dockFocusMember(on bool) {
 	if m == 0 {
 		return
 	}
+	win.find.keys = false // the member has the keyboard now, not the find bar
 	if win.dockMemberKeys() {
 		win.wantFocus = true
 		return
