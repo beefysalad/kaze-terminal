@@ -2,6 +2,9 @@ package ui
 
 import (
 	"image/color"
+	"maps"
+	"slices"
+	"strings"
 	"testing"
 
 	"gioui.org/io/event"
@@ -318,6 +321,147 @@ func TestShiftEnterRoutesToTerminalAndHonorsOverrides(t *testing.T) {
 		got := routeKey(goos, km, key.NameReturn, key.ModShift, term.Modes{})
 		if got.act != actNewTab || len(got.data) != 0 {
 			t.Errorf("%s override: got act=%v bytes=%q", goos, got.act, got.data)
+		}
+	}
+}
+
+func TestNoneUnbinds(t *testing.T) {
+	b, warns := resolveBindings("windows", map[string]string{"find": " None "})
+	if _, ok := b["find"]; ok || len(warns) != 0 {
+		t.Fatalf("find %v warns %v, want unbound and no warnings", b["find"], warns)
+	}
+	km, _ := buildKeymap("windows", map[string]string{"find": " None "})
+	for sc, a := range km {
+		if a == actFind {
+			t.Fatalf("find still bound to %v", sc)
+		}
+	}
+}
+
+func TestSettingsCannotBeNone(t *testing.T) {
+	b, warns := resolveBindings("windows", map[string]string{"open_settings": "none"})
+	if b["open_settings"] != (input.Shortcut{Name: ",", Mods: key.ModCtrl}) {
+		t.Fatalf("open_settings = %v, want Ctrl+,", b["open_settings"])
+	}
+	if len(warns) != 1 || warns[0] != "keys.open_settings: Settings needs a shortcut; using the default" {
+		t.Fatalf("warns %q", warns)
+	}
+}
+
+var csMods = key.ModCtrl | key.ModShift
+
+// resolveCases are the clash cases TestResolveIsOrderIndependent repeats.
+var resolveCases = []map[string]string{
+	{"palette": "ctrl+shift+f", "find": "ctrl+shift+k"},
+	{"find": "ctrl+shift+b", "toggle_sidebar": "none"},
+	{"find": "ctrl+shift+k"},
+	{"find": "ctrl+shift+q", "palette": "ctrl+shift+q"},
+	{"find": "none", "palette": "ctrl+shift+f", "new_tab": "ctrl+shift+k", "copy": "ctrl+shift+t"},
+}
+
+func TestSwappedOverridesResolveCleanly(t *testing.T) {
+	b, warns := resolveBindings("windows", resolveCases[0])
+	if b["palette"] != (input.Shortcut{Name: "F", Mods: csMods}) || b["find"] != (input.Shortcut{Name: "K", Mods: csMods}) || len(warns) != 0 {
+		t.Fatalf("palette %v find %v warns %v", b["palette"], b["find"], warns)
+	}
+}
+
+func TestReplaceResolvesCleanly(t *testing.T) {
+	b, warns := resolveBindings("windows", resolveCases[1])
+	_, sidebar := b["toggle_sidebar"]
+	if b["find"] != (input.Shortcut{Name: "B", Mods: csMods}) || sidebar || len(warns) != 0 {
+		t.Fatalf("find %v sidebar bound %v warns %v", b["find"], sidebar, warns)
+	}
+}
+
+func TestOverrideOntoADefaultStillWarns(t *testing.T) {
+	b, warns := resolveBindings("windows", resolveCases[2])
+	if b["find"] != (input.Shortcut{Name: "F", Mods: csMods}) || b["palette"] != (input.Shortcut{Name: "K", Mods: csMods}) {
+		t.Fatalf("find %v palette %v", b["find"], b["palette"])
+	}
+	if len(warns) != 1 || warns[0] != `keys.find: "ctrl+shift+k" is already palette; using the default` {
+		t.Fatalf("warns %q", warns)
+	}
+}
+
+func TestRealClashKeepsBothDefaults(t *testing.T) {
+	b, warns := resolveBindings("windows", resolveCases[3])
+	if b["find"] != (input.Shortcut{Name: "F", Mods: csMods}) || b["palette"] != (input.Shortcut{Name: "K", Mods: csMods}) {
+		t.Fatalf("find %v palette %v", b["find"], b["palette"])
+	}
+	if len(warns) != 2 || !strings.HasPrefix(warns[0], "keys.find:") || !strings.HasPrefix(warns[1], "keys.palette:") {
+		t.Fatalf("warns %q", warns)
+	}
+}
+
+func TestResolveIsOrderIndependent(t *testing.T) {
+	for _, c := range resolveCases {
+		b0, w0 := resolveBindings("windows", c)
+		km0, _ := buildKeymap("windows", c)
+		for range 50 {
+			// A fresh map each run, so Go's iteration order varies.
+			c2 := maps.Clone(c)
+			b, w := resolveBindings("windows", c2)
+			km, _ := buildKeymap("windows", c2)
+			if !maps.Equal(b, b0) || !slices.Equal(w, w0) || !maps.Equal(km, km0) {
+				t.Fatalf("%v: %v %q, then %v %q", c, b0, w0, b, w)
+			}
+		}
+	}
+}
+
+func TestShortcutTextRoundTrips(t *testing.T) {
+	var all []input.Shortcut
+	for _, goos := range []string{"windows", "darwin"} {
+		for _, sc := range defaultBindings(goos) {
+			all = append(all, sc)
+		}
+	}
+	all = append(all,
+		input.Shortcut{Name: key.NameF5},
+		input.Shortcut{Name: "K", Mods: key.ModCtrl | key.ModAlt},
+		input.Shortcut{Name: key.NameSpace, Mods: key.ModCommand | key.ModShift},
+		input.Shortcut{Name: ",", Mods: key.ModCtrl},
+		input.Shortcut{Name: key.NameTab, Mods: key.ModCtrl},
+	)
+	for _, sc := range all {
+		text, ok := shortcutText(sc)
+		back, ok2 := parseShortcut(text)
+		if !ok || !ok2 || back != sc {
+			t.Fatalf("%v -> %q (%v) -> %v (%v)", sc, text, ok, back, ok2)
+		}
+	}
+	for sc, want := range map[input.Shortcut]string{
+		{Name: "F", Mods: csMods}:              "ctrl+shift+f",
+		{Name: "K", Mods: key.ModCommand}:      "cmd+k",
+		{Name: key.NameF5}:                     "f5",
+		{Name: ",", Mods: key.ModCtrl}:         "ctrl+,",
+		{Name: "K", Mods: key.ModAlt | csMods}: "ctrl+alt+shift+k",
+		{Name: key.NameUpArrow, Mods: csMods}:  "ctrl+shift+up",
+		{Name: key.NameReturn, Mods: csMods}:   "ctrl+shift+enter",
+		{Name: key.NameEscape, Mods: csMods}:   "ctrl+shift+esc",
+		{Name: key.NamePageDown, Mods: csMods}: "ctrl+shift+pagedown",
+	} {
+		if got, ok := shortcutText(sc); !ok || got != want {
+			t.Errorf("shortcutText(%v) = %q,%v want %q", sc, got, ok, want)
+		}
+	}
+}
+
+func TestShortcutTextRefusesUnnameable(t *testing.T) {
+	for _, sc := range []input.Shortcut{
+		{Name: "+", Mods: key.ModCtrl},
+		{Name: key.NameEnter, Mods: key.ModCtrl},
+		{Name: key.NameCtrl, Mods: key.ModCtrl},
+		{Name: key.NameShift, Mods: key.ModShift},
+		{Name: key.NameAlt, Mods: key.ModAlt},
+		{Name: key.NameSuper},
+		{Name: key.NameCommand, Mods: key.ModCommand},
+		{Name: "Insert", Mods: key.ModCtrl},
+		{Name: "K", Mods: key.ModCtrl | key.ModSuper},
+	} {
+		if text, ok := shortcutText(sc); ok {
+			t.Errorf("shortcutText(%v) = %q, want false", sc, text)
 		}
 	}
 }
