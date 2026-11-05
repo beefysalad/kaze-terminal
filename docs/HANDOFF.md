@@ -1,10 +1,10 @@
 # kaze handoff
 
-Last updated: 2026-11-05, the palette redesign and editable shortcuts, shipping together in release 0.31. Before that, release 0.30 (find in the terminal and docked tabs, #155 / PR #156). Before that, release 0.29 (battery on macOS, #139 / PR #158; the About page redesign, PR #160; the lander's `kaze-about.png` still shows the old page and needs retaking). Before that, release 0.28.2 (.md links open the file the agent touched, #143 / PR #153; uninstall page #112 designed and planned on `feat/uninstall`). Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-05, release 0.31 (the palette redesign, PR #163, and editable shortcuts, PR #162). Before that, release 0.30 (find in the terminal and docked tabs, #155 / PR #156). Before that, release 0.29 (battery on macOS, #139 / PR #158; the About page redesign, PR #160; the lander's `kaze-about.png` still shows the old page and needs retaking). Before that, release 0.28.2 (.md links open the file the agent touched, #143 / PR #153; uninstall page #112 designed and planned on `feat/uninstall`). Read this first when you pick up kaze on another machine.
 
 ## Where things stand
 
-**The palette redesign ships in 0.31 with editable shortcuts (branch `feat/palette`).** The palette now
+**Release 0.31 ships the palette redesign (PR #163) with editable shortcuts.** The palette now
 opens on Waiting on you, Sessions and up to 3 recent skills with a "Browse all N skills" row. Typing also
 finds Kaze actions and up to 3 skills. `/`, Tab or the switch opens the Skills view, grouped Yours, This
 project, then one group per plugin (4 shown, "N more in ..." for the rest). Servers are no longer listed.
@@ -17,7 +17,7 @@ folds at 4), 7 (pills for done and shell; no " · /command" text), 9 (which acti
 the chip leaves Skills), 11 (switch hidden under 440 dp). Owner checks by hand: open the palette, `/`, Tab,
 a plugin group's "more" row, Shift+Enter on a skill, all five themes, and a narrow window.
 
-**Editable shortcuts ship in 0.31 with the palette redesign (built on `feat/shortcuts-edit`).** Settings >
+**Release 0.31 also ships editable shortcuts (PR #162).** Settings >
 Shortcuts now lets you change every shortcut: click, press the keys, saved at once. A clash asks first,
 keys without Ctrl, Alt or Cmd are refused (F-keys are fine on their own), and a plain Ctrl+letter warns. Reset works per row or for all.
 Plan: `docs/superpowers/plans/2026-11-05-kaze-editable-shortcuts.md`; spec:
