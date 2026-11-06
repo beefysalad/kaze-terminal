@@ -1,33 +1,22 @@
 package ui
 
 import (
+	"image"
 	"testing"
 )
 
-func TestMarkIsScaledOnceAndHasTheViolet(t *testing.T) {
-	op1, img := markImage(18)
-	if img == nil {
-		t.Fatal("no mark image")
+// The settings sidebar footer draws the approved K from the lockup's vector
+// mark, 22dp tall, just before "kaze <version>".
+func TestSettingsFooterDrawsTheVectorMark(t *testing.T) {
+	win, _ := alertWindow(t, 1)
+	win.openSettings()
+	win.drawSettings(pageContext(800, 600), image.Rect(0, 38, 800, 576))
+	m := win.set.footMark
+	if m.Empty() || m.Dy() != 22 {
+		t.Fatalf("footer mark %v, want a 22-tall box", m)
 	}
-	if b := img.Bounds(); b.Dx() != 18 || b.Dy() != 18 {
-		t.Fatalf("mark is %v, want 18x18", b)
-	}
-	violet := false
-	for y := 0; y < 18 && !violet; y++ {
-		for x := 0; x < 18; x++ {
-			c := img.NRGBAAt(x, y)
-			if c.A > 200 && c.B > 200 && c.R > 100 && c.G < c.B {
-				violet = true
-				break
-			}
-		}
-	}
-	if !violet {
-		t.Fatal("scaled mark has no opaque violet pixel")
-	}
-	op2, img2 := markImage(18)
-	if img2 != img || op1 != op2 {
-		t.Fatal("same size was decoded and scaled again")
+	if m.Max.Y > 576 || m.Min.Y < 38+576/2 {
+		t.Fatalf("footer mark %v is not at the bottom of the sidebar", m)
 	}
 }
 

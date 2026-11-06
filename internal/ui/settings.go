@@ -50,6 +50,7 @@ type settingsState struct {
 	texts    []string          // every string drawn, so tests can read the page
 	cards    []image.Rectangle // every card drawn this frame, for tests
 	about    aboutGeom         // the About page's layout this frame, for tests
+	footMark image.Rectangle   // where the sidebar footer drew the K, for tests
 	keyRows  []keyRowGeom      // the Shortcuts page's rows this frame, for tests
 	keyStrip keyStripGeom      // its message strip this frame, for tests
 	// memberFolderX is where each list member's folder starts, so tests can check the columns.
@@ -750,14 +751,16 @@ func (p *page) nav(r image.Rectangle, secs []settingsSection) {
 	paint.FillShape(ops, col.line, clip.Rect(image.Rect(x0, top, x1, top+1)).Op())
 	y = top + gtx.Dp(12)
 	tx := x0 + inner
+	// The approved K, drawn from the lockup's vector mark like the title bar's.
 	mark := gtx.Dp(22)
-	if mop, img := markImage(mark); img != nil {
-		t := op.Offset(image.Pt(tx, y+(vs.Y+ss.Y-mark)/2)).Push(ops)
-		mop.Add(ops)
-		paint.PaintOp{}.Add(ops)
-		t.Pop()
-		tx += mark + gtx.Dp(10)
+	box := image.Rect(tx, y+(vs.Y+ss.Y-mark)/2, tx+mark, y+(vs.Y+ss.Y-mark)/2+mark)
+	markCol := aboutMarkDark
+	if isLight(col.nav) {
+		markCol = aboutMarkLight
 	}
+	lockupShapes().drawMark(ops, box, mark, markCol)
+	p.st.footMark = box
+	tx += mark + gtx.Dp(10)
 	place(ops, vc, image.Pt(tx, y))
 	if state != "" {
 		place(ops, sc, image.Pt(tx, y+vs.Y))
