@@ -1,6 +1,7 @@
-## What’s new in Kaze 0.34
+## What’s new in Kaze 0.35
 
-- **A simpler sidebar:** the “New session on a branch” launcher is gone, with its shortcut and its worktree cleanup. Claude and Codex make branches and worktrees themselves, and the + in the title bar still opens a new session. The session list now runs down to your workspaces. Your existing worktrees and config are left as they are.
+- **A new app icon:** Kaze’s icon is now the refreshed wind K in soft lilac on a dark tile, in the Dock, Finder, the Windows taskbar and Alt+Tab. On macOS it follows Apple’s icon shape, so it sits the same size as your other apps. macOS may keep the old icon in the Dock until Kaze restarts after the update.
+- **The same K everywhere:** the settings sidebar now shows the new K too, matching the title bar and the About page.
 
 ## Download
 
