@@ -89,6 +89,7 @@ type titleIn struct {
 	SideW   int // the sidebar's width; 0 while hidden
 	Crumb   crumbParts
 	Key     string // the palette key cap text
+	WordW   int    // the width of the name "Kaze" beside the mark; 0 leaves it out
 	Dims    titleDims
 	Measure func(s string, mono bool) int
 }
@@ -96,7 +97,8 @@ type titleIn struct {
 // titleLayout is where the shared title bar's parts go, in px.
 type titleLayout struct {
 	Lead               image.Rectangle // the strip over the sidebar
-	Mark, Toggle, Plus image.Rectangle // Mark on Windows only; Plus only while the sidebar shows
+	Mark, Toggle, Plus image.Rectangle // Plus only while the sidebar shows
+	Word               image.Rectangle // the name beside the mark; empty when it gives way
 	Crumb              image.Rectangle
 	CrumbShow          crumbParts // the parts that fit (spec 5.3); Title may still need shortening to Crumb
 	Search             image.Rectangle
@@ -158,25 +160,6 @@ func layoutTitle(in titleIn) titleLayout {
 		return image.Rect(x, y, x+d.Btn, y+d.BtnH)
 	}
 
-	// Left: the lights or the mark, the toggle, and the lead strip.
-	x := d.Pad
-	if in.Mac && in.LightsW > 0 {
-		x = in.LightsW + d.Gap
-	}
-	if !in.Mac {
-		y := (h - d.Mark) / 2
-		l.Mark = image.Rect(d.Pad, y, d.Pad+d.Mark, y+d.Mark)
-		x = l.Mark.Max.X + d.Gap/2
-	}
-	l.Toggle = btn(x)
-	if in.SideW > 0 {
-		right := max(in.SideW, l.Toggle.Max.X+d.Gap+d.Btn+d.LeadPad)
-		l.Lead = image.Rect(0, 0, right, h)
-		l.Plus = btn(right - d.LeadPad - d.Btn)
-	} else {
-		l.Lead = image.Rect(0, 0, l.Toggle.Max.X+d.LeadPad, h)
-	}
-
 	// Right: the window buttons, then gear and agents, right to left.
 	r := in.Size.X
 	if !in.Mac {
@@ -189,9 +172,43 @@ func layoutTitle(in titleIn) titleLayout {
 	r -= d.LeadPad
 	l.Gear = btn(r - d.Btn)
 	l.Agents = btn(l.Gear.Min.X - 2 - d.Btn)
+	hi := l.Agents.Min.X - d.Gap
+
+	// Left: the lights (macOS), the mark and the name, the toggle, and the lead strip.
+	x := d.Pad
+	if in.Mac && in.LightsW > 0 {
+		x = in.LightsW + d.Gap
+	}
+	my := (h - d.Mark) / 2
+	l.Mark = image.Rect(x, my, x+d.Mark, my+d.Mark)
+	x = l.Mark.Max.X + d.Gap/2
+	if in.WordW > 0 {
+		// The name fits in the sidebar column, or leaves the crumb and search
+		// their room when the sidebar is hidden; otherwise it gives way first.
+		wx := l.Mark.Max.X + d.Gap/4
+		tx := wx + in.WordW + d.Gap
+		var fits bool
+		if in.SideW > 0 {
+			fits = tx+d.Btn+d.Gap+d.Btn+d.LeadPad <= in.SideW
+		} else {
+			fits = hi-(tx+d.Btn+d.LeadPad+d.Pad) >= 2*d.SearchMin
+		}
+		if fits {
+			l.Word = image.Rect(wx, 0, wx+in.WordW, h)
+			x = tx
+		}
+	}
+	l.Toggle = btn(x)
+	if in.SideW > 0 {
+		right := max(in.SideW, l.Toggle.Max.X+d.Gap+d.Btn+d.LeadPad)
+		l.Lead = image.Rect(0, 0, right, h)
+		l.Plus = btn(right - d.LeadPad - d.Btn)
+	} else {
+		l.Lead = image.Rect(0, 0, l.Toggle.Max.X+d.LeadPad, h)
+	}
 
 	// The middle: the crumb and the search field share what is left.
-	lo, hi := l.Lead.Max.X+d.Pad, l.Agents.Min.X-d.Gap
+	lo := l.Lead.Max.X + d.Pad
 	avail := max(hi-lo, 0)
 	keyW := 0 // no key cap when the palette has no shortcut
 	if in.Key != "" {

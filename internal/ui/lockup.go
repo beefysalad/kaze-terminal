@@ -201,27 +201,39 @@ func (lk *lockup) place(at image.Point, w int) lockupGeom {
 func (lk *lockup) draw(ops *op.Ops, g lockupGeom, markCol, wordCol color.NRGBA) {
 	o := f32.Pt(float32(g.rect.Min.X), float32(g.rect.Min.Y))
 	at := func(p f32.Point) f32.Point { return p.Sub(lk.bounds.Min).Mul(g.scale).Add(o) }
-	fill := func(ps []lockPath, col color.NRGBA) {
-		for _, lp := range ps {
-			var p clip.Path
-			p.Begin(ops)
-			for _, s := range lp.segs {
-				switch s.op {
-				case 'M':
-					p.MoveTo(at(s.pts[0]))
-				case 'L':
-					p.LineTo(at(s.pts[0]))
-				case 'Q':
-					p.QuadTo(at(s.pts[0]), at(s.pts[1]))
-				case 'C':
-					p.CubeTo(at(s.pts[0]), at(s.pts[1]), at(s.pts[2]))
-				case 'Z':
-					p.Close()
-				}
-			}
-			paint.FillShape(ops, col, clip.Outline{Path: p.End()}.Op())
-		}
+	fillLock(ops, lk.mark, at, markCol)
+	fillLock(ops, lk.word, at, wordCol)
+}
+
+// drawMark fills the mark alone, h pixels tall and centred in box.
+func (lk *lockup) drawMark(ops *op.Ops, box image.Rectangle, h int, col color.NRGBA) {
+	if len(lk.mark) == 0 || lk.markBounds.Dy() <= 0 {
+		return
 	}
-	fill(lk.mark, markCol)
-	fill(lk.word, wordCol)
+	s := float32(h) / lk.markBounds.Dy()
+	o := f32.Pt(float32(box.Min.X)+(float32(box.Dx())-lk.markBounds.Dx()*s)/2, float32(box.Min.Y+(box.Dy()-h)/2))
+	fillLock(ops, lk.mark, func(p f32.Point) f32.Point { return p.Sub(lk.markBounds.Min).Mul(s).Add(o) }, col)
+}
+
+// fillLock fills each path, its points mapped through at.
+func fillLock(ops *op.Ops, ps []lockPath, at func(f32.Point) f32.Point, col color.NRGBA) {
+	for _, lp := range ps {
+		var p clip.Path
+		p.Begin(ops)
+		for _, sg := range lp.segs {
+			switch sg.op {
+			case 'M':
+				p.MoveTo(at(sg.pts[0]))
+			case 'L':
+				p.LineTo(at(sg.pts[0]))
+			case 'Q':
+				p.QuadTo(at(sg.pts[0]), at(sg.pts[1]))
+			case 'C':
+				p.CubeTo(at(sg.pts[0]), at(sg.pts[1]), at(sg.pts[2]))
+			case 'Z':
+				p.Close()
+			}
+		}
+		paint.FillShape(ops, col, clip.Outline{Path: p.End()}.Op())
+	}
 }

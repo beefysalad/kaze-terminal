@@ -15,8 +15,11 @@ func sevenPx(s string, mono bool) int { return 7 * utf8.RuneCountInString(s) }
 
 var fullCrumb = crumbParts{Repo: "todo-api", Title: "TODO-142", Cmd: "/ship-ticket", State: "running"}
 
+// titleWordW is "Kaze" measured at the bar's name size, in the tests.
+const titleWordW = 36
+
 func titleAt(w int, mac bool, side int) titleLayout {
-	in := titleIn{Size: image.Pt(w, 42), Mac: mac, SideW: side, Crumb: fullCrumb, Key: "⌘K", Dims: titleTestDims, Measure: sevenPx}
+	in := titleIn{Size: image.Pt(w, 42), Mac: mac, SideW: side, Crumb: fullCrumb, Key: "⌘K", Dims: titleTestDims, Measure: sevenPx, WordW: titleWordW}
 	if mac {
 		in.LightsW = 68
 	}
@@ -33,8 +36,8 @@ func TestTitleSameLayoutBothPlatforms(t *testing.T) {
 			t.Errorf("%s: mac %v windows %v", name, pair[0], pair[1])
 		}
 	}
-	if mac.Mark != (image.Rectangle{}) || win.Mark.Empty() {
-		t.Fatal("the K mark is Windows only")
+	if mac.Mark.Empty() || win.Mark.Empty() {
+		t.Fatal("the K mark shows on both platforms")
 	}
 }
 
@@ -58,8 +61,8 @@ func TestTitleMacReservesLights(t *testing.T) {
 		t.Fatalf("toggle %v under the lights", l.Toggle)
 	}
 	in := titleIn{Size: image.Pt(1200, 42), Mac: true, SideW: 248, Crumb: fullCrumb, Key: "⌘K", Dims: titleTestDims, Measure: sevenPx}
-	if f := layoutTitle(in); f.Toggle.Min.X != 14 {
-		t.Fatalf("full screen toggle %v", f.Toggle)
+	if f := layoutTitle(in); f.Mark.Min.X != 14 {
+		t.Fatalf("full screen mark %v, want it at the bar's padding", f.Mark)
 	}
 }
 
@@ -216,5 +219,54 @@ func TestTitleNarrowWindowsButtonsNeverOverlap(t *testing.T) {
 		if !l.Agents.Empty() && l.at(l.Agents.Min.Add(image.Pt(2, 2))) != capAgents {
 			t.Fatalf("%dpx: a press on agents hits %v", w, l.at(l.Agents.Min.Add(image.Pt(2, 2))))
 		}
+	}
+}
+
+// The mark and the name "Kaze" sit at the bar's left on both platforms, like
+// a Windows app's icon and name; on macOS they follow the traffic lights.
+func TestTitleBrandBothPlatforms(t *testing.T) {
+	for _, mac := range []bool{false, true} {
+		l := titleAt(1200, mac, 248)
+		if l.Mark.Empty() || l.Word.Empty() {
+			t.Fatalf("mac=%v: mark %v word %v", mac, l.Mark, l.Word)
+		}
+		if l.Word.Min.X < l.Mark.Max.X || l.Toggle.Min.X < l.Word.Max.X {
+			t.Fatalf("mac=%v: want mark %v, then word %v, then toggle %v", mac, l.Mark, l.Word, l.Toggle)
+		}
+		if l.Word.Dx() != titleWordW {
+			t.Fatalf("mac=%v: word %v, want %d wide", mac, l.Word, titleWordW)
+		}
+		if mac && l.Mark.Min.X < 68 {
+			t.Fatalf("mark %v under the lights", l.Mark)
+		}
+		if l.Lead.Dx() != 248 {
+			t.Fatalf("mac=%v: the name must fit in the sidebar column, lead %v", mac, l.Lead)
+		}
+		if l.at(l.Word.Min.Add(image.Pt(2, 2))) != capNone || l.at(l.Mark.Min.Add(image.Pt(2, 2))) != capNone {
+			t.Fatalf("mac=%v: the mark and name are drag space, not buttons", mac)
+		}
+	}
+}
+
+// In a narrow window the name gives way first; the mark and the buttons stay.
+func TestTitleWordGivesWay(t *testing.T) {
+	for _, mac := range []bool{false, true} {
+		w := 420
+		if !mac {
+			w += 3 * 46
+		}
+		l := titleAt(w, mac, 0)
+		if !l.Word.Empty() {
+			t.Fatalf("mac=%v %dpx: word %v should give way", mac, w, l.Word)
+		}
+		if l.Mark.Empty() || l.Toggle.Empty() {
+			t.Fatalf("mac=%v %dpx: mark %v toggle %v", mac, w, l.Mark, l.Toggle)
+		}
+		if l.Toggle.Min.X < l.Mark.Max.X {
+			t.Fatalf("mac=%v: toggle %v over the mark %v", mac, l.Toggle, l.Mark)
+		}
+	}
+	if l := titleAt(1200, false, 0); l.Word.Empty() {
+		t.Fatal("a wide window with the sidebar hidden still shows the name")
 	}
 }

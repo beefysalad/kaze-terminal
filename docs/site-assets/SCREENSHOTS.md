@@ -189,3 +189,4 @@ lander later: the `member` state of the find mockup (`docs/design/find-mockup.ht
 member's tab in the panel with the bar open on "warn" and its matches marked. It needs a real run
 of the app like the other shots, so none is faked here. The development captures in
 `docs/audits/find/` are not for the lander.
+- 0.33 put the Kaze mark and name at the left of the title bar on both platforms. Every capture that shows the title bar now shows the old one and needs retaking. Do not fake it.

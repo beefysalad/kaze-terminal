@@ -1,0 +1,134 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kaze · Title bar app name mockup</title>
+<style>
+@font-face{font-family:JB;src:url(../site-assets/JetBrainsMono-Regular.ttf)}
+:root{color-scheme:dark;--canvas:#06080c;--chrome:#0b0d12;--active:#0f1117;--white:#fff;--text:#c9cdd8;--muted:#8a90a2;--line:#1d2230;--accent:#8b7bff;--accent-ink:#b9a6ff;--cap:#a7adbd;--green:#62d39a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--canvas);color:var(--white);font:14px/1.55 JB,monospace}
+main{max-width:1180px;margin:0 auto;padding:32px}
+h1{font-size:24px;line-height:1.25;margin:0 0 8px;font-weight:700}
+header p{margin:0 0 4px;color:#aab0bf;max-width:820px}
+header{margin-bottom:26px}
+h2{font-size:15px;margin:30px 0 4px;font-weight:700}
+h3{font-size:13px;margin:16px 0 6px;font-weight:400;color:var(--muted)}
+h3 b{color:var(--text);font-weight:700}
+.frame{zoom:1.35;width:820px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--active)}
+.bar{position:relative;height:42px;background:var(--chrome);border-bottom:1px solid var(--line);display:flex;align-items:center;font-size:12px;color:var(--muted)}
+.lead{height:100%;display:flex;align-items:center;flex:none;border-right:1px solid var(--line)}
+.lead.side{width:260px}
+.lead.nos{padding-right:8px;border-right:0}
+.mark{width:26px;height:26px;flex:none;margin-left:14px}
+.mark.sm{width:20px;height:20px;margin-left:0}
+.brand{display:flex;align-items:center;gap:6px;margin-right:8px}
+.brand.win{margin-left:0}
+.word{font-weight:700;font-size:13px;color:var(--white);letter-spacing:.01em}
+.btn{width:30px;height:28px;border-radius:6px;display:grid;place-items:center;color:var(--cap);flex:none}
+.btn svg{width:15px;height:15px}
+.spacer{flex:1}
+.lights{display:flex;gap:8px;margin:0 14px 0 14px;flex:none}
+.lights i{width:12px;height:12px;border-radius:50%;display:block}
+.crumb{margin-left:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.crumb .repo{color:var(--muted)}.crumb .sep{color:#6b7185;margin:0 7px}.crumb .t{color:var(--text)}
+.search{width:260px;height:28px;border:1px solid var(--line);border-radius:7px;display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--muted);margin:0 auto;flex:none}
+.search kbd{margin-left:auto;font:11px JB;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:1px 6px}
+.caps{display:flex;height:100%;margin-left:8px}
+.caps span{width:46px;display:grid;place-items:center;color:var(--cap)}
+.caps svg{width:10px;height:10px}
+.body{height:64px;display:flex}
+.body .sidebar{width:260px;background:var(--chrome);border-right:1px solid var(--line);padding:10px 12px;color:var(--muted);font-size:11px}
+.body .term{flex:1;padding:10px 12px;color:var(--text);font-size:12px}
+.term .p{color:var(--green)}
+.new{}
+.cap{margin:10px 2px 0;color:#aab0bf;font-size:12.5px;max-width:1100px}
+.cap b{color:#e7e9f0}
+.ref{display:flex;align-items:center;gap:16px;margin-top:6px}
+.ref img{height:44px;border:1px solid var(--line);border-radius:6px}
+.note{border-top:1px solid var(--line);margin-top:34px;padding-top:16px;color:#aab0bf;font-size:12.5px}
+.note p{margin:0 0 6px}.note b{color:var(--accent-ink);font-weight:700}
+</style></head><body><main>
+<header>
+<h1>Show the app name in the title bar</h1>
+<p>Windows apps like Calculator show their icon and name at the top left. kaze shows only its mark; the first “kaze” in the bar today is your repo folder, not the app.</p>
+<p>Proposal: put the name <b style="color:#fff">Kaze</b> next to the mark on Windows, and add the mark and name after the traffic lights on macOS.</p>
+</header>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+<linearGradient id="wind" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b9a6ff"/><stop offset="1" stop-color="#8b7bff"/></linearGradient>
+<symbol id="kold" viewBox="0 0 256 256"><path d="M65 61c0-6 5-11 11-11s11 5 11 11v134c0 6-5 11-11 11s-11-5-11-11z" fill="url(#wind)"/><path d="M94 130c30-12 46-59 103-73-25 21-38 48-60 70-15 16-28 24-43 27z" fill="url(#wind)"/><path d="M96 139c18-4 33 6 48 22 15 17 32 32 53 39-49 0-71-25-103-48z" fill="url(#wind)"/></symbol>
+<!-- The approved wind K from assets/branding/kaze-lockup.svg (About page), without the wordmark. -->
+<symbol id="k" viewBox="-10 -5 124 124"><g fill="#c2b4eb"><path d="M10 0H24L14 112H0Z"/><path d="M30 59C51 49 65 16 104 5C83 22 75 43 58 58C49 66 39 70 29 71Z"/><path d="M29 77C56 72 73 100 104 111C74 114 56 99 43 90L28 82Z"/></g></symbol>
+<symbol id="side" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M6 3v10" stroke="currentColor" stroke-width="1.3"/></symbol>
+<symbol id="plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+<symbol id="mag" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="m10.5 10.5 3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></symbol>
+<symbol id="bot" viewBox="0 0 16 16"><rect x="3" y="5" width="10" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 2.5V5" stroke="currentColor" stroke-width="1.3"/><circle cx="6" cy="9" r=".9" fill="currentColor"/><circle cx="10" cy="9" r=".9" fill="currentColor"/></symbol>
+<symbol id="gear" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.3" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 1.8v2M8 12.2v2M1.8 8h2M12.2 8h2M3.6 3.6 5 5M11 11l1.4 1.4M3.6 12.4 5 11M11 5l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></symbol>
+<symbol id="min" viewBox="0 0 10 10"><path d="M0 5h10" stroke="currentColor"/></symbol>
+<symbol id="max" viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9" fill="none" stroke="currentColor"/></symbol>
+<symbol id="x" viewBox="0 0 10 10"><path d="m0 0 10 10M10 0 0 10" stroke="currentColor"/></symbol>
+</defs></svg>
+
+<div class="ref"><span style="color:var(--muted);font-size:12.5px">The reference: Calculator</span><img src="title-bar-brand-calculator.png" alt="Windows Calculator title bar: icon, the word Calculator, then window buttons" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'[icon] Calculator ............ _ □ ×',style:'color:#c9cdd8'}))"></div>
+
+<h2>Windows</h2>
+
+<h3><b>Today</b> · sidebar open</h3>
+<div class="frame"><div class="bar">
+ <div class="lead side"><svg class="mark"><use href="#kold"/></svg><span style="width:4px"></span><span class="btn"><svg><use href="#side"/></svg></span><span class="spacer"></span><span class="btn" style="margin-right:8px"><svg><use href="#plus"/></svg></span></div>
+ <div class="crumb"><span class="repo">kaze</span><span class="sep">/</span><span class="t">Redundant renderings</span></div>
+ <div class="search"><svg width="13" height="13"><use href="#mag"/></svg>Search<kbd>Ctrl+Shift+K</kbd></div>
+ <span class="btn"><svg><use href="#bot"/></svg></span><span class="btn" style="margin-right:8px"><svg><use href="#gear"/></svg></span>
+ <div class="caps"><span><svg><use href="#min"/></svg></span><span><svg><use href="#max"/></svg></span><span><svg><use href="#x"/></svg></span></div>
+</div><div class="body"><div class="sidebar">kaze-terminal · 1</div><div class="term"><span class="p">PS C:\Users\john\Desktop\kaze&gt;</span> ls</div></div></div>
+
+<h3><b>Proposed</b> · sidebar open</h3>
+<div class="frame"><div class="bar">
+ <div class="lead side"><span class="brand new" style="margin-left:14px"><svg class="mark" style="margin-left:0"><use href="#k"/></svg><span class="word">Kaze</span></span><span class="btn"><svg><use href="#side"/></svg></span><span class="spacer"></span><span class="btn" style="margin-right:8px"><svg><use href="#plus"/></svg></span></div>
+ <div class="crumb"><span class="repo">kaze</span><span class="sep">/</span><span class="t">Redundant renderings</span></div>
+ <div class="search"><svg width="13" height="13"><use href="#mag"/></svg>Search<kbd>Ctrl+Shift+K</kbd></div>
+ <span class="btn"><svg><use href="#bot"/></svg></span><span class="btn" style="margin-right:8px"><svg><use href="#gear"/></svg></span>
+ <div class="caps"><span><svg><use href="#min"/></svg></span><span><svg><use href="#max"/></svg></span><span><svg><use href="#x"/></svg></span></div>
+</div><div class="body"><div class="sidebar">kaze-terminal · 1</div><div class="term"><span class="p">PS C:\Users\john\Desktop\kaze&gt;</span> ls</div></div></div>
+<p class="cap"><b>“Kaze” sits right of the mark, in white bold, like Calculator.</b> It fits inside the 260dp sidebar column, so the crumb, search and buttons don't move.</p>
+
+<h3><b>Proposed</b> · sidebar closed</h3>
+<div class="frame"><div class="bar">
+ <div class="lead nos"><span class="brand new" style="margin-left:14px"><svg class="mark" style="margin-left:0"><use href="#k"/></svg><span class="word">Kaze</span></span><span class="btn"><svg><use href="#side"/></svg></span></div>
+ <div class="crumb" style="margin-left:6px"><span class="repo">kaze</span><span class="sep">/</span><span class="t">Redundant renderings</span></div>
+ <div class="search"><svg width="13" height="13"><use href="#mag"/></svg>Search<kbd>Ctrl+Shift+K</kbd></div>
+ <span class="btn"><svg><use href="#bot"/></svg></span><span class="btn" style="margin-right:8px"><svg><use href="#gear"/></svg></span>
+ <div class="caps"><span><svg><use href="#min"/></svg></span><span><svg><use href="#max"/></svg></span><span><svg><use href="#x"/></svg></span></div>
+</div><div class="body"><div class="term"><span class="p">PS C:\Users\john\Desktop\kaze&gt;</span> ls</div></div></div>
+<p class="cap"><b>The crumb moves right by about the width of “Kaze” (45dp).</b> In a very narrow window the word goes first and the mark stays, before the crumb or search give way.</p>
+
+<h2>macOS</h2>
+
+<h3><b>Today</b> · sidebar open (no mark at all)</h3>
+<div class="frame"><div class="bar">
+ <div class="lead side"><span class="lights"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></span><span class="btn"><svg><use href="#side"/></svg></span><span class="spacer"></span><span class="btn" style="margin-right:8px"><svg><use href="#plus"/></svg></span></div>
+ <div class="crumb"><span class="repo">kaze</span><span class="sep">/</span><span class="t">Redundant renderings</span></div>
+ <div class="search"><svg width="13" height="13"><use href="#mag"/></svg>Search<kbd>⌘K</kbd></div>
+ <span class="btn"><svg><use href="#bot"/></svg></span><span class="btn" style="margin-right:8px"><svg><use href="#gear"/></svg></span>
+</div><div class="body"><div class="sidebar">kaze-terminal · 1</div><div class="term"><span class="p">patrick@mac kaze %</span> ls</div></div></div>
+
+<h3><b>Proposed</b> · sidebar open</h3>
+<div class="frame"><div class="bar">
+ <div class="lead side"><span class="lights"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></span><span class="brand new"><svg class="mark sm"><use href="#k"/></svg><span class="word">Kaze</span></span><span class="btn"><svg><use href="#side"/></svg></span><span class="spacer"></span><span class="btn" style="margin-right:8px"><svg><use href="#plus"/></svg></span></div>
+ <div class="crumb"><span class="repo">kaze</span><span class="sep">/</span><span class="t">Redundant renderings</span></div>
+ <div class="search"><svg width="13" height="13"><use href="#mag"/></svg>Search<kbd>⌘K</kbd></div>
+ <span class="btn"><svg><use href="#bot"/></svg></span><span class="btn" style="margin-right:8px"><svg><use href="#gear"/></svg></span>
+</div><div class="body"><div class="sidebar">kaze-terminal · 1</div><div class="term"><span class="p">patrick@mac kaze %</span> ls</div></div></div>
+<p class="cap"><b>A smaller 20dp mark and “Kaze” go after the traffic lights</b>, so the lights keep their native place. The lights are drawn by macOS; kaze only has to start its own items after them, which it already does for the sidebar toggle.</p>
+
+<h3><b>Proposed</b> · sidebar closed</h3>
+<div class="frame"><div class="bar">
+ <div class="lead nos"><span class="lights"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></span><span class="brand new"><svg class="mark sm"><use href="#k"/></svg><span class="word">Kaze</span></span><span class="btn"><svg><use href="#side"/></svg></span></div>
+ <div class="crumb" style="margin-left:6px"><span class="repo">kaze</span><span class="sep">/</span><span class="t">Redundant renderings</span></div>
+ <div class="search"><svg width="13" height="13"><use href="#mag"/></svg>Search<kbd>⌘K</kbd></div>
+ <span class="btn"><svg><use href="#bot"/></svg></span><span class="btn" style="margin-right:8px"><svg><use href="#gear"/></svg></span>
+</div><div class="body"><div class="term"><span class="p">patrick@mac kaze %</span> ls</div></div></div>
+
+<footer class="note">
+<p><b>Unchanged:</b> the real window title Windows and macOS see (“kaze · &lt;tab&gt;”, used by the taskbar, Alt+Tab, Task Manager and security tools), the buttons, and the crumb.</p>
+<p><b>Text:</b> JetBrains Mono Bold, 13sp, theme white (ActiveFG), so it follows every theme. The word and the mark are part of the drag area, like Calculator's.</p>
+<p>Design mockup only. Icons here are stand-ins for kaze's own.</p>
+</footer>
+</main></body></html>

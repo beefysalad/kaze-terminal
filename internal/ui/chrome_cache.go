@@ -54,7 +54,7 @@ type titleLayoutCache struct {
 func (c *titleLayoutCache) layout(in titleIn, metric unit.Metric, font *text.Shaper) titleLayout {
 	old := c.in
 	if c.valid && old.Size == in.Size && old.Mac == in.Mac && old.LightsW == in.LightsW && old.SideW == in.SideW &&
-		old.Crumb == in.Crumb && old.Key == in.Key && old.Dims == in.Dims && c.metric == metric && c.font == font {
+		old.Crumb == in.Crumb && old.Key == in.Key && old.WordW == in.WordW && old.Dims == in.Dims && c.metric == metric && c.font == font {
 		return c.value
 	}
 	c.value = layoutTitle(in)
