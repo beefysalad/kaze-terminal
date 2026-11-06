@@ -258,3 +258,9 @@ html,body{overflow-x:hidden}
 }
 q{quotes:none}
 .inline-icon{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px}
+
+/* The approved lockup; "by Patrick" is text under the wordmark, starting at the k's stem. */
+.brand-lock{position:relative;display:block;width:136px;height:46px;flex-shrink:0}
+.brand-lock img{display:block;width:136px;height:auto}
+.brand-by{position:absolute;left:55px;top:37px;font:8.5px/1 JetBrains,"JetBrains Mono",ui-monospace,monospace;letter-spacing:.04em;color:#9a98a6;white-space:nowrap;font-weight:400}
+.brand-foot img{display:block;width:96px;height:auto}
