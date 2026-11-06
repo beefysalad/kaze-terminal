@@ -60,6 +60,9 @@ func titleDimsFor(gtx layout.Context) titleDims {
 	}
 }
 
+// titleWord is the app's name beside the mark.
+const titleWord = "Kaze"
+
 // drawBar lays out and draws the shared title bar (spec 5) and records its
 // layout for input.
 func (win *window) drawBar(gtx layout.Context, barH int) {
@@ -86,8 +89,9 @@ func (win *window) drawBar(gtx layout.Context, barH int) {
 		win.titleCache.valid = false
 		win.titleCache.locale = gtx.Locale
 	}
+	wordFace, wordSize := font.Font{Typeface: chromeFace, Weight: font.Bold}, unit.Sp(13)
 	b := win.titleCache.layout(titleIn{Size: size, Mac: !win.custom, LightsW: lights, SideW: side, Crumb: win.crumb(),
-		Key: key, Dims: d, Measure: measure}, gtx.Metric, c.shaper)
+		Key: key, WordW: c.textWidth(gtx, titleWord, wordSize, wordFace), Dims: d, Measure: measure}, gtx.Metric, c.shaper)
 	win.titleCache.font = c.shaper
 	win.bar = b
 	win.lights.setDrag(b.Drag, gtx.Metric.PxPerDp)
@@ -101,16 +105,17 @@ func (win *window) drawBar(gtx layout.Context, barH int) {
 	}
 	paint.FillShape(ops, th.Border, clip.Rect(image.Rect(0, size.Y-1, size.X, size.Y)).Op())
 
+	// The app's mark and name, like a Windows app's icon and title (the mark from the approved lockup).
 	if m := b.Mark; !m.Empty() {
-		px := gtx.Dp(18)
-		if mop, img := markImage(px); img != nil {
-			cl := clip.Rect(m).Push(ops)
-			t := op.Offset(image.Pt(m.Min.X+(m.Dx()-px)/2, m.Min.Y+(m.Dy()-px)/2)).Push(ops)
-			mop.Add(ops)
-			paint.PaintOp{}.Add(ops)
-			t.Pop()
-			cl.Pop()
+		col := aboutMarkDark
+		if isLight(bg) {
+			col = aboutMarkLight
 		}
+		lockupShapes().drawMark(ops, m, gtx.Dp(18), col)
+	}
+	if w := b.Word; !w.Empty() {
+		call, sz := c.labelW(gtx, titleWord, wordSize, th.ActiveFG, font.Bold)
+		place(ops, call, image.Pt(w.Min.X, w.Min.Y+(w.Dy()-sz.Y)/2))
 	}
 	win.drawCrumb(gtx, b)
 	c.drawSearchField(gtx, b, key, win.caption.hover == capSearch)
