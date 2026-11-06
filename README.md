@@ -1058,7 +1058,7 @@ Done:
 
 - Editable shortcuts: change any of them in Settings > Shortcuts, or write `none` to drop one (built on `feat/shortcuts-edit`, ships in 0.31 with the palette redesign).
 - Find in the terminal and the docked tabs (#155): Ctrl+Shift+F or Cmd+F, every match marked, on the whole scrollback (built on `feat/find`, release next).
-- 0.32.1: the Windows exe details say Kaze 0.32.1 with its name and publisher, not 0.6 (PR #168).
+- 0.33: the Kaze mark and name in the title bar on Windows and macOS; the Windows exe details carry the real version, name and publisher (PR #168).
 - 0.32: five more themes, ten in all, and JetBrains Mono across the whole window (PR #165).
 - 0.31: a cleaner palette with sessions first and skills behind / (PR #163); shortcuts editable in Settings (PR #162).
 - 0.30: find in the terminal and docked tabs, Ctrl+Shift+F / Cmd+F (#155, PR #156).

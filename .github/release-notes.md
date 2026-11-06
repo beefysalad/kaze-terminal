@@ -1,6 +1,7 @@
-## What’s new in Kaze 0.32.1
+## What’s new in Kaze 0.33
 
-- **Correct app details on Windows:** kaze.exe's Properties, Task Manager and security tools now show Kaze 0.32.1 with its name and publisher, instead of an old 0.6. Nothing else changes.
+- **Kaze in the title bar:** the lilac K and the name Kaze now sit at the top left of the window, the way Windows apps show their icon and name. On a Mac they follow the traffic lights, which had no mark before. In a narrow window the name steps aside first.
+- **Correct app details on Windows:** kaze.exe's Properties, Task Manager and security tools now show Kaze 0.33 with its name and publisher, instead of an old 0.6.
 
 ## Download
 
