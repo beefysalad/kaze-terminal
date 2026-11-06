@@ -65,6 +65,8 @@ lander alone) don't get one.
      "What's new" section (`docs/index.html`, `#changelog`): the version, today's date, a short title
      and plain bullets of what users get. Keep only the three latest releases on the lander; preserve
      all entries on the changelog page. Move the "Latest" badge to the new entry on both pages.
+   - **News strip:** point the strip under the hero (`docs/index.html`, `class="wrap news"`) at the new
+     version and its title, and drop any "new in <old version>" tags on feature cards.
    - **Lander:** if the feature is worth showing, add or update its card in the feature grid
      (`#sessions`) or its section. If the UI changed, say whether the screenshots need retaking
      (`docs/site-assets/SCREENSHOTS.md` has how); don't fake them.
