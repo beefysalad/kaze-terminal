@@ -4,7 +4,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/beefysalad/kaze-terminal/internal/branchsession"
 	"github.com/beefysalad/kaze-terminal/internal/subagents"
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
@@ -32,7 +31,6 @@ type sideRow struct {
 // sideGroup is one repo's sessions. Rows is filtered; Count is not.
 type sideGroup struct {
 	Key, Name  string
-	Finished   int
 	Rows       []sideRow
 	Count      int  // all members, before the filter
 	Waiting    int  // members with markNeeds
@@ -148,7 +146,7 @@ func buildSide(in sideInput) sideModel {
 		row.Detail = row.Branch
 		if loc.repo == "" {
 			row.Detail = row.Folder
-		} else if loc.worktree != "" && !strings.HasSuffix(folderName(loc.worktree), branchsession.Slug(loc.branch)) {
+		} else if loc.worktree != "" && !strings.HasSuffix(folderName(loc.worktree), branchSlug(loc.branch)) {
 			row.Detail = "⑂ " + folderName(loc.worktree) + " · " + loc.branch
 		}
 		if in.Docs != nil {
@@ -393,4 +391,15 @@ func (r sideRow) stateWord() string {
 		return "running"
 	}
 	return ""
+}
+
+// branchSlug is branch as a folder name: anything but letters, digits, - and _
+// becomes -. A worktree folder ending in it needs no "⑂ folder" line.
+func branchSlug(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '-' || r == '_' {
+			return r
+		}
+		return '-'
+	}, s)
 }

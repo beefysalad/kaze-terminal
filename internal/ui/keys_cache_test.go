@@ -35,16 +35,16 @@ func TestSidebarFilterTakesSavedKeys(t *testing.T) {
 }
 
 // applyKeys drops every editor's key filters built from the old keymap: the
-// sidebar filter and rename, the branch launcher, find and the board.
+// sidebar filter and rename, find and the board.
 func TestApplyKeysDropsEditorKeyCaches(t *testing.T) {
 	win, _, _, _, _, _, _ := memberWindow(t)
 	stale := []event.Filter{key.Filter{Name: "X"}}
-	win.side.filters, win.side.renKeys, win.side.launch.filters = stale, stale, stale
+	win.side.filters, win.side.renKeys = stale, stale
 	win.find.edKeys, win.board.edKeys = stale, stale
 	win.applyKeys(map[string]string{"new_tab": "ctrl+alt+t"})
 	for name, fs := range map[string][]event.Filter{
 		"sidebar filter": win.side.filters, "sidebar rename": win.side.renKeys,
-		"branch launcher": win.side.launch.filters, "find": win.find.edKeys, "board": win.board.edKeys,
+		"find": win.find.edKeys, "board": win.board.edKeys,
 	} {
 		if fs != nil {
 			t.Errorf("%s keeps its old key filters after a save", name)

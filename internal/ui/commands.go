@@ -19,7 +19,6 @@ type kazeCommand struct {
 
 var kazeCommands = []kazeCommand{
 	{"new_tab", "New session", actNewTab},
-	{"new_branch_session", "New session on a branch", actNewBranchSession},
 	{"close_tab", "Close session", actCloseTab},
 	{"next_tab", "Next session", actNextTab},
 	{"prev_tab", "Previous session", actPrevTab},

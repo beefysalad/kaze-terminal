@@ -161,7 +161,7 @@ func TestShellRejectsEmptyProgram(t *testing.T) {
 }
 
 func TestKnownActionsAreTheRealOnes(t *testing.T) {
-	want := []string{"agents_board", "close_tab", "copy", "find", "new_branch_session", "new_tab", "next_tab", "next_waiting", "open_settings", "palette", "paste", "prev_tab", "toggle_sidebar"}
+	want := []string{"agents_board", "close_tab", "copy", "find", "new_tab", "next_tab", "next_waiting", "open_settings", "palette", "paste", "prev_tab", "toggle_sidebar"}
 	var got []string
 	for k := range KnownActions {
 		got = append(got, k)
@@ -342,16 +342,6 @@ func TestRestoreSessionsDefaultAndOptOut(t *testing.T) {
 	}
 }
 
-func TestSidebarLauncherConfig(t *testing.T) {
-	if !Default().SidebarLauncher || Default().SidebarLauncherAgent != "claude" {
-		t.Fatal("launcher defaults")
-	}
-	c, w, e := Load(write(t, "sidebar_launcher = false\nsidebar_launcher_agent = \"codex\"\n[keys]\nnew_branch_session = \"ctrl+shift+n\"\n"))
-	if e != nil || len(w) > 0 || c.SidebarLauncher || c.SidebarLauncherAgent != "codex" {
-		t.Fatalf("%+v %v %v", c, w, e)
-	}
-}
-
 func TestAgentPanelHeight(t *testing.T) {
 	cfg, warns, err := Load(write(t, "agent_panel_height = 300\n"))
 	if err != nil || len(warns) != 0 || cfg.AgentPanelHeight != 300 {
@@ -379,5 +369,22 @@ func TestScratchShellKeyWarns(t *testing.T) {
 	}
 	if _, ok := cfg.Keys["scratch_shell"]; ok {
 		t.Fatalf("keys %v", cfg.Keys)
+	}
+}
+
+// The branch launcher was removed on 2026-11-06; configs that still carry its
+// keys still load.
+func TestRetiredLauncherKeysLoadQuietly(t *testing.T) {
+	cfg, warns, err := Load(write(t, "sidebar_launcher = false\nsidebar_launcher_agent = \"codex\"\n[keys]\nnew_branch_session = \"ctrl+shift+n\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Kaze wrote the two settings itself, so they are quiet; the shortcut was
+	// the owner's own, so it says why it is ignored, as scratch_shell does.
+	if len(warns) != 1 || !strings.Contains(warns[0], "no longer used") {
+		t.Fatalf("warnings %q, want one about the retired shortcut", warns)
+	}
+	if _, ok := cfg.Keys["new_branch_session"]; ok {
+		t.Fatal("the retired shortcut should not be loaded")
 	}
 }

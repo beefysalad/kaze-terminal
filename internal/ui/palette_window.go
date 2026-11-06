@@ -171,7 +171,7 @@ func (win *window) palInput() palInput {
 
 // palActionIcons are the action tiles' icons (Ruling 9); others get none.
 var palActionIcons = map[string]string{
-	"new_tab": "plus", "new_branch_session": "branch", "open_settings": "cog",
+	"new_tab": "plus", "open_settings": "cog",
 	"toggle_sidebar": "panel", "find": "search", "agents_board": "agents",
 }
 

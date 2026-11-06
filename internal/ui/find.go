@@ -64,7 +64,7 @@ func (win *window) openFind() {
 	if !ok {
 		return
 	}
-	win.dropSideEdit() // the filter, rename and launcher fields give the keyboard up
+	win.dropSideEdit() // the filter and rename fields give the keyboard up
 	f := &win.find
 	member := v.tag != win.termTag
 	if !f.open || f.tab != v.tab.ID || f.member != member {

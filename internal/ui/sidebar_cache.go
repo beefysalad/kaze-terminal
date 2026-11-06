@@ -122,10 +122,6 @@ func (win *window) cachedSide(now time.Time) sideModel {
 		in.Runs = runs
 		c.base = buildSide(in)
 		c.base.Runs = cloneSideRuns(runs)
-		for i := range c.base.Groups {
-			g := &c.base.Groups[i]
-			g.Finished = len(win.finishedWorktrees(g.Key))
-		}
 		c.order = sessionOrder(c.base)
 		c.folded = maps.Clone(s.folded)
 		c.runFolded = maps.Clone(s.st.runFolded)
@@ -148,10 +144,6 @@ func (win *window) cachedSide(now time.Time) sideModel {
 			in.Filter = filter
 			c.model = buildSide(in)
 			c.model.Runs = c.base.Runs
-			for i := range c.model.Groups {
-				g := &c.model.Groups[i]
-				g.Finished = len(win.finishedWorktrees(g.Key))
-			}
 		}
 		c.filter = filter
 		c.builds++

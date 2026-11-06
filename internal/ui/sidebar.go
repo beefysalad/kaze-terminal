@@ -34,7 +34,6 @@ const maxSideText = 160
 // sideState is what the window knows that the model does not.
 type sideState struct {
 	activeRepo    string // common repository of the selected main session
-	launch        *branchLauncher
 	doc, hoverDoc docID
 	shown         tabs.TabID      // highlighted row or member
 	openAgent     subagents.Key   // the subagent whose docked panel is shown
@@ -73,25 +72,21 @@ type sideRunHit struct {
 
 // sideHits is where the last sidebar frame drew things, for clicks and the wheel.
 type sideHits struct {
-	cleanups                                                                        []sideKeyHit
-	launchToggle, launchButton, launchRepo, launchBranch, launchStart, launchCancel image.Rectangle
-	launchAgents                                                                    [3]image.Rectangle
-	launchRepos                                                                     []image.Rectangle
-	docs                                                                            []sideDocHit
-	rows                                                                            []sideRowHit
-	groups                                                                          []sideKeyHit
-	members                                                                         []sideRowHit
-	agents                                                                          []sideAgentHit // subagent lines and "+N more" lines
-	runs                                                                            []sideRunHit
-	settings, settingsClose                                                         image.Rectangle
-	filter                                                                          image.Rectangle
-	next                                                                            image.Rectangle // the "Next waiting" button
-	list                                                                            image.Rectangle // the scrollable area, for wheel events
-	tip                                                                             image.Rectangle // the hovered agent's step tooltip, empty when none shows
-	rename                                                                          image.Rectangle // the rename editor, empty while none is drawn
-	scrollMax                                                                       int
-	noMatches                                                                       bool      // the filter hides every session
-	chip                                                                            [3]string // the tray chip parts as drawn, for tests
+	docs                    []sideDocHit
+	rows                    []sideRowHit
+	groups                  []sideKeyHit
+	members                 []sideRowHit
+	agents                  []sideAgentHit // subagent lines and "+N more" lines
+	runs                    []sideRunHit
+	settings, settingsClose image.Rectangle
+	filter                  image.Rectangle
+	next                    image.Rectangle // the "Next waiting" button
+	list                    image.Rectangle // the scrollable area, for wheel events
+	tip                     image.Rectangle // the hovered agent's step tooltip, empty when none shows
+	rename                  image.Rectangle // the rename editor, empty while none is drawn
+	scrollMax               int
+	noMatches               bool      // the filter hides every session
+	chip                    [3]string // the tray chip parts as drawn, for tests
 }
 
 // fitSide draws s at size within room px, cut with a trailing "…" when it is longer.
@@ -256,10 +251,7 @@ func (c *chrome) layoutSidebar(gtx layout.Context, m sideModel, st sideState, si
 		secH = min(secH+gtx.Dp(6), max(size.Y/2, 0))
 		secTop = size.Y - secH
 	}
-	launcherH := c.launcherHeight(gtx, st.launch)
-	listBot := max(secTop-launcherH, 0)
-	h.list = image.Rect(0, min(y, listBot), size.X-1, listBot)
-	c.drawBranchLauncher(gtx, &h, st.launch, st.static, image.Rect(pad, listBot, size.X-1-pad, secTop))
+	h.list = image.Rect(0, min(y, secTop), size.X-1, secTop)
 
 	c.sideList(gtx, &h, m, st, closeCall, closeSize)
 	if len(m.Runs) > 0 {
@@ -343,9 +335,6 @@ func (c *chrome) sideList(gtx layout.Context, h *sideHits, m sideModel, st sideS
 	total := 0
 	for _, g := range m.Groups {
 		total += groupH
-		if g.Finished > 0 {
-			total += gtx.Dp(sideMoreH)
-		}
 		if !g.Folded {
 			for _, r := range g.Rows {
 				total += rowSpan(gtx, r)
@@ -491,15 +480,6 @@ func (c *chrome) sideList(gtx layout.Context, h *sideHits, m sideModel, st sideS
 		if !g.Folded {
 			for _, r := range g.Rows {
 				row(r)
-			}
-		}
-		if g.Finished > 0 {
-			band := image.Rect(pad, y, h.list.Max.X-pad, y+gtx.Dp(sideMoreH))
-			y = band.Max.Y
-			if band.Overlaps(h.list) {
-				call, sz := c.fitSide(gtx, strconv.Itoa(g.Finished)+" finished worktrees · clean up", 10, band.Dx()-gap*2, th.Muted)
-				place(ops, call, image.Pt(band.Min.X+gap, band.Min.Y+(band.Dy()-sz.Y)/2))
-				h.cleanups = append(h.cleanups, sideKeyHit{g.Key, band.Intersect(h.list)})
 			}
 		}
 	}

@@ -94,16 +94,6 @@ func TestSidebarCacheRetainsFilteredAndEditorRows(t *testing.T) {
 	if win.side.cache.draws != before {
 		t.Fatal("filter editor reshaped rows")
 	}
-	win.side.filtering = false
-	win.openBranchLauncher()
-	draw()
-	before = win.side.cache.draws
-	for range 5 {
-		draw()
-	}
-	if win.side.cache.draws != before {
-		t.Fatal("branch editor reshaped rows")
-	}
 }
 
 func TestSidebarCacheWithWorkspaceRunsAllocatesNothing(t *testing.T) {

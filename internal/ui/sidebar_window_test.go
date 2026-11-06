@@ -742,31 +742,6 @@ func TestNextWaitingNoneShowsNotice(t *testing.T) {
 	}
 }
 
-func TestBranchLauncherReplacesNextWaitingButton(t *testing.T) {
-	win, _ := needsWindow(t, 3, 2)
-	var r input.Router
-	sideFrame(t, win, &r)
-	h := win.side.hits
-	if h.launchButton.Empty() || h.launchButton.Overlaps(h.list) {
-		t.Fatalf("launcher %v list %v", h.launchButton, h.list)
-	}
-	sideClick(win, &r, h.launchButton, pointer.ButtonPrimary)
-	sideFrame(t, win, &r)
-	if !win.side.launch.open {
-		t.Fatal("button did not open branch picker")
-	}
-}
-func TestBranchLauncherSitsAboveWorkspaces(t *testing.T) {
-	win, _ := needsWindow(t, 2, 1)
-	openMember(t, win, "api")
-	var r input.Router
-	sideFrame(t, win, &r)
-	h := win.side.hits
-	if h.launchButton.Empty() || len(h.members) == 0 || h.launchButton.Max.Y > h.members[0].rect.Min.Y {
-		t.Fatalf("launcher %v members %v", h.launchButton, h.members)
-	}
-}
-
 // The search field opens the palette on macOS too, with or without the sidebar.
 func TestMacTitleSearchOpensPalette(t *testing.T) {
 	win, _ := sideWindow(t, false)
