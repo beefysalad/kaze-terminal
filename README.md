@@ -114,7 +114,7 @@ it to stderr) and exits.
 On Windows the kaze icon (exe file, taskbar, title bar, Alt+Tab) and the version details come
 from `cmd/kaze/rsrc_windows_*.syso`, which `go build` picks up by itself. They are generated
 from `cmd/kaze/winres/winres.json` and `assets/branding/kaze-icon-512.png`. After changing the
-icon or the version, regenerate them from `cmd/kaze` (the files still say 0.6 until I rerun this):
+icon or the version, regenerate them from `cmd/kaze`. `TestWinresMatchesVersion` fails when `winres.json` and `internal/version` disagree:
 
 ```
 go run github.com/tc-hib/go-winres@v0.3.3 make --in winres/winres.json --out rsrc --arch amd64,arm64

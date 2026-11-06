@@ -57,7 +57,9 @@ lander alone) don't get one.
 
 1. **Release PR** on a `release/<version>` branch, with:
    - **Version:** bump `internal/version.Number` (and its test, RED first) and
-     `CFBundleShortVersionString` in `assets/branding/macos/Info.plist`. A feature bumps the minor
+     `CFBundleShortVersionString` in `assets/branding/macos/Info.plist`, and the Windows exe details
+     in `cmd/kaze/winres/winres.json` (then rerun the go-winres command in the README so the `.syso`
+     files carry it; `TestWinresMatchesVersion` catches a miss). A feature bumps the minor
      version (0.12 → 0.13); a fix-only release adds a patch number (0.13 → 0.13.1).
    - **Changelog:** a new row at the top of the full history (`docs/changelog.html`) and the lander's
      "What's new" section (`docs/index.html`, `#changelog`): the version, today's date, a short title
