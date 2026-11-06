@@ -116,21 +116,16 @@ func TestEveryReaderWithNoBindings(t *testing.T) {
 	sideFrame(t, win, r)
 	sideFrame(t, win, r)
 	withKey := win.empty.button.Min.Y
-	win.initBranchShortcut()
-	if win.empty.shortcut == "" || win.side.launch.work.shortcut == "" {
-		t.Fatalf("default keys not shown: empty %q launcher %q", win.empty.shortcut, win.side.launch.work.shortcut)
+	if win.empty.shortcut == "" {
+		t.Fatalf("default keys not shown: empty %q", win.empty.shortcut)
 	}
 	win.binds, win.km = map[string]input.Shortcut{}, keymap{}
-	win.side.launch.work.shortcutReady = false
 	sideFrame(t, win, r)
 	if win.empty.shortcut != "" {
 		t.Fatalf("empty window shortcut %q", win.empty.shortcut)
 	}
 	if got := win.empty.button.Min.Y; got <= withKey {
 		t.Fatalf("the block still leaves room for a shortcut line: button at %d, %d with one", got, withKey)
-	}
-	if win.side.launch.work.shortcut != "" {
-		t.Fatalf("launcher shortcut %q", win.side.launch.work.shortcut)
 	}
 
 	// A session: the title bar, the alert card, the palette.

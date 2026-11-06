@@ -35,7 +35,6 @@ type sideUI struct {
 	runScratch    []sideRun
 	filterCache   string
 	filterScratch []byte
-	launch        branchLauncher
 	cache         sideCache
 	tabs          []*tabs.Tab
 	st            sideState
@@ -121,13 +120,6 @@ func (win *window) selectSession(id tabs.TabID) {
 // order (else the one before) is shown first, so closing never lands on a member
 // while a session is left; with none left, the first open member is shown.
 func (win *window) closeTab(id tabs.TabID) {
-	if t := win.mgr.Lookup(id); t != nil {
-		dir := win.locOf(t).cwd
-		if dir == "" {
-			dir = t.Dir
-		}
-		win.worktreeClosing(dir)
-	}
 	win.closeSessionDocs(id)
 	win.closeSessionDock(id)
 	if a := win.mgr.Active(); a != nil && a.ID == id {
@@ -137,7 +129,6 @@ func (win *window) closeTab(id tabs.TabID) {
 		}
 	}
 	win.mgr.Close(id)
-	win.requestWorktreeCheck(true)
 	win.w.Invalidate()
 }
 
@@ -176,7 +167,7 @@ func (win *window) toggleSidebar() {
 // and sets hidden. A narrow window hides it without touching the setting.
 func (win *window) sideWidth(gtx layout.Context, width int) int {
 	win.side.narrow = width < gtx.Dp(minSideWindow)
-	on := win.opt.Config.Sidebar && (!win.side.narrow || win.side.launch.open)
+	on := win.opt.Config.Sidebar && !win.side.narrow
 	win.side.hidden = !on
 	if !on {
 		win.dropSideEdit() // an invisible field must not keep the keyboard
@@ -207,9 +198,6 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 		}
 		m := win.cachedSide(gtx.Now)
 		s.st.filter, s.st.ed = s.filterText(), nil
-		s.st.launch = &s.launch
-		win.initBranchShortcut()
-		s.launch.shown = win.opt.Config.SidebarLauncher
 		if s.filtering {
 			s.st.ed = &s.ed
 		}
@@ -226,7 +214,7 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 		s.st.doc = win.docs.shown
 		s.st.settings, s.st.settingsOn = win.set.open, win.set.shown
 		s.st.docked = win.shownMember()
-		key := sideDrawKey{activeRepo: s.st.activeRepo, openAgent: s.st.openAgent, hoverAgent: s.st.hoverAgent, size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, docked: s.st.docked, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds, launchVersion: s.launch.version, launcher: s.launch.shown, renaming: s.renaming}
+		key := sideDrawKey{activeRepo: s.st.activeRepo, openAgent: s.st.openAgent, hoverAgent: s.st.hoverAgent, size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, docked: s.st.docked, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds, renaming: s.renaming}
 		if !s.cache.drawValid || s.cache.drawKey != key || s.reveal {
 			s.cache.ops.Reset()
 			cg := sg
@@ -292,9 +280,6 @@ func revealScroll(gtx layout.Context, m sideModel, st sideState, h sideHits) (in
 		y += gH
 		if !g.Folded {
 			rows(g.Rows)
-		}
-		if g.Finished > 0 {
-			y += gtx.Dp(sideMoreH)
 		}
 	}
 	rows(m.Loose)
@@ -480,9 +465,6 @@ func (win *window) dropSideEdit() {
 		win.side.filtering = false
 		win.wantFocus = true
 	}
-	if win.side.launch.open && !win.side.launch.busy {
-		win.closeBranchLauncher()
-	}
 	win.endRename(true)
 }
 
@@ -545,12 +527,6 @@ func (win *window) sidePointer(e pointer.Event) {
 			win.sideRedraw()
 		}
 	case pointer.Scroll:
-		if s.launch.repoOpen {
-			s.launch.repoScroll = max(0, s.launch.repoScroll+int(e.Scroll.Y))
-			s.launch.changed()
-			win.sideRedraw()
-			return
-		}
 		if !p.In(s.hits.list) {
 			return
 		}
@@ -592,12 +568,7 @@ func (win *window) sidePress(p image.Point, b pointer.Buttons, at time.Duration)
 			win.openSettings()
 		}
 		return
-	case primary && win.branchPress(p):
-		return
 	case p.In(h.filter):
-		if win.side.launch.open && !win.side.launch.busy {
-			win.closeBranchLauncher()
-		}
 		return // the frame gives the field the keyboard
 	}
 	for _, d := range h.docs {
@@ -752,12 +723,6 @@ func (win *window) drawSideEditors(gtx layout.Context) {
 	}
 	if s.renaming != 0 {
 		editor(&s.ren, s.hits.rename, "", gtx.Dp(4))
-	}
-	if s.launch.open {
-		editor(&s.launch.ed, s.hits.launchBranch, "fix/sidebar-rows", gtx.Dp(8))
-		if s.launch.repoOpen {
-			s.launch.repoCall.Add(gtx.Ops)
-		}
 	}
 }
 

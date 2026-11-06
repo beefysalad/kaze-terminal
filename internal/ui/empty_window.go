@@ -88,8 +88,6 @@ func (win *window) emptyFollowup(gtx layout.Context, cw, ch int) bool {
 		win.settingsEvents(gtx)
 	case win.board.open:
 		win.boardEvents(gtx)
-	case win.side.launch.open:
-		win.branchEvents(gtx)
 	default:
 		if t := win.mgr.Active(); t != nil {
 			win.termEvents(gtx, win.mainView(t), cw, ch)

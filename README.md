@@ -146,7 +146,6 @@ and flags, and colour emoji on Linux.
 | Action | Windows | macOS |
 |---|---|---|
 | New session | Ctrl+Shift+T | Cmd+T |
-| New session on a branch | Ctrl+Shift+N | Cmd+Shift+N |
 | Close session | Ctrl+Shift+W | Cmd+W |
 | Next session | Ctrl+Tab | Ctrl+Tab |
 | Previous session | Ctrl+Shift+Tab | Ctrl+Shift+Tab |
@@ -265,23 +264,6 @@ Sessions are listed down the left side, in place of a tab strip.
   match (on an empty field it only gives the keyboard back). Esc clears the field and gives the
   keyboard back to the terminal. Switching or opening a session, opening Settings or hiding the
   sidebar also gives the keyboard back and keeps the text.
-- **New session on a branch:** the bottom launcher replaces the Next waiting
-  button. Click `NEW SESSION · hide/show` to tuck it away or bring it back.
-  Cmd+Shift+N on macOS or Ctrl+Shift+N on Windows opens it either way. Pick a
-  repo, enter a branch and choose Claude, Codex or Shell. Enter starts; Esc cancels.
-  Kaze reuses that branch's worktree or makes a sibling folder named
-  `<main-checkout>-<branch-slug>`. Existing local or remote branches keep their
-  history; new branches use the fetched remote default, local main/master, then
-  the main checkout's HEAD. Kaze never fetches and refuses folder collisions.
-  Agents start only when the new shell is ready: `claude` or `codex --no-daemon`.
-- **Worktree cleanup:** only worktrees Kaze creates are recorded in
-  `worktrees.json` beside the config. Closing the last terminal in a clean one
-  offers Remove / Keep. A recent check can defer this once, up to a minute;
-  Keep skips the pending check. The final window stays open until answered.
-  Merged worktrees with commits made since creation show a quiet cleanup line
-  under their repo. Removal always asks, uses plain `git worktree remove`,
-  preserves branches, and reports folders Git refused. Workspace members count
-  as open terminals. There is no recurring cleanup timer.
 - **Next waiting:** Cmd+J / Ctrl+Shift+J and its palette action open the newest alert
   card's session while cards are showing. Without cards they jump to the next session
   that needs you, wrapping around. With none, the status bar says "Nothing is waiting on you."
@@ -805,9 +787,7 @@ error makes kaze use all defaults.
 | `startup_workspace` | The workspace to run when kaze starts (chosen in Settings > Workspaces, stored as its ID) | none, a normal tab |
 | `[colors]` | `fg`, `bg`, `cursor`, `selection`, `color0` to `color15`, as `"#rrggbb"` | the built-in Midnight palette |
 | `sidebar` | Show the session sidebar (the toggle saves it here) | `true` |
-| `sidebar_launcher` | Expand the sidebar branch launcher | `true` |
-| `sidebar_launcher_agent` | Last launcher choice: `claude`, `codex`, `shell` | `"claude"` |
-| `[keys]` | `new_tab`, `new_branch_session`, `close_tab`, `next_tab`, `prev_tab`, `copy`, `paste`, `find`, `toggle_sidebar`, `next_waiting`, `palette`, `agents_board`, `open_settings` (an old `scratch_shell` line is ignored with a warning) | the shortcuts above; `none` removes one |
+| `[keys]` | `new_tab`, `close_tab`, `next_tab`, `prev_tab`, `copy`, `paste`, `find`, `toggle_sidebar`, `next_waiting`, `palette`, `agents_board`, `open_settings` (old `scratch_shell` and `new_branch_session` lines are ignored with a warning) | the shortcuts above; `none` removes one |
 | `font_family` | **Not supported yet.** Setting it only adds a warning; kaze always uses its bundled font. | |
 
 Shortcuts are written like `"ctrl+shift+t"`. Modifiers: `ctrl`, `shift`, `alt` (or `option`),

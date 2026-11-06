@@ -103,12 +103,12 @@ func TestApplyKeysReturnsWarnings(t *testing.T) {
 
 // After a save, everything that shows keys shows the new ones on the next frame.
 func TestReloadRefreshesShownKeys(t *testing.T) {
-	win := keysWindow(t, "[keys]\nnew_branch_session = \"ctrl+alt+b\"\npalette = \"ctrl+alt+p\"\nnext_waiting = \"none\"\n")
+	win := keysWindow(t, "[keys]\nnew_tab = \"ctrl+alt+b\"\npalette = \"ctrl+alt+p\"\nnext_waiting = \"none\"\n")
 	openIn(t, win, osPath("/code/alpha/aaa"))
 	r := new(gioinput.Router)
 	sideFrame(t, win, r)
 	sideFrame(t, win, r)
-	if win.side.launch.work.shortcut == "" || win.nextWaitingCaps() == nil {
+	if win.keyText("new_tab") == "" || win.nextWaitingCaps() == nil {
 		t.Fatal("the start-up keys are not shown")
 	}
 	if err := win.reloadKeys(); err != nil {
@@ -117,8 +117,8 @@ func TestReloadRefreshesShownKeys(t *testing.T) {
 	sideFrame(t, win, r)
 	branch := formatShortcut(runtime.GOOS, input.Shortcut{Name: "B", Mods: key.ModCtrl | key.ModAlt})
 	pal := formatShortcut(runtime.GOOS, input.Shortcut{Name: "P", Mods: key.ModCtrl | key.ModAlt})
-	if got := win.side.launch.work.shortcut; got != branch {
-		t.Fatalf("launcher shows %q, want %q", got, branch)
+	if got := win.keyText("new_tab"); got != branch {
+		t.Fatalf("new session key %q, want %q", got, branch)
 	}
 	if got := win.keyText("palette"); got != pal {
 		t.Fatalf("title bar key %q, want %q", got, pal)
@@ -128,19 +128,19 @@ func TestReloadRefreshesShownKeys(t *testing.T) {
 	}
 	win.openPalette()
 	waitSkills(t, win, r)
-	win.setPaletteQuery("branch") // Kaze actions show once you type (palette redesign)
+	win.setPaletteQuery("new session") // Kaze actions show once you type (palette redesign)
 	win.refreshPalette()
 	found := false
 	for _, it := range win.palette.items {
-		if it.Act == actNewBranchSession {
+		if it.Act == actNewTab {
 			found = true
 			if want := splitShortcut(branch); !slices.Equal(it.Keys, want) {
-				t.Fatalf("palette shows %q for a new branch session, want %q", it.Keys, want)
+				t.Fatalf("palette shows %q for a new session, want %q", it.Keys, want)
 			}
 		}
 	}
 	if !found {
-		t.Fatal("no new branch session row in the palette")
+		t.Fatal("no new session row in the palette")
 	}
 }
 
