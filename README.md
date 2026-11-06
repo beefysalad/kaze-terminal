@@ -1041,6 +1041,7 @@ Done:
 
 - Editable shortcuts: change any of them in Settings > Shortcuts, or write `none` to drop one (built on `feat/shortcuts-edit`, ships in 0.31 with the palette redesign).
 - Find in the terminal and the docked tabs (#155): Ctrl+Shift+F or Cmd+F, every match marked, on the whole scrollback (built on `feat/find`, release next).
+- 0.35: the refreshed wind K as the app icon on macOS and Windows, on the website and in the README; the settings sidebar draws it too (PR #174).
 - 0.34: the “New session on a branch” launcher and its worktree cleanup removed; the session list runs down to the workspaces (PR #171).
 - 0.33: the Kaze mark and name in the title bar on Windows and macOS; the Windows exe details carry the real version, name and publisher (PR #168).
 - 0.32: five more themes, ten in all, and JetBrains Mono across the whole window (PR #165).
