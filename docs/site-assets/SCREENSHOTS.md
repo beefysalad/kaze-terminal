@@ -147,7 +147,7 @@ No product screenshot was fabricated or retouched.
 
 ## 0.28.2 retake (November 4, 2026)
 
-Every lander capture except `kaze-logo-by-patrick.png` was retaken from a demo build of `main` at
+Every lander capture was retaken from a demo build of `main` at
 Kaze 0.28.2 (2200 × 1440 px, Retina). The pending retakes listed under 0.19 to 0.28 above are done,
 apart from the Windows battery shot, which still needs a real Windows laptop.
 

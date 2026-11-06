@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="assets/branding/kaze-logo-by-patrick.png" alt="kaze by Patrick" width="420">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/branding/kaze-logo.svg">
+    <img src="assets/branding/kaze-logo-light.svg" alt="kaze by Patrick" width="420">
+  </picture>
 </p>
 
 <p align="center">

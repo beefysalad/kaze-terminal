@@ -13,6 +13,12 @@ import (
 	"github.com/beefysalad/kaze-terminal/assets/branding"
 )
 
+// markEntry is one scaled logo, kept with its upload op.
+type markEntry struct {
+	op  paint.ImageOp
+	img *image.NRGBA
+}
+
 type logoKey struct {
 	name string
 	px   int

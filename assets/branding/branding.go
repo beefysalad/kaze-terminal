@@ -3,11 +3,6 @@ package branding
 
 import _ "embed"
 
-// Mark is the violet wind K on a transparent background, 512x512.
-//
-//go:embed kaze-mark-512.png
-var Mark []byte
-
 // Lockup is the approved logo: the wind K, the outlined "kaze" wordmark and
 // an outlined byline, as SVG paths (docs/design/logo-premium).
 //
