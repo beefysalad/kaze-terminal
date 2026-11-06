@@ -1,7 +1,6 @@
-## What’s new in Kaze 0.33
+## What’s new in Kaze 0.34
 
-- **Kaze in the title bar:** the lilac K and the name Kaze now sit at the top left of the window, the way Windows apps show their icon and name. On a Mac they follow the traffic lights, which had no mark before. In a narrow window the name steps aside first.
-- **Correct app details on Windows:** kaze.exe's Properties, Task Manager and security tools now show Kaze 0.33 with its name and publisher, instead of an old 0.6.
+- **A simpler sidebar:** the “New session on a branch” launcher is gone, with its shortcut and its worktree cleanup. Claude and Codex make branches and worktrees themselves, and the + in the title bar still opens a new session. The session list now runs down to your workspaces. Your existing worktrees and config are left as they are.
 
 ## Download
 
