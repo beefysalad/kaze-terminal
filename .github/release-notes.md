@@ -1,7 +1,6 @@
-## What’s new in Kaze 0.32
+## What’s new in Kaze 0.32.1
 
-- **Five more themes:** Matcha, Kōyō, Hai and Fuji are dark, Kiri is light, so there are ten in all. Pick one in Settings, Appearance; the cards sit five to a row, fewer in a narrow window.
-- **One font everywhere:** Settings, the palette, alert cards, the Agents board, docs and the title and status bars now use JetBrains Mono, the same font as the terminal, so the whole window reads as one. Kaze is a little smaller too.
+- **Correct app details on Windows:** kaze.exe's Properties, Task Manager and security tools now show Kaze 0.32.1 with its name and publisher, instead of an old 0.6. Nothing else changes.
 
 ## Download
 
