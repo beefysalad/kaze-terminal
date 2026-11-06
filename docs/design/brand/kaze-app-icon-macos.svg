@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+<title>Kaze</title>
+<defs>
+<linearGradient id="t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b1e2a"/><stop offset="1" stop-color="#0c0e14"/></linearGradient>
+<filter id="b" x="-10%" y="-10%" width="120%" height="125%"><feGaussianBlur stdDeviation="14"/></filter>
+</defs>
+<rect x="100" y="112" width="824" height="824" rx="185" fill="#000" opacity=".34" filter="url(#b)"/>
+<rect x="100" y="100" width="824" height="824" rx="185" fill="url(#t)"/>
+<rect x="101.5" y="101.5" width="821" height="821" rx="183.5" fill="none" stroke="#ffffff" stroke-opacity=".08" stroke-width="3"/>
+<g fill="#c2b4eb" transform="translate(306.64 262.00) scale(4.4643)"><path d="M10 0H24L14 112H0Z"/>
+<path d="M30 59C51 49 65 16 104 5C83 22 75 43 58 58C49 66 39 70 29 71Z"/>
+<path d="M29 77C56 72 73 100 104 111C74 114 56 99 43 90L28 82Z"/></g>
+</svg>

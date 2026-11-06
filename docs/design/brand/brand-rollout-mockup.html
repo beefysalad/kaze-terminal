@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kaze Brand Rollout</title>
+<style>
+@font-face{font-family:Manrope;src:url(../../site-assets/Manrope.ttf);font-weight:200 800}
+@font-face{font-family:JetBrains;src:url(../../site-assets/JetBrainsMono-Regular.ttf)}
+:root{--ink:#0b0c11;--surface:#101118;--raised:#151824;--line:#22252f;--line2:#2e3242;--text:#eeedf3;--muted:#9a98a6;--dim:#6f6d7b;--mono:JetBrains,monospace;--sans:Manrope,system-ui,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:#06070a;color:var(--text);font:14px/1.5 var(--sans);padding:32px 24px 80px}
+.wrap{max-width:1100px;margin:0 auto}
+h1{font-size:18px;margin:0 0 4px}h2{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:44px 0 14px}
+.note{color:var(--dim);font-size:13px;margin:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px}
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.cap{font-size:12px;color:var(--muted);margin-top:12px;text-align:center}
+.tag{display:inline-block;font:600 10px var(--sans);letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:99px;background:#1b1f2d;color:var(--muted);margin-bottom:14px}
+.tag.new{background:#2a2442;color:#d6cbff}
+.icons{display:flex;justify-content:center;align-items:flex-end;gap:28px;flex-wrap:wrap}
+.icons img{display:block}
+/* dock */
+.desk{border-radius:14px;padding:60px 20px 18px;background:radial-gradient(120% 120% at 30% 0%,#2b3650,#141826 60%,#0d0f16);display:flex;justify-content:center}
+.dock{display:flex;gap:10px;align-items:flex-end;padding:8px 12px;border-radius:22px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(20px)}
+.ph{width:64px;height:64px;border-radius:15px}
+.dock img{width:64px;height:64px}
+.dot{width:4px;height:4px;border-radius:50%;background:#ddd;margin:4px auto 0}
+/* taskbar */
+.task{display:flex;justify-content:center;gap:6px;padding:8px;border-radius:10px;background:#1f1f24;border:1px solid #2c2c33}
+.task span{width:40px;height:40px;border-radius:6px;display:grid;place-items:center}
+.task span.on{background:#2f2f37}
+.task .g{width:24px;height:24px;border-radius:5px;background:#3a3a44}
+/* browser tab */
+.tabbar{display:flex;gap:2px;background:#1c1d22;border-radius:10px 10px 0 0;padding:8px 8px 0}
+.btab{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:8px 8px 0 0;font-size:12px;color:#c9c9d1;width:230px}
+.btab.on{background:#2b2c33;color:#fff}
+.btab .g{width:16px;height:16px;border-radius:4px;background:#444}
+/* site header */
+.site{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--ink)}
+.hdr{height:64px;display:flex;align-items:center;gap:28px;padding:0 28px;border-bottom:1px solid var(--line);background:rgba(11,12,17,.86)}
+.hdr nav{display:flex;gap:26px;color:#b4b2bd;font-size:13px;margin-left:auto}
+.hdr .dl{background:#e0d8f8;color:#17131f;border-radius:7px;padding:8px 14px;font-weight:650;font-size:13px}
+.old-brand{display:flex;gap:9px;align-items:center;font-size:21px;font-weight:700;letter-spacing:-1px}
+.old-brand small{display:block;font:9px/1 var(--mono);letter-spacing:.04em;color:var(--dim);margin-top:3px;font-weight:400}
+.new-brand{position:relative;display:block;width:136px;height:46px}
+.new-brand img{width:136px;display:block}
+.new-brand .by{position:absolute;left:52.6px;top:37px;font:8.5px/1 var(--mono);letter-spacing:.04em;color:var(--muted);white-space:nowrap}
+.ftr{display:flex;align-items:center;justify-content:space-between;padding:26px 28px;border-top:1px solid var(--line)}
+.ftr p{font-size:12px;color:#736c7e;margin:0}
+.ftr-l{display:flex;align-items:center;gap:22px}
+.ftr .links{display:flex;gap:22px;color:#9e93ac;font-size:11px}
+/* github readme */
+.gh{border-radius:10px;padding:30px;text-align:center;border:1px solid}
+.gh.dark{background:#0d1117;border-color:#30363d}
+.gh.light{background:#fff;border-color:#d0d7de}
+.gh img{width:340px;max-width:100%}
+@media (max-width:760px){.vs{grid-template-columns:1fr}.hdr nav{display:none}}
+</style></head><body><div class="wrap">
+<h1>Kaze brand rollout, proposed</h1>
+<p class="note">Mockup only. The new app icon puts the approved wind K (flat lilac, tapered stem, separated arms) on the Midnight tile; the website and README switch to the approved lockup.</p>
+
+<h2>App icon</h2>
+<div class="vs">
+  <div class="card" style="text-align:center"><span class="tag">Now</span><div class="icons"><img src="../../../assets/branding/kaze-icon-512.png" width="200" height="200" alt="current icon"></div><p class="cap">Gradient violet K, edge-to-edge tile</p></div>
+  <div class="card" style="text-align:center"><span class="tag new">Proposed</span><div class="icons"><img src="kaze-app-icon-macos.svg" width="200" height="200" alt="proposed icon"></div><p class="cap">Approved K in flat lilac, macOS grid (824 of 1024) with its shadow</p></div>
+</div>
+
+<h2>In the Dock (64px)</h2>
+<div class="desk"><div class="dock">
+  <div><div class="ph" style="background:linear-gradient(#5aa0ff,#2f6fe0)"></div><div class="dot" style="visibility:hidden"></div></div>
+  <div><div class="ph" style="background:linear-gradient(#f4f4f6,#d9d9de)"></div><div class="dot" style="visibility:hidden"></div></div>
+  <div><img src="../../../assets/branding/kaze-icon-512.png" alt="current" style="width:52px;height:52px;margin:6px"><div class="dot" style="visibility:hidden"></div></div>
+  <div><img src="kaze-app-icon-macos.svg" alt="proposed" style="width:78px;height:78px;margin:-7px"><div class="dot"></div></div>
+  <div><div class="ph" style="background:linear-gradient(#3ccf7a,#1f9a55)"></div><div class="dot" style="visibility:hidden"></div></div>
+</div></div>
+<p class="cap">Left of the running dot: today's icon (scaled to the same visual size) and the proposed one. Other tiles are neutral placeholders.</p>
+
+<h2>Small sizes</h2>
+<div class="card"><div class="icons">
+  <div style="text-align:center"><img src="kaze-app-icon-macos.svg" width="128" height="128"><p class="cap">128</p></div>
+  <div style="text-align:center"><img src="kaze-app-icon-macos.svg" width="64" height="64"><p class="cap">64</p></div>
+  <div style="text-align:center"><img src="kaze-app-icon.svg" width="32" height="32"><p class="cap">32</p></div>
+  <div style="text-align:center"><img src="kaze-app-icon.svg" width="16" height="16"><p class="cap">16</p></div>
+  <div style="text-align:center;margin-left:30px"><div class="task"><span><i class="g"></i></span><span class="on"><img src="kaze-app-icon.svg" width="24" height="24"></span><span><i class="g"></i></span></div><p class="cap">Windows taskbar (full-tile version)</p></div>
+</div>
+<div style="margin-top:26px"><div class="tabbar"><div class="btab"><i class="g"></i>Some other site</div><div class="btab on"><img src="kaze-app-icon.svg" width="16" height="16">Kaze, the terminal for long…</div></div></div>
+<p class="cap">Browser tab: the website's icon becomes the same tile.</p></div>
+
+<h2>Website header</h2>
+<div class="site">
+  <div class="hdr"><span class="tag" style="margin:0">Now</span><span class="old-brand"><img src="../../site-assets/kaze-icon.svg" width="28" height="28"><span>kaze<small>by Patrick</small></span></span><nav><span>Features</span><span>Changelog</span><span>GitHub</span></nav><span class="dl">Download</span></div>
+  <div class="hdr"><span class="tag new" style="margin:0">Proposed</span><span class="new-brand"><img src="kaze-lockup-dark.svg" alt="kaze"><span class="by">by Patrick</span></span><nav><span>Features</span><span>Changelog</span><span>GitHub</span></nav><span class="dl">Download</span></div>
+</div>
+
+<h2>Website footer</h2>
+<div class="site">
+  <div class="ftr"><div class="ftr-l"><span class="tag" style="margin:0">Now</span><span class="old-brand" style="font-size:20px"><img src="../../site-assets/kaze-icon.svg" width="26" height="26"><span>kaze</span></span><p>Made for the long session.</p></div><div class="links"><span>GitHub</span><span>MIT License</span></div></div>
+  <div class="ftr"><div class="ftr-l"><span class="tag new" style="margin:0">Proposed</span><img src="kaze-lockup-dark.svg" width="96" alt="kaze"><p>Made for the long session.</p></div><div class="links"><span>GitHub</span><span>MIT License</span></div></div>
+</div>
+
+<h2>README on GitHub</h2>
+<div class="vs">
+  <div class="gh dark"><img src="kaze-logo-full-dark.svg" alt="kaze by Patrick"><p class="cap" style="color:#8b949e">GitHub dark mode</p></div>
+  <div class="gh light"><img src="kaze-logo-full-light.svg" alt="kaze by Patrick"><p class="cap" style="color:#57606a">GitHub light mode (deeper lilac, dark wordmark)</p></div>
+</div>
+<p class="cap">Today's README logo is a dark-only PNG; this picks the right version for each GitHub theme.</p>
+</div></body></html>

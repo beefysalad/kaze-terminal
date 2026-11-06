@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<title>Kaze</title>
+<defs><linearGradient id="t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b1e2a"/><stop offset="1" stop-color="#0c0e14"/></linearGradient></defs>
+<rect width="256" height="256" rx="56" fill="url(#t)"/>
+<rect x="1" y="1" width="254" height="254" rx="55" fill="none" stroke="#ffffff" stroke-opacity=".1" stroke-width="2"/>
+<g fill="#c2b4eb" transform="translate(62.29 48.00) scale(1.4286)"><path d="M10 0H24L14 112H0Z"/>
+<path d="M30 59C51 49 65 16 104 5C83 22 75 43 58 58C49 66 39 70 29 71Z"/>
+<path d="M29 77C56 72 73 100 104 111C74 114 56 99 43 90L28 82Z"/></g>
+</svg>
