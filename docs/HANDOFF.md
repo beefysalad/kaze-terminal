@@ -100,6 +100,14 @@ the oldest lander release, remove the whole `<li class="release">` up to `</div>
 match to the first `</li>` stops inside the bullet list, which left orphaned 0.23 and 0.24 bullets on the lander
 in the 0.26 and 0.27 releases (fixed here).
 
+**Lander restyled (2026-11-07, branch `feat/lander-redesign`):** it had become a near copy of herdr.dev (even
+"Every window here is Herdr"). The hero layout stays; its second line and the buttons are Kaze lilac (#c2b4eb,
+from the mark). Below it the page is quiet and flat, reviewed with the impeccable skill: no gradients, glows,
+eyebrow labels, section numbers or card grids. Ruled lists carry the moments, the hooks relay, the feature index
+(drawn SVG icons), the FAQ and the changelog. Release markup (`ol.releases > li.release`) is unchanged, so the
+release steps below still apply. Links drop `.html` (`changelog`, `./#install`); GitHub Pages serves them, and
+`docs/vercel.json` sets `cleanUrls` for a move to Vercel.
+
 **Release 0.27 ships PR #136: dock tabs, alert cards and path links (2026-11-04).** Next: #134
 (readable agent activity, mockup approved) and #135 (subagents started together swap names). Three issues in one
 bundle, built in three worktree lanes (L, A, D) from `docs/superpowers/plans/2026-11-04-kaze-dock-alerts-links.md`:

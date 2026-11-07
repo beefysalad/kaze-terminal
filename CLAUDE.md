@@ -36,6 +36,10 @@ checklist and what's next. The authority for behaviour is the spec
   Bold only. Don't add, bundle or switch to another font, and don't mix fonts within a screen. Noto Sans JP
   stays only as the fallback for Japanese characters. (Set by the owner on 2026-11-05; the website lander is
   separate.)
+- **No emojis, ever.** Not in the app, the website, docs, commits, PRs or messages to the owner. Don't use
+  Unicode symbols (◆ ✦ ⟡ ▤ ¶ and the like) as icons either: draw a real icon (an SVG on the website, a
+  vector path in the app) or use a word. Key labels like ⌘ ⇧ in shortcuts are fine. (Set by the owner on
+  2026-11-07.)
 - **Never inject global keyboard or mouse input** (SendInput, SendKeys, posting to other windows) when
   testing the GUI. The owner works on the same machine; stray keystrokes have landed in their live
   sessions before. Test through the code paths, or use the bench mode, which drops real input by default.
@@ -67,7 +71,7 @@ lander alone) don't get one.
      all entries on the changelog page. Move the "Latest" badge to the new entry on both pages.
    - **News strip:** point the strip under the hero (`docs/index.html`, `class="wrap news"`) at the new
      version and its title, and drop any "new in <old version>" tags on feature cards.
-   - **Lander:** if the feature is worth showing, add or update its card in the feature grid
+   - **Lander:** if the feature is worth showing, add or update its row in the feature list
      (`#sessions`) or its section. If the UI changed, say whether the screenshots need retaking
      (`docs/site-assets/SCREENSHOTS.md` has how); don't fake them.
    - **README:** keep it in step with the feature (its section and the Roadmap).
