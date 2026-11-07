@@ -6,7 +6,7 @@
   color-scheme:dark;
   --ink:#0b0c11; --surface:#101118; --raised:#151824; --raised2:#1b1f2d;
   --line:#22252f; --line2:#2e3242;
-  --text:#eeedf3; --muted:#9a98a6; --dim:#6f6d7b;
+  --text:#eeedf3; --muted:#9a98a6; --dim:#84828f;
   --lilac:#b9a6ff; --violet:#8b7bff; --needs:#f2b84b; --done:#62d39a; --claude:#d97757; --mag:#c39be0;
   --mono:JetBrains,"JetBrains Mono",ui-monospace,monospace; --sans:Manrope,"Segoe UI",system-ui,sans-serif;
 }
@@ -85,107 +85,14 @@ h1 .q{display:block;color:var(--dim)}
 .news .tag{font:11px var(--mono);color:var(--lilac);border:1px solid #3a3360;border-radius:999px;padding:1px 9px}
 .news a:hover{color:var(--text)}
 
-/* Section headings: two tones, like the hero. */
-.section{padding:110px 0 0}
-.head{display:grid;grid-template-columns:1.1fr 1fr;gap:48px;align-items:end;margin-bottom:40px}
-.head.solo{grid-template-columns:1fr}
-h2{font-size:clamp(36px,4.4vw,58px);font-weight:600;line-height:1.02;letter-spacing:-.045em}
-h2 .q{display:block;color:var(--dim)}
-.head p{color:var(--muted);font-size:15.5px;max-width:470px}
 
-/* The moments: chips that switch a real Kaze screenshot. */
-.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
-.chips .label{font-size:12.5px;color:var(--dim);margin-right:auto}
-.chip{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);border:1px solid var(--line2);border-radius:7px;padding:4px 11px}
-.chip i{font:normal 10.5px var(--mono);color:var(--dim)}
-.chip:hover{color:var(--text)}
-.chip[aria-pressed="true"]{color:var(--text);background:var(--raised2);border-color:#3c4155}
-.s.needs{color:var(--needs)}.s.run{color:var(--lilac)}.s.done{color:var(--done)}
-.mk{width:13px;height:13px;border-radius:4px;background:var(--claude);display:grid;place-items:center;color:#fff;font:700 9px var(--sans);flex:none}
-.mk.cx{background:#111;border:1px solid #444}
-.bar-l{width:2px;height:12px;border-radius:2px;background:#4fc3d9}
-.bd.needs{background:var(--needs)}.bd.done{background:var(--done)}
-.demo-cap{margin-top:12px;font-size:13px;color:var(--muted);min-height:22px}
-
-/* Commands next to claims. */
-.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--line)}
-.trio article{padding:24px 26px 6px 0}
-.trio article+article{padding-left:26px;border-left:1px solid var(--line)}
-.trio h3{font-size:15px;font-weight:650;margin-bottom:6px}
-.trio p{font-size:14px;color:var(--muted);margin-bottom:14px}
-.cmd{display:inline-block;font:12.5px var(--mono);color:var(--lilac);background:var(--surface);border:1px solid var(--line2);border-radius:7px;padding:6px 10px}
-
-/* README-style features, with an index. */
-.readme{display:grid;grid-template-columns:230px 1fr;gap:56px;border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:34px 40px 40px}
-.toc{position:sticky;top:96px;align-self:start}
-.toc .file{font:12px var(--mono);color:var(--dim);display:flex;gap:8px;align-items:center;margin-bottom:18px}
-.toc ol{list-style:none;margin:0;padding:0;font-size:13.5px}
-.toc li a{display:grid;grid-template-columns:26px 1fr;padding:5px 0;color:var(--muted)}
-.toc li a:hover{color:var(--text)}
-.toc li a span{font:11px/1.9 var(--mono);color:var(--dim)}
-.docs article{padding:0 0 34px;margin-bottom:34px;border-bottom:1px solid var(--line)}
-.docs article:last-child{border-bottom:0;margin-bottom:0;padding-bottom:0}
-.docs h3{font-size:21px;font-weight:650;letter-spacing:-.02em;margin-bottom:10px;display:flex;gap:12px;align-items:baseline}
-.docs h3 span{font:11px var(--mono);color:var(--dim);font-weight:400}
-.docs p{color:#b6b4c1;max-width:640px}
-.docs p+p{margin-top:10px}
 .state{font:600 12.5px var(--mono)}
 .state.needs{color:var(--needs)}.state.running{color:var(--lilac)}.state.done{color:var(--done)}
-.more-links{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;font-size:13px}
-.more-links a,.more-links button{color:var(--lilac)}
-.more-links a:hover,.more-links button:hover{color:#d9cfff}
-
-/* Workspaces: the real Settings page. */
-.recipe-foot{margin-top:14px;font-size:13.5px;color:var(--muted)}
-
-.quiet{display:grid;grid-template-columns:1fr auto;gap:40px;align-items:center;padding:34px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:110px}
-.quiet h2{font-size:28px}
-.quiet p{color:var(--muted);margin-top:8px;max-width:560px}
-.quiet .tags{display:flex;gap:28px}
-.quiet .tags span{display:flex;flex-direction:column;font-size:12.5px;color:var(--dim)}
-.quiet .tags b{color:var(--text);font-size:15px;font-weight:650}
-
-/* Changelog: markup kept as the release script expects. */
-.releases{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
-.release{display:grid;grid-template-columns:200px 1fr;gap:32px;padding:28px 0;border-bottom:1px solid var(--line)}
-.release-meta{display:flex;gap:4px 10px;align-items:baseline;align-content:flex-start;flex-wrap:wrap;font-size:12.5px;color:var(--dim)}
-.version{font:600 20px var(--mono);color:var(--text)}
-.badge{font:11px var(--mono);color:var(--lilac);border:1px solid #3a3360;border-radius:999px;padding:1px 8px}
-.release-meta time{flex-basis:100%}
-.release-body h3{font-size:17px;font-weight:650;margin-bottom:10px}
-.release-body ul{margin:0;padding-left:18px;color:#b6b4c1;font-size:14px}
-.release-body li{margin:5px 0}
-.release-body b{color:var(--text);font-weight:600}
-.all-releases{display:inline-flex;gap:8px;align-items:center;margin-top:18px;font-size:13.5px;color:var(--lilac)}
-
-/* FAQ */
-.faq{border-top:1px solid var(--line)}
-.faq details{border-bottom:1px solid var(--line)}
-.faq summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:20px;padding:18px 0;font-size:16px;font-weight:600}
-.faq summary::-webkit-details-marker{display:none}
-.faq summary::after{content:"+";font:400 20px/1 var(--mono);color:var(--dim)}
-.faq details[open] summary::after{content:"−"}
-.faq details p{padding:0 0 20px;color:#b6b4c1;max-width:760px}
-.faq details a{color:var(--lilac);text-decoration:underline;text-underline-offset:3px}
-
-/* Install: the closing call, same words as the hero. */
-.install{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start;padding-top:130px}
-.install p{color:var(--muted);margin-top:16px;max-width:460px}
-.install .note{font-size:13.5px;color:var(--dim)}
-.installer{border:1px solid var(--line2);border-radius:14px;background:var(--surface);overflow:hidden}
-.platform-tabs{display:flex;border-bottom:1px solid var(--line)}
-.platform-tabs [role=tab]{padding:12px 20px;font-size:13.5px;color:var(--muted);border-bottom:2px solid transparent}
-.platform-tabs [role=tab][aria-selected=true]{color:var(--text);border-bottom-color:var(--lilac)}
-[role=tabpanel]{padding:22px}
-.download-block{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:20px}
-.download-block .arm{font-size:13px;color:var(--muted);text-decoration:underline;text-underline-offset:3px}
 .command-heading{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--dim);margin-bottom:6px}
 .command-heading button{font:11.5px var(--mono);color:var(--muted);border:1px solid var(--line2);border-radius:6px;padding:2px 9px}
 .command-heading button:hover{color:var(--text)}
 pre{margin:0;background:var(--ink);border:1px solid var(--line);border-radius:9px;padding:13px 15px;overflow:auto}
 pre code{font-size:12.5px;line-height:1.7;color:#d9d7e3}
-.tip{margin-top:14px;font-size:12.5px;color:var(--dim)}
-.build-docs{display:block;padding:12px 22px;border-top:1px solid var(--line);font-size:13px;color:var(--lilac)}
 
 /* First launch guide */
 .guide-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
@@ -200,20 +107,6 @@ pre code{font-size:12.5px;line-height:1.7;color:#d9d7e3}
 .guide-note{margin-top:14px;font-size:13.5px;color:var(--muted)}
 .guide-foot{margin-top:20px;font-size:13.5px;color:var(--muted)}
 
-/* Footer */
-footer{margin-top:130px;border-top:1px solid var(--line);padding:44px 0 56px}
-.foot{display:grid;grid-template-columns:1.4fr repeat(3,1fr);gap:32px;font-size:13.5px}
-.foot p{color:var(--dim);margin-top:10px}
-.foot h4{margin:0 0 10px;font-size:12px;font-weight:600;color:var(--dim)}
-.foot ul{list-style:none;margin:0;padding:0}
-.foot li{margin:6px 0}
-.foot li a{color:var(--muted)}
-.foot li a:hover{color:var(--text)}
-
-/* A real Kaze screenshot in a section. */
-.shot{margin:0}
-.shot img{display:block;width:100%;height:auto;border:1px solid var(--line2);border-radius:12px;background:#0f1117}
-
 /* Lightbox */
 .lightbox{border:0;padding:0;background:transparent;max-width:min(1280px,94vw);width:100%}
 .lightbox::backdrop{background:rgba(5,6,9,.88)}
@@ -225,42 +118,188 @@ footer{margin-top:130px;border-top:1px solid var(--line);padding:44px 0 56px}
 .lightbox .prev{left:20px}.lightbox .next{right:20px}
 .lightbox .close{position:fixed;top:18px;right:20px;font:12px var(--mono);color:var(--muted);border:1px solid #3a3e52;border-radius:999px;padding:5px 12px;background:rgba(16,17,24,.9)}
 
-@media (max-width:980px){
-  .nav{display:none}
-  .wall{opacity:.35;left:auto;right:-360px;width:1180px;height:1040px}
-  .hero::after{background:linear-gradient(0deg,var(--ink) 0%,rgba(11,12,17,.6) 100%)}
-  .head,.install,.readme,.guide-grid{grid-template-columns:1fr}
-  .toc{position:static}
-  .trio{grid-template-columns:1fr}
-  .trio article+article{padding-left:0;border-left:0;border-top:1px solid var(--line)}
-  .release{grid-template-columns:1fr;gap:10px}
-  .quiet{grid-template-columns:1fr}
-  .foot{grid-template-columns:1fr 1fr}
-}
-@media (max-width:560px){
-  .wrap{width:calc(100% - 36px)}
-  .facts{gap:22px}
-  .readme{padding:22px}
-  .header-cta .ghost{display:none}
-}
-.download-block .arm-link{font-size:13px;color:var(--muted);text-decoration:underline;text-underline-offset:3px}
-.guide-link{flex-basis:100%;font-size:13px;color:var(--lilac)}
-.installer-tip{margin-top:14px;font-size:12.5px;color:var(--dim)}
-.installer .os-icon{width:15px;height:15px;fill:currentColor}
-html,body{overflow-x:hidden}
-@media (max-width:980px){
-  .wall-hint{display:none}
-  .chips .label{flex-basis:100%}
-}
-@media (max-width:560px){
-  .wall{display:none}
-  .actions .button{flex:1 1 100%;justify-content:center}
-}
-q{quotes:none}
-.inline-icon{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px}
 
+html,body{overflow-x:hidden}
+q{quotes:none}
 /* The approved lockup; "by Patrick" is text under the wordmark, starting at the k's stem. */
 .brand-lock{position:relative;display:block;width:94px;height:34px;flex-shrink:0}
 .brand-lock img{display:block;width:94px;height:auto}
 .brand-by{position:absolute;left:38px;top:25.5px;font:8px/1 JetBrains,"JetBrains Mono",ui-monospace,monospace;letter-spacing:.04em;color:#9a98a6;white-space:nowrap;font-weight:400}
 .brand-foot img{display:block;width:80px;height:auto}
+
+/* Kaze lilac, from the approved mark. One accent, used sparingly; neutrals carry the page. */
+:root{
+  --k1:#c2b4eb; --k1-hover:#d6ccf3; --k-ink:#17142a;
+  --k-line:rgba(194,180,235,.28);
+  --lilac:var(--k1);
+  --hair:#1f212b; --hair2:#2a2d3a;
+  --body:#b7b5c3;
+}
+body{background:var(--ink)}
+::selection{background:rgba(194,180,235,.32);color:#fff}
+html{scrollbar-color:#2e3242 var(--ink);caret-color:var(--k1)}
+a:focus-visible,button:focus-visible,summary:focus-visible{outline-color:var(--k1)}
+
+/* Hero: the same layout. Lilac second line, solid, no gradient. */
+h1{letter-spacing:-.04em}
+h1 .q{color:var(--k1)}
+.button.primary,.pill{background:var(--k1);color:var(--k-ink)}
+.button.primary:hover,.pill:hover{background:var(--k1-hover)}
+.news .tag{color:var(--k1);border-color:var(--k-line)}
+
+/* Sections: generous space above, the heading carries itself. */
+.k-sec{padding:160px 0 0}
+.k-head{display:grid;grid-template-columns:1.15fr 1fr;gap:64px;align-items:end;margin-bottom:56px}
+.k-head-stack{display:block;margin-bottom:0}
+.k-head h2,.get h2{font-size:clamp(34px,3.9vw,52px);font-weight:600;line-height:1.06;letter-spacing:-.03em;text-wrap:balance}
+.k-head h2 em,.get h2 em,.statement em{font-style:normal;color:var(--k1)}
+.k-head p{color:var(--muted);font-size:16px;line-height:1.65;max-width:46ch}
+
+.k-link{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--k1);text-decoration:underline;text-decoration-color:var(--k-line);text-underline-offset:4px;transition:text-decoration-color .2s}
+.k-link:hover{text-decoration-color:var(--k1)}
+.k-links{display:flex;gap:22px;flex-wrap:wrap}
+
+/* A screenshot on a plate: one hairline, no glow. */
+.plate{display:block;margin:0;border:1px solid var(--hair2);border-radius:12px;overflow:hidden;background:#0e0f15}
+.plate img{display:block;width:100%;height:auto}
+.plate-btn{transition:border-color .2s}
+.plate-btn:hover{border-color:var(--k-line)}
+
+/* Moments */
+.moments{display:grid;grid-template-columns:280px 1fr;gap:48px;align-items:start}
+.moment-list{display:flex;flex-direction:column;border-top:1px solid var(--hair)}
+.mo{display:block;text-align:left;padding:18px 0 18px 18px;border-bottom:1px solid var(--hair);position:relative;color:var(--muted)}
+.mo::before{content:"";position:absolute;left:0;top:18px;bottom:18px;width:1px;background:transparent;transition:background .2s}
+.mo b{display:block;font-size:15px;font-weight:600;color:var(--muted);transition:color .2s}
+.mo small{display:block;margin-top:4px;font-size:13px;line-height:1.5;color:var(--dim)}
+.mo:hover b{color:var(--text)}
+.mo[aria-pressed="true"]::before{background:var(--k1)}
+.mo[aria-pressed="true"] b{color:var(--text)}
+.mo[aria-pressed="true"] small{color:var(--muted)}
+.moments .plate .demo-cap{margin:0;padding:14px 18px;border-top:1px solid var(--hair2);font-size:13.5px;color:var(--muted)}
+
+/* Relay: three steps in a row, joined by a hairline. */
+.relay{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--hair2)}
+.relay li{position:relative;padding:28px 32px 0 0}
+.relay li+li{padding-left:32px;border-left:1px solid var(--hair)}
+.relay li::before{content:"";position:absolute;top:-4px;left:0;width:7px;height:7px;border-radius:50%;background:var(--k1)}
+.relay li+li::before{left:-4px}
+.relay-who{display:block;font-size:12.5px;color:var(--k1);margin-bottom:10px}
+.relay h3{font-size:18px;font-weight:600;letter-spacing:-.01em;margin-bottom:8px}
+.relay p{font-size:14.5px;color:var(--body);margin-bottom:16px;max-width:34ch}
+.relay code{font-size:12.5px;color:var(--text);background:var(--surface);border:1px solid var(--hair2);border-radius:6px;padding:5px 9px}
+
+/* Features: one lead with its screenshot, then an index. */
+.lead-feature{display:grid;grid-template-columns:.75fr 1.25fr;gap:56px;align-items:center;margin-bottom:72px}
+.lead-feature h3{font-size:24px;font-weight:600;letter-spacing:-.02em;margin-bottom:12px}
+.lead-feature p{color:var(--body);font-size:15.5px;margin-bottom:18px;max-width:42ch}
+.index{margin:0;display:grid;grid-template-columns:1fr 1fr;column-gap:64px;border-top:1px solid var(--hair2)}
+.index>div{display:grid;grid-template-columns:200px 1fr;gap:24px;padding:28px 0;border-bottom:1px solid var(--hair)}
+.index dt{display:flex;gap:12px;align-items:flex-start;font-size:15.5px;font-weight:600;letter-spacing:-.01em;color:var(--text)}
+.index dd{margin:0}
+.index dd p{font-size:14.5px;color:var(--body);margin-bottom:12px}
+.b-ico{flex:none;color:var(--k1);line-height:0;padding-top:2px}
+.b-ico svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+
+/* Workspaces */
+.ws{display:grid;grid-template-columns:.8fr 1.2fr;gap:64px;align-items:center}
+.ws-steps{list-style:none;counter-reset:s;margin:40px 0 0;padding:0;border-top:1px solid var(--hair)}
+.ws-steps li{counter-increment:s;position:relative;padding:16px 0 16px 32px;border-bottom:1px solid var(--hair);color:var(--muted);font-size:15px}
+.ws-steps li::before{content:counter(s);position:absolute;left:0;top:16px;font:500 13px/1.7 var(--mono);color:var(--k1)}
+.ws-steps b{color:var(--text);font-weight:600}
+
+/* Statement: the numbers live in a sentence, not a stat band. */
+.statement>p:first-child{font-size:clamp(26px,2.9vw,38px);font-weight:500;line-height:1.3;letter-spacing:-.025em;max-width:30ch;color:var(--text);text-wrap:balance}
+.statement-foot{margin-top:22px;font-size:14px;color:var(--dim)}
+
+/* Changelog: ol.releases > li.release markup is what the release steps edit; keep it. */
+.releases{list-style:none;margin:0;padding:0;border-top:1px solid var(--hair2)}
+.release{display:grid;grid-template-columns:200px 1fr;gap:32px;padding:32px 0;border-bottom:1px solid var(--hair)}
+.release-meta{display:flex;flex-wrap:wrap;gap:10px;align-items:center;align-content:flex-start;font-size:13px;color:var(--dim)}
+.release-meta .version{font:500 15px var(--mono);color:var(--text)}
+.release-meta .badge{font-size:11.5px;font-weight:600;color:var(--k-ink);background:var(--k1);border-radius:999px;padding:1px 9px}
+.release-meta time{flex-basis:100%;font-variant-numeric:tabular-nums}
+.release-body h3{font-size:18px;font-weight:600;letter-spacing:-.01em;margin-bottom:10px}
+.release-body ul{margin:0;padding-left:18px;color:var(--body);font-size:14.5px;max-width:70ch}
+.release-body li{margin:6px 0}
+.release-body li::marker{color:var(--dim)}
+.release-body b{color:var(--text);font-weight:600}
+.all-releases{display:inline-flex;gap:8px;align-items:center;margin-top:24px;font-size:13.5px;color:var(--k1)}
+.all-releases:hover{color:var(--k1-hover)}
+
+/* FAQ: a ruled list in two columns. */
+.k-faq{display:grid;grid-template-columns:1fr 1fr;column-gap:64px;border-top:1px solid var(--hair2)}
+.k-faq details{border-bottom:1px solid var(--hair)}
+.k-faq summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:20px 0;font-size:15.5px;font-weight:600}
+.k-faq summary::-webkit-details-marker{display:none}
+.k-faq summary::after{content:"";flex:none;width:9px;height:9px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:translateY(-3px) rotate(45deg);transition:transform .25s cubic-bezier(.22,1,.36,1)}
+.k-faq details[open] summary::after{transform:translateY(2px) rotate(-135deg);border-color:var(--k1)}
+.k-faq p{padding:0 0 20px;font-size:14.5px;color:var(--body);max-width:60ch}
+.k-faq a{color:var(--k1);text-decoration:underline;text-decoration-color:var(--k-line);text-underline-offset:4px}
+
+/* Install: one flat panel, the copy on the left, the downloads on the right. */
+.get{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;padding:56px;border:1px solid var(--hair2);border-radius:16px;background:var(--surface)}
+.get-icon{display:block;margin-bottom:28px}
+.get p{margin-top:16px;color:var(--muted);font-size:15.5px;max-width:42ch}
+.get .note{font-size:13.5px;color:var(--dim)}
+.src-more{margin:12px 0 0}
+.get-os{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--hair2)}
+.os{display:flex;flex-direction:column;align-items:flex-start;gap:14px;padding:24px 24px 24px 0}
+.os+.os{padding-left:24px;border-left:1px solid var(--hair2)}
+.os h3{font-size:14px;font-weight:600;color:var(--muted)}
+.src{grid-column:1/-1;border-top:1px solid var(--hair2);padding-top:16px}
+.src summary{cursor:pointer;font-size:13.5px;color:var(--muted)}
+.src summary:hover{color:var(--text)}
+.src pre{margin-top:12px}
+
+/* First launch: the original guide, flat, in lilac. */
+.guide-card{border-color:var(--hair2);background:var(--surface)}
+.guide-card h3 svg{color:var(--k1)}
+.steps{color:var(--body)}
+.steps li::marker{color:var(--k1);font:500 13px var(--mono)}
+.steps a,.guide-note a,.guide-foot a{color:var(--k1);text-decoration-color:var(--k-line)}
+.steps a:hover,.guide-note a:hover,.guide-foot a:hover{text-decoration-color:var(--k1)}
+.guide-shortcut .command-heading button{color:var(--k1);border-color:var(--k-line)}
+.guide-shortcut .command-heading button:hover{border-color:var(--k1)}
+
+/* Grid children may shrink below their longest line (code blocks scroll instead). */
+.k-head>*,.moments>*,.lead-feature>*,.index>*,.ws>*,.get>*,.get-os>*,.guide-grid>*,.relay>*{min-width:0}
+
+/* Footer */
+.k-foot{position:relative;margin-top:160px;padding:56px 0 48px;border-top:1px solid var(--hair);overflow:hidden}
+.foot-kanji{position:absolute;right:max(32px,calc(50% - 590px));top:50%;transform:translateY(-50%);font-size:150px;line-height:1;color:rgba(194,180,235,.06);pointer-events:none}
+.k-foot-row{position:relative;display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+.k-foot-row p{color:var(--dim);font-size:13px}
+.k-foot-row nav{margin-left:auto;display:flex;gap:24px;font-size:13px;color:var(--muted)}
+.k-foot-row nav a:hover{color:var(--text)}
+
+@media (max-width:980px){
+  .k-sec{padding-top:112px}
+  .k-head,.moments,.lead-feature,.index,.ws,.k-faq,.get{grid-template-columns:1fr}
+  .k-head{gap:16px;margin-bottom:40px}
+  .relay{grid-template-columns:1fr;border-top:0}
+  .relay li,.relay li+li{padding:24px 0 24px 24px;border-left:1px solid var(--hair2)}
+  .relay li::before,.relay li+li::before{top:30px;left:-4px}
+  .index>div{grid-template-columns:1fr;gap:10px}
+  .release{grid-template-columns:1fr;gap:10px}
+  .get{padding:32px 24px;gap:32px}
+  .k-foot-row nav{margin-left:0;flex-wrap:wrap}
+}
+@media (max-width:560px){
+  .get-os{grid-template-columns:1fr}
+  .os+.os{padding-left:0;border-left:0;border-top:1px solid var(--hair2)}
+}
+
+@media (max-width:980px){
+  .nav{display:none}
+  .wall{opacity:.35;left:auto;right:-360px;width:1180px;height:1040px}
+  .hero::after{background:linear-gradient(0deg,var(--ink) 0%,rgba(11,12,17,.6) 100%)}
+  .guide-grid{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .wrap{width:calc(100% - 36px)}
+  .facts{gap:22px}
+  .header-cta .ghost{display:none}
+  .wall{display:none}
+  .actions .button{flex:1 1 100%;justify-content:center}
+}
