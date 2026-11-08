@@ -216,7 +216,9 @@ func (win *window) resumeLine(e sessionstate.Entry) (string, error) {
 	if e.Agent == "claude" {
 		return q + " --resume " + id, nil
 	}
-	return q + " resume " + id, nil
+	// A shared Codex daemon keeps its first client's KAZE_TAB_ID. Resume in
+	// this tab's process so hooks keep the owning tab's environment (#180).
+	return q + " --no-daemon resume " + id, nil
 }
 func (win *window) restoreStartup() bool {
 	if win.restore == nil || !win.opt.Config.RestoreSessions || strings.TrimSpace(win.opt.Workspace) != "" || len(win.restoreSaved.Entries) == 0 {

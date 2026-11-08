@@ -25,7 +25,13 @@ type codexDialog struct {
 	config []byte
 }
 
-func (win *window) loadAgents() { win.loadClaude(); win.loadCodex() }
+func (win *window) loadAgents() {
+	win.loadClaude()
+	win.loadCodex()
+	if win.system != nil && win.opt.Config.SystemNotifications {
+		win.system.backend.CheckPermission()
+	}
+}
 func readCodexFile(path string) ([]byte, error) {
 	f, err := os.Open(path)
 	if errors.Is(err, os.ErrNotExist) {

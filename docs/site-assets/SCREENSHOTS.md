@@ -1,5 +1,10 @@
 # Product captures
 
+Issue #172 adds System notifications to Settings > Agents > Alerts. Any capture
+of that page needs a native retake after owner review. Real OS notification
+captures require permission and delivery checks on each platform; do not
+substitute a mockup or headless render for a system banner.
+
 Issue #101 changes the session rows, group headers and bottom launcher. All
 sidebar-visible product captures need retaking after native owner review. Headless
 Gio verification images are development evidence, not replacement product captures.

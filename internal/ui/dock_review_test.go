@@ -55,6 +55,8 @@ func TestDockFocusedPanelPassesTypingOn(t *testing.T) {
 	clickAt(t, win, r, centre(win.dock.hits.body))
 	typeKeys(t, win, r, "ls")
 	sideFrame(t, win, r)
+	// Session.Write queues input; a frame need not wait for the PTY writer.
+	waitSent(t, ptyOf(st, 0), "ls")
 	if !strings.Contains(ptyOf(st, 0).sent(), "ls") || win.dock.keys {
 		t.Fatalf("typing into a focused panel was lost: %q keys %v", ptyOf(st, 0).sent(), win.dock.keys)
 	}

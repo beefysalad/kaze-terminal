@@ -35,7 +35,7 @@ func TestResumeUsesShellPathWithMinimalAppPath(t *testing.T) {
 			if agent == "claude" {
 				want += "--resume "
 			} else {
-				want += "resume "
+				want += "--no-daemon resume "
 			}
 			want += "'" + id + "'"
 			if line != want {

@@ -247,7 +247,8 @@ Sessions are listed down the left side, in place of a tab strip.
   the folder already ends in the branch's slug. Outside a repo, the second line
   shows the shortened folder. Hover for ×, or middle-click to close.
   - **Agent:** Claude and Codex have their own logos. Hooks or foreground-program
-    detection identify the agent. Codex hooks need `codex --no-daemon` for now.
+    detection identify the agent. Normal local Codex launches inside Kaze use
+    `--no-daemon` automatically so each tab keeps its own hooks.
   - **Status:** `needs you`, `done`, the active subagent count, then `running`, in
     that order. A session with subagents shows its tray's fold control (`N agents ⌄`) there
     instead, and its dot keeps the state. Running uses a closed ring with a bright core, drawn still
@@ -598,6 +599,19 @@ Other hook commands are silent. The hook transport, prompt, Stop and Interrupt l
 with Codex CLI 0.166.0 on macOS; the helper hooks follow that version's source. Windows hook
 execution still needs a manual check.
 
+Normal `codex`, `codex resume` and `codex fork` launches inside Kaze run locally
+with `--no-daemon`, so helpers and alerts stay with their own tab even when a
+shared daemon already exists. Kaze scopes this to its child shells and leaves
+your shell profiles and Codex configuration alone. Aliases/functions, absolute
+executable paths and shell startup that overrides PATH can bypass it; add the
+flag explicitly for those launches. Remote, administrative and unknown command
+forms pass through. An ambiguous single-word command-line prompt also needs an
+explicit flag; opening plain `codex` then typing a prompt works normally.
+On Windows, recognized npm launchers call Node directly to preserve arguments;
+custom `.cmd` wrappers report an error. If the private launcher cannot start,
+including when Smart App Control blocks it, start your installed Codex directly
+with `--no-daemon` without changing the OS policy.
+
 ## About
 
 Open Settings with Ctrl+, (Cmd+, on macOS), then choose **About** for the Kaze logo, version, platform and license. **Copy build info** copies the version, build and platform for a bug report; **View on GitHub** opens the repository and **Report an issue** opens a new issue.
@@ -745,6 +759,9 @@ The ready shell finds Claude or Codex using its own PATH, including paths set in
 files when Kaze opens from Finder or restarts after an update. Missing commands and resume
 errors appear in that tab as shell or agent output. The allowlisted agent command
 is unquoted so shell aliases, functions and PATH installs all resolve normally.
+Codex resumes use `codex --no-daemon resume <conversation>` so each tab's hooks
+keep its own tab identity. The local launch wrapper also isolates normal manual
+starts; custom launch paths need the explicit flag as described under Codex setup.
 
 Running commands, servers, shell variables, scrollback, panel tabs and
 live helpers do not survive exit. Workspace members reopen without replaying their recipe
@@ -782,6 +799,7 @@ error makes kaze use all defaults.
 | `cursor_style` | `block`, `bar` or `underline` | `block` |
 | `cursor_blink` | Blink the cursor (off keeps idle CPU at zero) | `false` |
 | `taskbar_flash` | Flash the taskbar button on alerts (Windows) | `true` |
+| `system_notifications` | Show native notifications while Kaze is in the background | `true` |
 | `done_toast` | How long a "done" alert card stays: `3s`, `6s`, `10s` or `until_seen` | `6s` |
 | `show_usage` | Show the Claude usage readout in the status bar | `true` |
 | `check_updates` | Ask GitHub once a day whether a newer kaze is out (see Updates) | `true` |
@@ -932,6 +950,18 @@ prompt or a question) or has finished its turn.
 - **×** closes a card and keeps the session's dot in the sidebar. "Needs you" cards stay until
   you visit the session; "done" cards hide after `done_toast`.
 - A workspace run's summary uses the same card, with the workspace mark.
+
+When Kaze is in the background or minimized, **System notifications** also shows
+native agent alerts. Click one to restore Kaze and open that session. The latest
+alert replaces the older notification for that session; visiting or closing it
+withdraws the notification. Turn this off in Settings > Agents > Alerts.
+Native banners are silent, keeping the existing chime as Kaze's sound, and
+follow the OS's notification permissions and Focus settings. Their Notification
+Center lifetime follows the OS rather than the in-window `done_toast` timer.
+macOS asks once for notification permission from the Kaze app bundle; unbundled
+development binaries show an availability hint. Windows registers a Kaze-owned
+Start menu shortcut for notification identity. Permission or setup failures appear
+beside the setting.
 
 "Needs you" plays a chime (unless you're already looking at that tab); "done" is silent
 unless you turn on `chime_done`. While kaze is minimized, its taskbar button flashes (Windows).
