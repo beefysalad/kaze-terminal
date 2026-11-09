@@ -40,7 +40,7 @@ func TestProxyExactArgumentsEnvironmentStdioAndExit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	executableFixture(t, real, "codex", "#!/bin/sh\nprintf '%s\\000' \"$@\"\nprintf '%s\\000' \"$KAZE_TAB_ID\" \"$CODEX_HOME\" \"$PWD\"\nIFS= read -r line\nprintf '%s\\000' \"$line\"\nprintf 'fake error' >&2\nexit 23\n")
+	executableFixture(t, real, "codex", "#!/bin/sh\nif [ \"$2\" = --help ]; then exit 0; fi\nprintf '%s\\000' \"$@\"\nprintf '%s\\000' \"$KAZE_TAB_ID\" \"$CODEX_HOME\" \"$PWD\"\nIFS= read -r line\nprintf '%s\\000' \"$line\"\nprintf 'fake error' >&2\nexit 23\n")
 	args := []string{"resume", "", `quote"`, "日本語", "%VAR%", "!", "&", "|", "(x)", "^", "two words"}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
