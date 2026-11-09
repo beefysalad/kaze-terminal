@@ -60,7 +60,7 @@
       </div>
     </div>
   </section>
-  <div class="wrap news"><span class="tag">0.36</span><a href="#changelog">New: system notifications and separate Codex tabs <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
+  <div class="wrap news"><span class="tag">0.37</span><a href="#changelog">New: see which model is running <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
 
   <section class="k-sec wrap" aria-labelledby="demo-title">
     <header class="k-head">
@@ -141,7 +141,18 @@
     </header>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.36</span><span class="badge">Latest</span><time datetime="2026-11-09">Nov 9, 2026</time></div>
+        <div class="release-meta"><span class="version">0.37</span><span class="badge">Latest</span><time datetime="2026-11-09">Nov 9, 2026</time></div>
+        <div class="release-body">
+          <h3>See which model is running</h3>
+          <ul>
+            <li><b>The model in the status bar:</b> the status bar now shows the model of the session in front, such as Opus 5.5, just before the usage numbers. It follows the tab you’re on and hides when Claude exits. It appears when usage is switched on.</li>
+            <li><b>Each subagent’s model:</b> a subagent’s panel shows that agent’s own model after the elapsed time, once its first reply is recorded.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.36</span><time datetime="2026-11-09">Nov 9, 2026</time></div>
         <div class="release-body">
           <h3>System notifications and separate Codex tabs</h3>
           <ul>
@@ -159,16 +170,6 @@
           <ul>
             <li><b>A new app icon:</b> Kaze’s icon is now the refreshed wind K in soft lilac on a dark tile, in the Dock, Finder, the Windows taskbar and Alt+Tab. On macOS it follows Apple’s icon shape, so it sits the same size as your other apps. macOS may keep the old icon in the Dock until Kaze restarts after the update.</li>
             <li><b>The same K everywhere:</b> the settings sidebar now shows the new K too, matching the title bar and the About page.</li>
-          </ul>
-        </div>
-      </li>
-
-      <li class="release">
-        <div class="release-meta"><span class="version">0.34</span><time datetime="2026-11-06">Nov 6, 2026</time></div>
-        <div class="release-body">
-          <h3>A simpler sidebar</h3>
-          <ul>
-            <li><b>A simpler sidebar:</b> the “New session on a branch” launcher is gone, with its shortcut and its worktree cleanup. Claude and Codex make branches and worktrees themselves, and the + in the title bar still opens a new session. The session list now runs down to your workspaces. Your existing worktrees and config are left as they are.</li>
           </ul>
         </div>
       </li>
