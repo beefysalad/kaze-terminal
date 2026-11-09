@@ -30,25 +30,26 @@ type Config struct {
 	FontFamily      string  `toml:"font_family"`      // not supported yet; a set value warns
 	// Shell empty means "use the platform default shell"; the caller
 	// resolves it at startup.
-	Shell            []string          `toml:"shell"`
-	ScrollbackLines  int               `toml:"scrollback_lines"`   // default 10000, max 100000
-	AgentPanelHeight int               `toml:"agent_panel_height"` // docked agent panel height in dp; 0 = 40% of the terminal area
-	Colors           map[string]string `toml:"colors"`             // "fg", "bg", "cursor", "selection", "color0".."color15": "#rrggbb"
-	Keys             map[string]string `toml:"keys"`               // action -> shortcut text; parsed by the caller
-	CopyOnSelect     bool              `toml:"copy_on_select"`     // copy a selection when the mouse is released
-	ChimeNeeds       bool              `toml:"chime_needs"`        // chime when Claude needs you; default true
-	ChimeDone        bool              `toml:"chime_done"`         // chime when Claude is done; default false
-	ChimeFile        string            `toml:"chime_file"`         // custom WAV; ~ expands to home, other relative paths use the working dir; empty = bundled chime
-	Theme            string            `toml:"theme"`              // midnight|sumi|tide|washi|sakura|matcha|koyo|hai|fuji|kiri
-	LineSpacing      string            `toml:"line_spacing"`       // tight|normal|roomy
-	CursorStyle      string            `toml:"cursor_style"`       // block|bar|underline
-	CursorBlink      bool              `toml:"cursor_blink"`       // default false
-	TaskbarFlash     bool              `toml:"taskbar_flash"`      // flash the taskbar button on alerts; default true
-	DoneToast        string            `toml:"done_toast"`         // 3s|6s|10s|until_seen
-	ShowUsage        bool              `toml:"show_usage"`         // usage readout in the status bar; default true
-	Sidebar          bool              `toml:"sidebar"`            // agent sidebar beside the terminal; default true
-	StartupWorkspace string            `toml:"startup_workspace"`  // workspace ID to run at startup; "" opens a home tab
-	CheckUpdates     bool              `toml:"check_updates"`      // ask GitHub for a newer release once a day; default true
+	Shell               []string          `toml:"shell"`
+	ScrollbackLines     int               `toml:"scrollback_lines"`     // default 10000, max 100000
+	AgentPanelHeight    int               `toml:"agent_panel_height"`   // docked agent panel height in dp; 0 = 40% of the terminal area
+	Colors              map[string]string `toml:"colors"`               // "fg", "bg", "cursor", "selection", "color0".."color15": "#rrggbb"
+	Keys                map[string]string `toml:"keys"`                 // action -> shortcut text; parsed by the caller
+	CopyOnSelect        bool              `toml:"copy_on_select"`       // copy a selection when the mouse is released
+	ChimeNeeds          bool              `toml:"chime_needs"`          // chime when Claude needs you; default true
+	ChimeDone           bool              `toml:"chime_done"`           // chime when Claude is done; default false
+	ChimeFile           string            `toml:"chime_file"`           // custom WAV; ~ expands to home, other relative paths use the working dir; empty = bundled chime
+	Theme               string            `toml:"theme"`                // midnight|sumi|tide|washi|sakura|matcha|koyo|hai|fuji|kiri
+	LineSpacing         string            `toml:"line_spacing"`         // tight|normal|roomy
+	CursorStyle         string            `toml:"cursor_style"`         // block|bar|underline
+	CursorBlink         bool              `toml:"cursor_blink"`         // default false
+	TaskbarFlash        bool              `toml:"taskbar_flash"`        // flash the taskbar button on alerts; default true
+	SystemNotifications bool              `toml:"system_notifications"` // native alerts while Kaze is in the background; default true
+	DoneToast           string            `toml:"done_toast"`           // 3s|6s|10s|until_seen
+	ShowUsage           bool              `toml:"show_usage"`           // usage readout in the status bar; default true
+	Sidebar             bool              `toml:"sidebar"`              // agent sidebar beside the terminal; default true
+	StartupWorkspace    string            `toml:"startup_workspace"`    // workspace ID to run at startup; "" opens a home tab
+	CheckUpdates        bool              `toml:"check_updates"`        // ask GitHub for a newer release once a day; default true
 }
 
 // KnownActions are the action names accepted under [keys]; the window binds each one.
@@ -71,20 +72,21 @@ var (
 
 func Default() Config {
 	return Config{
-		RestoreSessions: true,
-		FontSize:        defaultFontSize,
-		ScrollbackLines: defaultScrollback,
-		ChimeNeeds:      true,
-		Theme:           "midnight",
-		LineSpacing:     "normal",
-		CursorStyle:     "block",
-		TaskbarFlash:    true,
-		DoneToast:       "6s",
-		ShowUsage:       true,
-		CheckUpdates:    true,
-		Sidebar:         true,
-		Colors:          map[string]string{},
-		Keys:            map[string]string{},
+		RestoreSessions:     true,
+		FontSize:            defaultFontSize,
+		ScrollbackLines:     defaultScrollback,
+		ChimeNeeds:          true,
+		Theme:               "midnight",
+		LineSpacing:         "normal",
+		CursorStyle:         "block",
+		TaskbarFlash:        true,
+		SystemNotifications: true,
+		DoneToast:           "6s",
+		ShowUsage:           true,
+		CheckUpdates:        true,
+		Sidebar:             true,
+		Colors:              map[string]string{},
+		Keys:                map[string]string{},
 	}
 }
 
@@ -226,6 +228,8 @@ func Load(path string) (Config, []string, error) {
 			loadBool(v, k, &cfg.CursorBlink, warn)
 		case "taskbar_flash":
 			loadBool(v, k, &cfg.TaskbarFlash, warn)
+		case "system_notifications":
+			loadBool(v, k, &cfg.SystemNotifications, warn)
 		case "show_usage":
 			loadBool(v, k, &cfg.ShowUsage, warn)
 		case "sidebar_launcher", "sidebar_launcher_agent":

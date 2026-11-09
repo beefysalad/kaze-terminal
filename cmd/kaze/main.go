@@ -12,6 +12,7 @@ import (
 	"gioui.org/unit"
 
 	"github.com/beefysalad/kaze-terminal/internal/bench"
+	"github.com/beefysalad/kaze-terminal/internal/codexlaunch"
 	"github.com/beefysalad/kaze-terminal/internal/config"
 	"github.com/beefysalad/kaze-terminal/internal/ptyx"
 	"github.com/beefysalad/kaze-terminal/internal/ui"
@@ -24,6 +25,9 @@ var r string
 
 func main() {
 	_ = r
+	if handled, code := codexlaunch.Dispatch(os.Args, os.Environ(), os.Stderr); handled {
+		os.Exit(code)
+	}
 	if len(os.Args) > 1 && os.Args[1] == "--version" {
 		fmt.Println(version.Text()) // before any window code
 		os.Exit(0)
@@ -49,10 +53,38 @@ func main() {
 	if err != nil {
 		home = ""
 	}
+	var launcher *codexlaunch.Launcher
+	var shellEnv func([]string) []string
+	if rec == nil {
+		go codexlaunch.SweepStale()
+		exe, e := os.Executable()
+		if e == nil {
+			launcher, e = codexlaunch.New(exe)
+		}
+		if e != nil {
+			warns = append(warns, "Codex tab isolation is unavailable: "+e.Error()+". Start Codex with --no-daemon.")
+		} else {
+			shellEnv = launcher.Env
+			if len(shell) > 0 && codexlaunch.IsZsh(shell[0]) {
+				if e := launcher.PrepareZsh(); e != nil {
+					warns = append(warns, "Codex tab isolation may be bypassed by your zsh startup files: "+e.Error())
+				}
+			}
+		}
+	}
 	go func() {
 		w := new(app.Window)
 		w.Option(app.Title("kaze"), app.Size(unit.Dp(1100), unit.Dp(720)), app.MinSize(unit.Dp(480), unit.Dp(320)), app.Decorated(false))
-		if err := ui.Run(w, ui.Options{Config: cfg, Warnings: warns, Shell: shell, Dir: home, Bench: rec, Workspace: wsName}); err != nil {
+		shellsReleased := true
+		err := ui.Run(w, ui.Options{Config: cfg, Warnings: warns, Shell: shell, Dir: home, Bench: rec, Workspace: wsName, ShellEnv: shellEnv, ShellsClosed: func(released bool) { shellsReleased = shellsReleased && released }})
+		// os.Exit skips defers. Remove only this run's directory, after every
+		// PTY has released it; a timed-out ConPTY keeps its private launcher.
+		if launcher != nil && shellsReleased {
+			if e := launcher.Close(); e != nil {
+				fmt.Fprintln(os.Stderr, e)
+			}
+		}
+		if err != nil {
 			reportFatal(err)
 			os.Exit(1)
 		}

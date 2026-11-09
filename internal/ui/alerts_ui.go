@@ -121,6 +121,8 @@ func (win *window) publish(active *tabs.Tab, focused bool) {
 	}
 	win.snapActive.Store(int64(id))
 	win.snapFocused.Store(focused)
+	win.publishSystemMetadata()
+	win.system.focus(focused)
 }
 
 // onNotify runs on a notify connection goroutine and must not block. The
@@ -149,6 +151,9 @@ func (win *window) onNotify(m notify.Msg) {
 	}
 	if t == nil {
 		return // closed or unknown tab
+	}
+	if m.Kind != notify.KindUsage && !subKind(m.Kind) && m.Kind != notify.KindDoc {
+		win.system.note(m, t)
 	}
 	// Taken now, so a shell prompt that comes back before the next frame still
 	// counts as after this message: it hides ctx and ends Claude.
@@ -195,6 +200,7 @@ func (win *window) onNotify(m notify.Msg) {
 		}
 	}
 	win.inbox.put(m, shell)
+	win.system.notify(m)
 	if win.w != nil {
 		win.w.Invalidate()
 	}
@@ -264,6 +270,7 @@ func (win *window) selectTab(id tabs.TabID) {
 func (win *window) visit(t *tabs.Tab) {
 	if t != nil && win.focused {
 		win.alerts.visited(t.ID)
+		win.system.remove(t.ID)
 	}
 }
 

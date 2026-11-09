@@ -50,6 +50,7 @@ func sharedAgentRows(win *window) []settingRow {
 		}},
 		settingRow{label: "Chime when an agent is done", ctrls: []ctrl{{kind: ctlToggle, id: "chime_done", on: c.ChimeDone}}},
 		settingRow{label: "Flash the taskbar", hint: "When kaze is in the background", ctrls: []ctrl{{kind: ctlToggle, id: "taskbar_flash", on: c.TaskbarFlash}}},
+		settingRow{label: "System notifications", hint: win.systemNotificationHint(), ctrls: []ctrl{{kind: ctlToggle, id: "system_notifications", on: c.SystemNotifications}}},
 		settingRow{label: `"Done" toast stays for`, ctrls: []ctrl{{
 			kind: ctlSegmented, id: "done_toast", options: []string{"3s", "6s", "10s", "Until seen"},
 			selected: choiceIndex(doneToasts, c.DoneToast, 1),
@@ -217,6 +218,13 @@ func claudeAct(win *window, id string, arg int) {
 		win.alertMu.Lock()
 		win.opt.Config.TaskbarFlash = on
 		win.alertMu.Unlock()
+		win.saveSetting(id, on)
+	case "system_notifications":
+		win.opt.Config.SystemNotifications = on
+		win.system.setEnabled(on)
+		if on && win.system != nil {
+			win.system.backend.Retry()
+		}
 		win.saveSetting(id, on)
 	case "done_toast":
 		if arg >= 0 && arg < len(doneToasts) {

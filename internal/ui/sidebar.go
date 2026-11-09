@@ -788,6 +788,8 @@ func runHeaderState(run sideRun, th theme.Chrome) (string, color.NRGBA) {
 	switch {
 	case run.Down > 0:
 		return strconv.Itoa(run.Down) + " down", th.UsageHigh
+	case run.NotStarted > 0:
+		return strconv.Itoa(run.NotStarted) + " not started", th.Muted
 	case run.Ready > 0:
 		return strconv.Itoa(run.Ready) + " ready", th.Muted
 	}

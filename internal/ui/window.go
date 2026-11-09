@@ -39,6 +39,7 @@ import (
 	"github.com/beefysalad/kaze-terminal/internal/skills"
 	"github.com/beefysalad/kaze-terminal/internal/sound"
 	"github.com/beefysalad/kaze-terminal/internal/subagents"
+	"github.com/beefysalad/kaze-terminal/internal/sysnotify"
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
 	"github.com/beefysalad/kaze-terminal/internal/term"
 	"github.com/beefysalad/kaze-terminal/internal/theme"
@@ -54,6 +55,10 @@ type Options struct {
 	Bench    *bench.Recorder // nil unless KAZE_BENCH is set
 	// Workspace is the name from --workspace; it wins over the startup_workspace setting.
 	Workspace string
+	// ShellEnv scopes launch helpers to child shells, preserving each tab's identity.
+	ShellEnv func([]string) []string
+	// ShellsClosed reports whether every PTY released before the shutdown limit.
+	ShellsClosed func(released bool)
 }
 
 const (
@@ -157,6 +162,8 @@ type window struct {
 	chime       func(time.Time) // sound.Player.Play; nil until a chime is on or tested
 	flash       func()          // flashes the taskbar button
 	toastTag    *int
+	system      *systemNotifications
+	systemTabs  []*tabs.Tab                  // retained scratch for publishing notification metadata
 	liveMgr     atomic.Pointer[tabs.Manager] // win.mgr, for onNotify
 	snapActive  atomic.Int64                 // active TabID, mirrored for onNotify
 	snapFocused atomic.Bool
@@ -258,6 +265,7 @@ func Run(w *app.Window, opt Options) error {
 	win.initUpdates()
 	win.initResources()
 	win.initBattery()
+	win.initSystemNotifications(sysnotify.New)
 	if !win.custom {
 		win.lights = newMacBridge(win.nativeRunner(), win.w.Invalidate, 42, 14) // nil off macOS
 	}
@@ -310,8 +318,45 @@ func shellName(argv []string) string {
 
 func (win *window) loop() error {
 	var ops op.Ops
+	// A minimized Gio window has no frames. Pump one native event at a time
+	// so notification activation can reach the UI goroutine independently.
+	events := make(chan event.Event)
+	processed := make(chan struct{})
+	stop := make(chan struct{})
+	defer close(stop)
+	go func() {
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+			}
+			e := win.w.Event()
+			select {
+			case events <- e:
+			case <-stop:
+				return
+			}
+			select {
+			case <-processed:
+			case <-stop:
+				return
+			}
+		}
+	}()
+	var activation <-chan string
+	if win.system != nil {
+		activation = win.system.activations
+	}
 	for {
-		switch e := win.w.Event().(type) {
+		var next event.Event
+		select {
+		case id := <-activation:
+			win.systemActivation(id)
+			continue
+		case next = <-events:
+		}
+		switch e := next.(type) {
 		case app.DestroyEvent:
 			win.finish()
 			return e.Err
@@ -338,11 +383,24 @@ func (win *window) loop() error {
 		default:
 			if h, ok := viewHandle(e); ok {
 				win.hwnd.Store(h)
+				if win.system != nil && win.custom {
+					win.system.backend.SetWindow(h)
+					if win.opt.Config.SystemNotifications {
+						win.system.backend.CheckPermission()
+					}
+				}
 			}
 			if v, ok := macView(e); ok {
 				win.lights.viewEvent(v)
+				if win.system != nil {
+					win.system.backend.SetWindow(v)
+					if win.opt.Config.SystemNotifications {
+						win.system.backend.CheckPermission()
+					}
+				}
 			}
 		}
+		processed <- struct{}{}
 	}
 }
 
@@ -382,6 +440,7 @@ func (win *window) frameOrShutdown(gtx layout.Context) error {
 
 // shutdown closes the alert listener and every shell, together within shutdownWait.
 func (win *window) shutdown() {
+	win.system.close()
 	win.resources.close()
 	win.battery.close()
 	start := time.Now()
@@ -398,6 +457,9 @@ func (win *window) shutdown() {
 	released := true
 	if win.mgr != nil {
 		released = win.mgr.CloseAllReleased()
+	}
+	if win.opt.ShellsClosed != nil {
+		win.opt.ShellsClosed(released)
 	}
 	win.finishRestore(released)
 	if done != nil {
@@ -439,6 +501,10 @@ func (win *window) setFocused(f bool) {
 		}
 	}
 	win.snapFocused.Store(f)
+	win.system.focus(f)
+	if f && win.system != nil && win.opt.Config.SystemNotifications {
+		win.system.backend.CheckPermission()
+	}
 	if !f {
 		win.dropKeyEdit()
 		// Windows may never send Leave once another window takes the pointer.
@@ -477,6 +543,9 @@ func (win *window) start(env []string, dir string) (ptyx.Session, error) {
 		dir = win.plainStartDir()
 	}
 	cols, rows := win.mgr.Size()
+	if win.opt.ShellEnv != nil {
+		env = win.opt.ShellEnv(env)
+	}
 	return ptyx.Start(win.opt.Shell, cols, rows, env, dir)
 }
 
@@ -690,6 +759,7 @@ func (win *window) frame(gtx layout.Context) error {
 	if wake := win.detectAgents(gtx.Now); !wake.IsZero() {
 		gtx.Execute(op.InvalidateCmd{At: wake}) // a tab printed during the last check's second
 	}
+	win.publishSystemMetadata() // reflect this frame's hook and detected-agent updates
 	win.visit(win.shownTab())
 	if v, ok := win.keyView(); ok && v.tag != win.termTag {
 		win.visit(v.tab) // the docked member being typed into is seen too

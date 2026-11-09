@@ -1,8 +1,34 @@
 # kaze handoff
 
-Last updated: 2026-11-07, release 0.35 (the approved wind K as the app icon, website and README logo, PR #174; `docs/site-assets/kaze-about.png` still shows the old About page and needs retaking). Before that, release 0.34 (the branch launcher, its `new_branch_session` shortcut, the Kaze-made worktree cleanup and `internal/branchsession` removed, PR #171; old `sidebar_launcher*` keys load quietly, an old `[keys] new_branch_session` warns; next ideas filed as #167 smooth scrolling and #172 system notifications). Before that, release 0.33 (the Kaze mark and name in the title bar, after the traffic lights on macOS: **check the Mac bar by hand**, layout is unit-tested and Windows captures were inspected; the Windows exe details carry the real version, name and publisher, PR #168; `TestWinresMatchesVersion` keeps them in step, so the old "rerun go-winres" to-dos below are done). Before that, release 0.32 (five more themes and one UI font, PR #165). Before that, release 0.31 (the palette redesign, PR #163, and editable shortcuts, PR #162). Before that, release 0.30 (find in the terminal and docked tabs, #155 / PR #156). Before that, release 0.29 (battery on macOS, #139 / PR #158; the About page redesign, PR #160; the lander's `kaze-about.png` still shows the old page and needs retaking). Before that, release 0.28.2 (.md links open the file the agent touched, #143 / PR #153; uninstall page #112 designed and planned on `feat/uninstall`). Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-09 (#180 and #172 implemented locally, not released). Latest release: 0.35 (the approved wind K as the app icon, website and README logo, PR #174; `docs/site-assets/kaze-about.png` still shows the old About page and needs retaking). Before that, release 0.34 (the branch launcher, its `new_branch_session` shortcut, the Kaze-made worktree cleanup and `internal/branchsession` removed, PR #171; old `sidebar_launcher*` keys load quietly, an old `[keys] new_branch_session` warns; next ideas filed as #167 smooth scrolling and #172 system notifications). Before that, release 0.33 (the Kaze mark and name in the title bar, after the traffic lights on macOS: **check the Mac bar by hand**, layout is unit-tested and Windows captures were inspected; the Windows exe details carry the real version, name and publisher, PR #168; `TestWinresMatchesVersion` keeps them in step, so the old "rerun go-winres" to-dos below are done). Before that, release 0.32 (five more themes and one UI font, PR #165). Before that, release 0.31 (the palette redesign, PR #163, and editable shortcuts, PR #162). Before that, release 0.30 (find in the terminal and docked tabs, #155 / PR #156). Before that, release 0.29 (battery on macOS, #139 / PR #158; the About page redesign, PR #160; the lander's `kaze-about.png` still shows the old page and needs retaking). Before that, release 0.28.2 (.md links open the file the agent touched, #143 / PR #153; uninstall page #112 designed and planned on `feat/uninstall`). Read this first when you pick up kaze on another machine.
 
 ## Where things stand
+
+**Issues #180 and #172 are implemented locally (2026-11-09), not released.** On
+`fix/issues-180-172`, Codex session restoration now uses `codex --no-daemon resume`
+so restored tabs retain their own hook environment. Three bounded regression
+tests failed before the change and passed afterward; the UI package tests and
+vet passed. Manually started shared-daemon clients still inherit the daemon's
+original tab environment. The owner approved the Kaze-only launch wrapper on
+2026-11-08; it now isolates recognized local launches, with documented bypasses
+for aliases, absolute paths, PATH overrides and remote/unknown forms. Private
+launchers are removed only after all PTYs release, before the app exits.
+Audit: `docs/audits/2026-11-08-codex-tab-isolation.md`. #172's native notification
+design and TDD plan were approved on 2026-11-08. The native adapters, controller
+and Settings integration are implemented and independently reviewed. Automated
+tests and macOS/Windows builds pass; native delivery/click checks remain open.
+Audit: `docs/audits/2026-11-08-system-notifications.md`. Final full tests, vet,
+focused race checks, native macOS build and Windows amd64/arm64 builds pass.
+Windows-only native test binaries compile for both architectures but were not
+executed here. Real Codex sessions and native notification delivery/clicks still
+need owner checks. A separate final Mac bundle at
+`/tmp/kaze-issues-final-y4RNnS/Kaze.app` passes strict signature validation; it
+was never launched or installed over the owner's copy. The full suite exposed
+an existing dock-test asynchronous-write race; the assertion now uses the
+existing bounded wait and retains the routing check.
+Both designs/plans are dated `2026-11-08` under `docs/superpowers/`. The owner
+authorized committing, pushing and opening a review PR on 2026-11-09. No merge,
+version bump or release has been performed for this work.
 
 **Release 0.32 ships five more themes and one font (PR #165).** Matcha, Kōyō (`koyo`),
 Hai, Fuji (dark) and Kiri (light) join the five, ten in all; the owner asked for fewer light ones, so only

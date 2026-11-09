@@ -42,6 +42,9 @@ type wsMember struct {
 	promptAt      uint64   // the shell's prompt reports when its line was typed; a later one means it finished
 	run           workspaces.TabRun
 	hideBanner    bool // the owner dismissed a failure banner
+	restored      bool // reopened after a restart; its commands wait for Run
+	inUse         bool // restored, then typed into: Run leaves it alone
+	resumed       bool // restored with an agent conversation, not its commands
 }
 
 // wsResult is one probe's answer for every member of a run waiting on dep.
@@ -146,6 +149,9 @@ func (win *window) runWorkspace(id string) {
 		return
 	}
 	if r := win.openRun(id); r != nil {
+		if win.startRestored(ws, r) {
+			return
+		}
 		for _, m := range r.members {
 			if m.tab != 0 && win.mgr.Has(m.tab) {
 				win.selectTab(m.tab)
@@ -188,7 +194,7 @@ func (win *window) launch(ws workspaces.Workspace, plan []wsPlan, warns []string
 		shown = a.ID
 	}
 	for i, p := range plan {
-		m := &wsMember{title: p.tab.Title, dir: p.dir, cmds: p.tab.Commands, run: workspaces.TabRun{Line: p.line, Wait: p.tab.Wait, Port: p.tab.Port, Started: now}}
+		m := &wsMember{title: p.tab.Title, dir: p.dir, cmds: p.tab.Commands, run: planRun(p, now)}
 		run.members = append(run.members, m)
 		opts := tabs.StartOpts{
 			Dir: p.dir, Title: p.tab.Title, Color: p.tab.Color,
@@ -493,6 +499,9 @@ func (win *window) memberOf(t *tabs.Tab) *wsMember {
 // takeOver cancels t's automatic launch because the owner is typing into it.
 // Call it before the input is forwarded.
 func (win *window) takeOver(t *tabs.Tab) {
+	if m := win.memberOf(t); m != nil && m.restored {
+		m.restored, m.inUse = false, true
+	}
 	if m := win.memberOf(t); m != nil && !m.run.Settled() {
 		win.wsEvent(m, t, workspaces.UserInputEvent{})
 	}
