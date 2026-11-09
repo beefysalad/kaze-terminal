@@ -22,7 +22,19 @@
     <div class="section-intro"><a class="archive-back" href="./#changelog">Back to Kaze</a><h1 id="changelog-title">Changelog.</h1><p>Features, improvements and fixes, release by release. Kaze checks for updates in Settings, Updates.</p></div>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.35</span><span class="badge">Latest</span><time datetime="2026-11-07">Nov 7, 2026</time></div>
+        <div class="release-meta"><span class="version">0.36</span><span class="badge">Latest</span><time datetime="2026-11-09">Nov 9, 2026</time></div>
+        <div class="release-body">
+          <h3>System notifications and separate Codex tabs</h3>
+          <ul>
+            <li><b>System notifications:</b> while Kaze is in the background, agent alerts also appear as macOS and Windows notifications. The newest alert replaces the older one for that session, and clicking it takes you to the session. Turn it off in Settings, Agents.</li>
+            <li><b>Codex tabs stay separate:</b> Codex started in a Kaze tab now runs on its own, so its helpers and alerts stay with the right session. This needs a Codex version with <code>--no-daemon</code>; older versions start as before, without the separation.</li>
+            <li><b>Restored workspaces say what’s running:</b> after a restart, workspace tabs whose commands haven’t run say Not started instead of “all up”. Press Run to start them in the tabs already open. Nothing starts by itself.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.35</span><time datetime="2026-11-07">Nov 7, 2026</time></div>
         <div class="release-body">
           <h3>A new app icon and logo</h3>
           <ul>

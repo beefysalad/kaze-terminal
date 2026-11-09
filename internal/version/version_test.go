@@ -78,7 +78,7 @@ func TestText(t *testing.T) {
 }
 
 func TestNumber(t *testing.T) {
-	if Number != "0.35" {
-		t.Errorf("Number = %q, want 0.35", Number)
+	if Number != "0.36" {
+		t.Errorf("Number = %q, want 0.36", Number)
 	}
 }
