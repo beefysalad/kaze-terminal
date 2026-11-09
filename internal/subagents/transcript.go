@@ -279,17 +279,19 @@ func (tr *Transcript) record(line []byte) {
 	}
 	if entry.Type == "user" {
 		var patch []patchHunk
+		created := false
 		if r := entry.ToolUseResult; len(r) > 0 && r[0] == '{' {
 			var tur struct {
+				Type            string      `json:"type"`
 				StructuredPatch []patchHunk `json:"structuredPatch"`
 			}
 			if json.Unmarshal(r, &tur) == nil {
-				patch = tur.StructuredPatch
+				patch, created = tur.StructuredPatch, tur.Type == "create"
 			}
 		}
 		for i := range entry.Message.Content {
 			if b := &entry.Message.Content[i]; b.Type == "tool_result" && b.ToolUseID != "" {
-				tr.result(b.ToolUseID, b.IsError, b.Content, patch)
+				tr.result(b.ToolUseID, b.IsError, b.Content, patch, created)
 			}
 		}
 		return
@@ -347,19 +349,19 @@ func (tr *Transcript) newStep(id, name string, at time.Time, in *stepInput) Tran
 		st.Path = shortPath(in.FilePath, tr.cwd)
 	case "Edit":
 		st.Path = shortPath(in.FilePath, tr.cwd)
-		st.Added, st.Removed, st.Diff = lineDiff(in.OldString, in.NewString, nil)
+		st.Added, st.Removed, st.Diff, st.DiffMore = lineDiff(in.OldString, in.NewString, nil, 0)
 	case "MultiEdit":
 		st.Path = shortPath(in.FilePath, tr.cwd)
 		for _, e := range in.Edits {
-			a, r, d := lineDiff(e.OldString, e.NewString, st.Diff)
+			a, r, d, more := lineDiff(e.OldString, e.NewString, st.Diff, st.DiffMore)
 			st.Added += a
 			st.Removed += r
-			st.Diff = d
+			st.Diff, st.DiffMore = d, more
 		}
 	case "Write":
 		st.Path = shortPath(in.FilePath, tr.cwd)
 		st.Added = countLines(in.Content)
-		st.Diff = writeDiff(in.Content)
+		st.Diff, st.DiffMore = writeDiff(in.Content)
 	case "Grep", "Glob":
 		st.Pattern = stepLine(in.Pattern)
 		if in.Path != "" {
@@ -410,8 +412,9 @@ type patchHunk struct {
 }
 
 // result fills in a call's outcome. The call is looked for among the last
-// resultLookBack steps (no map); an unknown id is ignored.
-func (tr *Transcript) result(id string, isErr bool, raw json.RawMessage, patch []patchHunk) {
+// resultLookBack steps (no map); an unknown id is ignored. created says the
+// tool reported making a new file.
+func (tr *Transcript) result(id string, isErr bool, raw json.RawMessage, patch []patchHunk, created bool) {
 	at := -1
 	for i := len(tr.Steps) - 1; i >= 0 && i >= len(tr.Steps)-resultLookBack; i-- {
 		if tr.Steps[i].ID == id {
@@ -456,6 +459,8 @@ func (tr *Transcript) result(id string, isErr bool, raw json.RawMessage, patch [
 			tr.stepBytes -= stepDetail(st)
 			st.Added, st.Removed, st.Diff, st.DiffMore = patchDiff(patch)
 			tr.stepBytes += stepDetail(st)
+		} else if created && st.Tool == "Write" && at >= tr.detailFrom {
+			st.Diff = numberedFromOne(st.Diff)
 		}
 	}
 	tr.Version++
@@ -606,8 +611,10 @@ func commitLine(s string) (hash, subject string) {
 
 // lineDiff counts the lines an edit adds and removes (common leading and
 // trailing lines trimmed) and appends to diff, within the caps, up to two
-// context lines on each side, the removed lines, then the added ones.
-func lineDiff(old, new string, diff []DiffLine) (added, removed int, out []DiffLine) {
+// context lines on each side, the removed lines, then the added ones. more is
+// the rows already left out, and grows by every row left out here: the first
+// row over a cap ends the listing, so later, shorter ones leave no hole.
+func lineDiff(old, new string, diff []DiffLine, more int) (added, removed int, out []DiffLine, moreOut int) {
 	a, b := splitLines(old), splitLines(new)
 	p := 0
 	for p < len(a) && p < len(b) && a[p] == b[p] {
@@ -622,14 +629,14 @@ func lineDiff(old, new string, diff []DiffLine) (added, removed int, out []DiffL
 	for _, d := range diff {
 		used += len(d.Text)
 	}
+	full := more > 0
 	put := func(kind byte, lines []string) {
 		for _, l := range lines {
-			if len(diff) >= maxDiffLines {
-				return
-			}
 			d := detailLine(l)
-			if used+len(d) > maxStepDetail {
-				return
+			if full || len(diff) >= maxDiffLines || used+len(d) > maxStepDetail {
+				full = true
+				more++
+				continue
 			}
 			used += len(d)
 			diff = append(diff, DiffLine{Kind: kind, Text: d})
@@ -639,7 +646,7 @@ func lineDiff(old, new string, diff []DiffLine) (added, removed int, out []DiffL
 	put('-', a[p:len(a)-s])
 	put('+', b[p:len(b)-s])
 	put(' ', a[len(a)-s:min(len(a), len(a)-s+2)])
-	return added, removed, diff
+	return added, removed, diff, more
 }
 
 func splitLines(s string) []string {
@@ -658,13 +665,14 @@ func countLines(s string) int {
 	return strings.Count(s, "\n") + 1
 }
 
-// writeDiff is a new file's first lines as additions, within the caps.
-func writeDiff(s string) []DiffLine {
-	var diff []DiffLine
+// writeDiff is a new file's first lines as additions, within the caps, and
+// how many lines did not fit.
+func writeDiff(s string) (diff []DiffLine, more int) {
+	total := countLines(s)
 	used := 0
-	for rest := strings.TrimSuffix(s, "\n"); rest != "" && len(diff) < maxDiffLines; {
+	for rest, ok := strings.TrimSuffix(s, "\n"), total > 0; ok && len(diff) < maxDiffLines; {
 		var ln string
-		ln, rest, _ = strings.Cut(rest, "\n")
+		ln, rest, ok = strings.Cut(rest, "\n")
 		d := detailLine(ln)
 		if used+len(d) > maxStepDetail {
 			break
@@ -672,7 +680,19 @@ func writeDiff(s string) []DiffLine {
 		used += len(d)
 		diff = append(diff, DiffLine{Kind: '+', Text: d})
 	}
-	return diff
+	return diff, total - len(diff)
+}
+
+// numberedFromOne is a brand-new file's rows with their line numbers, which
+// are known: the rows are the file's first lines, in order. It is a new slice
+// so a recording of the unnumbered rows is drawn again.
+func numberedFromOne(diff []DiffLine) []DiffLine {
+	out := make([]DiffLine, len(diff))
+	for i, d := range diff {
+		d.New = i + 1
+		out[i] = d
+	}
+	return out
 }
 
 func stepDetail(s *TranscriptStep) int {
