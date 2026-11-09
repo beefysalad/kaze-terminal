@@ -288,10 +288,11 @@ Sessions are listed down the left side, in place of a tab strip.
 Along the bottom, left to right: the folder and branch of the session in front (with its lines
 added and removed), then an **Update** pill when a newer kaze is out, the running subagents
 (amber when one waits on you), workspace dots with how many members are up, CPU and memory
-for Kaze and its sessions, Claude usage as small meters, the tab count and, on a laptop, the
-battery. Clicking the update, agents, workspace dots or Claude usage
+for Kaze and its sessions, the Claude model of the session in front (such as Opus 5.5), Claude
+usage as small meters, the tab count and, on a laptop, the battery. Each subagent's own model
+is in the header of its panel. Clicking the update, agents, workspace dots or Claude usage
 opens what they point at. In a narrow window the least important parts give way first: the
-battery, then the tab count, then the resource label and meter, then other labels, so nothing
+model shortens and then hides, then the battery, then the tab count, then the resource label and meter, then other labels, so nothing
 overlaps.
 
 **Battery (Windows and macOS):** at the far right, a small battery that fills to the level and

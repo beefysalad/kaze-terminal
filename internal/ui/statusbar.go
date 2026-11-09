@@ -4,6 +4,8 @@ import (
 	"image"
 	"strconv"
 	"strings"
+
+	"github.com/beefysalad/kaze-terminal/internal/usage"
 )
 
 // statusGroup is one part of the status bar (spec 6.1).
@@ -20,6 +22,7 @@ const (
 	grpTabs
 	grpNotice
 	grpBattery // last, so the groups above keep their numbers
+	grpModel
 )
 
 // statusDims are the status bar's sizes in px.
@@ -39,6 +42,7 @@ type statusLayout struct {
 		BranchCounts                           bool // the +N -M were dropped
 	}
 	FolderText, BranchText, NoticeText string
+	ModelText                          string
 	UsageKeys                          []string // the usage entries shown, in order
 	Seps                               []int    // x of each hairline between right-hand groups
 	Tight                              bool     // padding reduced and separators dropped (step 7)
@@ -78,7 +82,8 @@ type statusFit struct {
 	folderBudget, branchBudget                         int // -1: as is; 0: omitted
 	noCounts, compactPills, noMeters, tight, aggregate bool
 	noServers, noBranch, noUpdate, noAgents            bool
-	usageDrop                                          int // usage entries dropped from the end (ctx, wk, 5h)
+	usageDrop                                          int  // usage entries dropped from the end (ctx, wk, 5h)
+	modelShort, noModel                                bool // the model is the first thing to give way
 }
 
 // layoutStatusBar fits the model into width px, taking the spec's steps in
@@ -86,6 +91,8 @@ type statusFit struct {
 func layoutStatusBar(m statusModel, width int, measure func(s string, mono bool) int, d statusDims) statusLayout {
 	f := statusFit{folderBudget: -1, branchBudget: -1}
 	steps := []func(){
+		func() { f.modelShort = true },
+		func() { f.noModel = true },
 		func() { f.noBattery = true }, // the battery goes first (issue #111)
 		func() { f.noTabs = true },
 		func() { f.resourceLabel = true },
@@ -217,6 +224,13 @@ func statusPlace(m statusModel, width int, measure func(s string, mono bool) int
 			w += d.Meter + gap/2
 		}
 		right = append(right, item{grpMem, 2*ip + w, true})
+	}
+	if m.Model != "" && !f.noModel {
+		p.ModelText = m.Model
+		if f.modelShort {
+			p.ModelText = usage.ModelFamily(m.Model)
+		}
+		right = append(right, item{grpModel, 2*ip + measure(p.ModelText, true), true})
 	}
 	keys := []string{}
 	if n := len(m.Usage) - f.usageDrop; n > 0 {

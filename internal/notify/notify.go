@@ -98,6 +98,7 @@ type Usage struct {
 	FiveHour *Window  `json:"five_hour,omitempty"`
 	Week     *Window  `json:"week,omitempty"`
 	Ctx      *float64 `json:"ctx,omitempty"`
+	Model    string   `json:"model,omitempty"`
 }
 
 type Server struct {

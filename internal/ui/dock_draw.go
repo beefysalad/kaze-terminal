@@ -428,10 +428,29 @@ func (win *window) drawDockAgent(gtx layout.Context, s *dockSession, a *subagent
 	aCall, aSize := c.labelW(gtx, "Activity", 11, hc.text, font.Medium)
 	rCall, rSize := c.labelW(gtx, "Report", 11, hc.text, font.Medium)
 	segW := aSize.X + rSize.X + dp(40)
+	model := ""
+	if s.tr != nil {
+		model = s.tr.Model
+	}
+	var mCall op.CallOp
+	var mSize image.Point
+	if model != "" {
+		mCall, mSize = c.labelW(gtx, model, 11, hc.text, font.Normal)
+	}
 	room := max(right-dp(12)-segW-dp(12)-eSize.X-dp(8)-x, 0)
+	if model != "" {
+		if room-mSize.X-dp(12) >= dp(dockTaskMinDp) {
+			room -= mSize.X + dp(12)
+		} else {
+			model = "" // the task keeps a readable width in a narrow panel
+		}
+	}
 	tCall, tSize := c.fitSide(gtx, a.Task, 11, room, hc.text)
 	x = text(tCall, tSize, x, a.Task) + dp(8)
 	x = text(eCall, eSize, x, el) + dp(12)
+	if model != "" {
+		x = text(mCall, mSize, x, model) + dp(12)
+	}
 	seg := image.Rect(x, mid-dp(10), x+segW, mid+dp(10))
 	if seg.Max.X <= right {
 		paint.FillShape(ops, tint(th.Border, 0x80), clip.UniformRRect(seg, dp(6)).Op(ops))
@@ -545,3 +564,6 @@ func (win *window) drawShownDock(gtx layout.Context) {
 	paint.FillShape(gtx.Ops, win.ui.th.Accent, clip.Rect(l).Op())
 	win.dock.focusLine = l
 }
+
+// dockTaskMinDp is the task text's width below which an agent's model gives way.
+const dockTaskMinDp = 80

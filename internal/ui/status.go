@@ -86,6 +86,11 @@ func (win *window) pruneLocs(list []*tabs.Tab) {
 			delete(win.locs, id)
 		}
 	}
+	for id := range win.models {
+		if !slices.ContainsFunc(list, func(t *tabs.Tab) bool { return t.ID == id }) {
+			delete(win.models, id)
+		}
+	}
 	for id := range win.ctx {
 		if !slices.ContainsFunc(list, func(t *tabs.Tab) bool { return t.ID == id }) {
 			delete(win.ctx, id)
@@ -186,6 +191,7 @@ type statusModel struct {
 	Agents, Waiting int    // running and waiting subagents; waiting includes session waits
 	Servers         []serverDot
 	Usage           []usage.Detail
+	Model           string
 	Tabs            int
 	Resources       resources.Snapshot
 	Notice          string
@@ -221,6 +227,9 @@ func (win *window) statusModel(now time.Time) statusModel {
 		if t != nil {
 			if e, ok := win.ctx[t.ID]; ok && e.cwdSeq == cwdSeq(t) {
 				u.Ctx = &e.pct
+			}
+			if e, ok := win.models[t.ID]; ok && e.cwdSeq == cwdSeq(t) {
+				m.Model = e.name
 			}
 		}
 		m.Usage = usage.Details(u, now)

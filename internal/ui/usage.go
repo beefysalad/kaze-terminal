@@ -76,6 +76,12 @@ func (win *window) drainUsage() {
 			continue
 		}
 		win.noteAgent(notify.Msg{Kind: notify.KindUsage}, r.tab, r.shell)
+		if name := usage.ModelName("", cleanText(r.u.Model)); name != "" {
+			if win.models == nil {
+				win.models = map[tabs.TabID]modelEntry{}
+			}
+			win.models[r.tab] = modelEntry{name: name, cwdSeq: r.cwdSeq}
+		}
 		if r.u.Ctx == nil {
 			delete(win.ctx, r.tab)
 			continue
@@ -113,4 +119,10 @@ func (c *chrome) usageColor(l usage.Level) color.NRGBA {
 		return c.th.Needs
 	}
 	return c.th.Folder
+}
+
+// modelEntry is a tab's model and the folder-report count when it came, like ctxEntry.
+type modelEntry struct {
+	name   string
+	cwdSeq uint64
 }

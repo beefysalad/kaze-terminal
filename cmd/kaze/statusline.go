@@ -20,6 +20,10 @@ const (
 )
 
 type statusInput struct {
+	Model struct {
+		ID      string `json:"id"`
+		Display string `json:"display_name"`
+	} `json:"model"`
 	Context struct {
 		Used *float64 `json:"used_percentage"`
 	} `json:"context_window"`
@@ -59,7 +63,7 @@ func runStatusline(stdin io.Reader, stdout io.Writer, env func(string) string, n
 	if json.Unmarshal(raw, &in) != nil {
 		return 0
 	}
-	u := notify.Usage{FiveHour: in.Limits.FiveHour.window(), Week: in.Limits.Week.window(), Ctx: in.Context.Used}
+	u := notify.Usage{FiveHour: in.Limits.FiveHour.window(), Week: in.Limits.Week.window(), Ctx: in.Context.Used, Model: usage.ModelName(in.Model.ID, in.Model.Display)}
 	if line := usage.Line(u, now); line != "" {
 		fmt.Fprintln(stdout, line)
 	}
