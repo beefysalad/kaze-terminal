@@ -225,6 +225,10 @@ func (win *window) restoreStartup() bool {
 	}
 	var selected tabs.TabID
 	groups := map[uint64]*wsRun{}
+	var recipes workspaces.Document
+	if win.cfgPath != "" {
+		recipes, _, _ = workspaces.Load(workspaces.Path(win.cfgPath))
+	}
 	// Startup warnings go to the first tab, as on the workspace path; each tab
 	// also shows its own restore warnings, never another tab's.
 	startWarns := append([]string(nil), win.opt.Warnings...)
@@ -245,7 +249,7 @@ func (win *window) restoreStartup() bool {
 			if r == nil {
 				win.wsr.next++
 				ctx, cancel := context.WithCancel(context.Background())
-				r = &wsRun{id: win.wsr.next, workspace: e.Workspace, name: e.WorkspaceName, ctx: ctx, cancel: cancel}
+				r = &wsRun{id: win.wsr.next, workspace: e.Workspace, name: e.WorkspaceName, ctx: ctx, cancel: cancel, summarized: true}
 				groups[e.Run] = r
 				if win.runs == nil {
 					win.runs = map[uint64]*wsRun{}
@@ -272,7 +276,7 @@ func (win *window) restoreStartup() bool {
 		}
 		if group != nil {
 			r := win.runs[group.Run]
-			m := &wsMember{tab: t.ID, title: e.FixedTitle, dir: dir}
+			m := &wsMember{tab: t.ID, title: e.FixedTitle, dir: dir, resumed: resume != "", restored: resume == "" && restoredHasCommands(recipes, e)}
 			m.run.Event(workspaces.StartedEvent{})
 			r.members = append(r.members, m)
 		}

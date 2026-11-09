@@ -13,6 +13,12 @@ import (
 func (win *window) memberStatus(m *wsMember, t *tabs.Tab) (text string, needs, failed bool) {
 	r := &m.run
 	switch {
+	case m.restored:
+		return "Not started", false, false
+	case m.inUse:
+		return "In use", false, false
+	case m.resumed:
+		return "Resumed", false, false
 	case r.State == workspaces.Failed:
 		return "Failed", false, true
 	case r.State == workspaces.Cancelled:

@@ -144,6 +144,8 @@ func (win *window) listRows() (rows []settingRow) {
 		run, strong, tone := "Run", true, "off"
 		switch state {
 		case "Closed":
+		case "Not started":
+			tone = "warn"
 		case "Open", "Starting":
 			run, strong, tone = "Go to tabs", false, "run"
 		default:
@@ -215,6 +217,8 @@ func (win *window) wsBadge(id string) string {
 	switch {
 	case needs:
 		return "Needs attention"
+	case len(win.waitingForRun(r)) > 0:
+		return "Not started"
 	case starting:
 		return "Starting"
 	case open < len(r.members):
@@ -624,7 +628,7 @@ func wsAct(win *window, id string, arg int) {
 
 // goOrRun focuses an open run's first tab, or starts the workspace.
 func (win *window) goOrRun(id string) {
-	if r := win.openRun(id); r != nil {
+	if r := win.openRun(id); r != nil && len(win.waitingForRun(r)) == 0 {
 		for _, m := range r.members {
 			if m.tab != 0 && win.mgr.Has(m.tab) {
 				win.selectTab(m.tab)

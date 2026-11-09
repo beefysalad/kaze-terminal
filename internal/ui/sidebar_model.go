@@ -49,12 +49,13 @@ type sideMember struct {
 
 // sideRun is one workspace run's section.
 type sideRun struct {
-	Run     uint64
-	Name    string
-	Down    int
-	Ready   int  // members whose commands finished and whose shell is still open
-	Mark    mark // the strongest member mark, needs over done
-	Members []sideMember
+	Run        uint64
+	Name       string
+	Down       int
+	Ready      int  // members whose commands finished and whose shell is still open
+	NotStarted int  // restored members whose commands wait for Run
+	Mark       mark // the strongest member mark, needs over done
+	Members    []sideMember
 }
 
 type sideModel struct {
@@ -280,6 +281,8 @@ func (win *window) buildSideRuns(out []sideRun, ids []uint64) []sideRun {
 			switch {
 			case (exited || closed) && !failed:
 				mem.Status = "stopped" // a closed or exited shell is not starting or waiting
+			case text == "Not started":
+				sr.NotStarted++
 			case text == "Finished":
 				// The commands returned and the shell is still open, such as after
 				// activating a venv. kaze sees no exit code, so it is not called down (#118).

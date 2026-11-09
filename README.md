@@ -760,13 +760,15 @@ The ready shell finds Claude or Codex using its own PATH, including paths set in
 files when Kaze opens from Finder or restarts after an update. Missing commands and resume
 errors appear in that tab as shell or agent output. The allowlisted agent command
 is unquoted so shell aliases, functions and PATH installs all resolve normally.
-Codex resumes use `codex --no-daemon resume <conversation>` so each tab's hooks
-keep its own tab identity. The local launch wrapper also isolates normal manual
-starts; custom launch paths need the explicit flag as described under Codex setup.
+Codex resumes go through the local launch wrapper, which adds `--no-daemon` when your
+Codex supports it so each tab's hooks keep their own tab identity. Custom launch paths
+need the explicit flag as described under Codex setup.
 
 Running commands, servers, shell variables, scrollback, panel tabs and
 live helpers do not survive exit. Workspace members reopen without replaying their recipe
-commands. Kaze saves small metadata snapshots on changes, including while minimized, so it
+commands: they say **Not started** until you press Run on the workspace, which sends the
+commands into those tabs. Tabs you have typed in and tabs with a resumed agent are left
+alone. Kaze saves small metadata snapshots on changes, including while minimized, so it
 can recover the last saved set after a crash. Changes in the last 250 ms may be lost.
 
 Turn off **Restore sessions on launch** under Settings > Workspaces > Startup to clear the

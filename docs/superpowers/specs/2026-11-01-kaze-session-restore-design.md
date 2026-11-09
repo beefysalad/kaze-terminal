@@ -28,7 +28,7 @@ Interrupted agent turns are not automatically submitted again.
   Resumption never uses a folder's latest conversation or a conversation name.
 - Workspace members return with their saved grouping and display metadata, as fresh
   shells or exact resumed conversations. Their recipe commands and dependency waits
-  are not replayed. Running a restored workspace selects its existing members.
+  are not replayed. Running a restored workspace sends its commands into the tabs still waiting (#182).
 - Scratch shells, floating geometry, subagent cards and team orchestration are excluded.
   The main agent's own saved conversation may include historical subagent results;
   Kaze does not launch or claim to restore live helpers. Issue #53 retains its scope.
