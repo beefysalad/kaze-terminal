@@ -7,7 +7,7 @@ import (
 )
 
 // Number is the release version shown in the settings page and `kaze --version`.
-const Number = "0.34"
+const Number = "0.34.1"
 
 // Build is what the Go toolchain recorded about the commit a binary was built from.
 type Build struct {
