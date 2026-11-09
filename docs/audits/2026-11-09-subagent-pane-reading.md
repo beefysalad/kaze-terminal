@@ -24,15 +24,24 @@ machine, so they move by tens of percent between runs.
 
 | Scene | Allocations | Time | Limit |
 |---|---|---|---|
-| Edits open, 1000x600 (`TestOpenDiffsFrameTime`, 3 runs) | 73 | 290, 271, 216 µs | 120 / 400 µs |
-| Edits open, 1400x1000, tall panel, about 30 diff rows (`diffScene`, 5 runs) | 73 | 330, 385, 313, 383, 336 µs | 120 / 400 µs |
-| Folded, 21 steps, 1000x600 (3 runs) | 74 | 519, 249, 233 µs (the first run was a busy one) | 77.7 allocations (74 + 5%) |
-| Folded, 21 steps, eb17e90 against the finished work, median of 5 alternating runs (Task 5 report) | 74 both | 212 µs before, 211 µs after | within 5% |
+| Edits open, 1000x600 (3 runs after the column fix) | 73 | 220, 286, 218 µs | 120 / 400 µs |
+| Edits open, 1400x1000, tall panel, about 30 diff rows (3 runs after the column fix) | 73 | 342, 339, 346 µs | 120 / 400 µs |
+| Folded, 21 steps, 1000x600 (3 runs after the column fix) | 74 | 221, 218, 212 µs | 76.65 allocations and 217 µs (the spec's 73 and 207 µs, + 5%) |
+| Folded, 21 steps, 1400x1000 (3 runs after the column fix) | 78 | 409, 358, 348 µs | the spec has no baseline at this size |
+| Folded, 21 steps, eb17e90 against the finished work, median of 5 alternating runs (Task 5 report) | 74 both | 212 µs before, 211 µs after | shows this work added nothing |
 
-The big window is the one to watch. The 1400x1000 scene sat at 313 to 385 µs in this run. Task 5
-measured the same scene at 357 and 421 µs, so on a loaded machine it can pass the 400 µs line. The
-extra cost over folded there is about 150 µs, thought to be the input router and GPU walking the
-replayed ops, since each row is several labels. Cutting it would mean fewer colours per row. The
+The folded limit is measured against the spec's baseline: 73 allocations and 207 µs on a 1000x600
+frame, so 76.65 allocations and about 217 µs. The folded still frame is 74 allocations, inside that
+limit by count, and about 212 to 221 µs, which sits at the time limit and past it in two of three
+runs, on a machine that moves by tens of percent. Against eb17e90, the commit just before inline
+diffs, it was already 74 allocations and 212 µs, so the 1 allocation and most of the time were there
+before this work. `TestOpenDiffsStayWithinAllocations` guards a limit of 77.7 from eb17e90's 74, one
+step looser than the spec's 76.65.
+
+The big window is the one to watch. The 1400x1000 scene sat at 339 to 346 µs in these runs. Task 5
+measured the same scene at 357 and 421 µs, so on a loaded machine it can pass the 400 µs line. A
+folded pane at that size costs about the same (348 to 409 µs), so most of the time there is the
+big window itself rather than the open edits. The
 1000x600 frame the limits were set on stays under 400 µs in every run. This is a real-session
 check for the owner, not a pass or fail here.
 
@@ -74,12 +83,15 @@ What I looked at, against option B of the mockup, by opening each PNG:
 - The passed command is one line with `done`. The failed edit shows `failed` and its error line.
   The failed command is open, with its command shown (cut off at the bottom of the frame).
 - Reads fold to "Read 2 files", as in B.
+- Code lines up. Each colour span is placed at its character column from one measured character
+  width (a label's own width is rounded and leaves out trailing spaces, which once put false gaps
+  around coloured words and started equal indents at different columns). Rows with the same indent
+  start together, and a line of many colours ends where a plain line of the same length ends
+  (`dock_diff_columns_test.go`). Japanese text in a line is best effort: what follows it moves past
+  it, so that line's later columns no longer match its neighbours.
 
 Seen and not fixed (product code is out of scope for this task):
 
-- Spacing around coloured words is slightly uneven in places, for example extra space after `func`
-  and around `:=` and `nil`. Each colour span is its own label, so a boundary can show a small gap.
-  The row columns still line up at the start of each line. Worth a look in a real session.
 - `!=` draws as the JetBrains Mono ligature `≠`.
 - The Midnight and Washi frames show a terminal that is empty, because the fixture has no output.
 
@@ -91,5 +103,5 @@ delete rows).
 
 ## Owner checks
 
-See `docs/HANDOFF.md`. In short: a real run, odd spacing around colours, a 40-line edit and its
+See `docs/HANDOFF.md`. In short: a real run, a 40-line edit and its
 "N more lines", failed edit and command, fold and reopen, and scrolling on a large window.
