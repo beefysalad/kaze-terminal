@@ -1,5 +1,12 @@
 # Product captures
 
+Subagent pane reading (built on `feat/pane-reading`, not released): Readable activity now opens
+edits inline with line numbers and code colours, folds quiet commands and opens failures. Retake
+`kaze-agents.png` and `kaze-board.png` with a subagent that has edited a few files, so the panel or
+the board preview shows a diff. Any other shot with the old one-line edit rows or the grey detail
+box needs the same. The headless renders in `docs/audits/pane-reading/` are development evidence,
+not product captures.
+
 Issue #172 adds System notifications to Settings > Agents > Alerts. Any capture
 of that page needs a native retake after owner review. Real OS notification
 captures require permission and delivery checks on each platform; do not

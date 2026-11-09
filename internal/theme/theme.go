@@ -14,6 +14,8 @@ type Chrome struct {
 	Needs, Done, ToastBG, ToastLine, ToastFG, ToastGo, ToastTitle, UsageHigh  color.NRGBA
 	// An edit's added and removed lines in the readable agent activity.
 	DiffAddBG, DiffAddFG, DiffDelBG, DiffDelFG color.NRGBA
+	// Token colours for code shown in the readable agent activity.
+	CodeKeyword, CodeString, CodeComment, CodeNumber, CodeName color.NRGBA
 }
 
 // Theme is one selectable look.
@@ -69,6 +71,8 @@ func midnight() Theme {
 			ToastBG: hex(0x1a1f2c), ToastLine: hex(0x2a3142), ToastFG: hex(0xe7e9f0), ToastGo: hex(0xb9a6ff),
 			ToastTitle: hex(0xffffff), UsageHigh: hex(0xff6b6b),
 			DiffAddBG: hex(0x122419), DiffAddFG: hex(0x8fe0b0), DiffDelBG: hex(0x2a1418), DiffDelFG: hex(0xf3a0a8),
+			CodeKeyword: hex(0xb9a6ff), CodeString: hex(0x8fe0b0), CodeComment: hex(0x8a90a2),
+			CodeNumber: hex(0xf2b84b), CodeName: hex(0x8fc8ff),
 		},
 	}
 }
@@ -90,6 +94,8 @@ func sumi() Theme {
 			ToastBG: hex(0x181818), ToastLine: hex(0x222222), ToastFG: hex(0xe4e1da), ToastGo: hex(0xe2553d),
 			ToastTitle: hex(0xffffff), UsageHigh: hex(0xff7a5c),
 			DiffAddBG: hex(0x16261a), DiffAddFG: hex(0xa9d79a), DiffDelBG: hex(0x2c1513), DiffDelFG: hex(0xf0a093),
+			CodeKeyword: hex(0xe08a78), CodeString: hex(0xa9d79a), CodeComment: hex(0x8f8b83),
+			CodeNumber: hex(0xd9b56a), CodeName: hex(0x9fbfdc),
 		},
 	}
 }
@@ -111,6 +117,8 @@ func tide() Theme {
 			ToastBG: hex(0x0c1e30), ToastLine: hex(0x16283d), ToastFG: hex(0xcfe3ef), ToastGo: hex(0x40e0d0),
 			ToastTitle: hex(0xffffff), UsageHigh: hex(0xff9daa),
 			DiffAddBG: hex(0x12292d), DiffAddFG: hex(0x8ff0c2), DiffDelBG: hex(0x2a1c2a), DiffDelFG: hex(0xffb3bd),
+			CodeKeyword: hex(0xc3a6ff), CodeString: hex(0x8ff0c2), CodeComment: hex(0x7fa3b8),
+			CodeNumber: hex(0xffd27a), CodeName: hex(0x7cc8ff),
 		},
 	}
 }
@@ -133,6 +141,8 @@ func washi() Theme {
 			ToastBG: hex(0xfffdf8), ToastLine: hex(0xddd5c6), ToastFG: hex(0x2b2a33), ToastGo: hex(0x3f51b5),
 			ToastTitle: hex(0x2b2a33), UsageHigh: hex(0xc0392b),
 			DiffAddBG: hex(0xd7dfcc), DiffAddFG: hex(0x1f5a37), DiffDelBG: hex(0xedd3c9), DiffDelFG: hex(0x962d22),
+			CodeKeyword: hex(0x6a3a9a), CodeString: hex(0x1f5a37), CodeComment: hex(0x565c50),
+			CodeNumber: hex(0x7a4f00), CodeName: hex(0x1f4f9a),
 		},
 	}
 }
@@ -154,6 +164,8 @@ func sakura() Theme {
 			ToastBG: hex(0x24181f), ToastLine: hex(0x2b1f28), ToastFG: hex(0xeedde6), ToastGo: hex(0xff8fb8),
 			ToastTitle: hex(0xffffff), UsageHigh: hex(0xff93ab),
 			DiffAddBG: hex(0x1c2a20), DiffAddFG: hex(0xbdeac3), DiffDelBG: hex(0x2e1820), DiffDelFG: hex(0xffb3c6),
+			CodeKeyword: hex(0xff8fb8), CodeString: hex(0xa8e0b0), CodeComment: hex(0xa8909e),
+			CodeNumber: hex(0xf3c98b), CodeName: hex(0x9fb6ff),
 		},
 	}
 }
@@ -176,6 +188,8 @@ func matcha() Theme {
 			ToastBG: hex(0x181d14), ToastLine: hex(0x283020), ToastFG: hex(0xdde3cf), ToastGo: hex(0x9cc77a),
 			ToastTitle: hex(0xffffff), UsageHigh: hex(0xf09485),
 			DiffAddBG: hex(0x1a2a17), DiffAddFG: hex(0xb6dd96), DiffDelBG: hex(0x2c1715), DiffDelFG: hex(0xf0a093),
+			CodeKeyword: hex(0xb6dd96), CodeString: hex(0xd9c27a), CodeComment: hex(0x8e9783),
+			CodeNumber: hex(0xf09485), CodeName: hex(0x86a8c9),
 		},
 	}
 }
@@ -198,6 +212,8 @@ func koyo() Theme {
 			ToastBG: hex(0x1f1712), ToastLine: hex(0x2e2219), ToastFG: hex(0xeadccd), ToastGo: hex(0xe8803a),
 			ToastTitle: hex(0xffffff), UsageHigh: hex(0xf47e66),
 			DiffAddBG: hex(0x1f2716), DiffAddFG: hex(0xc2d086), DiffDelBG: hex(0x30170f), DiffDelFG: hex(0xf4a08a),
+			CodeKeyword: hex(0xe8803a), CodeString: hex(0xc2d086), CodeComment: hex(0xa08c7a),
+			CodeNumber: hex(0xf4cc76), CodeName: hex(0x9ab4cc),
 		},
 	}
 }
@@ -220,6 +236,8 @@ func hai() Theme {
 			ToastBG: hex(0x2d3034), ToastLine: hex(0x3c4046), ToastFG: hex(0xd6d8db), ToastGo: hex(0xa6bcd8),
 			ToastTitle: hex(0xf2f3f4), UsageHigh: hex(0xe09a9a),
 			DiffAddBG: hex(0x2c3a2e), DiffAddFG: hex(0xb8d8b0), DiffDelBG: hex(0x40292b), DiffDelFG: hex(0xf0b0b0),
+			CodeKeyword: hex(0xb49ac0), CodeString: hex(0xb0cca8), CodeComment: hex(0xa0a4aa),
+			CodeNumber: hex(0xdcc698), CodeName: hex(0x9ab4d4),
 		},
 	}
 }
@@ -242,6 +260,8 @@ func fuji() Theme {
 			ToastBG: hex(0x1d1a2a), ToastLine: hex(0x2c2740), ToastFG: hex(0xe2dcec), ToastGo: hex(0xc4a7e7),
 			ToastTitle: hex(0xffffff), UsageHigh: hex(0xff98a6),
 			DiffAddBG: hex(0x18291f), DiffAddFG: hex(0xb8e6be), DiffDelBG: hex(0x2e1722), DiffDelFG: hex(0xffb0bc),
+			CodeKeyword: hex(0xc4a7e7), CodeString: hex(0xb8e6be), CodeComment: hex(0x9a92ae),
+			CodeNumber: hex(0xf6dca8), CodeName: hex(0x9fb4f8),
 		},
 	}
 }
@@ -265,6 +285,8 @@ func kiri() Theme {
 			ToastBG: hex(0xf7f9fb), ToastLine: hex(0xcbd3db), ToastFG: hex(0x24303a), ToastGo: hex(0x255d88),
 			ToastTitle: hex(0x24303a), UsageHigh: hex(0xb83a3a),
 			DiffAddBG: hex(0xcfe0d4), DiffAddFG: hex(0x1d5a37), DiffDelBG: hex(0xefd6d6), DiffDelFG: hex(0x962d2d),
+			CodeKeyword: hex(0x6a2f8a), CodeString: hex(0x1d5a37), CodeComment: hex(0x4f5b66),
+			CodeNumber: hex(0x7a5500), CodeName: hex(0x1f4f8f),
 		},
 	}
 }

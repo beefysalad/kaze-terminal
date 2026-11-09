@@ -1,0 +1,80 @@
+<style>
+.pn{background:#0f1117;border:1px solid #1d2230;border-radius:8px;padding:12px 14px;font:12.5px/1.55 "JetBrains Mono",ui-monospace,Consolas,monospace;color:#c9cdd8;overflow-x:auto;text-align:left}
+.st{white-space:nowrap}.st b{color:#e9ebf2;font-weight:400}.mu{color:#a7adbd}.ok{color:#62d39a;float:right}.bad{color:#f07b7b;float:right}
+.note{border-left:2px solid #d97757;padding-left:10px;margin:9px 0;color:#e9ebf2}
+.dl{white-space:pre;display:flex;margin-left:16px;min-width:640px;padding:0 10px}.dl i{font-style:normal;color:#8f95a7;width:34px;flex:none;text-align:right;padding-right:10px}
+.dl.a{background:#122419}.dl.d{background:#2a1418}.dl.a em,.dl.d em{font-style:normal;width:14px;flex:none}.dl.c em{width:14px;flex:none}
+.a em{color:#8fe0b0}.d em{color:#f3a0a8}
+.kw{color:#ff7b9c}.fn{color:#62d39a}.str{color:#f2d27a}.ty{color:#7fd4ff}
+.out{white-space:pre;margin-left:16px;color:#a7adbd}.gap{height:9px}
+.hd{font-size:11px;color:#8a90a2;margin:0 0 6px}
+.today{opacity:.95}
+.box{margin:3px 0 0 16px;background:#0b0d12;border:1px solid #1d2230;border-radius:6px;padding:7px 10px;color:#a7adbd;white-space:pre}
+</style>
+
+<h2>How should a subagent's work read?</h2>
+<p class="subtitle">The same run shown three ways. Click the one closest to what you want, and tell me what to change in the terminal.</p>
+
+<div class="section">
+<p class="label">Today, for comparison</p>
+<div class="pn today">
+<div class="st">› Searched the code</div>
+<div class="st">› Read <b>2 files</b></div>
+<div class="note">Tests first.</div>
+<div class="st">⌄ Edited <b>backend/tests/test_sony_refresh.py</b><span class="ok">+3 -1</span></div>
+<div class="box">$ grey box, cut to 24 lines, no line numbers, no code colours</div>
+<div class="st">› Ran <b>cd "/c/Users/john/Desktop/samurai_cart_v3 worktrees/wt-V3-3690-admin-fe/fron…</b><span class="ok">done</span></div>
+</div>
+</div>
+
+<div class="options">
+<div class="option" data-choice="a" onclick="toggleSelect(this)">
+<div class="letter">A</div>
+<div class="content">
+<h3>Everything open, like Claude Code</h3>
+<p>Nothing to click. Every edit and every command's output is right there, with no box. The longest to scroll.</p>
+<div class="pn">
+<div class="st mu">Searched the code · Read <b>2 files</b></div>
+<div class="note">Tests first.</div>
+<div class="st"><b>Update</b>(backend/tests/test_sony_refresh.py)<span class="ok">+3 -1</span></div>
+<div class="dl c"><i>69</i><em> </em><span>    <span class="kw">assert</span> (<span class="kw">await</span> _reload(db, tx.id)).status <span class="kw">is</span> row_after</span></div>
+<div class="dl d"><i>70</i><em>-</em><span><span class="kw">async def</span> <span class="fn">test_old_name</span>(db):</span></div>
+<div class="dl a"><i>70</i><em>+</em><span><span class="kw">async def</span> <span class="fn">test_refunded_row_keeps_its_fields</span>(</span></div>
+<div class="dl a"><i>71</i><em>+</em><span>    db: <span class="ty">AsyncSession</span>, monkeypatch</span></div>
+<div class="dl a"><i>72</i><em>+</em><span>):</span></div>
+<div class="gap"></div>
+<div class="st"><b>Bash</b>(git status --short | head)<span class="ok">done</span></div>
+<div class="out">   M backend/tests/test_sony_refresh.py
+   M backend/app/services/sony_credit_card_service.py</div>
+<div class="gap"></div>
+<div class="st"><b>Bash</b>(pytest tests/test_sony_refresh.py)<span class="bad">failed</span></div>
+<div class="out">   FAILED tests/test_sony_refresh.py::test_refunded_row
+   1 failed, 12 passed in 3.41s</div>
+</div>
+</div>
+</div>
+
+<div class="option" data-choice="b" onclick="toggleSelect(this)">
+<div class="letter">B</div>
+<div class="content">
+<h3>Edits open, quiet commands folded</h3>
+<p>The code changes are always visible. A command stays one line unless it failed. Click a command to open it in place, no box.</p>
+<div class="pn">
+<div class="st mu">Searched the code · Read <b>2 files</b></div>
+<div class="note">Tests first.</div>
+<div class="st"><b>Update</b>(backend/tests/test_sony_refresh.py)<span class="ok">+3 -1</span></div>
+<div class="dl c"><i>69</i><em> </em><span>    <span class="kw">assert</span> (<span class="kw">await</span> _reload(db, tx.id)).status <span class="kw">is</span> row_after</span></div>
+<div class="dl d"><i>70</i><em>-</em><span><span class="kw">async def</span> <span class="fn">test_old_name</span>(db):</span></div>
+<div class="dl a"><i>70</i><em>+</em><span><span class="kw">async def</span> <span class="fn">test_refunded_row_keeps_its_fields</span>(</span></div>
+<div class="dl a"><i>71</i><em>+</em><span>    db: <span class="ty">AsyncSession</span>, monkeypatch</span></div>
+<div class="dl a"><i>72</i><em>+</em><span>):</span></div>
+<div class="gap"></div>
+<div class="st">› <b>Bash</b>(git status --short | head)<span class="ok">done</span></div>
+<div class="gap"></div>
+<div class="st">⌄ <b>Bash</b>(pytest tests/test_sony_refresh.py)<span class="bad">failed</span></div>
+<div class="out">   FAILED tests/test_sony_refresh.py::test_refunded_row
+   1 failed, 12 passed in 3.41s</div>
+</div>
+</div>
+</div>
+</div>

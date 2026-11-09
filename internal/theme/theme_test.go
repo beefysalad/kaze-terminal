@@ -150,3 +150,27 @@ func TestMatchTokensInEveryTheme(t *testing.T) {
 			th.Key, ratio(p.FG, p.Match), cur, ratio(p.MatchMark, p.BG), ratio(p.MatchCur, p.BG))
 	}
 }
+
+// The five token colours of code in the readable agent activity: set in every
+// theme and readable (4.5:1) on both diff backgrounds and the terminal background.
+func TestCodeColoursReadable(t *testing.T) {
+	for _, th := range All() {
+		u := th.UI
+		cols := map[string]color.NRGBA{"CodeKeyword": u.CodeKeyword, "CodeString": u.CodeString,
+			"CodeComment": u.CodeComment, "CodeNumber": u.CodeNumber, "CodeName": u.CodeName}
+		for name, c := range cols {
+			if c == (color.NRGBA{}) {
+				t.Errorf("%s: %s unset", th.Key, name)
+				continue
+			}
+			for bgName, bg := range map[string]color.NRGBA{"DiffAddBG": u.DiffAddBG, "DiffDelBG": u.DiffDelBG, "terminal BG": th.Term.BG} {
+				if r := ratio(c, bg); r < 4.5 {
+					t.Errorf("%s: %s on %s contrast %.2f < 4.5", th.Key, name, bgName, r)
+				}
+			}
+		}
+		if dist(u.CodeComment, th.Term.FG) < 30 {
+			t.Errorf("%s: comment colour too close to plain text", th.Key)
+		}
+	}
+}

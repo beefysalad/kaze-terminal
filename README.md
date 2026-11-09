@@ -393,10 +393,20 @@ guess swaps; a name that has settled never moves.
     description in the past tense ("Ran go vet and the ui tests") with **passed**, **failed · N
     tests** or **done**; an edit says "Edited `<path>` +N −M"; a commit says "Committed "<subject>""
     with its short hash. Runs of small steps fold ("Read 3 files", "Searched the code 4 times"),
-    and housekeeping tools such as ToolSearch, Monitor and TaskStop are left out. Click a step to
-    open its diff, or the command and the last lines of its output. It follows new rows unless you
-    scroll up. A waiting agent shows what it wants to run; a finished one says "Finished in Nm ·
-    read the report".
+    and housekeeping tools such as ToolSearch, Monitor and TaskStop are left out. It follows new
+    rows unless you scroll up. A waiting agent shows what it wants to run; a finished one says
+    "Finished in Nm · read the report".
+    - **Edits open on their own.** An edit that was applied (or is still running) shows its diff
+      right under its line: real line numbers from the file, a `+` or `−` marker, green and red
+      rows across the full width, and code colours for Go, Python, TypeScript and JavaScript (also
+      TSX and JSX), shell and JSON, picked by the file extension. Other files show plain diff
+      colours. There is no box around it. A long edit shows its first 40 lines, then "N more
+      lines", and long lines are cut at the panel's edge. An edit that failed or was rejected shows
+      `failed` and the first lines of the error. Notebook edits and `apply_patch` stay one line, and neighbouring ones
+      share it; one that failed opens with its error like any failed edit.
+    - **Quiet commands fold.** A command that passed, or is still running, is one line; click it
+      to read its output in place. A command that failed opens on its own. Click any step's line
+      to fold or open it; Kaze keeps that choice for that step while the panel lives.
   - **Readable | Every step:** the switch at the top of Activity. **Every step** shows the full
     list, each tool step with its time, tool and target. The choice is for the whole window (the
     panel and the board preview) and is not saved; Kaze starts in Readable. Codex helpers have no
@@ -1075,6 +1085,7 @@ Done:
 
 - Editable shortcuts: change any of them in Settings > Shortcuts, or write `none` to drop one (built on `feat/shortcuts-edit`, ships in 0.31 with the palette redesign).
 - Find in the terminal and the docked tabs (#155): Ctrl+Shift+F or Cmd+F, every match marked, on the whole scrollback (built on `feat/find`, release next).
+- Next release (built on `feat/pane-reading`): the subagent panel and the board preview open edits inline with line numbers and code colours, fold quiet commands and open failures.
 - 0.37: the session's model in the status bar and each subagent's model in its panel (PR #185).
 - 0.36: native system notifications while Kaze is in the background (#172), each Codex tab kept separate (#180), and restored workspaces that say Not started and start on Run (#182, PR #181).
 - 0.35: the refreshed wind K as the app icon on macOS and Windows, on the website and in the README; the settings sidebar draws it too (PR #174).
