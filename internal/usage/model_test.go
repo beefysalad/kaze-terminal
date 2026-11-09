@@ -3,6 +3,7 @@ package usage
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestModelName(t *testing.T) {
@@ -13,6 +14,13 @@ func TestModelName(t *testing.T) {
 		{"claude-opus-5-5[1m]", "", "Opus 5.5"},
 		{"claude-3-5-sonnet-20241022", "", "Sonnet 3.5"},
 		{"us.anthropic.claude-opus-4-1-20250805-v1:0", "", "Opus 4.1"},
+		{"claude-sonnet-4-5-20250929", "", "Sonnet 4.5"},
+		{"us.anthropic.claude-sonnet-4-5-20250929-v1:0", "", "Sonnet 4.5"},
+		{"arn:aws:bedrock:us-east-1:1:inference-profile/us.anthropic.claude-opus-4-1-20250805-v1:0", "", "Opus 4.1"},
+		{"claude-sonnet-4-5@20250929", "", "Sonnet 4.5"},
+		{"claude-opus-4-1@20250805", "", "Opus 4.1"},
+		{"claude-3-5-sonnet-latest", "", "Sonnet 3.5"},
+		{"claude-sonnet-4-5-thinking", "", "Sonnet 4.5"},
 		{"some-custom-model", "Custom One", "Custom One"},
 		{"some-custom-model", "", "some-custom-model"},
 		{"", "", ""},
@@ -26,6 +34,13 @@ func TestModelName(t *testing.T) {
 func TestModelNameIsBounded(t *testing.T) {
 	if got := ModelName(strings.Repeat("x", 500), ""); got == "" || len(got) > maxModelName {
 		t.Fatalf("len=%d", len(got))
+	}
+}
+
+func TestModelNameCapIsInBytesAndKeepsRunesWhole(t *testing.T) {
+	got := ModelName("", strings.Repeat("語", 30))
+	if len(got) > maxModelName || got == "" || !utf8.ValidString(got) {
+		t.Fatalf("len=%d valid=%v", len(got), utf8.ValidString(got))
 	}
 }
 

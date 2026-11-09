@@ -3,6 +3,7 @@ package usage
 import (
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 const maxModelName = 40
@@ -18,24 +19,28 @@ func ModelName(id, display string) string {
 	if name == "" {
 		name = strings.TrimSpace(id)
 	}
-	if r := []rune(name); len(r) > maxModelName {
-		name = string(r[:maxModelName])
-		for len(name) > maxModelName { // multi-byte runes
-			r = r[:len(r)-1]
-			name = string(r)
+	if len(name) > maxModelName {
+		cut := maxModelName
+		for cut > 0 && !utf8.RuneStart(name[cut]) {
+			cut--
 		}
+		name = name[:cut]
 	}
 	return name
 }
 
 func claudeModelName(id string) string {
-	id, _, _ = strings.Cut(id, "[") // "[1m]" and the like
 	i := strings.Index(id, "claude-")
 	if i < 0 {
 		return ""
 	}
+	id = id[i+len("claude-"):]
+	// "[1m]", a Vertex "@date" and a Bedrock ":0" all follow the name.
+	if end := strings.IndexAny(id, "[@:"); end >= 0 {
+		id = id[:end]
+	}
 	var words, nums []string
-	for _, p := range strings.Split(id[i+len("claude-"):], "-") {
+	for _, p := range strings.Split(id, "-") {
 		switch {
 		case p == "":
 		case allOf(p, unicode.IsDigit):
@@ -49,7 +54,7 @@ func claudeModelName(id string) string {
 	if len(words) == 0 || len(nums) == 0 {
 		return ""
 	}
-	return strings.Join(words, " ") + " " + strings.Join(nums, ".")
+	return words[0] + " " + strings.Join(nums, ".") // later words are "latest", "thinking" and the like
 }
 
 func allOf(s string, f func(rune) bool) bool {
