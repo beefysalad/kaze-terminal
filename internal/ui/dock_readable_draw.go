@@ -24,18 +24,17 @@ const (
 	readChevDp   = 22 // where a step's words start, after the chevron
 	readLineDp   = 18 // a detail line
 	readCapDp    = 22 // a detail's "$ command" caption
-	readInsetDp  = 24 // a detail box's left inset
 	readNoteTime = 48 // room kept right of a note for its time
 )
 
 // readInk is the readable Activity's colours, all from the theme, each text
 // nudged to 4.5:1 on the surface it is drawn on.
 type readInk struct {
-	say, sayBar, step, strong, mono, meta color.NRGBA // on the panel
-	add, del, ok, bad                     color.NRGBA // meta tones on the panel
-	detailBG, detailLine                  color.NRGBA // an open step's box
-	dim, list, detailMono                 color.NRGBA // on the box
-	addBG, addFG, delBG, delFG            color.NRGBA // diff lines
+	say, sayBar, step, strong, mono, meta color.NRGBA       // on the panel
+	add, del, ok, bad                     color.NRGBA       // meta tones on the panel
+	addBG, addFG, delBG, delFG            color.NRGBA       // diff lines
+	code                                  [3][6]color.NRGBA // a diff row's code, by tone and code kind
+	num                                   [3]color.NRGBA    // a diff row's line number, by tone
 }
 
 // readInk works the colours out for panel background bg.
@@ -43,26 +42,33 @@ func (c *chrome) readInk(bg color.NRGBA) readInk {
 	th := c.th
 	r := func(fg, on color.NRGBA) color.NRGBA { return render.Readable(fg, on) }
 	k := readInk{
-		sayBar:     agentLogoColor("claude", th.Accent),
-		say:        r(th.ActiveFG, bg),
-		step:       r(mix(th.Muted, th.ActiveFG, 0.35), bg),
-		strong:     r(th.ActiveFG, bg),
-		mono:       r(th.ActiveFG, bg),
-		meta:       r(th.Muted, bg),
-		add:        r(th.DiffAddFG, bg),
-		del:        r(th.DiffDelFG, bg),
-		ok:         r(th.Done, bg),
-		bad:        r(th.UsageHigh, bg),
-		detailBG:   th.Chrome,
-		detailLine: th.Border,
-		addBG:      th.DiffAddBG,
-		delBG:      th.DiffDelBG,
+		sayBar: agentLogoColor("claude", th.Accent),
+		say:    r(th.ActiveFG, bg),
+		step:   r(mix(th.Muted, th.ActiveFG, 0.35), bg),
+		strong: r(th.ActiveFG, bg),
+		mono:   r(th.ActiveFG, bg),
+		meta:   r(th.Muted, bg),
+		add:    r(th.DiffAddFG, bg),
+		del:    r(th.DiffDelFG, bg),
+		ok:     r(th.Done, bg),
+		bad:    r(th.UsageHigh, bg),
+		addBG:  th.DiffAddBG,
+		delBG:  th.DiffDelBG,
 	}
-	k.dim = r(th.Muted, k.detailBG)
-	k.list = r(mix(th.Muted, th.ActiveFG, 0.35), k.detailBG)
-	k.detailMono = r(th.ActiveFG, k.detailBG)
 	k.addFG = r(th.DiffAddFG, k.addBG)
 	k.delFG = r(th.DiffDelFG, k.delBG)
+	plain := [3]color.NRGBA{diffTonePlain: k.step, diffToneAdd: k.addFG, diffToneDel: k.delFG}
+	for tone, on := range [3]color.NRGBA{diffTonePlain: bg, diffToneAdd: k.addBG, diffToneDel: k.delBG} {
+		k.code[tone] = [6]color.NRGBA{
+			codecolor.Plain:   plain[tone],
+			codecolor.Keyword: r(th.CodeKeyword, on),
+			codecolor.String:  r(th.CodeString, on),
+			codecolor.Comment: r(th.CodeComment, on),
+			codecolor.Number:  r(th.CodeNumber, on),
+			codecolor.Name:    r(th.CodeName, on),
+		}
+		k.num[tone] = r(th.Muted, on)
+	}
 	return k
 }
 
@@ -91,6 +97,9 @@ type readCache struct {
 	heights         []int                          // row heights, reused every frame
 	builds          int                            // list builds so far; tests count them
 	spans           map[spanKey][][]codecolor.Span // code colours of an edit's diff, worked out once per step
+	diffs           map[string]*diffRecording      // open diffs' retained rows, by step id
+	diffRecords     int                            // recordings made so far; tests count them
+	frame           uint64                         // drawReadable calls, to tell which recordings are on screen
 
 	ink   readInk
 	inkOf theme.Chrome
@@ -180,6 +189,7 @@ func (s *dockSession) readable(a *subagents.Agent) []readItem {
 		rc.builds++
 		s.pruneNotes()
 		s.colourDiffs(rc.items)
+		s.dropDiffRecordings()
 		for id := range s.open {
 			found := false
 			for i := range rc.items {
@@ -313,6 +323,9 @@ func (win *window) readItemHeight(gtx layout.Context, s *dockSession, it *readIt
 
 func readDetailHeight(gtx layout.Context, it *readItem) int {
 	dp := gtx.Dp
+	if it.detail.diff {
+		return diffRows(&it.detail) * dp(readLineDp)
+	}
 	hgt := dp(12) + len(it.detail.lines)*dp(readLineDp)
 	if it.detail.cap != "" {
 		hgt += dp(readCapDp)
@@ -325,6 +338,7 @@ func readDetailHeight(gtx layout.Context, it *readItem) int {
 func (win *window) drawReadable(gtx layout.Context, s *dockSession, a *subagents.Agent, inner image.Rectangle, ink *readInk, bc dockPalette, h *dockHits, texts *[]string) {
 	ops, c, th, dp := gtx.Ops, win.ui, win.ui.th, gtx.Dp
 	items := s.readable(a)
+	s.read.frame++
 	noteW := max(inner.Dx()-dp(14)-dp(readNoteTime), 1)
 	hs := s.read.heights[:0]
 	total := 0
@@ -454,32 +468,31 @@ func (win *window) drawReadStep(gtx layout.Context, s *dockSession, it *readItem
 	if !open {
 		return
 	}
-	box := image.Rect(r.Min.X+dp(readInsetDp), row.Max.Y+dp(2), r.Max.X, row.Max.Y+dp(2)+readDetailHeight(gtx, it))
-	rad := dp(8)
-	paint.FillShape(ops, ink.detailLine, clip.UniformRRect(box, rad).Op(ops))
-	paint.FillShape(ops, ink.detailBG, clip.UniformRRect(box.Inset(1), max(rad-1, 0)).Op(ops))
-	bcl := clip.UniformRRect(box.Inset(1), max(rad-1, 0)).Push(ops)
-	defer bcl.Pop()
-	y := box.Min.Y
-	tx := box.Min.X + dp(10)
-	tw := max(box.Dx()-dp(20), 0)
+	top := row.Max.Y + dp(2)
+	left := r.Min.X + dp(diffIndentDp)
+	if it.detail.diff {
+		win.drawDiffBody(gtx, s, it, image.Pt(left, top), r.Max.X-left, ink, h, texts)
+		return
+	}
+	y := top
+	tx := left + dp(diffPadDp)
+	tw := max(r.Max.X-tx, 0)
 	if it.detail.cap != "" {
-		call, sz := c.fitSans(gtx, it.detail.cap, 11, tw, ink.dim, font.Normal)
+		call, sz := c.fitSans(gtx, it.detail.cap, 11, tw, ink.meta, font.Normal)
 		place(ops, call, image.Pt(tx, y+(dp(readCapDp)-sz.Y)/2))
 		*texts = append(*texts, it.detail.cap)
 		y += dp(readCapDp)
-		paint.FillShape(ops, ink.detailLine, clip.Rect(image.Rect(box.Min.X, y-1, box.Max.X, y)).Op())
 	}
 	y += dp(6)
 	clipR := h.body
 	for _, ln := range it.detail.lines {
-		lr := image.Rect(box.Min.X, y, box.Max.X, y+dp(readLineDp))
+		lr := image.Rect(left, y, r.Max.X, y+dp(readLineDp))
 		y += dp(readLineDp)
 		if !clipR.Empty() && (lr.Max.Y < clipR.Min.Y || lr.Min.Y > clipR.Max.Y) {
 			continue
 		}
 		lmid := lr.Min.Y + lr.Dy()/2
-		x, w, col := tx, tw, ink.dim
+		x, w, col := tx, tw, ink.meta
 		prefix := ""
 		switch ln.Kind {
 		case '+':
@@ -489,7 +502,7 @@ func (win *window) drawReadStep(gtx layout.Context, s *dockSession, it *readItem
 			paint.FillShape(ops, ink.delBG, clip.Rect(lr).Op())
 			col, prefix = ink.delFG, "− "
 		case 'l':
-			col = ink.list
+			col = ink.step
 		}
 		if prefix != "" {
 			call, sz := c.label(gtx, prefix, 12, col)
@@ -643,7 +656,7 @@ func lastStepID(items []readItem) string {
 func (s *dockSession) dropTranscript() {
 	s.tr = nil
 	if rc := &s.read; rc.tr != nil {
-		rc.tr, rc.items, rc.every, rc.itemsOK, rc.everyOK, rc.spans = nil, nil, nil, false, false, nil
+		rc.tr, rc.items, rc.every, rc.itemsOK, rc.everyOK, rc.spans, rc.diffs = nil, nil, nil, false, false, nil, nil
 		s.pruneNotes()
 	}
 }

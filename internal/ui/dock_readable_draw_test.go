@@ -11,11 +11,13 @@ import (
 	"testing"
 	"time"
 
+	"gioui.org/gpu/headless"
 	"gioui.org/io/input"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/unit"
 
+	"github.com/beefysalad/kaze-terminal/internal/codecolor"
 	"github.com/beefysalad/kaze-terminal/internal/notify"
 	"github.com/beefysalad/kaze-terminal/internal/subagents"
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
@@ -42,9 +44,14 @@ func TestReadInkContrast(t *testing.T) {
 			"meta": ink.meta, "add": ink.add, "del": ink.del, "ok": ink.ok, "bad": ink.bad} {
 			check(label+" on the panel", fg, bg)
 		}
-		for label, fg := range map[string]color.NRGBA{"dim": ink.dim, "mono": ink.detailMono, "list": ink.list} {
-			check(label+" on the detail", fg, ink.detailBG)
+		for kind := codecolor.Plain; kind <= codecolor.Name; kind++ {
+			check("code on the panel", ink.code[diffTonePlain][kind], bg)
+			check("code on an added row", ink.code[diffToneAdd][kind], ink.addBG)
+			check("code on a removed row", ink.code[diffToneDel][kind], ink.delBG)
 		}
+		check("number on the panel", ink.num[diffTonePlain], bg)
+		check("number on an added row", ink.num[diffToneAdd], ink.addBG)
+		check("number on a removed row", ink.num[diffToneDel], ink.delBG)
 		check("added line", ink.addFG, ink.addBG)
 		check("removed line", ink.delFG, ink.delBG)
 		if ink.sayBar != claudeCoral {
@@ -435,5 +442,283 @@ func TestNoTranscriptStillShowsNotes(t *testing.T) {
 	twoFrames(t, win, r)
 	if !rdHas(win.dock.texts, "Searched the code") || win.dock.texts[len(win.dock.texts)-1] != "working" {
 		t.Fatalf("texts %q", win.dock.texts)
+	}
+}
+
+// rdPatchEdit is an Edit of path whose result carries a structuredPatch starting
+// at line start of both files, with the given patch lines.
+func rdPatchEdit(id, path string, start int, lines ...string) string {
+	b, _ := json.Marshal(map[string]any{"type": "user",
+		"toolUseResult": map[string]any{"structuredPatch": []map[string]any{{"oldStart": start, "oldLines": len(lines), "newStart": start, "newLines": len(lines), "lines": lines}}},
+		"message":       map[string]any{"content": []map[string]any{{"type": "tool_result", "tool_use_id": id, "is_error": false, "content": "ok"}}}})
+	return rdUse(id, "Edit", map[string]any{"file_path": path, "old_string": "x", "new_string": "y"}) + string(b) + "\n"
+}
+
+// rdDiffEdit: context at 70, one removal at 71, two additions at 71 and 72.
+func rdDiffEdit(id string) string {
+	return rdPatchEdit(id, "/w/kaze/a.go", 70, " package main", "-func old() {}", "+func fresh() {}", "+var keep = 1")
+}
+
+// diffShot renders one frame at size and returns its pixels. Skips where the
+// machine has no GPU-backed Gio context.
+func diffShot(t *testing.T, win *window, r *input.Router, w, h int) *image.RGBA {
+	t.Helper()
+	gpu, err := headless.NewWindow(w, h)
+	if err != nil {
+		t.Skipf("no headless GPU here: %v", err)
+	}
+	defer gpu.Release()
+	gtx := pageContext(w, h)
+	gtx.Source = r.Source()
+	gtx.Now = time.Unix(1000, 0)
+	if err := win.frame(gtx); err != nil {
+		t.Fatal(err)
+	}
+	r.Frame(gtx.Ops)
+	if err := gpu.Frame(gtx.Ops); err != nil {
+		t.Fatal(err)
+	}
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	if err := gpu.Screenshot(img); err != nil {
+		t.Fatal(err)
+	}
+	return img
+}
+
+// nearColour is whether p is c, give or take rounding.
+func nearColour(p color.RGBA, c color.NRGBA) bool {
+	d := func(a, b uint8) int { return max(int(a), int(b)) - min(int(a), int(b)) }
+	return d(p.R, c.R) <= 3 && d(p.G, c.G) <= 3 && d(p.B, c.B) <= 3
+}
+
+// colourDist is how far apart p and c are, per channel summed.
+func colourDist(p color.RGBA, c color.NRGBA) int {
+	d := func(a, b uint8) int { return max(int(a), int(b)) - min(int(a), int(b)) }
+	return d(p.R, c.R) + d(p.G, c.G) + d(p.B, c.B)
+}
+
+// diffRowAt is the pane's right edge and the middle of row i below the step
+// drawn at hit.
+func diffRowAt(win *window, hit image.Point, i int) (x, y int) {
+	var r image.Rectangle
+	for _, st := range win.dock.hits.steps {
+		if hit.In(st.rect) {
+			r = st.rect
+		}
+	}
+	return r.Max.X - 2, r.Max.Y + gtxDp(win, 2) + i*gtxDp(win, readLineDp) + gtxDp(win, readLineDp)/2
+}
+
+func TestDiffDrawsNumbersAndNoBox(t *testing.T) {
+	win, r, _, _, _ := rdDock(t, rdDiffEdit("e1"))
+	for _, w := range []string{"70", "71", "72", "func fresh() {}", "package main", "+ ", "− "} {
+		if !rdHas(win.dock.texts, w) {
+			t.Fatalf("no %q in %q", w, win.dock.texts)
+		}
+	}
+	x, y := diffRowAt(win, rdHit(t, win.dock.hits, "e1"), 0)
+	th := win.ui.th
+	img := diffShot(t, win, r, 1000, 600)
+	if p := img.RGBAAt(x, y); !nearColour(p, win.pal.BG) || nearColour(p, th.Chrome) {
+		t.Fatalf("context row sits on %v, want the pane's %v and no box %v", p, win.pal.BG, th.Chrome)
+	}
+	if p := img.RGBAAt(x, y+gtxDp(win, readLineDp)); !nearColour(p, th.DiffDelBG) {
+		t.Fatalf("removed row is %v, want %v across the whole row", p, th.DiffDelBG)
+	}
+	if p := img.RGBAAt(x, y+2*gtxDp(win, readLineDp)); !nearColour(p, th.DiffAddBG) {
+		t.Fatalf("added row is %v, want %v across the whole row", p, th.DiffAddBG)
+	}
+}
+
+// A diff without numbers (its result has not arrived) shows none.
+func TestDiffWithoutNumbersShowsNone(t *testing.T) {
+	win, _, _, _, _ := rdDock(t, rdUse("e1", "Edit", map[string]any{"file_path": "/w/kaze/a.go", "old_string": "aa", "new_string": "bb"}))
+	if !rdHas(win.dock.texts, "bb") {
+		t.Fatalf("no diff: %q", win.dock.texts)
+	}
+	for _, s := range win.dock.texts {
+		if s == "0" || s == "1" {
+			t.Fatalf("a made-up number %q in %q", s, win.dock.texts)
+		}
+	}
+}
+
+func TestDiffGutterFitsTheWidestNumber(t *testing.T) {
+	lines := []subagents.DiffLine{{Kind: '+', New: 7}, {Kind: ' ', Text: "no number"}, {Kind: '-', Old: 1204}}
+	if got := diffDigits(lines); got != 4 {
+		t.Fatalf("digits %d, want 4 for the whole diff", got)
+	}
+	if got := diffDigits([]subagents.DiffLine{{Kind: '+'}}); got != 0 {
+		t.Fatalf("digits %d for a diff with no numbers", got)
+	}
+}
+
+func TestDiffRowsColoured(t *testing.T) {
+	win, r, _, s, _ := rdDock(t, rdDiffEdit("e1"))
+	x, y := diffRowAt(win, rdHit(t, win.dock.hits, "e1"), 2)
+	ink := s.inkFor(win.ui, win.pal.BG)
+	want := ink.code[diffToneAdd][codecolor.Keyword]
+	if want == (color.NRGBA{}) || want == ink.addFG {
+		t.Fatalf("keyword ink %v against plain %v", want, ink.addFG)
+	}
+	img := diffShot(t, win, r, 1000, 600)
+	found := false
+	for px := max(x-800, 0); px < x && !found; px++ {
+		for py := y - gtxDp(win, readLineDp)/2; py < y+gtxDp(win, readLineDp)/2; py++ {
+			// Thin glyphs are antialiased: a keyword pixel leans to the keyword
+			// colour, away from the row's own background and plain text.
+			if p := img.RGBAAt(px, py); !nearColour(p, ink.addBG) && colourDist(p, want) < colourDist(p, ink.addFG) {
+				found = true
+				break
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("no pixel of the keyword colour %v in the added row", want)
+	}
+}
+
+func TestDiffMoreRow(t *testing.T) {
+	lines := make([]string, 60)
+	for i := range lines {
+		lines[i] = "+line" + strconv.Itoa(i)
+	}
+	win, r, _, s, _ := rdDock(t, rdPatchEdit("e1", "/w/kaze/a.txt", 1, lines...))
+	s.scroll = win.dock.hits.scrollMax
+	twoFrames(t, win, r)
+	if !rdHas(win.dock.texts, "20 more lines") {
+		t.Fatalf("no more row in %q", win.dock.texts)
+	}
+	want := gtxDp(win, readRowDp) + 41*gtxDp(win, readLineDp) + gtxDp(win, 10)
+	found := false
+	for _, h := range s.read.heights {
+		found = found || h == want
+	}
+	if !found {
+		t.Fatalf("heights %v, none holds 40 rows and the more row (%d)", s.read.heights, want)
+	}
+}
+
+func TestDiffRecordedOnce(t *testing.T) {
+	win, r, _, s, _ := rdDock(t, rdDiffEdit("e1"))
+	first := s.read.diffRecords
+	if first != 1 {
+		t.Fatalf("recorded %d times, want 1", first)
+	}
+	now := time.Now()
+	for i := range 50 {
+		frameAt(t, win, r, now.Add(time.Duration(i)*10*time.Millisecond))
+	}
+	if s.read.diffRecords != first {
+		t.Fatalf("recorded %d times over still frames", s.read.diffRecords-first)
+	}
+	if !rdHas(win.dock.texts, "func fresh() {}") {
+		t.Fatalf("texts lost on replay: %q", win.dock.texts)
+	}
+}
+
+func TestDiffRedrawnOnThemeAndWidth(t *testing.T) {
+	win, r, _, s, _ := rdDock(t, rdDiffEdit("e1"))
+	n := s.read.diffRecords
+	again := func(what string) {
+		t.Helper()
+		if s.read.diffRecords <= n {
+			t.Fatalf("%s: not recorded again", what)
+		}
+		n = s.read.diffRecords
+	}
+	var other theme.Theme
+	for _, th := range theme.All() {
+		if th.UI.DiffAddBG != win.ui.th.DiffAddBG {
+			other = th
+			break
+		}
+	}
+	win.applyTheme(other)
+	twoFrames(t, win, r)
+	again("theme")
+	x, y := diffRowAt(win, rdHit(t, win.dock.hits, "e1"), 2)
+	if p := diffShot(t, win, r, 1000, 600).RGBAAt(x, y); !nearColour(p, other.UI.DiffAddBG) {
+		t.Fatalf("added row %v, want the new theme's %v", p, other.UI.DiffAddBG)
+	}
+	sizedFrame(t, win, r, 1200, 600)
+	sizedFrame(t, win, r, 1200, 600)
+	again("width")
+	gtx := pageContext(1200, 600)
+	gtx.Source, gtx.Now = r.Source(), time.Unix(1000, 0)
+	gtx.Metric = unit.Metric{PxPerDp: 2, PxPerSp: 2}
+	if err := win.frame(gtx); err != nil {
+		t.Fatal(err)
+	}
+	again("scale")
+}
+
+func TestDiffRecordingDroppedWithItsStep(t *testing.T) {
+	win, r, _, s, _ := rdDock(t, rdDiffEdit("e1"))
+	if len(s.read.diffs) != 1 {
+		t.Fatalf("recordings %d", len(s.read.diffs))
+	}
+	s.tr.Steps = nil // the step is gone from the list
+	s.tr.Version++
+	twoFrames(t, win, r)
+	if len(s.read.diffs) != 0 {
+		t.Fatalf("recording kept for a step no longer listed: %d", len(s.read.diffs))
+	}
+}
+
+func TestFollowStaysAtBottomWithOpenDiffs(t *testing.T) {
+	win, r, _, s, path := rdDock(t, rdDiffEdit("e1"))
+	s.follow = true
+	twoFrames(t, win, r)
+	f, _ := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0o644)
+	f.WriteString(rdPatchEdit("e2", "/w/kaze/b.go", 300, "+func tail() {}"))
+	f.Close()
+	now := time.Now()
+	frameAt(t, win, r, now.Add(agentTranscriptPoll+time.Second))
+	frameAt(t, win, r, now.Add(agentTranscriptPoll+time.Second+10*time.Millisecond))
+	if !s.follow || s.scroll != win.dock.hits.scrollMax {
+		t.Fatalf("follow %v scroll %d of %d", s.follow, s.scroll, win.dock.hits.scrollMax)
+	}
+	if !rdHas(win.dock.texts, "func tail() {}") || win.dock.texts[len(win.dock.texts)-1] != "working" {
+		t.Fatalf("last row not shown: %q", win.dock.texts)
+	}
+}
+
+func TestFoldingMiddleRowStopsFollow(t *testing.T) {
+	win, r, _, s, _ := rdDock(t, rdDiffEdit("e1")+rdDiffEdit("e2"))
+	s.follow = true
+	twoFrames(t, win, r)
+	clickAt(t, win, r, rdHit(t, win.dock.hits, "e1"))
+	if s.follow {
+		t.Fatal("folding a middle row kept following")
+	}
+	if s.open["e1"] {
+		t.Fatalf("e1 not folded: %v", s.open)
+	}
+}
+
+func TestBoardPreviewShowsDiff(t *testing.T) {
+	win, _, r, a, _, _, _ := memberWindow(t)
+	k, _ := readScene(t, win, int(a.ID), rdDiffEdit("e1"))
+	twoFrames(t, win, r)
+	win.openBoard(0)
+	win.boardSelect(k)
+	drawPreview(win)
+	win.board.prev.follow = false
+	drawPreview(win)
+	for _, w := range []string{"72", "func fresh() {}", "+ ", "− "} {
+		if !boardHas(win, w) {
+			t.Errorf("no %q in %q", w, win.board.texts)
+		}
+	}
+}
+
+// A failed command draws in place: no box behind its output either.
+func TestCommandOutputHasNoBox(t *testing.T) {
+	win, r, _, _, _ := rdDock(t, rdUse("b1", "Bash", map[string]any{"command": "go test"})+rdResult("b1", true, "boom"))
+	x, y := diffRowAt(win, rdHit(t, win.dock.hits, "b1"), 0)
+	th := win.ui.th
+	if p := diffShot(t, win, r, 1000, 600).RGBAAt(x, y); !nearColour(p, win.pal.BG) || nearColour(p, th.Chrome) {
+		t.Fatalf("output sits on %v, want the pane's %v", p, win.pal.BG)
 	}
 }

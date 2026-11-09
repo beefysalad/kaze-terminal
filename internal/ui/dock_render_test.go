@@ -442,3 +442,90 @@ func TestReadableFrameTiming(t *testing.T) {
 	win.actEvery = true
 	measure("every step")
 }
+
+// readableFoldedAllocs is what a still frame of the 21-step scene with every
+// step folded allocated on the commit before inline diffs (eb17e90); folded
+// must stay within 5% of it.
+const readableFoldedAllocs = 74
+
+// diffScene is three edits of Go code with real line numbers: about 30 diff
+// rows, drawn at w by h in a tall panel, at least minRows changed rows showing.
+// frame draws one still frame of it.
+func diffScene(t *testing.T, w, h, minRows int) (frame func()) {
+	t.Helper()
+	var tr strings.Builder
+	for e := range 3 {
+		lines := make([]string, 0, 12)
+		for i := range 12 {
+			switch i % 3 {
+			case 0:
+				lines = append(lines, " func keep"+strconv.Itoa(i)+"(a int) string { return \"x\" }")
+			case 1:
+				lines = append(lines, "-	var old = "+strconv.Itoa(i)+" // gone")
+			default:
+				lines = append(lines, "+	for i := range n { fresh(i, \"y\") } // new")
+			}
+		}
+		tr.WriteString(rdPatchEdit("e"+strconv.Itoa(e), "/w/kaze/f"+strconv.Itoa(e)+".go", 100*(e+1), lines...))
+	}
+	win, r, _, s, _ := rdDock(t, tr.String())
+	win.dock.heightDp = 800
+	s.follow = false
+	s.scroll = 0
+	frame = func() { sizedFrame(t, win, r, w, h) }
+	frame()
+	frame()
+	n := rdCount(win.dock.texts, "+ ") + rdCount(win.dock.texts, "− ")
+	if n < minRows {
+		t.Fatalf("scene shows only %d changed rows", n)
+	}
+	return frame
+}
+
+func TestOpenDiffsStayWithinAllocations(t *testing.T) {
+	frame := diffScene(t, 1400, 1000, 18)
+	if got := testing.AllocsPerRun(50, frame); got > 120 {
+		t.Fatalf("%.0f allocations on a still frame with edits open, limit 120", got)
+	}
+
+	win2, _, r2, a, _, _, _ := memberWindow(t)
+	win2.openDock(a.ID, act21Scene(t, win2, int(a.ID)))
+	s := win2.dockOf(a.ID)
+	twoFrames(t, win2, r2)
+	s.open = map[string]bool{}
+	for i := range s.read.items {
+		if s.read.items[i].hasDetail() {
+			s.open[s.read.items[i].id] = false
+		}
+	}
+	twoFrames(t, win2, r2)
+	limit := float64(readableFoldedAllocs) * 1.05
+	got := testing.AllocsPerRun(50, func() { sideFrame(t, win2, r2) })
+	t.Logf("folded: %.0f allocations, limit %.1f", got, limit)
+	if got > limit {
+		t.Fatalf("%.0f allocations folded, limit %.1f (today's %d +5%%)", got, limit, readableFoldedAllocs)
+	}
+}
+
+// Opt-in (KAZE_DOCK_BENCH=1): the panel full of open edits at the 1000x600
+// frame the limits were set on. The best of five batches, so a busy machine
+// does not fail it.
+func TestOpenDiffsFrameTime(t *testing.T) {
+	if os.Getenv("KAZE_DOCK_BENCH") == "" {
+		t.Skip("set KAZE_DOCK_BENCH=1 to time panel frames")
+	}
+	frame := diffScene(t, 1000, 600, 6)
+	best := time.Hour
+	const n = 200
+	for range 5 {
+		start := time.Now()
+		for range n {
+			frame()
+		}
+		best = min(best, time.Since(start)/n)
+	}
+	t.Logf("edits open, still frame: best batch %v, %.0f allocations", best, testing.AllocsPerRun(50, frame))
+	if best > 400*time.Microsecond {
+		t.Fatalf("%v per still frame, limit 400µs", best)
+	}
+}
