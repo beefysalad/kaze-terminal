@@ -5,6 +5,7 @@ import (
 	"image"
 	"strings"
 	"testing"
+	"time"
 
 	"gioui.org/io/input"
 	"gioui.org/io/key"
@@ -349,7 +350,11 @@ func TestFindLargeHistoryFinishesOverFrames(t *testing.T) {
 			fmt.Fprintf(&b, "%s line %05d\r\n", pad[:cols-12], i)
 		}
 	}
-	emitTo(t, st, 4, c, b.String(), func() bool { return scrollbackLen(c) >= 59_000 })
+	// Wait for the final line so the search cannot race the fixture's remaining
+	// output. Parsing 60,000 lines under -race is setup, not a latency check.
+	emitToWithin(t, st, 4, c, b.String(), func() bool {
+		return strings.Contains(screenText(c), "line 59999")
+	}, 15*time.Second)
 	findKey(t, win, r)
 	r.Queue(key.EditEvent{Text: "warn"})
 	w := &win.find.work
