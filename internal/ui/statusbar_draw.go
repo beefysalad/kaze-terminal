@@ -219,8 +219,13 @@ func (win *window) drawStatus(gtx layout.Context, y int, now time.Time) {
 				}
 			}
 			x = text(x, cpu, true, col)
-			x = text(x+gap, "·", false, th.Muted)
-			text(x+gap, ram, true, c.statusValueColor())
+			if l.Compact.ResourcesLabel {
+				x = text(x+gap, "·", false, th.Muted)
+				x += gap
+			} else {
+				x = c.statusLabel(gtx, x+2*gap, mid, "RAM") + gap/2
+			}
+			text(x, ram, true, c.statusValueColor())
 		case grpTabs:
 			x = icon(x, "tabs", th.Muted) + gap
 			unit := " tabs"
