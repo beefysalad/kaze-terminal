@@ -216,9 +216,11 @@ func statusPlace(m statusModel, width int, measure func(s string, mono bool) int
 	}
 	if !f.noMem {
 		cpu, ram := resourceValues(m.Resources.Total, m.Resources.Partial)
-		w := measure(cpu, true) + gap + measure("·", false) + gap + measure(ram, true)
-		if !f.resourceLabel {
-			w += measure("CPU", false) + gap/2
+		w := measure(cpu, true) + measure(ram, true)
+		if f.resourceLabel {
+			w += gap + measure("·", false) + gap
+		} else {
+			w += measure("CPU", false) + gap/2 + 2*gap + measure("RAM", false) + gap/2
 		}
 		if !f.resourceMeter {
 			w += d.Meter + gap/2
