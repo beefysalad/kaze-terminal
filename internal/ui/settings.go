@@ -56,8 +56,6 @@ type settingsState struct {
 	// memberFolderX is where each list member's folder starts, so tests can check the columns.
 	memberFolderX []int
 
-	devbox devboxPage // the Devbox section, on a machine paired with a devbox
-
 	build    string            // the build line, read when the page opens
 	sections []settingsSection // nil means defaultSections; tests swap in their own
 
@@ -147,7 +145,7 @@ func (win *window) sections() []settingsSection {
 	if win.set.sections != nil {
 		return win.set.sections
 	}
-	return win.withDevbox(defaultSections())
+	return defaultSections()
 }
 
 // openSettings opens the Settings tab, or shows it when it is already open.
@@ -159,7 +157,6 @@ func (win *window) openSettings() {
 	if !s.open {
 		s.open, s.focus = true, -1
 		s.navFocus = false
-		win.devboxOpen()
 		s.section = 0
 		for i, sec := range win.sections() {
 			if !sec.later {
