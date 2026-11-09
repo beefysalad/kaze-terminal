@@ -411,3 +411,12 @@ func TestHookStepsUnchanged(t *testing.T) {
 		t.Fatalf("%+v", got)
 	}
 }
+
+func TestHookReadsAndSearchesStaySeparate(t *testing.T) {
+	a := rdAgent()
+	a.Steps = []subagents.Step{{At: tl0, Tool: "Grep", Summary: "foo"}, {At: tl0.Add(time.Second), Tool: "Read", Summary: "a.go"}, {At: tl0.Add(2 * time.Second), Tool: "Read", Summary: "b.go"}}
+	got := rdSteps(readableItems(a, nil))
+	if len(got) != 2 || rdSentence(got[0]) != "Searched the code" || rdSentence(got[1]) != "Read 2 files" {
+		t.Fatalf("%+v", got)
+	}
+}

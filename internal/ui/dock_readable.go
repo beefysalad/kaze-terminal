@@ -264,7 +264,7 @@ func appendReadable(out []readItem, a *subagents.Agent, tr *subagents.Transcript
 			continue
 		}
 		c := foldOf(e.step.Tool)
-		if c == foldReads || c == foldSearches {
+		if !hook && (c == foldReads || c == foldSearches) {
 			c = foldLook
 		}
 		if !hook && c == foldEdits {
@@ -395,7 +395,7 @@ func bashSentence(desc string) (verb, rest string) {
 func foldItem(cls foldClass, run []*subagents.TranscriptStep, hook bool) readItem {
 	it := readItem{kind: readStep, id: run[0].ID, at: run[0].At, msg: -1}
 	switch cls {
-	case foldLook:
+	case foldLook, foldReads, foldSearches:
 		paths := distinctPaths(run, func(s *subagents.TranscriptStep) string {
 			if foldOf(s.Tool) == foldReads {
 				return s.Path
