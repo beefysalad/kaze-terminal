@@ -278,20 +278,30 @@ func (tr *Transcript) record(line []byte) {
 		tr.noteModel(entry.Message.Model)
 	}
 	if entry.Type == "user" {
+		// toolUseResult is one per record: with several tool_result blocks
+		// there is no telling whose it is, so none of them gets it.
+		results := 0
+		for i := range entry.Message.Content {
+			if entry.Message.Content[i].Type == "tool_result" {
+				results++
+			}
+		}
 		var patch []patchHunk
-		created := false
-		if r := entry.ToolUseResult; len(r) > 0 && r[0] == '{' {
+		created, unchanged := false, false
+		if r := entry.ToolUseResult; results == 1 && len(r) > 0 && r[0] == '{' {
 			var tur struct {
 				Type            string      `json:"type"`
 				StructuredPatch []patchHunk `json:"structuredPatch"`
 			}
 			if json.Unmarshal(r, &tur) == nil {
 				patch, created = tur.StructuredPatch, tur.Type == "create"
+				// Present but empty, unlike a missing or null patch (nil).
+				unchanged = tur.Type == "update" && patch != nil && len(patch) == 0
 			}
 		}
 		for i := range entry.Message.Content {
 			if b := &entry.Message.Content[i]; b.Type == "tool_result" && b.ToolUseID != "" {
-				tr.result(b.ToolUseID, b.IsError, b.Content, patch, created)
+				tr.result(b.ToolUseID, b.IsError, b.Content, patch, created, unchanged)
 			}
 		}
 		return
@@ -413,8 +423,9 @@ type patchHunk struct {
 
 // result fills in a call's outcome. The call is looked for among the last
 // resultLookBack steps (no map); an unknown id is ignored. created says the
-// tool reported making a new file.
-func (tr *Transcript) result(id string, isErr bool, raw json.RawMessage, patch []patchHunk, created bool) {
+// tool reported making a new file, unchanged that it rewrote one with the same
+// content.
+func (tr *Transcript) result(id string, isErr bool, raw json.RawMessage, patch []patchHunk, created, unchanged bool) {
 	at := -1
 	for i := len(tr.Steps) - 1; i >= 0 && i >= len(tr.Steps)-resultLookBack; i-- {
 		if tr.Steps[i].ID == id {
@@ -445,15 +456,17 @@ func (tr *Transcript) result(id string, isErr bool, raw json.RawMessage, patch [
 			st.Out = tailLines(text, maxStepDetail-before)
 			tr.stepBytes += stepDetail(st) - before
 		}
+	case "NotebookEdit", "apply_patch":
+		if isErr {
+			tr.keepError(at, text)
+		}
 	case "Edit", "Write", "MultiEdit":
 		if isErr {
 			// A failed edit changed nothing: no diff, just the error.
-			if at >= tr.detailFrom {
-				tr.stepBytes -= stepDetail(st)
-				st.Out = headLines(text, maxStepDetail)
-				st.Diff = nil
-				tr.stepBytes += stepDetail(st)
-			}
+			tr.keepError(at, text)
+			st.Diff, st.DiffMore, st.Added, st.Removed = nil, 0, 0, 0
+		} else if unchanged && st.Tool == "Write" {
+			tr.stepBytes -= stepDetail(st)
 			st.Diff, st.DiffMore, st.Added, st.Removed = nil, 0, 0, 0
 		} else if len(patch) > 0 && at >= tr.detailFrom {
 			tr.stepBytes -= stepDetail(st)
@@ -465,6 +478,19 @@ func (tr *Transcript) result(id string, isErr bool, raw json.RawMessage, patch [
 	}
 	tr.Version++
 	tr.trimDetail()
+}
+
+// keepError swaps step at's detail for the first lines of its error, unless
+// the step has already lost its detail to the total budget.
+func (tr *Transcript) keepError(at int, text string) {
+	if at < tr.detailFrom {
+		return
+	}
+	st := &tr.Steps[at]
+	tr.stepBytes -= stepDetail(st)
+	st.Out = headLines(text, maxStepDetail)
+	st.Diff = nil
+	tr.stepBytes += stepDetail(st)
 }
 
 // patchDiff turns a structured patch into numbered lines within the caps.
