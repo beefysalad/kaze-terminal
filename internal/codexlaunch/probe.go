@@ -34,6 +34,9 @@ func removeOwned(dir string) error {
 	if err := os.Remove(filepath.Join(dir, shimName(runtime.GOOS))); err != nil && !os.IsNotExist(err) {
 		return err
 	}
+	if err := os.RemoveAll(filepath.Join(dir, zshDirName)); err != nil {
+		return err
+	}
 	if err := os.Remove(filepath.Join(dir, markerName)); err != nil && !os.IsNotExist(err) {
 		return err
 	}

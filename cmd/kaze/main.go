@@ -65,6 +65,11 @@ func main() {
 			warns = append(warns, "Codex tab isolation is unavailable: "+e.Error()+". Start Codex with --no-daemon.")
 		} else {
 			shellEnv = launcher.Env
+			if len(shell) > 0 && codexlaunch.IsZsh(shell[0]) {
+				if e := launcher.PrepareZsh(); e != nil {
+					warns = append(warns, "Codex tab isolation may be bypassed by your zsh startup files: "+e.Error())
+				}
+			}
 		}
 	}
 	go func() {

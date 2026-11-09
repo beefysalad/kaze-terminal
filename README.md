@@ -602,9 +602,9 @@ execution still needs a manual check.
 Normal `codex`, `codex resume` and `codex fork` launches inside Kaze run locally
 with `--no-daemon`, so helpers and alerts stay with their own tab even when a
 shared daemon already exists. Kaze scopes this to its child shells and leaves
-your shell profiles and Codex configuration alone. Aliases/functions, absolute
-executable paths and shell startup that overrides PATH can bypass it; add the
-flag explicitly for those launches. Remote, administrative and unknown command
+your shell profiles and Codex configuration alone. Aliases/functions and absolute
+executable paths can bypass it, and so can bash or fish startup files that reorder
+PATH (zsh is handled); add the flag explicitly for those launches. Remote, administrative and unknown command
 forms pass through. An ambiguous single-word command-line prompt also needs an
 explicit flag; opening plain `codex` then typing a prompt works normally.
 On Windows, recognized npm launchers call Node directly to preserve arguments;

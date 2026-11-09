@@ -27,6 +27,7 @@ type manifest struct {
 }
 type Launcher struct {
 	dir, token string
+	zdot       string // private zsh startup folder, empty unless PrepareZsh ran
 	once       sync.Once
 	closeErr   error
 }
@@ -180,7 +181,7 @@ func (l *Launcher) Env(env []string) []string {
 			out = append(out, e)
 		}
 	}
-	return append(out, "PATH="+strings.Join(paths, sep), markerEnv+"="+l.dir, tokenEnv+"="+l.token, depthEnv+"=0")
+	return append(l.zshEnv(env, out), "PATH="+strings.Join(paths, sep), markerEnv+"="+l.dir, tokenEnv+"="+l.token, depthEnv+"=0")
 }
 
 func (l *Launcher) Close() error {
