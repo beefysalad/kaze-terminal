@@ -109,18 +109,18 @@ func TestTranscriptEditCounts(t *testing.T) {
 	if s.Added != 8 || s.Removed != 5 {
 		t.Fatalf("+%d −%d", s.Added, s.Removed)
 	}
-	want := []DiffLine{{' ', "ctx1"}, {' ', "ctx0"}, {'-', "o1"}}
+	want := []DiffLine{{Kind: ' ', Text: "ctx1"}, {Kind: ' ', Text: "ctx0"}, {Kind: '-', Text: "o1"}}
 	for i, w := range want {
 		if s.Diff[i] != w {
 			t.Fatalf("diff[%d] %+v, want %+v (%+v)", i, s.Diff[i], w, s.Diff)
 		}
 	}
-	if last := s.Diff[len(s.Diff)-1]; last != (DiffLine{' ', "end1"}) || len(s.Diff) != 2+5+8+2 {
+	if last := s.Diff[len(s.Diff)-1]; last != (DiffLine{Kind: ' ', Text: "end1"}) || len(s.Diff) != 2+5+8+2 {
 		t.Fatalf("diff %+v", s.Diff)
 	}
 	// Write: every line added.
 	tr = feedAll(useLine("w", "Write", map[string]any{"file_path": "/w/b.go", "content": "a\nb\n\tc\n"}))
-	if s := tr.Steps[0]; s.Added != 3 || s.Removed != 0 || len(s.Diff) != 3 || s.Diff[2] != (DiffLine{'+', "    c"}) {
+	if s := tr.Steps[0]; s.Added != 3 || s.Removed != 0 || len(s.Diff) != 3 || s.Diff[2] != (DiffLine{Kind: '+', Text: "    c"}) {
 		t.Fatalf("write %+v", s)
 	}
 	// MultiEdit: summed.

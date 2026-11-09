@@ -21,10 +21,10 @@ const (
 
 	// Step caps: a huge edit or output can't grow memory past these.
 	MaxTranscriptSteps = 200
-	maxDiffLines       = 24
+	maxDiffLines       = 40
 	maxOutLines        = 8
 	maxDetailLine      = 200       // runes per kept diff or output line
-	maxStepDetail      = 4 << 10   // detail bytes per step
+	maxStepDetail      = 8 << 10   // detail bytes per step
 	maxStepsDetail     = 256 << 10 // detail bytes for all steps; the oldest lose theirs first
 	maxStepText        = 1 << 10   // bytes of a step's command
 	resultLookBack     = 64        // steps scanned back for a tool_result's call
@@ -61,9 +61,11 @@ type TranscriptMessage struct {
 }
 
 // DiffLine is one kept line of an edit: Kind ' ' (context), '+' or '-'.
+// Old and New are the real line numbers in the old and new file; 0 means none.
 type DiffLine struct {
-	Kind byte
-	Text string
+	Kind     byte
+	Text     string
+	Old, New int
 }
 
 // TranscriptStep is one tool call and, once its result arrives, its outcome.
@@ -76,6 +78,7 @@ type TranscriptStep struct {
 	Path, Pattern, Query string // file or search path, Grep/Glob pattern, web query or URL
 	Added, Removed       int    // edit line counts over the whole text
 	Diff                 []DiffLine
+	DiffMore             int      // patch lines left out of Diff
 	Out                  []string // the last lines of the result
 	Done, Failed         bool
 	Fails                int    // Go "--- FAIL:" lines in the result
@@ -249,7 +252,10 @@ func (tr *Transcript) record(line []byte) {
 		Type      string `json:"type"`
 		Timestamp string `json:"timestamp"`
 		Cwd       string `json:"cwd"`
-		Message   struct {
+		// ToolUseResult is an object for edits (with the structured patch)
+		// and often a plain string for failures; only an object is decoded.
+		ToolUseResult json.RawMessage `json:"toolUseResult"`
+		Message       struct {
 			Model   string `json:"model"`
 			Content []struct {
 				Type, Text, Name, ID string
@@ -272,9 +278,18 @@ func (tr *Transcript) record(line []byte) {
 		tr.noteModel(entry.Message.Model)
 	}
 	if entry.Type == "user" {
+		var patch []patchHunk
+		if r := entry.ToolUseResult; len(r) > 0 && r[0] == '{' {
+			var tur struct {
+				StructuredPatch []patchHunk `json:"structuredPatch"`
+			}
+			if json.Unmarshal(r, &tur) == nil {
+				patch = tur.StructuredPatch
+			}
+		}
 		for i := range entry.Message.Content {
 			if b := &entry.Message.Content[i]; b.Type == "tool_result" && b.ToolUseID != "" {
-				tr.result(b.ToolUseID, b.IsError, b.Content)
+				tr.result(b.ToolUseID, b.IsError, b.Content, patch)
 			}
 		}
 		return
@@ -386,9 +401,17 @@ func (tr *Transcript) trimDetail() {
 	}
 }
 
+// patchHunk is one hunk of Claude Code's structuredPatch: each line starts
+// with ' ', '-' or '+'.
+type patchHunk struct {
+	OldStart int      `json:"oldStart"`
+	NewStart int      `json:"newStart"`
+	Lines    []string `json:"lines"`
+}
+
 // result fills in a call's outcome. The call is looked for among the last
 // resultLookBack steps (no map); an unknown id is ignored.
-func (tr *Transcript) result(id string, isErr bool, raw json.RawMessage) {
+func (tr *Transcript) result(id string, isErr bool, raw json.RawMessage, patch []patchHunk) {
 	at := -1
 	for i := len(tr.Steps) - 1; i >= 0 && i >= len(tr.Steps)-resultLookBack; i-- {
 		if tr.Steps[i].ID == id {
@@ -413,15 +436,95 @@ func (tr *Transcript) result(id string, isErr bool, raw json.RawMessage) {
 		st.Commit, st.Subject = commitLine(text)
 	}
 	switch st.Tool {
-	case "Bash", "exec_command", "shell": // the only steps that show their output
+	case "Bash", "exec_command", "shell":
 		if at >= tr.detailFrom {
 			before := stepDetail(st)
 			st.Out = tailLines(text, maxStepDetail-before)
 			tr.stepBytes += stepDetail(st) - before
 		}
+	case "Edit", "Write", "MultiEdit":
+		if isErr {
+			// A failed edit changed nothing: no diff, just the error.
+			if at >= tr.detailFrom {
+				tr.stepBytes -= stepDetail(st)
+				st.Out = headLines(text, maxStepDetail)
+				st.Diff = nil
+				tr.stepBytes += stepDetail(st)
+			}
+			st.Diff, st.DiffMore, st.Added, st.Removed = nil, 0, 0, 0
+		} else if len(patch) > 0 && at >= tr.detailFrom {
+			tr.stepBytes -= stepDetail(st)
+			st.Added, st.Removed, st.Diff, st.DiffMore = patchDiff(patch)
+			tr.stepBytes += stepDetail(st)
+		}
 	}
 	tr.Version++
 	tr.trimDetail()
+}
+
+// patchDiff turns a structured patch into numbered lines within the caps.
+// The counts cover the whole patch; more is how many lines were left out.
+func patchDiff(patch []patchHunk) (added, removed int, diff []DiffLine, more int) {
+	used := 0
+	for _, h := range patch {
+		old, nw := h.OldStart, h.NewStart
+		for _, l := range h.Lines {
+			kind, text := byte(' '), l
+			if l != "" {
+				kind, text = l[0], l[1:]
+			}
+			d := DiffLine{Kind: kind}
+			switch kind {
+			case ' ':
+				d.Old, d.New = old, nw
+				old++
+				nw++
+			case '-':
+				d.Old = old
+				old++
+				removed++
+			case '+':
+				d.New = nw
+				nw++
+				added++
+			default: // a "no newline at end of file" marker
+				continue
+			}
+			if len(diff) >= maxDiffLines {
+				more++
+				continue
+			}
+			d.Text = detailLine(text)
+			if used+len(d.Text) > maxStepDetail {
+				more++
+				continue
+			}
+			used += len(d.Text)
+			diff = append(diff, d)
+		}
+	}
+	return
+}
+
+// headLines keeps the first maxOutLines non-empty lines of s, each cut to
+// maxDetailLine runes, within budget bytes.
+func headLines(s string, budget int) []string {
+	var out []string
+	used := 0
+	for rest := s; rest != "" && len(out) < maxOutLines; {
+		var ln string
+		ln, rest, _ = strings.Cut(rest, "\n")
+		if strings.TrimSpace(ln) == "" {
+			continue
+		}
+		d := detailLine(ln)
+		if used+len(d) > budget {
+			break
+		}
+		used += len(d)
+		out = append(out, d)
+	}
+	return out
 }
 
 // resultText is a tool_result's content: a JSON string, or the text blocks of
@@ -528,7 +631,7 @@ func lineDiff(old, new string, diff []DiffLine) (added, removed int, out []DiffL
 				return
 			}
 			used += len(d)
-			diff = append(diff, DiffLine{kind, d})
+			diff = append(diff, DiffLine{Kind: kind, Text: d})
 		}
 	}
 	put(' ', a[max(0, p-2):p])
@@ -566,7 +669,7 @@ func writeDiff(s string) []DiffLine {
 			break
 		}
 		used += len(d)
-		diff = append(diff, DiffLine{'+', d})
+		diff = append(diff, DiffLine{Kind: '+', Text: d})
 	}
 	return diff
 }
