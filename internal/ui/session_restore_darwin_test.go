@@ -44,7 +44,7 @@ func TestResumeResolvesAgentFromZshStartup(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v: %s", agent, err, out)
 		}
-		verb := "--no-daemon\nresume"
+		verb := "resume"
 		if agent == "claude" {
 			verb = "--resume"
 		}
@@ -88,7 +88,7 @@ func TestReviewResumeExpandsZshAliases(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		out, err := exec.CommandContext(ctx, "/bin/zsh", "-d", "-i", "-c", line).CombinedOutput()
 		cancel()
-		verb := "--no-daemon\nresume"
+		verb := "resume"
 		if agent == "claude" {
 			verb = "--resume"
 		}
