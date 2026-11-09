@@ -402,7 +402,8 @@ guess swaps; a name that has settled never moves.
       TSX and JSX), shell and JSON, picked by the file extension. Other files show plain diff
       colours. There is no box around it. A long edit shows its first 40 lines, then "N more
       lines", and long lines are cut at the panel's edge. An edit that failed or was rejected shows
-      `failed` and the first lines of the error. Notebook edits and `apply_patch` stay one line.
+      `failed` and the first lines of the error. Notebook edits and `apply_patch` stay one line, and neighbouring ones
+      share it; one that failed opens with its error like any failed edit.
     - **Quiet commands fold.** A command that passed, or is still running, is one line; click it
       to read its output in place. A command that failed opens on its own. Click any step's line
       to fold or open it; Kaze keeps that choice for that step while the panel lives.

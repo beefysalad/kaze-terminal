@@ -267,8 +267,8 @@ func appendReadable(out []readItem, a *subagents.Agent, tr *subagents.Transcript
 		if !hook && (c == foldReads || c == foldSearches) {
 			c = foldLook
 		}
-		if !hook && c == foldEdits {
-			c = foldNone // a transcript's edits stand on their own
+		if !hook && c == foldEdits && standsAlone(e.step) {
+			c = foldNone
 		}
 		if c == foldNone {
 			flush()
@@ -283,6 +283,16 @@ func appendReadable(out []readItem, a *subagents.Agent, tr *subagents.Transcript
 	}
 	flush()
 	return append(out, endItem(a))
+}
+
+// standsAlone reports whether a transcript's edit keeps its own row: the ones
+// with a diff to show, and any that failed, so its error is not folded away.
+func standsAlone(st *subagents.TranscriptStep) bool {
+	switch st.Tool {
+	case "Edit", "Write", "MultiEdit":
+		return true
+	}
+	return st.Failed
 }
 
 // endItem is the waiting, finished or working row, as in dockTimeline.
@@ -458,7 +468,7 @@ func foldItem(cls foldClass, run []*subagents.TranscriptStep, hook bool) readIte
 			it.detail.lines = append(it.detail.lines, subagents.DiffLine{Kind: 'l', Text: p})
 		}
 	case foldEdits:
-		// Only hook steps fold here: a transcript's edits stand on their own.
+		// Hook steps, and a transcript's NotebookEdit and apply_patch: see standsAlone.
 		paths := distinctPaths(run, func(s *subagents.TranscriptStep) string { return s.Path })
 		if len(paths) <= 1 {
 			it.verb, it.obj, it.objMono = "Edited", run[0].Path, true

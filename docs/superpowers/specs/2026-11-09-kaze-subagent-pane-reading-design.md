@@ -26,7 +26,7 @@ Applies to the Readable mode, wherever it is drawn: the docked pane and the agen
 | Agent messages | Shown | Coral bar, unchanged, the most prominent thing in the list |
 | Edits (Edit, Write, MultiEdit) that were applied or are still running | Open | Inline diff, no box |
 | Edits that failed or were rejected | Open | No diff, since nothing changed. A `failed` tag and the first lines of the error, shown like a failed command (builder's call, not confirmed by the owner) |
-| NotebookEdit and apply_patch | One line | Header only, with no diff and no `+0 -0` (builder's call, not confirmed by the owner) |
+| NotebookEdit and apply_patch | One line | Header only, with no diff and no `+0 -0`. Neighbouring ones share a line, as before this work. One that failed stands alone and opens with its error, like a failed edit (builder's call, not confirmed by the owner) |
 | Commands that succeeded or are still running | One line | Click opens the output in place, no box |
 | Commands that failed | Open | Output shown in place. Click folds it |
 | Reads and searches | One quiet line | A neighbouring run shares a line: `Searched the code · Read 2 files` |
@@ -55,7 +55,11 @@ Transcript user records carry a top-level `toolUseResult.structuredPatch`, a lis
 `{oldStart, oldLines, newStart, newLines, lines}`, where each entry in `lines` starts with a space,
 `+` or `-`. This was confirmed in real subagent transcripts on 2026-11-09. It is the source of the
 real line numbers and of the context lines, and is paired to its step by the tool_use id, as results
-are today.
+are today. A record has one `toolUseResult`, so it is applied only when the record holds exactly one
+`tool_result` block. With several, every step keeps today's diff and shows no line numbers.
+
+A Write whose result has type `update` and a present but empty `structuredPatch` rewrote the file
+with the same content: it shows no diff and `+0 -0`, as one row.
 
 When it is missing (the step's result has not arrived yet, or an agent that does not write it), keep
 today's diff from `old_string` and `new_string`, and show no line numbers. A diff must never appear
