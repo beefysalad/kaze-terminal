@@ -1,3 +1,7 @@
+## What's changed
+
+- Removed the unused experimental Devbox Settings page and its pairing and network integration. Existing external pairing files stay intact.
+
 ## Download
 
 | | File |

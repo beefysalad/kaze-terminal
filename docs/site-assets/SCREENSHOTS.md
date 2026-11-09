@@ -1,5 +1,9 @@
 # Product captures
 
+Release 0.40 removes the paired-machine Devbox Settings entry. Any private capture
+showing that entry needs a native retake. No published Devbox captures are reused
+or fabricated for this release.
+
 Subagent pane reading (built on `feat/pane-reading`, not released): Readable activity now opens
 edits inline with line numbers and code colours, folds quiet commands and opens failures. Retake
 `kaze-agents.png` and `kaze-board.png` with a subagent that has edited a few files, so the panel or

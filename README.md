@@ -1086,6 +1086,7 @@ Done:
 - Editable shortcuts: change any of them in Settings > Shortcuts, or write `none` to drop one (built on `feat/shortcuts-edit`, ships in 0.31 with the palette redesign).
 - Find in the terminal and the docked tabs (#155): Ctrl+Shift+F or Cmd+F, every match marked, on the whole scrollback (built on `feat/find`, release next).
 - Next release (built on `feat/pane-reading`): the subagent panel and the board preview open edits inline with line numbers and code colours, fold quiet commands and open failures.
+- 0.40: the unused experimental Devbox Settings page and its integration removed; external pairing files stay intact.
 - 0.39.1: the status bar labels RAM next to CPU, so the memory figure no longer reads as part of CPU (PR #193).
 - 0.38: subagent edits open inline in the panel with real line numbers and code colours, and failed edits open with their error (PR #187).
 - 0.37: the session's model in the status bar and each subagent's model in its panel (PR #185).
