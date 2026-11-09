@@ -147,3 +147,23 @@ func TestPatchRespectsTotalDetailBudget(t *testing.T) {
 		t.Fatal("the newest step lost its diff")
 	}
 }
+
+func TestPatchByteCapLeavesNoHole(t *testing.T) {
+	var lines []string
+	for range 25 {
+		lines = append(lines, "+"+strings.Repeat("é", 200)) // 400 bytes each: 20 fit
+	}
+	for range 5 {
+		lines = append(lines, "+x") // short lines after the cap must not sneak in
+	}
+	tr := feedAll(editUse("t1"), patchResult("t1", false, hunk(1, 1, lines...)))
+	s := tr.Steps[0]
+	if len(s.Diff) != 20 || s.DiffMore != 10 {
+		t.Fatalf("kept %d more %d", len(s.Diff), s.DiffMore)
+	}
+	for i, d := range s.Diff {
+		if d.New != i+1 {
+			t.Fatalf("hole at %d: %+v", i, d)
+		}
+	}
+}

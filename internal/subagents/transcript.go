@@ -465,7 +465,7 @@ func (tr *Transcript) result(id string, isErr bool, raw json.RawMessage, patch [
 // patchDiff turns a structured patch into numbered lines within the caps.
 // The counts cover the whole patch; more is how many lines were left out.
 func patchDiff(patch []patchHunk) (added, removed int, diff []DiffLine, more int) {
-	used := 0
+	used, full := 0, false
 	for _, h := range patch {
 		old, nw := h.OldStart, h.NewStart
 		for _, l := range h.Lines {
@@ -490,12 +490,13 @@ func patchDiff(patch []patchHunk) (added, removed int, diff []DiffLine, more int
 			default: // a "no newline at end of file" marker
 				continue
 			}
-			if len(diff) >= maxDiffLines {
+			if full || len(diff) >= maxDiffLines {
 				more++
 				continue
 			}
 			d.Text = detailLine(text)
 			if used+len(d.Text) > maxStepDetail {
+				full = true // later, shorter lines must not leave a hole
 				more++
 				continue
 			}
