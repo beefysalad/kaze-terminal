@@ -27,6 +27,13 @@ func Dispatch(argv, env []string, stderr io.Writer) (bool, int) {
 	if err != nil {
 		return fail(126, err)
 	}
+	if want := envValue(env, probeEnv); want != "" {
+		m, e := loadManifest(filepath.Dir(self))
+		if e != nil || m.Token != want {
+			return fail(126, fmt.Errorf("kaze: invalid Codex launcher probe"))
+		}
+		return true, 0
+	}
 	if err = validate(self, env); err != nil {
 		return fail(126, err)
 	}
@@ -43,6 +50,9 @@ func Dispatch(argv, env []string, stderr io.Writer) (bool, int) {
 	command, err := Resolve(env, self, platformName())
 	if err != nil {
 		return fail(127, err)
+	}
+	if command.Notice != "" {
+		fmt.Fprintln(stderr, command.Notice)
 	}
 	childEnv := make([]string, 0, len(env)+1)
 	for _, e := range env {

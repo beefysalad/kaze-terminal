@@ -137,7 +137,7 @@ func TestWindowsBackendRegistrationIsOnceAndPolicyIsExposed(t *testing.T) {
 	}
 }
 
-func TestWindowsBackendDeliveryFailureRemainsUntilExplicitRetry(t *testing.T) {
+func TestWindowsBackendDeliveryFailureRecoversOnNextAlert(t *testing.T) {
 	d := &fakeWindowsDriver{}
 	b := newWindowsBackend(d, Callbacks{})
 	defer b.Close()
@@ -149,11 +149,17 @@ func TestWindowsBackendDeliveryFailureRemainsUntilExplicitRetry(t *testing.T) {
 	if b.Status() != "native delivery failed" {
 		t.Fatal("permission refresh lost native error")
 	}
-	if err := b.Post(Notification{ID: "1-2-4"}); err == nil || len(d.posts) != 1 {
-		t.Fatal("native delivery retried without explicit request")
+	if len(d.posts) != 1 {
+		t.Fatal("native delivery retried while idle")
 	}
-	b.Retry()
-	if err := b.Post(Notification{ID: "1-2-5"}); err != nil || len(d.posts) != 2 {
-		t.Fatal("explicit retry did not recover", err)
+	if err := b.Post(Notification{ID: "1-2-4"}); err != nil || len(d.posts) != 2 {
+		t.Fatal("one failed toast blocked the next alert", err)
+	}
+	if b.Status() != "" {
+		t.Fatalf("recovered backend still reports %q", b.Status())
+	}
+	b.CheckPermission()
+	if err := b.Post(Notification{ID: "1-2-5"}); err != nil || len(d.posts) != 3 {
+		t.Fatal("recovered backend stopped posting", err)
 	}
 }

@@ -6,6 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"syscall"
+
+	"golang.org/x/sys/windows"
 )
 
 func platformName() string { return "windows" }
@@ -28,4 +31,23 @@ func execute(path string, args, env []string) (int, error) {
 		return e.ExitCode(), nil
 	}
 	return 126, err
+}
+
+// hideConsole stops a console child of the GUI app from flashing a window.
+func hideConsole(cmd *exec.Cmd) {
+	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: windows.CREATE_NO_WINDOW}
+}
+
+func processAlive(pid int) bool {
+	const stillActive = 259
+	h, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(pid))
+	if err != nil {
+		return err == windows.ERROR_ACCESS_DENIED
+	}
+	defer windows.CloseHandle(h)
+	var code uint32
+	if windows.GetExitCodeProcess(h, &code) != nil {
+		return true
+	}
+	return code == stillActive
 }

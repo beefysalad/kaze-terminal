@@ -19,8 +19,8 @@ Each app run creates its own private executable directory and child-only PATH
 transform. Unix uses a hardlink/copy and process replacement. Windows makes an
 independent unsigned PE console copy, rejecting signed/malformed images without
 altering the installed executable. Known npm command shims resolve to Node plus
-the official package script, avoiding shell interpolation. Unknown wrappers fail
-clearly. Windows keeps the proxy waiting when Codex receives Ctrl+C.
+the official package script, avoiding shell interpolation. Unknown wrappers run
+as they are, with a note. Windows keeps the proxy waiting when Codex receives Ctrl+C.
 
 Cleanup runs explicitly before `os.Exit` only after all PTYs report release.
 A shutdown timeout preserves the private directory. Removal verifies ownership

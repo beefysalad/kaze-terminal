@@ -65,7 +65,7 @@ than producing a status message for every hook.
 
 Windows uses the OS's per-app notification policy. A registration or native
 delivery failure is shown in this row without stopping cards, chimes or hooks.
-No automatic retries while idle; retry on a later normal launch or explicitly
+No automatic retries while idle; a later real alert tries again, as does
 turning the row off and on. No native setup or permission calls run in tests or
 bench mode.
 

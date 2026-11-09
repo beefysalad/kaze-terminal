@@ -97,6 +97,9 @@ func TestLauncherEnvironmentAndIndependentLifetime(t *testing.T) {
 }
 
 func TestResolveCurrentPathSkipsShimAndCopies(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("relies on Unix executable bits, which Windows files do not have")
+	}
 	dir := t.TempDir()
 	own := filepath.Join(dir, "own")
 	copyDir := filepath.Join(dir, "copy")
@@ -136,8 +139,9 @@ func TestResolveWindowsPATHEXTAndOfficialNPM(t *testing.T) {
 	if err := os.Remove(real); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Resolve([]string{"PATH=" + npm, "PATHEXT=.CMD;.EXE"}, self, "windows"); err == nil || !strings.Contains(err.Error(), "npm") {
-		t.Fatalf("unknown cmd wrapper=%v", err)
+	wrapper := filepath.Join(npm, "codex.cmd")
+	if cmd, err := Resolve([]string{"PATH=" + npm, "PATHEXT=.CMD;.EXE"}, self, "windows"); err != nil || cmd.Path != wrapper || cmd.Notice == "" {
+		t.Fatalf("unknown cmd wrapper=%+v %v", cmd, err)
 	}
 	pkg := filepath.Join(npm, "node_modules", "@openai", "codex")
 	os.MkdirAll(filepath.Join(pkg, "bin"), 0o700)
@@ -150,8 +154,8 @@ func TestResolveWindowsPATHEXTAndOfficialNPM(t *testing.T) {
 		t.Fatalf("npm command=%+v %v", cmd, err)
 	}
 	executableFixture(t, npm, "codex.cmd", npmCanonical+"echo custom\n")
-	if _, err := Resolve([]string{"PATH=" + npm, "PATHEXT=.CMD;.EXE"}, self, "windows"); err == nil {
-		t.Fatal("custom npm-adjacent wrapper silently bypassed")
+	if cmd, err := Resolve([]string{"PATH=" + npm, "PATHEXT=.CMD;.EXE"}, self, "windows"); err != nil || cmd.Path != wrapper || cmd.Notice == "" {
+		t.Fatalf("custom npm-adjacent wrapper=%+v %v", cmd, err)
 	}
 }
 

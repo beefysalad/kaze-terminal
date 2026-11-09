@@ -386,3 +386,20 @@ func TestSystemNotificationStillMetadataDoesNotAllocate(t *testing.T) {
 		t.Fatalf("unchanged metadata allocated %g times", allocs)
 	}
 }
+
+func TestSystemNotificationErrorClearsAfterSuccessfulPost(t *testing.T) {
+	w, f := notificationWindow(t)
+	id := w.mgr.Tabs()[1].ID
+	f.err = errors.New("Blocked in Windows notification settings")
+	w.onNotify(notify.Msg{Tab: int(id), Kind: notify.KindNeeds, Reason: "first"})
+	w.system.flush()
+	if !strings.Contains(w.system.status(), "Blocked") {
+		t.Fatalf("status=%q", w.system.status())
+	}
+	f.err = nil
+	w.onNotify(notify.Msg{Tab: int(id), Kind: notify.KindNeeds, Reason: "second"})
+	w.system.flush()
+	if s := w.system.status(); s != "" {
+		t.Fatalf("stale status after a successful post: %q", s)
+	}
+}

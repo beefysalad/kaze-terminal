@@ -56,6 +56,7 @@ func main() {
 	var launcher *codexlaunch.Launcher
 	var shellEnv func([]string) []string
 	if rec == nil {
+		go codexlaunch.SweepStale()
 		exe, e := os.Executable()
 		if e == nil {
 			launcher, e = codexlaunch.New(exe)

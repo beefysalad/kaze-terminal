@@ -14,6 +14,7 @@ import (
 type Command struct {
 	Path   string
 	Prefix []string
+	Notice string
 }
 
 // Resolve uses the invoking shell's current PATH rather than Kaze's startup
@@ -44,6 +45,9 @@ func Resolve(env []string, self, goos string) (Command, error) {
 		}
 		dir = strings.Trim(dir, `"`)
 		if dir == "" {
+			if goos == "windows" {
+				continue // only POSIX defines an empty entry as the current folder
+			}
 			dir = "."
 		}
 		if shimDir(dir) {
@@ -110,31 +114,32 @@ const npmCanonical = npmHead + npmTail
 const npmLegacy = "@ECHO off\nGOTO start\n:find_dp0\nSET dp0=%~dp0\nEXIT /b\n:start\nSETLOCAL\nCALL :find_dp0\n\nIF EXIST \"%dp0%\\node.exe\" (\n  SET \"_prog=%dp0%\\node.exe\"\n) ELSE (\n  SET \"_prog=node\"\n  SET PATHEXT=%PATHEXT:;.JS;=;%\n)\n\nendLocal & goto #_undefined_# 2>NUL || title %COMSPEC% & \"%_prog%\"  \"%dp0%\\node_modules\\@openai\\codex\\bin\\codex.js\" %*\n"
 
 func npmCommand(wrapper string, env []string) (Command, error) {
-	bad := fmt.Errorf("kaze: unsupported Codex command wrapper %s; use the official npm installation or a native codex.exe", wrapper)
+	// Run an unrecognized wrapper as the shell would, rather than break Codex.
+	bad := Command{Path: wrapper, Notice: fmt.Sprintf("kaze: %s is not recognized as the official npm wrapper; running it as is", wrapper)}
 	b, err := readBounded(wrapper, 16<<10)
 	if err != nil {
-		return Command{}, bad
+		return bad, nil
 	}
 	text := strings.TrimSpace(strings.ReplaceAll(string(b), "\r\n", "\n"))
 	if text != strings.TrimSpace(npmCanonical) && text != strings.TrimSpace(npmLegacy) {
-		return Command{}, bad
+		return bad, nil
 	}
 	dir := filepath.Dir(wrapper)
 	pkg := filepath.Join(dir, "node_modules", "@openai", "codex")
 	b, err = readBounded(filepath.Join(pkg, "package.json"), 64<<10)
 	if err != nil {
-		return Command{}, bad
+		return bad, nil
 	}
 	var meta struct {
 		Name string
 		Bin  map[string]string
 	}
 	if json.Unmarshal(b, &meta) != nil || meta.Name != "@openai/codex" || meta.Bin["codex"] != "bin/codex.js" {
-		return Command{}, bad
+		return bad, nil
 	}
 	js := filepath.Join(pkg, "bin", "codex.js")
 	if st, e := os.Stat(js); e != nil || !st.Mode().IsRegular() {
-		return Command{}, bad
+		return bad, nil
 	}
 	node := filepath.Join(dir, "node.exe")
 	if st, e := os.Stat(node); e != nil || !st.Mode().IsRegular() {

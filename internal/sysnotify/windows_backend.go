@@ -78,9 +78,6 @@ func (b *windowsBackend) post(n Notification, group, tag string) error {
 	if err := b.ensure(); err != nil {
 		return err
 	}
-	if b.deliveryErr != nil {
-		return b.deliveryErr
-	}
 	status, err := b.driver.Permission()
 	if err != nil {
 		b.deliveryErr = err
@@ -107,6 +104,7 @@ func (b *windowsBackend) post(n Notification, group, tag string) error {
 		b.deliveryErr = err
 		return err
 	}
+	b.deliveryErr = nil
 	b.live[key] = r
 	return nil
 }

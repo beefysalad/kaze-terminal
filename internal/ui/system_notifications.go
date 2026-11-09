@@ -359,6 +359,8 @@ func (s *systemNotifications) flush() {
 		}
 		if err != nil {
 			s.err = "System notifications: " + cleanReason(err.Error())
+		} else {
+			s.err = ""
 		}
 		s.mu.Unlock()
 		if err != nil && s.changed != nil {

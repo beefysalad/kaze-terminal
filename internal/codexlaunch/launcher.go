@@ -23,6 +23,7 @@ const maxImage = 64 << 20
 type manifest struct {
 	Version       int
 	Token, Source string
+	PID           int
 }
 type Launcher struct {
 	dir, token string
@@ -40,6 +41,14 @@ func shimName(goos string) string {
 // New creates this Kaze process's private launcher. On Windows the copy is a
 // console image; on macOS a hardlink avoids copying the running executable.
 func New(executable string) (*Launcher, error) {
+	var probe func(string, string) error
+	if runtime.GOOS == "windows" {
+		probe = probeShim // a fresh unsigned copy can be refused by App Control
+	}
+	return newLauncher(executable, probe)
+}
+
+func newLauncher(executable string, probe func(path, token string) error) (*Launcher, error) {
 	source, err := filepath.Abs(executable)
 	if err != nil {
 		return nil, err
@@ -67,9 +76,14 @@ func New(executable string) (*Launcher, error) {
 	if err = materialize(source, dest, runtime.GOOS, os.Link); err != nil {
 		return nil, err
 	}
-	data, _ := json.Marshal(manifest{Version: 1, Token: l.token, Source: source})
+	data, _ := json.Marshal(manifest{Version: 1, Token: l.token, Source: source, PID: os.Getpid()})
 	if err = os.WriteFile(filepath.Join(dir, markerName), data, 0o600); err != nil {
 		return nil, err
+	}
+	if probe != nil {
+		if err = probe(dest, l.token); err != nil {
+			return nil, err
+		}
 	}
 	good = true
 	return l, nil
@@ -179,16 +193,7 @@ func (l *Launcher) Close() error {
 			l.closeErr = errors.New("kaze: refusing to remove a changed Codex launcher directory")
 			return
 		}
-		// Keep the ownership marker if Windows still has the executable open.
-		if err := os.Remove(filepath.Join(l.dir, shimName(runtime.GOOS))); err != nil && !os.IsNotExist(err) {
-			l.closeErr = err
-			return
-		}
-		if err := os.Remove(filepath.Join(l.dir, markerName)); err != nil && !os.IsNotExist(err) {
-			l.closeErr = err
-			return
-		}
-		l.closeErr = os.Remove(l.dir)
+		l.closeErr = removeOwned(l.dir)
 	})
 	return l.closeErr
 }
@@ -205,7 +210,7 @@ func validate(self string, env []string) error {
 	if err != nil || pErr != nil || eErr != nil || !os.SameFile(parent, expected) || dir == "" || !baseOK || m.Token != envValue(env, tokenEnv) {
 		return errors.New("kaze: invalid private Codex launcher identity")
 	}
-	if envValue(env, "KAZE_TAB_ID") == "" || envValue(env, "KAZE_NOTIFY") == "" || envValue(env, "KAZE_NOTIFY_TOKEN") == "" {
+	if envValue(env, "KAZE_TAB_ID") == "" {
 		return errors.New("kaze: Codex launcher needs its owning Kaze tab environment")
 	}
 	return nil

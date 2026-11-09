@@ -73,8 +73,8 @@ effect on these local sessions.
    Windows starts the real executable and waits, forwarding its exit code and
    inherited handles. For the official npm `codex.cmd` layout, resolve the sibling
    `node_modules/@openai/codex/bin/codex.js` and invoke Node directly, preserving
-   argv without command-shell interpolation. Reject unknown `.cmd` wrappers with
-   a clear error. Isolated Windows argv/console behavior still needs native
+   argv without command-shell interpolation. Run unknown `.cmd` wrappers as they
+   are, with a one-line note (owner ruling after the PR 181 review). Isolated Windows argv/console behavior still needs native
    verification before shipping.
 6. Existing aliases/functions keep shell precedence and may bypass a PATH shim.
    Document adding `--no-daemon` to those definitions; do not rewrite or remove
