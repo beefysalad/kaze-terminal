@@ -483,6 +483,9 @@ func diffScene(t *testing.T, w, h, minRows int) (frame func()) {
 }
 
 func TestOpenDiffsStayWithinAllocations(t *testing.T) {
+	if raceDetector {
+		t.Skip("the race detector adds allocations of its own; the normal test run enforces these limits")
+	}
 	frame := diffScene(t, 1400, 1000, 18)
 	if got := testing.AllocsPerRun(50, frame); got > 120 {
 		t.Fatalf("%.0f allocations on a still frame with edits open, limit 120", got)
