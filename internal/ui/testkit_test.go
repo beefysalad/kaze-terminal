@@ -96,11 +96,18 @@ func typeKeys(t *testing.T, win *window, r *input.Router, s string) {
 // seconds, until done says tab applied it.
 func emitTo(t *testing.T, st *recStarter, i int, tab *tabs.Tab, s string, done func() bool) {
 	t.Helper()
+	emitToWithin(t, st, i, tab, s, done, 3*time.Second)
+}
+
+// emitToWithin gives large functional fixtures a bounded setup allowance; it
+// does not change frame budgets or the condition that output must satisfy.
+func emitToWithin(t *testing.T, st *recStarter, i int, tab *tabs.Tab, s string, done func() bool, wait time.Duration) {
+	t.Helper()
 	go ptyOf(st, i).w.Write([]byte(s))
-	deadline := time.Now().Add(3 * time.Second)
+	deadline := time.Now().Add(wait)
 	for !done() {
 		if time.Now().After(deadline) {
-			t.Fatalf("output %q never applied", s)
+			t.Fatalf("output (%d bytes, starts %q) never applied", len(s), s[:min(len(s), 256)])
 		}
 		time.Sleep(time.Millisecond)
 	}
