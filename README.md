@@ -1075,6 +1075,7 @@ Done:
 
 - Editable shortcuts: change any of them in Settings > Shortcuts, or write `none` to drop one (built on `feat/shortcuts-edit`, ships in 0.31 with the palette redesign).
 - Find in the terminal and the docked tabs (#155): Ctrl+Shift+F or Cmd+F, every match marked, on the whole scrollback (built on `feat/find`, release next).
+- 0.37: the session's model in the status bar and each subagent's model in its panel (PR #185).
 - 0.36: native system notifications while Kaze is in the background (#172), each Codex tab kept separate (#180), and restored workspaces that say Not started and start on Run (#182, PR #181).
 - 0.35: the refreshed wind K as the app icon on macOS and Windows, on the website and in the README; the settings sidebar draws it too (PR #174).
 - 0.34: the “New session on a branch” launcher and its worktree cleanup removed; the session list runs down to the workspaces (PR #171).
