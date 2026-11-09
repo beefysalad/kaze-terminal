@@ -458,12 +458,8 @@ func foldItem(cls foldClass, run []*subagents.TranscriptStep, hook bool) readIte
 			it.detail.lines = append(it.detail.lines, subagents.DiffLine{Kind: 'l', Text: p})
 		}
 	case foldEdits:
+		// Only hook steps fold here: a transcript's edits stand on their own.
 		paths := distinctPaths(run, func(s *subagents.TranscriptStep) string { return s.Path })
-		added, removed := 0, 0
-		for _, s := range run {
-			added += s.Added
-			removed += s.Removed
-		}
 		if len(paths) <= 1 {
 			it.verb, it.obj, it.objMono = "Edited", run[0].Path, true
 			for _, s := range run {
@@ -479,23 +475,8 @@ func foldItem(cls foldClass, run []*subagents.TranscriptStep, hook bool) readIte
 				if len(it.detail.lines) == readDetailLines {
 					break
 				}
-				ln := p
-				if !hook {
-					a, r := 0, 0
-					for _, s := range run {
-						if s.Path == p {
-							a += s.Added
-							r += s.Removed
-						}
-					}
-					ln += "  +" + strconv.Itoa(a) + " −" + strconv.Itoa(r)
-				}
-				it.detail.lines = append(it.detail.lines, subagents.DiffLine{Kind: 'l', Text: ln})
+				it.detail.lines = append(it.detail.lines, subagents.DiffLine{Kind: 'l', Text: p})
 			}
-		}
-		if !hook {
-			it.addMeta("+"+strconv.Itoa(added), toneAdd)
-			it.addMeta("−"+strconv.Itoa(removed), toneDel)
 		}
 	case foldTodos:
 		it.verb = "Updated the to-do list"
@@ -518,17 +499,6 @@ outer:
 			}
 		}
 		out = append(out, k)
-	}
-	return out
-}
-
-func listLines(ss []string) []subagents.DiffLine {
-	out := make([]subagents.DiffLine, 0, min(len(ss), readDetailLines))
-	for _, s := range ss {
-		if len(out) == readDetailLines {
-			break
-		}
-		out = append(out, subagents.DiffLine{Kind: 'l', Text: s})
 	}
 	return out
 }
