@@ -60,7 +60,7 @@
       </div>
     </div>
   </section>
-  <div class="wrap news"><span class="tag">0.35</span><a href="#changelog">New: a new app icon and logo <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
+  <div class="wrap news"><span class="tag">0.36</span><a href="#changelog">New: system notifications and separate Codex tabs <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
 
   <section class="k-sec wrap" aria-labelledby="demo-title">
     <header class="k-head">
@@ -141,7 +141,19 @@
     </header>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.35</span><span class="badge">Latest</span><time datetime="2026-11-07">Nov 7, 2026</time></div>
+        <div class="release-meta"><span class="version">0.36</span><span class="badge">Latest</span><time datetime="2026-11-09">Nov 9, 2026</time></div>
+        <div class="release-body">
+          <h3>System notifications and separate Codex tabs</h3>
+          <ul>
+            <li><b>System notifications:</b> while Kaze is in the background, agent alerts also appear as macOS and Windows notifications. The newest alert replaces the older one for that session, and clicking it takes you to the session. Turn it off in Settings, Agents.</li>
+            <li><b>Codex tabs stay separate:</b> Codex started in a Kaze tab now runs on its own, so its helpers and alerts stay with the right session. This needs a Codex version with <code>--no-daemon</code>; older versions start as before, without the separation.</li>
+            <li><b>Restored workspaces say what’s running:</b> after a restart, workspace tabs whose commands haven’t run say Not started instead of “all up”. Press Run to start them in the tabs already open. Nothing starts by itself.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.35</span><time datetime="2026-11-07">Nov 7, 2026</time></div>
         <div class="release-body">
           <h3>A new app icon and logo</h3>
           <ul>
@@ -157,17 +169,6 @@
           <h3>A simpler sidebar</h3>
           <ul>
             <li><b>A simpler sidebar:</b> the “New session on a branch” launcher is gone, with its shortcut and its worktree cleanup. Claude and Codex make branches and worktrees themselves, and the + in the title bar still opens a new session. The session list now runs down to your workspaces. Your existing worktrees and config are left as they are.</li>
-          </ul>
-        </div>
-      </li>
-
-      <li class="release">
-        <div class="release-meta"><span class="version">0.33</span><time datetime="2026-11-06">Nov 6, 2026</time></div>
-        <div class="release-body">
-          <h3>The Kaze name in the title bar, and correct app details on Windows</h3>
-          <ul>
-            <li><b>Kaze in the title bar:</b> the lilac K and the name Kaze now sit at the top left of the window, the way Windows apps show their icon and name. On a Mac they follow the traffic lights, which had no mark before. In a narrow window the name steps aside first.</li>
-            <li><b>Correct app details on Windows:</b> kaze.exe's Properties, Task Manager and security tools now show Kaze 0.33 with its name and publisher, instead of an old 0.6.</li>
           </ul>
         </div>
       </li>
