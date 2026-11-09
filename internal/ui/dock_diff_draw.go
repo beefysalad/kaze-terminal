@@ -2,7 +2,9 @@ package ui
 
 import (
 	"image"
+	"image/color"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	"gioui.org/layout"
@@ -34,6 +36,10 @@ const (
 	// past it, the recordings not on screen are let go and made again if
 	// they scroll back.
 	diffRecordingsKept = 32
+
+	// diffAdvanceRunes is how many characters a code advance is measured
+	// over: a width in whole pixels, in hundredths of a character.
+	diffAdvanceRunes = 100
 )
 
 // diffKey is everything a recording's pixels depend on. first tells a diff
@@ -60,6 +66,7 @@ type diffRecording struct {
 	call   op.CallOp
 	rows   []diffRowTexts
 	height int
+	adv    int    // width of diffAdvanceRunes code characters, measured once
 	drawn  uint64 // the frame it was last replayed in
 }
 
@@ -99,15 +106,16 @@ func (win *window) recordDiff(gtx layout.Context, it *readItem, width int, ink *
 	g := gtx
 	g.Ops = &rec.ops
 	c, dp, d := win.ui, g.Dp, &it.detail
-	_, cell := c.label(g, "0", 12, ink.meta)
+	rec.adv = win.codeAdvance(g)
+	cellW := (rec.adv + diffAdvanceRunes - 1) / diffAdvanceRunes
 	lineH := dp(readLineDp)
-	numEnd := dp(diffPadDp) + diffDigits(d.lines)*cell.X
+	numEnd := dp(diffPadDp) + diffDigits(d.lines)*cellW
 	markX := numEnd
 	if numEnd > dp(diffPadDp) {
 		markX += dp(diffGapDp)
 	}
-	codeX := markX + 2*cell.X
-	maxRunes := max(width-codeX, 0)/max(cell.X, 1) + 1
+	codeX := markX + 2*cellW
+	maxRunes := max(width-codeX, 0)*diffAdvanceRunes/max(rec.adv, 1) + 1
 
 	m := op.Record(g.Ops)
 	rec.rows = make([]diffRowTexts, 0, diffRows(d))
@@ -145,7 +153,7 @@ func (win *window) recordDiff(gtx layout.Context, it *readItem, width int, ink *
 		if i < len(d.spans) {
 			spans = d.spans[i]
 		}
-		win.recordCode(g, ln.Text, spans, image.Pt(codeX, mid), maxRunes, cell.X, tone, ink)
+		win.recordCode(g, ln.Text, spans, image.Pt(codeX, mid), maxRunes, rec.adv, tone, ink)
 		add(ln.Text)
 		rec.rows = append(rec.rows, row)
 	}
@@ -160,9 +168,21 @@ func (win *window) recordDiff(gtx layout.Context, it *readItem, width int, ink *
 	return rec
 }
 
-// recordCode draws text from at (its vertical middle), one label per span.
-// Text past the pane's edge is not shaped: maxRunes is more than fit.
-func (win *window) recordCode(g layout.Context, text string, spans []codecolor.Span, at image.Point, maxRunes, cellW, tone int, ink *readInk) {
+// codeAdvance measures how wide diffAdvanceRunes code characters are, so a
+// character's true width is known to a fraction of a pixel. It draws into ops
+// of its own: nothing of the measuring is kept with the rows.
+func (win *window) codeAdvance(g layout.Context) int {
+	g.Ops = new(op.Ops)
+	_, sz := win.ui.label(g, strings.Repeat("0", diffAdvanceRunes), 12, color.NRGBA{})
+	return sz.X
+}
+
+// recordCode draws text from at (its vertical middle), one label per span,
+// each at the column its first character belongs in. A label's own width is
+// not used: it is rounded, and leaves out trailing spaces. adv is the width
+// of diffAdvanceRunes characters. Text past the pane's edge is not shaped:
+// maxRunes is more than fit.
+func (win *window) recordCode(g layout.Context, text string, spans []codecolor.Span, at image.Point, maxRunes, adv, tone int, ink *readInk) {
 	c, limit := win.ui, len(text)
 	for i := range text {
 		if maxRunes == 0 {
@@ -171,7 +191,8 @@ func (win *window) recordCode(g layout.Context, text string, spans []codecolor.S
 		}
 		maxRunes--
 	}
-	x, pos := at.X, 0
+	col := func(n int) int { return (n*adv + diffAdvanceRunes/2) / diffAdvanceRunes }
+	pos, runes, wide := 0, 0, 0
 	draw := func(end int, kind codecolor.Kind) {
 		if end = min(end, limit); end <= pos {
 			return
@@ -179,9 +200,14 @@ func (win *window) recordCode(g layout.Context, text string, spans []codecolor.S
 		part := text[pos:end]
 		pos = end
 		call, sz := c.label(g, part, 12, ink.code[tone][kind])
-		place(g.Ops, call, image.Pt(x, at.Y-sz.Y/2))
-		// A label's size leaves out trailing spaces; the cells keep them.
-		x += max(sz.X, utf8.RuneCountInString(part)*cellW)
+		place(g.Ops, call, image.Pt(at.X+wide+col(runes), at.Y-sz.Y/2))
+		n := utf8.RuneCountInString(part)
+		runes += n
+		// Rounding is at most a pixel. More is wide characters from the
+		// Japanese fallback font: what follows moves past them.
+		if over := sz.X - col(n); over > 1 {
+			wide += over
+		}
 	}
 	for _, sp := range spans {
 		draw(sp.Start, codecolor.Plain)
