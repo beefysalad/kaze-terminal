@@ -42,6 +42,7 @@ const (
 	devboxLoaded
 	devboxUnreachable
 	devboxRejected
+	devboxUnreadable
 )
 
 // devboxPage is the page's state. creds is nil on a machine that isn't paired.
@@ -112,6 +113,17 @@ func (win *window) devboxCheck() {
 	if d.creds == nil || d.fetching {
 		return
 	}
+	// Read the pairing again, so running /devbox:setup then Refresh is enough.
+	// A file that has gone keeps the old key: the devbox will say if it's dead,
+	// and the menu keeps its shape while the tab is open.
+	load := d.load
+	if load == nil {
+		load = loadDevboxCreds
+	}
+	if c, ok := load(); ok && *d.creds != c {
+		d.phase, d.groups, d.checkedAt, d.more = devboxNone, devbox.Groups{}, time.Time{}, false
+		d.creds = &c
+	}
 	d.fetching = true
 	creds, list := *d.creds, d.list
 	if list == nil {
@@ -131,13 +143,16 @@ func (win *window) devboxDone(asked devbox.Creds, jobs []devbox.Job, err error) 
 	d := &win.set.devbox
 	d.fetching = false
 	if d.creds == nil || *d.creds != asked {
-		return // the machine's pairing changed while it ran
+		win.devboxCheck() // the pairing changed while it ran: ask with the new one
+		return
 	}
 	switch {
 	case err == nil:
 		d.phase, d.groups, d.checkedAt = devboxLoaded, devbox.Group(jobs), time.Now()
 	case errors.Is(err, devbox.ErrRejected):
 		d.phase, d.groups = devboxRejected, devbox.Groups{}
+	case errors.Is(err, devbox.ErrUnreadable):
+		d.phase, d.groups = devboxUnreadable, devbox.Groups{}
 	default:
 		d.phase, d.groups = devboxUnreachable, devbox.Groups{}
 	}
@@ -190,6 +205,10 @@ func drawDevbox(p *page, r image.Rectangle, win *window) int {
 		return p.devboxHero(r, y, devbox.Stopped, "Couldn't reach the devbox",
 			"No connection right now. Statuses are hidden because they may be out of date.",
 			[]ctrl{{kind: ctlButton, id: "dbx_refresh", text: "Try again", dead: d.fetching}})
+	case d.phase == devboxUnreadable:
+		return p.devboxHero(r, y, devbox.Unknown, "Couldn't read the job list",
+			"The devbox answered, but not in a form Kaze understands. Statuses are hidden rather than guessed.",
+			[]ctrl{{kind: ctlButton, id: "dbx_refresh", text: "Try again", dead: d.fetching}})
 	case d.phase == devboxNone:
 		return p.devboxPlaceholders(r, y)
 	}
@@ -214,7 +233,8 @@ func drawDevbox(p *page, r image.Rectangle, win *window) int {
 	drawJobs("Needs you", g.NeedsYou)
 	drawJobs("Running", g.Running)
 	y = p.devboxLineRows(r, y, "Queued", g.Queued, true)
-	if len(g.NeedsYou) == 0 && len(g.Running) == 0 && len(g.Queued) == 0 {
+	y = p.devboxLineRows(r, y, "Unknown status", g.Unknown, true)
+	if len(g.NeedsYou) == 0 && len(g.Running) == 0 && len(g.Queued) == 0 && len(g.Unknown) == 0 {
 		sub := "All your jobs have finished."
 		if len(g.Finished) == 0 {
 			sub = "No jobs yet."
@@ -308,13 +328,7 @@ func (p *page) devboxSummary(r image.Rectangle, y int, g devbox.Groups, creds *d
 	paint.PaintOp{}.Add(ops)
 	wash.Pop()
 
-	status := devbox.Done
-	switch {
-	case len(g.NeedsYou) > 0 && len(g.Running) == 0:
-		status = devbox.NeedsYou
-	case len(g.Running) > 0:
-		status = devbox.Running
-	}
+	status := devboxMood(g)
 	_, _, c := p.devboxLook(status)
 	top := y + pad
 	mid := top + mascot/2
@@ -350,6 +364,25 @@ func (p *page) devboxSummary(r image.Rectangle, y int, g devbox.Groups, creds *d
 	}
 	p.devboxCard(box, 14, col.card, col.line2, rec.Stop())
 	return box.Max.Y
+}
+
+// devboxMood is the summary spirit's face: the most active thing going on.
+func devboxMood(g devbox.Groups) devbox.Status {
+	switch {
+	case len(g.Running) > 0:
+		return devbox.Running
+	case len(g.NeedsYou) > 0:
+		return devbox.NeedsYou
+	case len(g.Queued) > 0:
+		return devbox.Queued
+	case g.FailedToday > 0:
+		return devbox.Failed
+	case len(g.Unknown) > 0:
+		return devbox.Unknown
+	case len(g.Finished) == 0:
+		return devbox.Stopped
+	}
+	return devbox.Done
 }
 
 // devboxJob draws a job with its lane; seen says whether the lane is on screen.
@@ -482,6 +515,10 @@ func (p *page) devboxLineRows(r image.Rectangle, y int, heading string, jobs []d
 	rec := op.Record(ops)
 	yy := y
 	for i, j := range shown {
+		if at := yy - p.st.scroll; at+rowH <= p.st.pane.Min.Y || at >= p.st.pane.Max.Y {
+			yy += rowH // out of sight: it keeps its height and costs nothing to draw
+			continue
+		}
 		if i > 0 {
 			paint.FillShape(ops, col.line, clip.Rect(image.Rect(r.Min.X, yy, r.Max.X, yy+1)).Op())
 		}

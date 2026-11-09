@@ -30,10 +30,17 @@ const (
 	maxReplyBytes = 1 << 20
 	maxJobs       = 500
 	maxNameRunes  = 160
+
+	maxQuestionRunes = 400
 )
 
 // ErrRejected means the devbox refused the key: this machine is no longer paired.
 var ErrRejected = errors.New("devbox: key rejected")
+
+// ErrUnreadable means the devbox answered with text that holds no jobs Kaze
+// can recognize, as when the list's format changes. It must not look like an
+// empty list.
+var ErrUnreadable = errors.New("devbox: unreadable job list")
 
 // Creds is one machine's pairing. Key is never logged, drawn or put in an error.
 type Creds struct {
@@ -153,6 +160,9 @@ func parseLine(line string) Job {
 	details = strings.TrimSpace(details)
 	j.Name = limit(lapName(strings.TrimSpace(title)))
 	if q, ok := strings.CutPrefix(details, "needs you: "); ok {
+		if r := []rune(q); len(r) > maxQuestionRunes {
+			q = string(r[:maxQuestionRunes])
+		}
 		j.Question = q
 	}
 	if p := percentRe.FindStringSubmatch(details); p != nil {
@@ -189,8 +199,8 @@ func clean(s string) string {
 
 // Groups are the page's sections.
 type Groups struct {
-	NeedsYou, Running, Queued, Finished []Job
-	FailedToday                         int
+	NeedsYou, Running, Queued, Finished, Unknown []Job
+	FailedToday                                  int
 }
 
 // Group sorts jobs into the page's sections, newest first where order matters.
@@ -204,6 +214,8 @@ func Group(jobs []Job) Groups {
 			g.Running = append(g.Running, j)
 		case Queued:
 			g.Queued = append(g.Queued, j)
+		case Unknown:
+			g.Unknown = append(g.Unknown, j)
 		default:
 			g.Finished = append(g.Finished, j)
 			if j.Status == Failed && j.Age < 24*time.Hour {
@@ -264,7 +276,11 @@ func List(ctx context.Context, c Creds, hc *http.Client) ([]Job, error) {
 			text.WriteByte('\n')
 		}
 	}
-	return Parse(text.String()), nil
+	jobs := Parse(text.String())
+	if len(jobs) == 0 && strings.TrimSpace(text.String()) != "" {
+		return nil, ErrUnreadable
+	}
+	return jobs, nil
 }
 
 // mcpSession is the small part of MCP over streamable HTTP that listing needs.

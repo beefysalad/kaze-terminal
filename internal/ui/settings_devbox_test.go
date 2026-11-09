@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"errors"
+	"fmt"
 	"image"
 	"os"
 	"slices"
@@ -188,6 +189,134 @@ func TestDevboxQueuedJobs(t *testing.T) {
 	}
 	if win.set.devbox.wakes != 0 {
 		t.Error("a queued job has no lane to animate")
+	}
+}
+
+func TestDevboxUnknownJobIsNotFinished(t *testing.T) {
+	jobs := devbox.Parse("jabc123  teleporting  lead  3m  Mystery job")
+	win := devboxWindow(t, staticJobs(jobs, nil))
+	openDevbox(t, win)
+	waitDevbox(t, win)
+	text := drawDevboxPage(win, 1000, 900)
+	if strings.Contains(text, "Nothing is running") || strings.Contains(text, "RECENTLY FINISHED") {
+		t.Fatalf("a job kaze can't read must not read as finished: %s", text)
+	}
+	if !strings.Contains(text, "UNKNOWN STATUS") || !strings.Contains(text, "Mystery job") {
+		t.Fatalf("page: %s", text)
+	}
+}
+
+func TestDevboxUnreadableFormatSaysSo(t *testing.T) {
+	win := devboxWindow(t, staticJobs(nil, devbox.ErrUnreadable))
+	openDevbox(t, win)
+	waitDevbox(t, win)
+	text := drawDevboxPage(win, 1000, 900)
+	if !strings.Contains(text, "Couldn't read the job list") {
+		t.Fatalf("no message: %s", text)
+	}
+	if strings.Contains(text, "No jobs yet") || strings.Contains(text, "Checked just now") {
+		t.Fatalf("an unreadable list must not look like a good check: %s", text)
+	}
+}
+
+func TestDevboxRefreshPicksUpANewPairing(t *testing.T) {
+	var seen atomic.Value
+	win := devboxWindow(t, func(_ context.Context, c devbox.Creds) ([]devbox.Job, error) {
+		seen.Store(c.Key)
+		if c.Key == dbxKey {
+			return nil, devbox.ErrRejected
+		}
+		return dbxJobs, nil
+	})
+	openDevbox(t, win)
+	waitDevbox(t, win)
+	fresh := dbxCreds
+	fresh.Key = "a-new-key"
+	win.set.devbox.load = func() (devbox.Creds, bool) { return fresh, true }
+	win.activate("dbx_refresh", 0)
+	waitDevbox(t, win)
+	if seen.Load() != "a-new-key" {
+		t.Fatalf("Refresh used key %v", seen.Load())
+	}
+	if text := drawDevboxPage(win, 1000, 1400); strings.Contains(text, "isn't paired") || !strings.Contains(text, "lap-a") {
+		t.Fatalf("page: %s", text)
+	}
+}
+
+func TestDevboxPairingLostKeepsTheMenu(t *testing.T) {
+	win := devboxWindow(t, staticJobs(nil, devbox.ErrRejected))
+	openDevbox(t, win)
+	waitDevbox(t, win)
+	win.set.devbox.load = func() (devbox.Creds, bool) { return devbox.Creds{}, false }
+	win.activate("dbx_refresh", 0)
+	waitDevbox(t, win)
+	if devboxIndex(win) < 0 {
+		t.Fatal("the menu must keep its shape while the tab is open")
+	}
+}
+
+func TestDevboxRepairedDuringACheckChecksAgain(t *testing.T) {
+	release := make(chan struct{})
+	win := devboxWindow(t, func(_ context.Context, c devbox.Creds) ([]devbox.Job, error) {
+		if c.Key == dbxKey {
+			<-release
+		}
+		return dbxJobs, nil
+	})
+	openDevbox(t, win)
+	fresh := dbxCreds
+	fresh.Key = "a-new-key"
+	win.set.devbox.load = func() (devbox.Creds, bool) { return fresh, true }
+	win.devboxOpen()
+	close(release)
+	waitDevbox(t, win)
+	if win.set.devbox.phase != devboxLoaded {
+		t.Fatalf("phase = %v: left on placeholder rows", win.set.devbox.phase)
+	}
+}
+
+func TestDevboxSummaryFace(t *testing.T) {
+	bad := devbox.Job{Status: devbox.Failed}
+	ok := devbox.Job{Status: devbox.Done}
+	cases := []struct {
+		name string
+		g    devbox.Groups
+		want devbox.Status
+	}{
+		{"running", devbox.Groups{Running: []devbox.Job{{}}, NeedsYou: []devbox.Job{{}}}, devbox.Running},
+		{"needs you", devbox.Groups{NeedsYou: []devbox.Job{{}}}, devbox.NeedsYou},
+		{"queued", devbox.Groups{Queued: []devbox.Job{{}}}, devbox.Queued},
+		{"failed today", devbox.Groups{Finished: []devbox.Job{bad, ok}, FailedToday: 1}, devbox.Failed},
+		{"no jobs", devbox.Groups{}, devbox.Stopped},
+		{"unknown", devbox.Groups{Unknown: []devbox.Job{{}}}, devbox.Unknown},
+		{"all fine", devbox.Groups{Finished: []devbox.Job{ok}}, devbox.Done},
+	}
+	for _, c := range cases {
+		if got := devboxMood(c.g); got != c.want {
+			t.Errorf("%s: mood = %v, want %v", c.name, got, c.want)
+		}
+	}
+}
+
+func TestDevboxSkipsRowsOffScreen(t *testing.T) {
+	var lines []string
+	for i := range 50 {
+		lines = append(lines, fmt.Sprintf("j0000%02d  done  lead  %dh  Batch lap lap-row%d  100%%", i, i+1, i))
+	}
+	win := devboxWindow(t, staticJobs(devbox.Parse(strings.Join(lines, "\n")), nil))
+	openDevbox(t, win)
+	waitDevbox(t, win)
+	win.set.devbox.more = true
+	text := drawDevboxPage(win, 1000, 500)
+	if strings.Contains(text, "lap-row49") {
+		t.Fatal("a row far below the window was drawn")
+	}
+	if win.set.scrollMax < 1500 {
+		t.Fatalf("skipped rows must keep their height: scrollMax = %d", win.set.scrollMax)
+	}
+	win.set.scroll = win.set.scrollMax
+	if text := drawDevboxPage(win, 1000, 500); !strings.Contains(text, "lap-row49") {
+		t.Fatal("the last row did not appear when scrolled to")
 	}
 }
 

@@ -116,6 +116,24 @@ func TestQueuedJobsAreNotFinished(t *testing.T) {
 	}
 }
 
+func TestListUnreadableFormatIsAnError(t *testing.T) {
+	creds, hc := startFake(t, &fakeMCP{reply: "Jobs:\n| id | state |\n| abc | working |"})
+	if _, err := List(bounded(t), creds, hc); !errors.Is(err, ErrUnreadable) {
+		t.Fatalf("err = %v, want ErrUnreadable: a changed format must not look like no jobs", err)
+	}
+	creds, hc = startFake(t, &fakeMCP{reply: "  \n"})
+	if jobs, err := List(bounded(t), creds, hc); err != nil || len(jobs) != 0 {
+		t.Fatalf("an empty list is just empty: %v, %v", jobs, err)
+	}
+}
+
+func TestQuestionIsCapped(t *testing.T) {
+	jobs := Parse("jabc123  needs_you  lead  3m  A lap  needs you: " + strings.Repeat("q", maxQuestionRunes+200))
+	if len(jobs) != 1 || len([]rune(jobs[0].Question)) != maxQuestionRunes {
+		t.Fatalf("question is %d runes, want the cap %d", len([]rune(jobs[0].Question)), maxQuestionRunes)
+	}
+}
+
 func TestParseOddLines(t *testing.T) {
 	if got := Parse(""); len(got) != 0 {
 		t.Fatalf("empty reply gave %d jobs", len(got))
@@ -169,8 +187,11 @@ func TestGroup(t *testing.T) {
 	if len(g.Running) != 2 || g.Running[0].Name != "new run" {
 		t.Errorf("running must be newest first: %+v", g.Running)
 	}
-	if len(g.Finished) != 4 || g.Finished[0].Name != "?" {
+	if len(g.Finished) != 3 || g.Finished[0].Name != "ok" {
 		t.Errorf("finished = %+v", g.Finished)
+	}
+	if len(g.Unknown) != 1 || g.Unknown[0].Name != "?" {
+		t.Errorf("a job kaze can't read must not count as finished: %+v", g.Unknown)
 	}
 	if g.FailedToday != 1 {
 		t.Errorf("failed today = %d, want 1", g.FailedToday)
