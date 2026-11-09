@@ -60,7 +60,7 @@
       </div>
     </div>
   </section>
-  <div class="wrap news"><span class="tag">0.37</span><a href="#changelog">New: see which model is running <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
+  <div class="wrap news"><span class="tag">0.38</span><a href="#changelog">New: read subagent edits right in the panel <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
 
   <section class="k-sec wrap" aria-labelledby="demo-title">
     <header class="k-head">
@@ -105,7 +105,7 @@
     </div>
     <dl class="index">
       <div><dt><span class="b-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>Alert cards</dt><dd><p>When Claude asks or finishes, a card at the bottom right names the session the way the sidebar does, with its branch and slash command, what Claude said or the start of its reply, and how long it ran. <kbd>⌘</kbd> <kbd>J</kbd> opens the newest one. Native notifications reach you while Kaze is in the background; click one to open its session. An optional chime too.</p><a class="k-link" href="https://github.com/beefysalad/kaze-terminal#alerts-claude-code-hooks">Set up the hooks</a></dd></div>
-      <div><dt><span class="b-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="19" r="2"/><path d="M5 8v1a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V8M12 12v5"/></svg></span>Every subagent</dt><dd><p>When Claude Code or Codex hands work to subagents, each gets a slim line under its session, waiting first. Click one to open it in the panel, which reads like Claude's own transcript: its words first, a short sentence per step, a click for the diff or the output, then a formatted report. Agents started together keep their own names. <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>A</kbd> opens the agents board: filter and search every subagent and preview it without leaving the list.</p><span class="k-links"><button class="k-link" type="button" data-open="agents">See the subagents</button><button class="k-link" type="button" data-open="board">See the board</button></span></dd></div>
+      <div><dt><span class="b-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="19" r="2"/><path d="M5 8v1a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V8M12 12v5"/></svg></span>Every subagent</dt><dd><p>When Claude Code or Codex hands work to subagents, each gets a slim line under its session, waiting first. Click one to open it in the panel, which reads like Claude's own transcript: its words first, a short sentence per step, edits open with line numbers and code colours, a click for a command’s output, then a formatted report. Agents started together keep their own names. <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>A</kbd> opens the agents board: filter and search every subagent and preview it without leaving the list.</p><span class="k-links"><button class="k-link" type="button" data-open="agents">See the subagents</button><button class="k-link" type="button" data-open="board">See the board</button></span></dd></div>
       <div><dt><span class="b-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg></span>Servers in the panel</dt><dd><p>Click a workspace member and its terminal opens as a tab in the panel under Claude, next to your subagents. Click the tab to type in it, click Claude’s terminal to take the keyboard back, hide the panel or expand a server to the main view. Nothing floats over your work.</p><a class="k-link" href="https://github.com/beefysalad/kaze-terminal#workspace-members-in-the-panel">How the panel works</a></dd></div>
       <div><dt><span class="b-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span>The doc reader</dt><dd><p>Ctrl+click an .md path, even one with spaces in it, to read it in Kaze with a heading outline and links. It reloads when the agent edits it, and the session is one click away.</p><a class="k-link" href="https://github.com/beefysalad/kaze-terminal#reading-docs">How the reader works</a></dd></div>
       <div><dt><span class="b-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></span>The status bar</dt><dd><p>Your folder and branch with its line changes, your servers and subagents at a glance, CPU and RAM for your sessions, Claude usage as small meters, and the battery on laptops. Hover for details and when each limit resets.</p><a class="k-link" href="https://github.com/beefysalad/kaze-terminal#claude-usage-in-the-status-bar">See the usage setup</a></dd></div>
@@ -141,7 +141,19 @@
     </header>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.37</span><span class="badge">Latest</span><time datetime="2026-11-09">Nov 9, 2026</time></div>
+        <div class="release-meta"><span class="version">0.38</span><span class="badge">Latest</span><time datetime="2026-11-09">Nov 9, 2026</time></div>
+        <div class="release-body">
+          <h3>Read subagent edits right in the panel</h3>
+          <ul>
+            <li><b>Edits open inline:</b> in a subagent’s Readable view, each edit opens by itself with its real line numbers and its added and removed counts.</li>
+            <li><b>Code colours:</b> diffs are coloured for common languages, in every theme.</li>
+            <li><b>Failures show why:</b> a failed edit opens with its error, while quiet notebook and patch edits stay folded on one line.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.37</span><time datetime="2026-11-09">Nov 9, 2026</time></div>
         <div class="release-body">
           <h3>See which model is running</h3>
           <ul>
@@ -159,17 +171,6 @@
             <li><b>System notifications:</b> while Kaze is in the background, agent alerts also appear as macOS and Windows notifications. The newest alert replaces the older one for that session, and clicking it takes you to the session. Turn it off in Settings, Agents.</li>
             <li><b>Codex tabs stay separate:</b> Codex started in a Kaze tab now runs on its own, so its helpers and alerts stay with the right session. This needs a Codex version with <code>--no-daemon</code>; older versions start as before, without the separation.</li>
             <li><b>Restored workspaces say what’s running:</b> after a restart, workspace tabs whose commands haven’t run say Not started instead of “all up”. Press Run to start them in the tabs already open. Nothing starts by itself.</li>
-          </ul>
-        </div>
-      </li>
-
-      <li class="release">
-        <div class="release-meta"><span class="version">0.35</span><time datetime="2026-11-07">Nov 7, 2026</time></div>
-        <div class="release-body">
-          <h3>A new app icon and logo</h3>
-          <ul>
-            <li><b>A new app icon:</b> Kaze’s icon is now the refreshed wind K in soft lilac on a dark tile, in the Dock, Finder, the Windows taskbar and Alt+Tab. On macOS it follows Apple’s icon shape, so it sits the same size as your other apps. macOS may keep the old icon in the Dock until Kaze restarts after the update.</li>
-            <li><b>The same K everywhere:</b> the settings sidebar now shows the new K too, matching the title bar and the About page.</li>
           </ul>
         </div>
       </li>
