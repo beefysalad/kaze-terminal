@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/usage"
 	"io"
 	"os"
 	"path/filepath"
@@ -33,6 +34,7 @@ const (
 // partial record; pending holds only that record until its newline arrives.
 // The shown dock tab owns this value and calls Read only while visible.
 type Transcript struct {
+	Model              string // display name of the newest reply model, empty until known
 	Messages           []TranscriptMessage
 	Steps              []TranscriptStep // tool calls in record order, at most MaxTranscriptSteps
 	Offset             int64
@@ -47,8 +49,9 @@ type Transcript struct {
 	handback, lastText string
 	seq                uint64 // record order shared by Messages and Steps
 	cwd                string
-	stepBytes          int // detail bytes held by Steps
-	detailFrom         int // Steps before this index hold no detail
+	stepBytes          int    // detail bytes held by Steps
+	detailFrom         int    // Steps before this index hold no detail
+	modelID            string // the raw id behind Model
 }
 type TranscriptMessage struct {
 	Text  string
@@ -247,6 +250,7 @@ func (tr *Transcript) record(line []byte) {
 		Timestamp string `json:"timestamp"`
 		Cwd       string `json:"cwd"`
 		Message   struct {
+			Model   string `json:"model"`
 			Content []struct {
 				Type, Text, Name, ID string
 				ToolUseID            string          `json:"tool_use_id"`
@@ -263,6 +267,9 @@ func (tr *Transcript) record(line []byte) {
 	}
 	if entry.Cwd != "" && entry.Cwd != tr.cwd {
 		tr.cwd = entry.Cwd
+	}
+	if entry.Type == "assistant" {
+		tr.noteModel(entry.Message.Model)
 	}
 	if entry.Type == "user" {
 		for i := range entry.Message.Content {
@@ -644,3 +651,12 @@ func (tr *Transcript) Report(hook string) string {
 
 // AtEnd reports whether the last Read reached the end of the file it saw.
 func (tr *Transcript) AtEnd() bool { return tr.info != nil && tr.Offset >= tr.info.Size() }
+
+// noteModel keeps the newest reply's model. Claude Code writes placeholders
+// such as "<synthetic>" for replies no model produced.
+func (tr *Transcript) noteModel(id string) {
+	if id == "" || id[0] == '<' || id == tr.modelID {
+		return
+	}
+	tr.modelID, tr.Model = id, usage.ModelName(id, "")
+}

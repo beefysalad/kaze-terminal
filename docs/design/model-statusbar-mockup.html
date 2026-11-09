@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kaze Model Display</title>
+<style>
+@font-face{font-family:JB;src:url(../site-assets/JetBrainsMono-Regular.ttf)}
+:root{color-scheme:dark;--canvas:#06080c;--chrome:#0b0d12;--active:#0f1117;--white:#fff;--text:#c9cdd8;--muted:#8a90a2;--status:#9aa0b1;--line:#1d2230;--green:#62d39a;--amber:#f2b84b;--accent:#8b7bff;--accent-ink:#b9a6ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--canvas);color:var(--white);font:14px/1.55 JB,monospace}
+main{max-width:1180px;margin:0 auto;padding:32px 16px}
+h1{font-size:24px;line-height:1.25;margin:0 0 8px}
+header p{margin:0;color:#aab0bf;max-width:860px}
+h2{font-size:15px;margin:34px 0 4px}
+h2 span{color:var(--muted);font-weight:400}
+.why{color:#aab0bf;font-size:12.5px;margin:0 0 12px;max-width:900px}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 4px}
+.tabs button{font:12px JB,monospace;color:var(--text);background:var(--active);border:1px solid var(--line);border-radius:7px;padding:7px 12px;cursor:pointer}
+.tabs button[aria-pressed=true]{color:var(--accent-ink);background:#1b1930;border-color:#302a50}
+.scroll{overflow-x:auto;padding-bottom:4px}
+.sb{width:1120px;height:32px;background:var(--chrome);border:1px solid var(--line);border-radius:7px;display:flex;align-items:center;font-size:11px;color:var(--status);white-space:nowrap}
+.sb.narrow{width:760px}
+.g{display:flex;align-items:center;gap:7px;padding:0 10px;height:100%}
+.sep{width:1px;height:14px;background:var(--line)}
+.grow{flex:1}
+.fold{color:var(--text)}.br{color:var(--green)}
+.k{color:var(--muted);font-size:10px;letter-spacing:.06em}
+.v{color:#d6d9e2}
+.pa{display:flex;align-items:center;gap:6px;background:#8b7bff14;color:var(--accent-ink);border-radius:10px;padding:2px 9px}
+.pa i,.sd i{width:6px;height:6px;border-radius:50%;display:block}
+.pa i{background:var(--accent)}
+.sd{display:flex;gap:4px;align-items:center}.sd i{background:var(--green)}
+.new{height:24px;border-radius:6px;background:#8b7bff12;outline:1px solid #8b7bff40;outline-offset:-1px}
+.m{color:#e7e9f0}
+.dock{width:1120px;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:var(--chrome);font-size:11px;color:var(--text)}
+.head{height:34px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
+.dot.done{background:var(--green)}
+.kind{color:var(--accent-ink)}
+.task{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.mut{color:var(--muted)}
+.tag{padding:3px 7px;border-radius:5px}
+.seg{display:flex;background:#1d223080;border-radius:6px;padding:2px}
+.seg span{padding:1px 9px;border-radius:4px;color:var(--muted)}
+.seg span.on{background:#2a3142;color:var(--text)}
+.body{padding:10px 12px;color:var(--muted);height:62px}
+.body b{color:var(--text);font-weight:400}
+.table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px}
+.table th,.table td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.table th{color:var(--muted);font-weight:400}
+.ok{color:var(--green)}.warn{color:var(--amber)}
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>Which model is this using?</h1>
+<p>The status bar shows the model of the session in front. Each subagent shows its own model in its pane. The purple outline marks what is new.</p>
+</header>
+
+<div class="tabs" id="tabs"></div>
+
+<h2>Status bar <span>the session or tab in front, nothing else</span></h2>
+<p class="why">It changes when you switch tabs, and hides in a plain shell.</p>
+<div class="scroll"><div class="sb" id="bar"></div></div>
+
+<h2>Status bar, narrow window</h2>
+<p class="why">Shortens to the family name, then drops before anything else moves.</p>
+<div class="scroll"><div class="sb narrow" id="narrow"></div></div>
+
+<h2>Subagent pane, option 1: beside the agent type <span>(recommended)</span></h2>
+<p class="why">It reads as one label, "Explore on Haiku 5.5", and the task text gives up the room.</p>
+<div class="scroll" id="p1"></div>
+
+<h2>Subagent pane, option 2: on the right, by the elapsed time</h2>
+<p class="why">Keeps the agent name and task together, with the model among the details. It is easier to miss.</p>
+<div class="scroll" id="p2"></div>
+
+<h2>What Kaze can really get</h2>
+<div class="scroll"><table class="table">
+<tr><th>Item</th><th>Source</th><th>Status</th></tr>
+<tr><td>Claude session model</td><td>The status line Kaze already runs, per tab. No new polling</td><td class="ok">Documented by Claude Code. Real payload still to capture</td></tr>
+<tr><td>Subagent model</td><td>The "model" field in the transcript the pane already reads</td><td class="ok">Seen in real transcripts here</td></tr>
+<tr><td>Codex session model</td><td>Not checked yet</td><td class="warn">Unconfirmed, shown here as a best case</td></tr>
+<tr><td>Before the first reply</td><td>A subagent has no recorded model yet</td><td>Nothing shown until it is known</td></tr>
+</table></div>
+</main>
+
+<script>
+const S={
+ "Opus session, Haiku agent":{m:"Opus 5.5",short:"Opus",usage:true,a:"Haiku 5.5",type:"Explore",task:"Find every caller of the session restore code",t:"1m 12s"},
+ "Fable session, Fable agent":{m:"Fable 5.1",short:"Fable",usage:true,a:"Fable 5.1",type:"general-purpose",task:"Draft the release notes for this version",t:"38s"},
+ "Sonnet agent, finished":{m:"Opus 5.5",short:"Opus",usage:true,a:"Sonnet 5.5",type:"code-review",task:"Review the workspace restore change",t:"done in 6m 40s",done:true},
+ "Agent just started":{m:"Opus 5.5",short:"Opus",usage:true,a:"",type:"Plan",task:"Plan the status bar model slot",t:"2s"},
+ "Codex tab":{m:"gpt-5-codex",short:"Codex",usage:false,a:"",type:"",task:"",t:""},
+ "Plain shell":{m:"",short:"",usage:false,a:"",type:"",task:"",t:""}
+};
+let cur=Object.keys(S)[0];
+const $=i=>document.getElementById(i), esc=s=>s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const left=`<div class="g"><span class="fold">~/Desktop/kaze</span></div><div class="sep"></div><div class="g"><span class="br">main</span></div><div class="grow"></div>`;
+const servers=`<div class="g"><span class="sd"><i></i><i></i></span><span class="v">2/2</span><span class="k">UP</span></div><div class="sep"></div>`;
+const agents=s=>s.type?`<div class="g"><span class="pa"><i></i>1 agent</span></div><div class="sep"></div>`:"";
+const usage=s=>s.usage?`<div class="g"><span class="k">5H</span><span class="v">23%</span><span class="k">WK</span><span class="v">41%</span><span class="k">CTX</span><span class="v">34%</span></div><div class="sep"></div>`:"";
+const res=`<div class="g"><span class="k">CPU</span><span class="v">3%</span><span class="k">MEM</span><span class="v">1.2G</span></div>`;
+const slot=t=>t?`<div class="g new"><span class="m">${esc(t)}</span></div><div class="sep"></div>`:"";
+const tag=t=>t?`<span class="tag new" style="height:auto;color:#e7e9f0">${esc(t)}</span>`:"";
+function pane(s,first){
+ if(!s.type)return `<div class="dock"><div class="body">No subagent open in this tab.</div></div>`;
+ const seg=`<div class="seg"><span class="${s.done?"":"on"}">Activity</span><span class="${s.done?"on":""}">Report</span></div>`;
+ return `<div class="dock"><div class="head"><span class="dot ${s.done?"done":""}"></span><span class="kind">${esc(s.type)}</span>${first?tag(s.a):""}<span class="task">${esc(s.task)}</span><span class="mut">${esc(s.t)}</span>${first?"":tag(s.a)}${seg}${s.done?'<span class="mut">Copy report</span>':""}</div><div class="body"><b>Read 3 files</b><br>Searched the code 4 times</div></div>`;
+}
+function draw(){
+ const s=S[cur];
+ document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-pressed",b.textContent===cur));
+ $("bar").innerHTML=left+agents(s)+servers+slot(s.m)+usage(s)+res;
+ $("narrow").innerHTML=`<div class="g"><span class="fold">~/Desktop/kaze</span></div><div class="grow"></div>`+agents(s)+slot(s.short)+usage(s)+res;
+ $("p1").innerHTML=pane(s,true);
+ $("p2").innerHTML=pane(s,false);
+}
+Object.keys(S).forEach(k=>{const e=document.createElement("button");e.textContent=k;e.onclick=()=>{cur=k;draw()};$("tabs").append(e)});
+draw();
+</script>
+</body>
+</html>

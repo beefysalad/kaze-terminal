@@ -184,6 +184,8 @@ func (win *window) drawStatus(gtx layout.Context, y int, now time.Time) {
 				x = text(x-d.Dot*2/3+gap, serversCount(m.Servers), true, th.ActiveFG)
 				c.statusLabel(gtx, x+gap, mid, "UP")
 			}
+		case grpModel:
+			text(x, l.ModelText, true, th.ActiveFG)
 		case grpUsage:
 			for i, k := range l.UsageKeys {
 				u := usageByKey(m.Usage, k)

@@ -163,7 +163,8 @@ type window struct {
 	flash       func()          // flashes the taskbar button
 	toastTag    *int
 	system      *systemNotifications
-	systemTabs  []*tabs.Tab                  // retained scratch for publishing notification metadata
+	systemTabs  []*tabs.Tab // retained scratch for publishing notification metadata
+	models      map[tabs.TabID]modelEntry
 	liveMgr     atomic.Pointer[tabs.Manager] // win.mgr, for onNotify
 	snapActive  atomic.Int64                 // active TabID, mirrored for onNotify
 	snapFocused atomic.Bool

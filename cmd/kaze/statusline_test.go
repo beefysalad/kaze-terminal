@@ -108,3 +108,15 @@ func TestStatuslineAcceptsFractionalResetTime(t *testing.T) {
 		t.Fatalf("printed %q", out.String())
 	}
 }
+
+func TestStatuslineSendsTheModel(t *testing.T) {
+	srv, got := startServer(t)
+	var out bytes.Buffer
+	runStatusline(strings.NewReader(fullSample), &out, envOf(srv, "4"), slNow)
+	if m := wait(t, got); m.Usage == nil || m.Usage.Model != "Opus 5.5" {
+		t.Fatalf("got %+v", m.Usage)
+	}
+	if strings.Contains(out.String(), "Opus") {
+		t.Fatalf("Claude status row changed: %q", out.String())
+	}
+}

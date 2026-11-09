@@ -85,6 +85,7 @@ func (win *window) noteAgent(m notify.Msg, id tabs.TabID, seq uint64) {
 	}
 	if agent == "codex" {
 		delete(win.ctx, id)
+		delete(win.models, id)
 	}
 	a.shellAt = seq
 	if win.agents == nil {

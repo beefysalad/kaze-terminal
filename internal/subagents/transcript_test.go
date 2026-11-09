@@ -150,3 +150,30 @@ func TestTranscriptAtEnd(t *testing.T) {
 		t.Fatal("never reached the end")
 	}
 }
+
+func modelLine(model string) string {
+	b, _ := json.Marshal(map[string]any{"type": "assistant", "message": map[string]any{"model": model, "content": []map[string]any{textBlock("hi")}}})
+	return string(b) + "\n"
+}
+
+func TestTranscriptKnowsItsModel(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "agent-a.jsonl")
+	os.WriteFile(p, []byte(fixtureLine("assistant", textBlock("no model yet"))), 0644)
+	var tr Transcript
+	tr.Read(p)
+	if tr.Model != "" {
+		t.Fatalf("model=%q", tr.Model)
+	}
+	f, _ := os.OpenFile(p, os.O_APPEND|os.O_WRONLY, 0644)
+	defer f.Close()
+	f.WriteString(modelLine("claude-haiku-5-5"))
+	tr.Read(p)
+	if tr.Model != "Haiku 5.5" {
+		t.Fatalf("model=%q", tr.Model)
+	}
+	f.WriteString(modelLine("<synthetic>"))
+	tr.Read(p)
+	if tr.Model != "Haiku 5.5" {
+		t.Fatalf("placeholder replaced the model: %q", tr.Model)
+	}
+}
