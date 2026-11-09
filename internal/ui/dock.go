@@ -48,7 +48,7 @@ type dockSession struct {
 	trAt, trStarted time.Time
 	cache           dockCache
 	read            readCache       // the Activity's items, built once per change
-	open            map[string]bool // readable steps whose detail is open, by step id
+	open            map[string]bool // readable steps the owner opened or folded against their default, by step id
 }
 
 // dockEntry is one tab of a session's panel: an agent's view, or a member.

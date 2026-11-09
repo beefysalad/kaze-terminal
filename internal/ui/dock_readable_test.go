@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/beefysalad/kaze-terminal/internal/codecolor"
 	"github.com/beefysalad/kaze-terminal/internal/subagents"
 )
 
@@ -150,23 +151,20 @@ func TestReadableFoldsSearches(t *testing.T) {
 }
 
 func TestReadableFoldsEdits(t *testing.T) {
-	got := rdSteps(readableItems(rdAgent(), rdTr(
+	// Without a transcript the hook steps fold edits as before.
+	a := rdAgent()
+	a.Steps = []subagents.Step{{At: tl0, Tool: "Edit", Summary: "a.go"}, {At: tl0.Add(time.Second), Tool: "Write", Summary: "b.go"}}
+	got := rdSteps(readableItems(a, nil))
+	if len(got) != 1 || rdSentence(got[0]) != "Edited 2 files" || len(got[0].detail.lines) != 2 {
+		t.Fatalf("%+v", got)
+	}
+	// From a transcript every edit is its own step, with its own counts.
+	got = rdSteps(readableItems(rdAgent(), rdTr(
 		subagents.TranscriptStep{Tool: "Edit", Path: "internal/ui/commands.go", Removed: 12},
 		subagents.TranscriptStep{Tool: "Edit", Path: "internal/ui/logic.go", Added: 2, Removed: 9},
 		subagents.TranscriptStep{Tool: "Write", Path: "internal/config/config.go", Added: 4, Removed: 20},
 	)))
-	if len(got) != 1 || rdSentence(got[0]) != "Edited 3 files" || rdMeta(got[0]) != "+6 −41" {
-		t.Fatalf("%+v", got)
-	}
-	if d := got[0].detail.lines; len(d) != 3 || d[1].Text != "internal/ui/logic.go  +2 −9" {
-		t.Fatalf("detail %+v", d)
-	}
-	// The same file twice: one file's sentence, counts summed, diffs joined.
-	got = rdSteps(readableItems(rdAgent(), rdTr(
-		subagents.TranscriptStep{Tool: "Edit", Path: "a.go", Added: 1, Removed: 1, Diff: []subagents.DiffLine{{Kind: '+', Text: "x"}}},
-		subagents.TranscriptStep{Tool: "Edit", Path: "a.go", Added: 2, Diff: []subagents.DiffLine{{Kind: '+', Text: "y"}}},
-	)))
-	if len(got) != 1 || rdSentence(got[0]) != "Edited a.go" || rdMeta(got[0]) != "+3 −1" || len(got[0].detail.lines) != 2 {
+	if len(got) != 3 || rdSentence(got[1]) != "Edited internal/ui/logic.go" || rdMeta(got[1]) != "+2 −9" || rdMeta(got[2]) != "+4 −20" {
 		t.Fatalf("%+v", got)
 	}
 }
@@ -280,5 +278,136 @@ func TestReadableEndRowsAndDropped(t *testing.T) {
 	items := readableItems(a, tr)
 	if items[0].kind != readDropped || items[0].text != "… earlier steps hidden" || items[len(items)-1].kind != readFinished || items[len(items)-1].text != "Finished in 1m" {
 		t.Fatalf("items %+v", items)
+	}
+}
+
+func rdEdit(id, path string) subagents.TranscriptStep {
+	return subagents.TranscriptStep{Tool: "Edit", ID: id, Path: path, Added: 1, Removed: 1, Done: true,
+		Diff: []subagents.DiffLine{{Kind: '-', Text: "old", Old: 1}, {Kind: '+', Text: "new", New: 1}}}
+}
+
+func TestAppliedEditOpensByDefault(t *testing.T) {
+	items := rdSteps(readableItems(rdAgent(), rdTr(rdEdit("e1", "a.go"))))
+	s := &dockSession{}
+	if len(items) != 1 || !s.isOpen(&items[0]) || !items[0].detail.diff || len(items[0].detail.lines) != 2 || items[0].detail.path != "a.go" {
+		t.Fatalf("%+v", items)
+	}
+}
+
+func TestAppliedEditsAreNotFolded(t *testing.T) {
+	items := rdSteps(readableItems(rdAgent(), rdTr(rdEdit("e1", "a.go"), rdEdit("e2", "a.go"), rdEdit("e3", "b.go"))))
+	if len(items) != 3 || items[0].id != "e1" || items[2].id != "e3" || rdSentence(items[2]) != "Edited b.go" || rdMeta(items[2]) != "+1 −1" {
+		t.Fatalf("%+v", items)
+	}
+}
+
+func TestSuccessfulCommandStaysFolded(t *testing.T) {
+	st := subagents.TranscriptStep{Tool: "Bash", Command: "ls", Done: true, Out: []string{"x"}}
+	items := rdSteps(readableItems(rdAgent(), rdTr(st)))
+	s := &dockSession{}
+	if len(items) != 1 || !items[0].hasDetail() || s.isOpen(&items[0]) {
+		t.Fatalf("%+v", items)
+	}
+}
+
+func TestFailedCommandOpensByDefault(t *testing.T) {
+	st := subagents.TranscriptStep{Tool: "Bash", Command: "make", Done: true, Failed: true, Out: []string{"boom"}}
+	items := rdSteps(readableItems(rdAgent(), rdTr(st)))
+	s := &dockSession{}
+	if len(items) != 1 || !s.isOpen(&items[0]) {
+		t.Fatalf("%+v", items)
+	}
+}
+
+func TestFailedEditShowsErrorNoDiff(t *testing.T) {
+	st := subagents.TranscriptStep{Tool: "Edit", Path: "a.go", Done: true, Failed: true, Out: []string{"String to replace not found"}}
+	items := rdSteps(readableItems(rdAgent(), rdTr(st)))
+	s := &dockSession{}
+	if len(items) != 1 || rdMeta(items[0]) != "failed" || items[0].detail.diff || len(items[0].detail.lines) != 1 ||
+		items[0].detail.lines[0].Text != "String to replace not found" || !s.isOpen(&items[0]) {
+		t.Fatalf("%+v", items)
+	}
+}
+
+func TestNotebookEditIsHeaderOnly(t *testing.T) {
+	for _, tool := range []string{"NotebookEdit", "apply_patch"} {
+		items := rdSteps(readableItems(rdAgent(), rdTr(subagents.TranscriptStep{Tool: tool, Path: "n.ipynb", Done: true})))
+		if len(items) != 1 || rdSentence(items[0]) != "Edited n.ipynb" || rdMeta(items[0]) != "" || items[0].hasDetail() {
+			t.Fatalf("%s: %+v", tool, items)
+		}
+	}
+}
+
+func TestReadsAndSearchesShareALine(t *testing.T) {
+	items := rdSteps(readableItems(rdAgent(), rdTr(
+		subagents.TranscriptStep{Tool: "Grep", Pattern: "foo", Path: "internal"},
+		subagents.TranscriptStep{Tool: "Read", Path: "a.go"},
+		subagents.TranscriptStep{Tool: "Read", Path: "b.go"},
+	)))
+	if len(items) != 1 || rdSentence(items[0]) != "Searched the code · Read 2 files" {
+		t.Fatalf("%+v", items)
+	}
+	d := items[0].detail.lines
+	if len(d) != 3 || d[0].Text != "foo in internal" || d[1].Text != "a.go" || d[2].Text != "b.go" {
+		t.Fatalf("detail %+v", d)
+	}
+	if s := (&dockSession{}); s.isOpen(&items[0]) {
+		t.Fatal("a quiet line opens by default")
+	}
+}
+
+func TestFoldOverrideSticks(t *testing.T) {
+	tr := rdTr(rdEdit("e1", "a.go"))
+	s := &dockSession{tr: tr}
+	a := rdAgent()
+	it := &s.readable(a)[0]
+	if !s.isOpen(it) {
+		t.Fatal("not open by default")
+	}
+	s.open = map[string]bool{"e1": false}
+	tr.Version++
+	it = &s.readable(a)[0]
+	if s.isOpen(it) || s.read.builds < 2 {
+		t.Fatalf("closed item reopened (builds %d)", s.read.builds)
+	}
+}
+
+func TestStepWithoutDetailIsOneLine(t *testing.T) {
+	st := rdEdit("e1", "a.go")
+	st.Diff = nil // trimmed
+	items := rdSteps(readableItems(rdAgent(), rdTr(st)))
+	if len(items) != 1 || items[0].hasDetail() || (&dockSession{}).isOpen(&items[0]) || rdMeta(items[0]) != "+1 −1" {
+		t.Fatalf("%+v", items)
+	}
+}
+
+func TestSpansComputedOncePerStep(t *testing.T) {
+	calls := 0
+	old := colourLine
+	colourLine = func(l codecolor.Lang, s string, dst []codecolor.Span) []codecolor.Span {
+		calls++
+		return old(l, s, dst)
+	}
+	defer func() { colourLine = old }()
+	tr := rdTr(rdEdit("e1", "a.go"))
+	s := &dockSession{tr: tr}
+	a := rdAgent()
+	it := &s.readable(a)[0]
+	if calls != 2 || len(it.detail.spans) != len(it.detail.lines) {
+		t.Fatalf("calls %d spans %d", calls, len(it.detail.spans))
+	}
+	tr.Version++
+	it = &s.readable(a)[0]
+	if s.read.builds != 2 || calls != 2 || len(it.detail.spans) != 2 {
+		t.Fatalf("builds %d calls %d", s.read.builds, calls)
+	}
+}
+
+func TestHookStepsUnchanged(t *testing.T) {
+	a := rdAgent()
+	a.Steps = []subagents.Step{{At: tl0, Tool: "Edit", Summary: "a.go"}, {At: tl0.Add(time.Second), Tool: "Edit", Summary: "b.go"}}
+	got := rdSteps(readableItems(a, nil))
+	if len(got) != 1 || rdSentence(got[0]) != "Edited 2 files" || got[0].openByDefault {
+		t.Fatalf("%+v", got)
 	}
 }

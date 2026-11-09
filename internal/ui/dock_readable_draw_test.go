@@ -126,7 +126,9 @@ func rdHas(texts []string, want string) bool {
 }
 
 func TestDockShowsReadableSteps(t *testing.T) {
-	win, _, _, _, _ := rdDock(t, rdTranscript())
+	win, r, _, s, _ := rdDock(t, rdTranscript())
+	s.open = map[string]bool{"e1": false, "b1": false} // the open edit and failure would push rows out of the panel
+	twoFrames(t, win, r)
 	all := strings.Join(win.dock.texts, " ")
 	if !strings.Contains(all, "Starting") || !strings.Contains(all, "scratch") {
 		t.Fatalf("note missing: %q", win.dock.texts)
@@ -255,22 +257,23 @@ func rdCount(texts []string, want string) int {
 
 func TestClickStepOpensDiff(t *testing.T) {
 	win, r, _, s, _ := rdDock(t, rdTranscript())
-	if rdHas(win.dock.texts, "+ ") {
-		t.Fatal("a detail is open before any click")
+	if rdCount(win.dock.texts, "+ ") == 0 || rdCount(win.dock.texts, "− ") != 5 || !rdHas(win.dock.texts, "n1") || !rdHas(win.dock.texts, "ctx1") {
+		t.Fatalf("an applied edit is not open before any click: %q", win.dock.texts)
 	}
 	clickAt(t, win, r, rdHit(t, win.dock.hits, "e1"))
-	if !s.open["e1"] || rdCount(win.dock.texts, "+ ") == 0 || rdCount(win.dock.texts, "− ") != 5 || !rdHas(win.dock.texts, "n1") || !rdHas(win.dock.texts, "ctx1") {
-		t.Fatalf("diff not open: %q", win.dock.texts)
-	}
-	clickAt(t, win, r, rdHit(t, win.dock.hits, "e1"))
-	if s.open["e1"] || rdHas(win.dock.texts, "+ ") {
+	if v, ok := s.open["e1"]; !ok || v || rdHas(win.dock.texts, "+ ") {
 		t.Fatalf("diff still open: %q", win.dock.texts)
+	}
+	clickAt(t, win, r, rdHit(t, win.dock.hits, "e1"))
+	if !s.open["e1"] || rdCount(win.dock.texts, "− ") != 5 {
+		t.Fatalf("diff not open again: %q", win.dock.texts)
 	}
 }
 
 func TestClickBashShowsCommandAndOutput(t *testing.T) {
-	win, r, _, _, _ := rdDock(t, rdTranscript())
-	clickAt(t, win, r, rdHit(t, win.dock.hits, "b1"))
+	win, r, _, s, _ := rdDock(t, rdTranscript())
+	s.open = map[string]bool{"e1": false} // a failed command is open by default; fold the edit above it into view
+	twoFrames(t, win, r)
 	if !rdHas(win.dock.texts, "$ "+rdBashCmd) || !rdHas(win.dock.texts, "FAIL    github.com/x/ui    4.8s") {
 		t.Fatalf("texts %q", win.dock.texts)
 	}
@@ -336,10 +339,13 @@ func TestBoardPreviewClickOpensStep(t *testing.T) {
 	win.boardSelect(k)
 	win.board.prev.follow = false
 	gtx := drawPreview(win)
+	if !boardHas(win, "+ ") {
+		t.Fatalf("an applied edit is not open in the preview: %q", win.board.texts)
+	}
 	win.boardPress(gtx, rdHit(t, win.board.prevHits, "e1"), 0)
 	drawPreview(win)
-	if !win.board.prev.open["e1"] || !boardHas(win, "+ ") {
-		t.Fatalf("preview step not open: %q", win.board.texts)
+	if v, ok := win.board.prev.open["e1"]; !ok || v || boardHas(win, "+ ") {
+		t.Fatalf("preview step not folded: %q", win.board.texts)
 	}
 	win.boardPress(gtx, centre(win.board.prevHits.modeEvery), 0)
 	drawPreview(win)
@@ -350,14 +356,14 @@ func TestBoardPreviewClickOpensStep(t *testing.T) {
 
 func TestOpenStepSurvivesNewRecords(t *testing.T) {
 	win, r, _, s, path := rdDock(t, rdTranscript())
-	clickAt(t, win, r, rdHit(t, win.dock.hits, "e1"))
+	clickAt(t, win, r, rdHit(t, win.dock.hits, "e1")) // folds the applied edit
 	f, _ := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0o644)
 	f.WriteString(rdUse("b2", "Bash", map[string]any{"command": "ls"}))
 	f.Close()
 	now := time.Now()
 	frameAt(t, win, r, now.Add(agentTranscriptPoll+time.Second))
 	frameAt(t, win, r, now.Add(agentTranscriptPoll+time.Second+10*time.Millisecond))
-	if s.read.builds < 2 || !s.open["e1"] || !rdHas(win.dock.texts, "o1") {
+	if s.read.builds < 2 || s.open["e1"] || rdHas(win.dock.texts, "o1") || !rdHas(win.dock.texts, "go vet and the ui tests") {
 		t.Fatalf("builds %d open %v texts %q", s.read.builds, s.open, win.dock.texts)
 	}
 }

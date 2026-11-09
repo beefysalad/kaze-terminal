@@ -11,6 +11,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 
+	"github.com/beefysalad/kaze-terminal/internal/codecolor"
 	"github.com/beefysalad/kaze-terminal/internal/render"
 	"github.com/beefysalad/kaze-terminal/internal/subagents"
 	"github.com/beefysalad/kaze-terminal/internal/theme"
@@ -69,6 +70,7 @@ func (c *chrome) readInk(bg color.NRGBA) readInk {
 type readHit struct {
 	id   string
 	rect image.Rectangle
+	open bool // drawn open: a click closes it
 }
 
 // readCache is a panel's Activity items, rebuilt only when what they are
@@ -85,14 +87,65 @@ type readCache struct {
 	itemsOK         bool
 	every           []dockItem // the Every step list
 	everyOK         bool
-	counts          string // "21 steps · 3 messages"
-	heights         []int  // row heights, reused every frame
-	builds          int    // list builds so far; tests count them
+	counts          string                         // "21 steps · 3 messages"
+	heights         []int                          // row heights, reused every frame
+	builds          int                            // list builds so far; tests count them
+	spans           map[spanKey][][]codecolor.Span // code colours of an edit's diff, worked out once per step
 
 	ink   readInk
 	inkOf theme.Chrome
 	inkBG color.NRGBA
 	inkOK bool
+}
+
+// spanKey is one step's diff as it was coloured: a step id and its line count.
+type spanKey struct {
+	id    string
+	lines int
+}
+
+// colourLine is the one-line colourer; tests swap it to count calls.
+var colourLine = codecolor.Line
+
+// isOpen reports whether it is drawn open: the owner's choice for this step if
+// there is one, else its default.
+func (s *dockSession) isOpen(it *readItem) bool {
+	if !it.hasDetail() {
+		return false
+	}
+	if v, ok := s.open[it.id]; ok {
+		return v
+	}
+	return it.openByDefault
+}
+
+// colourDiffs gives each diff item its spans, from the cache when this step
+// was coloured with the same lines before.
+func (s *dockSession) colourDiffs(items []readItem) {
+	rc := &s.read
+	var keep map[spanKey][][]codecolor.Span
+	for i := range items {
+		d := &items[i].detail
+		if !d.diff {
+			continue
+		}
+		k := spanKey{items[i].id, len(d.lines)}
+		sp, ok := rc.spans[k]
+		if !ok {
+			if lang := codecolor.LangOf(d.path); lang != codecolor.None {
+				sp = make([][]codecolor.Span, len(d.lines))
+				for j, ln := range d.lines {
+					sp[j] = colourLine(lang, ln.Text, nil)
+				}
+			}
+		}
+		if keep == nil {
+			keep = map[spanKey][][]codecolor.Span{}
+		}
+		keep[k] = sp
+		d.spans = sp
+	}
+	rc.spans = keep // steps no longer in the list drop out
 }
 
 // readFresh drops the built lists when anything they come from changed.
@@ -126,6 +179,7 @@ func (s *dockSession) readable(a *subagents.Agent) []readItem {
 		rc.itemsOK = true
 		rc.builds++
 		s.pruneNotes()
+		s.colourDiffs(rc.items)
 		for id := range s.open {
 			found := false
 			for i := range rc.items {
@@ -247,7 +301,7 @@ func (win *window) readItemHeight(gtx layout.Context, s *dockSession, it *readIt
 	case readNote:
 		return win.noteLayout(gtx, s, it.text, noteW).height + dp(14)
 	case readStep:
-		if it.hasDetail() && s.open[it.id] {
+		if s.isOpen(it) {
 			return dp(readRowDp) + readDetailHeight(gtx, it) + dp(10)
 		}
 		return dp(readRowDp)
@@ -347,7 +401,7 @@ func (win *window) drawReadStep(gtx layout.Context, s *dockSession, it *readItem
 	ops, c, dp := gtx.Ops, win.ui, gtx.Dp
 	row := image.Rect(r.Min.X, r.Min.Y, r.Max.X, r.Min.Y+dp(readRowDp))
 	mid := row.Min.Y + row.Dy()/2
-	open := it.hasDetail() && s.open[it.id]
+	open := s.isOpen(it)
 	if it.hasDetail() {
 		chev := "›"
 		if open {
@@ -356,7 +410,7 @@ func (win *window) drawReadStep(gtx layout.Context, s *dockSession, it *readItem
 		call, sz := c.labelW(gtx, chev, 12, ink.meta, font.Normal)
 		place(ops, call, image.Pt(row.Min.X+dp(3), mid-sz.Y/2))
 		if hit := row.Intersect(list); !hit.Empty() {
-			h.steps = append(h.steps, readHit{id: it.id, rect: hit})
+			h.steps = append(h.steps, readHit{id: it.id, rect: hit, open: open})
 		}
 	}
 	// Meta first, right-aligned, so the words can be cut to what is left.
@@ -566,11 +620,7 @@ func (win *window) readPress(s *dockSession, h *dockHits, p image.Point) bool {
 			if s.follow && x.id != lastStepID(s.read.items) {
 				s.follow = false
 			}
-			if s.open[x.id] {
-				delete(s.open, x.id)
-			} else {
-				s.open[x.id] = true
-			}
+			s.open[x.id] = !x.open
 			win.invalidate()
 			return true
 		}
@@ -593,7 +643,7 @@ func lastStepID(items []readItem) string {
 func (s *dockSession) dropTranscript() {
 	s.tr = nil
 	if rc := &s.read; rc.tr != nil {
-		rc.tr, rc.items, rc.every, rc.itemsOK, rc.everyOK = nil, nil, nil, false, false
+		rc.tr, rc.items, rc.every, rc.itemsOK, rc.everyOK, rc.spans = nil, nil, nil, false, false, nil
 		s.pruneNotes()
 	}
 }

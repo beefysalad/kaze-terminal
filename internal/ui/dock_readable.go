@@ -8,6 +8,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/beefysalad/kaze-terminal/internal/codecolor"
 	"github.com/beefysalad/kaze-terminal/internal/subagents"
 )
 
@@ -48,10 +49,17 @@ type readMeta struct {
 
 // readDetail is what a click opens: an optional "$ command" caption and
 // lines. Line kinds: '+' and '-' diff lines, ' ' dim (context, output),
-// 'l' a plain list line (a fold's files or searches).
+// 'l' a plain list line (a fold's files or searches). diff marks an edit's
+// own diff: more is the patch lines left out, path names the file for its
+// colouring and spans (parallel to lines, filled once per step when the list
+// is built) colour each line's code.
 type readDetail struct {
 	cap   string
 	lines []subagents.DiffLine
+	diff  bool
+	more  int
+	path  string
+	spans [][]codecolor.Span
 }
 
 type readItem struct {
@@ -67,6 +75,8 @@ type readItem struct {
 	text    string // notes and the end rows
 	msg     int    // a note's index in the transcript's Messages, else -1
 	clock   string // a note's time, "15:04", set when the list is built
+
+	openByDefault bool // an applied edit, a failed edit or command: open until the owner folds it
 }
 
 func (it *readItem) metas() []readMeta { return it.meta[:it.nmeta] }
@@ -95,6 +105,7 @@ const (
 	foldSearches
 	foldEdits
 	foldTodos
+	foldLook // reads and searches that neighbour each other share one line
 )
 
 func foldOf(tool string) foldClass {
@@ -253,6 +264,12 @@ func appendReadable(out []readItem, a *subagents.Agent, tr *subagents.Transcript
 			continue
 		}
 		c := foldOf(e.step.Tool)
+		if c == foldReads || c == foldSearches {
+			c = foldLook
+		}
+		if !hook && c == foldEdits {
+			c = foldNone // a transcript's edits stand on their own
+		}
 		if c == foldNone {
 			flush()
 			out = append(out, stepItem(e.step, hook))
@@ -323,6 +340,28 @@ func stepItem(st *subagents.TranscriptStep, hook bool) readItem {
 		for _, o := range st.Out {
 			it.detail.lines = append(it.detail.lines, subagents.DiffLine{Kind: ' ', Text: o})
 		}
+		it.openByDefault = (st.Failed || st.Fails > 0) && it.hasDetail()
+	case "Edit", "Write", "MultiEdit", "NotebookEdit", "apply_patch":
+		it.verb, it.obj, it.objMono = "Edited", st.Path, true
+		switch {
+		case st.Failed:
+			it.addMeta("failed", toneBad)
+			for _, o := range st.Out {
+				if len(it.detail.lines) == readDetailLines {
+					break
+				}
+				it.detail.lines = append(it.detail.lines, subagents.DiffLine{Kind: ' ', Text: o})
+			}
+			it.openByDefault = len(it.detail.lines) > 0
+		case st.Tool == "NotebookEdit" || st.Tool == "apply_patch":
+		default:
+			it.addMeta("+"+strconv.Itoa(st.Added), toneAdd)
+			it.addMeta("−"+strconv.Itoa(st.Removed), toneDel)
+			if len(st.Diff) > 0 {
+				it.detail = readDetail{lines: st.Diff, diff: true, more: st.DiffMore, path: st.Path}
+				it.openByDefault = true
+			}
+		}
 	case "WebFetch":
 		it.verb, it.obj = "Fetched", st.Query
 		if u, err := url.Parse(st.Query); err == nil && u.Host != "" {
@@ -356,25 +395,53 @@ func bashSentence(desc string) (verb, rest string) {
 func foldItem(cls foldClass, run []*subagents.TranscriptStep, hook bool) readItem {
 	it := readItem{kind: readStep, id: run[0].ID, at: run[0].At, msg: -1}
 	switch cls {
-	case foldReads:
-		paths := distinctPaths(run, func(s *subagents.TranscriptStep) string { return s.Path })
-		if len(paths) <= 1 {
+	case foldLook:
+		paths := distinctPaths(run, func(s *subagents.TranscriptStep) string {
+			if foldOf(s.Tool) == foldReads {
+				return s.Path
+			}
+			return ""
+		})
+		searches := 0
+		for _, s := range run {
+			if foldOf(s.Tool) == foldSearches {
+				searches++
+			}
+		}
+		search := ""
+		if searches > 0 {
+			search = "Searched the code"
+			if searches > 1 {
+				search += " " + strconv.Itoa(searches) + " times"
+			}
+		}
+		switch {
+		case searches == 0 && len(paths) <= 1:
 			it.verb, it.obj, it.objMono = "Read", run[0].Path, true
 			return it
-		}
-		it.verb, it.obj = "Read", strconv.Itoa(len(paths))+" files"
-		it.detail.lines = listLines(paths)
-	case foldSearches:
-		it.verb = "Searched the code"
-		if len(run) > 1 {
-			it.obj = strconv.Itoa(len(run)) + " times"
-		}
-		if hook && len(run) == 1 {
-			return it
+		case searches == 0:
+			it.verb, it.obj = "Read", strconv.Itoa(len(paths))+" files"
+		case len(paths) == 0:
+			it.verb = "Searched the code"
+			if searches > 1 {
+				it.obj = strconv.Itoa(searches) + " times"
+			}
+			if hook && searches == 1 {
+				return it
+			}
+		default:
+			read := "Read " + strconv.Itoa(len(paths)) + " files"
+			if len(paths) == 1 {
+				read = "Read " + paths[0]
+			}
+			it.verb = search + " · " + read
 		}
 		for _, s := range run {
 			if len(it.detail.lines) == readDetailLines {
 				break
+			}
+			if foldOf(s.Tool) != foldSearches {
+				continue
 			}
 			ln := s.Pattern
 			if s.Path != "" {
@@ -383,6 +450,12 @@ func foldItem(cls foldClass, run []*subagents.TranscriptStep, hook bool) readIte
 			if ln != "" {
 				it.detail.lines = append(it.detail.lines, subagents.DiffLine{Kind: 'l', Text: ln})
 			}
+		}
+		for _, p := range paths {
+			if len(it.detail.lines) == readDetailLines {
+				break
+			}
+			it.detail.lines = append(it.detail.lines, subagents.DiffLine{Kind: 'l', Text: p})
 		}
 	case foldEdits:
 		paths := distinctPaths(run, func(s *subagents.TranscriptStep) string { return s.Path })
