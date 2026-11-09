@@ -21,8 +21,12 @@ func IsZsh(shell string) bool { return isZsh(shell, platformName()) }
 // load the user's own at the top level: inside a function, a plain typeset in
 // them would become local.
 func zshLoad(name string) string {
-	return `ZDOTDIR="$__kaze_user"
-[[ -r "$ZDOTDIR/` + name + `" ]] && source "$ZDOTDIR/` + name + `"
+	return `if [[ -z "$__kaze_had" && "$__kaze_user" == "$HOME" ]]; then
+  unset ZDOTDIR
+else
+  ZDOTDIR="$__kaze_user"
+fi
+[[ -r "$__kaze_user/` + name + `" ]] && source "$__kaze_user/` + name + `"
 __kaze_user="${ZDOTDIR:-$HOME}"
 ZDOTDIR="$__kaze_private"
 `

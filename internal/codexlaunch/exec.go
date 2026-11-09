@@ -62,7 +62,11 @@ func Dispatch(argv, env []string, stderr io.Writer) (bool, int) {
 		}
 	}
 	childEnv = append(childEnv, depthEnv+"="+strconv.Itoa(depth+1))
-	args := append(append([]string{}, command.Prefix...), Arguments(argv[1:])...)
+	planned := Arguments(argv[1:])
+	if len(planned) > len(argv)-1 && !supportsNoDaemon(command, childEnv) {
+		planned = argv[1:]
+	}
+	args := append(append([]string{}, command.Prefix...), planned...)
 	code, err := execute(command.Path, args, childEnv)
 	if err != nil {
 		return fail(code, fmt.Errorf("kaze: cannot run Codex: %w", err))

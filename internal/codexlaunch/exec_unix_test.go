@@ -77,3 +77,25 @@ func TestProxyRecursiveShellWrapperFailsWithinBound(t *testing.T) {
 		t.Fatalf("recursive wrapper output=%s err=%v", b, err)
 	}
 }
+
+func TestCodexWithoutNoDaemonStartsUnchanged(t *testing.T) {
+	self, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	l, err := New(self)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer l.Close()
+	real := t.TempDir()
+	executableFixture(t, real, "codex", "#!/bin/sh\nif [ \"$1\" = '--no-daemon' ]; then echo unexpected >&2; exit 2; fi\nprintf 'launched %s' \"$*\"\n")
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, filepath.Join(l.dir, "codex"), "resume", "abc")
+	cmd.Env = l.Env([]string{"PATH=" + real + ":/usr/bin:/bin", "KAZE_TAB_ID=1"})
+	b, err := cmd.CombinedOutput()
+	if err != nil || string(b) != "launched resume abc" {
+		t.Fatalf("err=%v output=%s", err, b)
+	}
+}

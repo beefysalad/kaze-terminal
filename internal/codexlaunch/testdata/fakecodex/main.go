@@ -8,6 +8,9 @@ import (
 )
 
 func main() {
+	if n := len(os.Args); n >= 3 && os.Args[n-2] == "--no-daemon" && os.Args[n-1] == "--help" {
+		return // the launcher asks first whether the flag is supported
+	}
 	in, _ := io.ReadAll(io.LimitReader(os.Stdin, 4096))
 	cwd, _ := os.Getwd()
 	_ = json.NewEncoder(os.Stdout).Encode(struct {

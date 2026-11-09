@@ -607,6 +607,7 @@ executable paths can bypass it, and so can bash or fish startup files that reord
 PATH (zsh is handled); add the flag explicitly for those launches. Remote, administrative and unknown command
 forms pass through. An ambiguous single-word command-line prompt also needs an
 explicit flag; opening plain `codex` then typing a prompt works normally.
+Codex versions without `--no-daemon` start unchanged and are not isolated.
 On Windows, recognized npm launchers call Node directly to preserve arguments;
 other `.cmd` wrappers run as they are, with a note, and may not be isolated. If the private launcher cannot start,
 including when Smart App Control blocks it, start your installed Codex directly

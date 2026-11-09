@@ -61,3 +61,15 @@ func sweep(root string, alive func(int) bool) {
 		}
 	}
 }
+
+// supportsNoDaemon asks the real Codex, because older versions exit on the
+// unknown flag. Anything but a clean exit means launch it unchanged.
+func supportsNoDaemon(command Command, env []string) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
+	defer cancel()
+	args := append(append([]string{}, command.Prefix...), "--no-daemon", "--help")
+	cmd := exec.CommandContext(ctx, command.Path, args...)
+	cmd.Env = env
+	hideConsole(cmd)
+	return cmd.Run() == nil
+}

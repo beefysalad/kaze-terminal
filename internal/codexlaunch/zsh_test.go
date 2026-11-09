@@ -143,3 +143,34 @@ func TestRealZshInteractiveNonLoginFinishes(t *testing.T) {
 		t.Fatalf("got=%q log=%q", got, log)
 	}
 }
+
+func TestZshenvLoadsWithZdotdirUnsetWhenUserHadNone(t *testing.T) {
+	body := zshFiles()[".zshenv"]
+	unset, load := strings.Index(body, "unset ZDOTDIR\nelse\n  ZDOTDIR="), strings.Index(body, `source "$__kaze_user/.zshenv"`)
+	if unset < 0 || load < 0 || unset > load {
+		t.Fatalf("user .zshenv does not see ZDOTDIR unset:\n%s", body)
+	}
+}
+
+func TestRealZshUserZshenvCanChooseZdotdir(t *testing.T) {
+	zsh, err := exec.LookPath("zsh")
+	if err != nil {
+		t.Skip("zsh is not installed")
+	}
+	l := zshLauncher(t)
+	home := t.TempDir()
+	custom := filepath.Join(home, ".config", "zsh")
+	if err := os.MkdirAll(custom, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	os.WriteFile(filepath.Join(home, ".zshenv"), []byte(`export ZDOTDIR="${ZDOTDIR:-$HOME/.config/zsh}"`+"\n"), 0o600)
+	os.WriteFile(filepath.Join(custom, ".zshrc"), []byte("export KAZE_TEST_RC=loaded\n"), 0o600)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, zsh, "-l", "-i", "-c", `print -r -- "$KAZE_TEST_RC|$ZDOTDIR|${PATH%%:*}"`)
+	cmd.Env = l.Env([]string{"HOME=" + home, "PATH=/usr/bin:/bin", "KAZE_TAB_ID=1"})
+	out, err := cmd.Output()
+	if want := "loaded|" + custom + "|" + l.dir; err != nil || !strings.Contains(string(out), want) {
+		t.Fatalf("err=%v out=%q want %q", err, out, want)
+	}
+}
