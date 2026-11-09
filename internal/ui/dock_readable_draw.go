@@ -107,10 +107,13 @@ type readCache struct {
 	inkOK bool
 }
 
-// spanKey is one step's diff as it was coloured: a step id and its line count.
+// spanKey is one step's diff as it was coloured: a step id, its line count and
+// its first line's address, which tells it from a diff that replaced it at the
+// same length.
 type spanKey struct {
 	id    string
 	lines int
+	first *subagents.DiffLine
 }
 
 // colourLine is the one-line colourer; tests swap it to count calls.
@@ -138,7 +141,7 @@ func (s *dockSession) colourDiffs(items []readItem) {
 		if !d.diff {
 			continue
 		}
-		k := spanKey{items[i].id, len(d.lines)}
+		k := spanKey{items[i].id, len(d.lines), &d.lines[0]}
 		sp, ok := rc.spans[k]
 		if !ok {
 			if lang := codecolor.LangOf(d.path); lang != codecolor.None {

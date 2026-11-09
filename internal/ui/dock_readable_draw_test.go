@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -720,5 +721,45 @@ func TestCommandOutputHasNoBox(t *testing.T) {
 	th := win.ui.th
 	if p := diffShot(t, win, r, 1000, 600).RGBAAt(x, y); !nearColour(p, win.pal.BG) || nearColour(p, th.Chrome) {
 		t.Fatalf("output sits on %v, want the pane's %v", p, win.pal.BG)
+	}
+}
+
+// A diff replaced at the same line count (the real patch arriving for a
+// fallback diff) is coloured and recorded again from its new text.
+func TestDiffReplacedAtSameLengthRecoloured(t *testing.T) {
+	win, r, _, s, _ := rdDock(t, rdDiffEdit("e1"))
+	before := s.read.diffRecords
+	st := &s.tr.Steps[0]
+	text := []string{"package é", `var s = "日本語" // é`, `func 関数() { return "ñ" }`, "for i := range 10 {}"}
+	if len(text) != len(st.Diff) {
+		t.Fatalf("fixture has %d lines, want %d", len(st.Diff), len(text))
+	}
+	next := make([]subagents.DiffLine, len(st.Diff))
+	for i, ln := range st.Diff {
+		ln.Text = text[i]
+		next[i] = ln
+	}
+	st.Diff = next
+	s.tr.Version++
+	twoFrames(t, win, r)
+	if s.read.diffRecords <= before {
+		t.Fatal("the replaced diff was not recorded again")
+	}
+	var d *readDetail
+	for i := range s.read.items {
+		if s.read.items[i].id == "e1" {
+			d = &s.read.items[i].detail
+		}
+	}
+	if d == nil || len(d.spans) != len(text) {
+		t.Fatalf("detail %+v", d)
+	}
+	for i, want := range text {
+		if got := codecolor.Line(codecolor.Go, want, nil); !slices.Equal(d.spans[i], got) {
+			t.Errorf("line %d %q: spans %v, want %v", i, want, d.spans[i], got)
+		}
+	}
+	if !rdHas(win.dock.texts, text[1]) {
+		t.Fatalf("new text not drawn: %q", win.dock.texts)
 	}
 }
