@@ -141,7 +141,17 @@
     </header>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.38</span><span class="badge">Latest</span><time datetime="2026-11-09">Nov 9, 2026</time></div>
+        <div class="release-meta"><span class="version">0.39.1</span><span class="badge">Latest</span><time datetime="2026-11-09">Nov 9, 2026</time></div>
+        <div class="release-body">
+          <h3>A clearer RAM reading in the status bar</h3>
+          <ul>
+            <li><b>RAM has its own label:</b> the status bar now shows CPU and RAM side by side, each with its name, so the memory figure no longer looks like part of the CPU reading. In a narrow window the labels step aside and the numbers stay.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.38</span><time datetime="2026-11-09">Nov 9, 2026</time></div>
         <div class="release-body">
           <h3>Read subagent edits right in the panel</h3>
           <ul>
@@ -159,18 +169,6 @@
           <ul>
             <li><b>The model in the status bar:</b> the status bar now shows the model of the session in front, such as Opus 5.5, just before the usage numbers. It follows the tab you’re on and hides when Claude exits. It appears when usage is switched on.</li>
             <li><b>Each subagent’s model:</b> a subagent’s panel shows that agent’s own model after the elapsed time, once its first reply is recorded.</li>
-          </ul>
-        </div>
-      </li>
-
-      <li class="release">
-        <div class="release-meta"><span class="version">0.36</span><time datetime="2026-11-09">Nov 9, 2026</time></div>
-        <div class="release-body">
-          <h3>System notifications and separate Codex tabs</h3>
-          <ul>
-            <li><b>System notifications:</b> while Kaze is in the background, agent alerts also appear as macOS and Windows notifications. The newest alert replaces the older one for that session, and clicking it takes you to the session. Turn it off in Settings, Agents.</li>
-            <li><b>Codex tabs stay separate:</b> Codex started in a Kaze tab now runs on its own, so its helpers and alerts stay with the right session. This needs a Codex version with <code>--no-daemon</code>; older versions start as before, without the separation.</li>
-            <li><b>Restored workspaces say what’s running:</b> after a restart, workspace tabs whose commands haven’t run say Not started instead of “all up”. Press Run to start them in the tabs already open. Nothing starts by itself.</li>
           </ul>
         </div>
       </li>
