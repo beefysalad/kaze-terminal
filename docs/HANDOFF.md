@@ -4,6 +4,19 @@ Last updated: 2026-11-09, release 0.37 (the session model in the status bar and 
 
 ## Where things stand
 
+**Subagent pane reading is built on `feat/pane-reading` (2026-11-09), not released.** In Readable
+mode, in the docked panel and the board preview, edits now open on their own with real line
+numbers, a +/- marker, full-width green and red rows and code colours (Go, Python, TS/JS, shell,
+JSON). Quiet commands are one line (click to open the output in place); failed commands and failed
+edits open. Design: `docs/superpowers/specs/2026-11-09-kaze-subagent-pane-reading-design.md`.
+Audit with numbers and captures: `docs/audits/2026-11-09-subagent-pane-reading.md`. Tests and vet
+pass. Owner checks, none done yet (only headless renders were inspected): watch a real subagent edit
+several files and read the diffs top to bottom; look for odd gaps between code colours on a line;
+open a long edit (40 lines, then "N more lines"); check a failed edit and a failed command open;
+fold and reopen a step; on a big window with a tall panel, check scrolling feels smooth (that frame
+sits near 400 µs). The version, changelog and lander are left to the release PR. The lander's agent
+screenshots need retaking (`docs/site-assets/SCREENSHOTS.md`).
+
 **Issues #180 and #172 are implemented locally (2026-11-09), not released.** On
 `fix/issues-180-172`, Codex session restoration now uses `codex --no-daemon resume`
 so restored tabs retain their own hook environment. Three bounded regression

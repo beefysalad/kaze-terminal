@@ -365,7 +365,7 @@ func act21Scene(t testing.TB, win *window, a int) subagents.Key {
 }
 
 // Opt-in development evidence for the readable Activity (issue #134), in the
-// docked panel and the board preview, at 1400x860 in Midnight and Sumi.
+// docked panel and the board preview, at 1400x860 in Midnight, Sumi and Washi.
 func TestReadableRenders(t *testing.T) {
 	dir := os.Getenv("KAZE_DOCK_RENDER_DIR")
 	if dir == "" {
@@ -373,7 +373,7 @@ func TestReadableRenders(t *testing.T) {
 	}
 	os.MkdirAll(dir, 0o700)
 	size := image.Pt(1400, 860)
-	for _, key := range []string{"midnight", "sumi"} {
+	for _, key := range []string{"midnight", "sumi", "washi"} {
 		for _, state := range []string{"dock", "open", "every", "board"} {
 			win, _, r, a, _, _, _ := memberWindow(t)
 			win.km, _ = buildKeymap(runtime.GOOS, nil)
