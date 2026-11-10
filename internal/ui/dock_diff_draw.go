@@ -33,7 +33,7 @@ const (
 	diffGapDp    = 8  // from the number to the marker
 
 	// diffRecordingsKept bounds the retained rows a long run can pile up;
-	// past it, the recordings not on screen are let go and made again if
+	// past it, the longest-unseen recordings are let go and made again if
 	// they scroll back.
 	diffRecordingsKept = 32
 
@@ -227,12 +227,20 @@ func (win *window) diffRecordingFor(gtx layout.Context, s *dockSession, it *read
 	if rec := rc.diffs[it.id]; rec != nil && rec.key == key {
 		return rec
 	}
-	if len(rc.diffs) >= diffRecordingsKept {
+	// At the cap, let go of the longest-unseen recordings. Ones on screen last
+	// frame are newer, so a diff still waiting its turn in this frame's draw
+	// order is not dropped and made again.
+	for rc.diffs[it.id] == nil && len(rc.diffs) >= diffRecordingsKept {
+		oldest := ""
 		for id, r := range rc.diffs {
-			if r.drawn != rc.frame {
-				delete(rc.diffs, id)
+			if r.drawn != rc.frame && (oldest == "" || r.drawn < rc.diffs[oldest].drawn) {
+				oldest = id
 			}
 		}
+		if oldest == "" {
+			break // every one is on screen in this frame
+		}
+		delete(rc.diffs, oldest)
 	}
 	if rc.diffs == nil {
 		rc.diffs = map[string]*diffRecording{}
