@@ -763,3 +763,34 @@ func TestDiffReplacedAtSameLengthRecoloured(t *testing.T) {
 		t.Fatalf("new text not drawn: %q", win.dock.texts)
 	}
 }
+
+// At the cap, a miss lets go of the longest-unseen recording, not one that was
+// on screen last frame and only waits its turn in this one's draw order.
+func TestDiffEvictionKeepsVisibleRecordings(t *testing.T) {
+	win, _, _, s, _ := rdDock(t, rdDiffEdit("e1"))
+	rc := &s.read
+	var e1 *readItem
+	for i := range rc.items {
+		if rc.items[i].id == "e1" {
+			e1 = &rc.items[i]
+		}
+	}
+	if e1 == nil || rc.diffs["e1"] == nil {
+		t.Fatal("no recording for e1")
+	}
+	key := rc.diffs["e1"].key
+	rc.frame++ // a new frame, e1 not drawn in it yet
+	for i := 0; i < diffRecordingsKept-1; i++ {
+		rc.diffs["old"+strconv.Itoa(i)] = &diffRecording{key: key, drawn: rc.frame - 2 - uint64(i%3)}
+	}
+	fresh := *e1
+	fresh.id = "fresh"
+	ink := rc.ink
+	win.diffRecordingFor(pageContext(1000, 600), s, &fresh, key.width, &ink)
+	if rc.diffs["e1"] == nil {
+		t.Fatal("e1, on screen last frame, was let go")
+	}
+	if rc.diffs["fresh"] == nil || len(rc.diffs) > diffRecordingsKept {
+		t.Fatalf("recordings %d, fresh %v", len(rc.diffs), rc.diffs["fresh"] != nil)
+	}
+}

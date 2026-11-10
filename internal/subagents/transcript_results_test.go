@@ -187,3 +187,42 @@ func TestSuccessfulHeaderOnlyEditKeepsNoOutput(t *testing.T) {
 		}
 	}
 }
+
+// Claude Code wraps a refused tool call in <tool_use_error> tags; the reader
+// sees only the message inside.
+func TestFailedEditDropsTheToolUseErrorTags(t *testing.T) {
+	for _, c := range []struct{ content, first, last string }{
+		{"<tool_use_error>File has not been read yet. Read it first before writing to it.</tool_use_error>",
+			"File has not been read yet. Read it first before writing to it.", ""},
+		{"<tool_use_error>String to replace not found in file.\nString: foo</tool_use_error>",
+			"String to replace not found in file.", "String: foo"},
+	} {
+		tr := feedAll(stepRecord("assistant", "", editBlock("t1", "/a.go", "foo", "bar")), resultLine("t1", true, c.content))
+		s := tr.Steps[0]
+		if !s.Failed || len(s.Out) == 0 || s.Out[0] != c.first || c.last != "" && s.Out[len(s.Out)-1] != c.last {
+			t.Fatalf("%q: out %q", c.content, s.Out)
+		}
+		if detailBytes(&s) != tr.stepBytes {
+			t.Fatalf("tracked %d, held %d", tr.stepBytes, detailBytes(&s))
+		}
+	}
+}
+
+// Only an edit's toolUseResult is decoded: a Read's embeds the whole file, and
+// nothing in it is used.
+func TestEditResultDecodesOnlyEdits(t *testing.T) {
+	tur := json.RawMessage(`{"type":"update","structuredPatch":[{"oldStart":1,"newStart":1,"lines":["-a","+b"]}]}`)
+	tr := feedAll(
+		useLine("r1", "Read", map[string]any{"file_path": "/a.go"}),
+		stepRecord("assistant", "", editBlock("e1", "/a.go", "a", "b")),
+	)
+	if patch, _, _ := tr.editResult("r1", tur); patch != nil {
+		t.Fatalf("Read result decoded: %+v", patch)
+	}
+	if patch, _, _ := tr.editResult("e1", tur); len(patch) != 1 {
+		t.Fatalf("Edit result: %+v", patch)
+	}
+	if patch, _, _ := tr.editResult("missing", tur); patch != nil {
+		t.Fatalf("unknown id decoded: %+v", patch)
+	}
+}
