@@ -123,3 +123,13 @@ func TestLineDoesNotAllocateWithRoom(t *testing.T) {
 		t.Fatalf("allocs = %v", n)
 	}
 }
+
+// A Go raw string and a shell single-quoted string keep a backslash as a
+// plain character, so one ending in a backslash still closes there.
+func TestLineRawStringBackslash(t *testing.T) {
+	check(t, LangOf("a.go"), "p := `C:\\` + Foo", map[string]Kind{"`C:\\`": String, "Foo": Name})
+	check(t, LangOf("a.sh"), `echo 'a\' then`, map[string]Kind{`'a\'`: String, "then": Keyword})
+	// Other quotes still escape.
+	check(t, LangOf("a.go"), `s := "a\"b" + Foo`, map[string]Kind{`"a\"b"`: String, "Foo": Name})
+	check(t, LangOf("a.sh"), `echo "a\"b" then`, map[string]Kind{`"a\"b"`: String, "then": Keyword})
+}

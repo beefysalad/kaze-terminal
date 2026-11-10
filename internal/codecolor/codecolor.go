@@ -133,9 +133,12 @@ func Line(l Lang, s string, dst []Span) []Span {
 			dst = append(dst, Span{i, len(s), Comment})
 			return dst
 		case strings.IndexByte(t.quotes, c) >= 0:
+			// A Go raw string and a shell single-quoted string keep a
+			// backslash as it is; elsewhere it escapes the next character.
+			raw := l == Go && c == '`' || l == Shell && c == '\''
 			j := i + 1
 			for j < len(s) && s[j] != c {
-				if s[j] == 0x5c { // backslash
+				if s[j] == 0x5c && !raw { // backslash
 					j++
 				}
 				j++
