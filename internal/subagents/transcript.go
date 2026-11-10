@@ -288,15 +288,11 @@ func (tr *Transcript) record(line []byte) {
 		}
 		var patch []patchHunk
 		created, unchanged := false, false
-		if r := entry.ToolUseResult; results == 1 && len(r) > 0 && r[0] == '{' {
-			var tur struct {
-				Type            string      `json:"type"`
-				StructuredPatch []patchHunk `json:"structuredPatch"`
-			}
-			if json.Unmarshal(r, &tur) == nil {
-				patch, created = tur.StructuredPatch, tur.Type == "create"
-				// Present but empty, unlike a missing or null patch (nil).
-				unchanged = tur.Type == "update" && patch != nil && len(patch) == 0
+		if results == 1 {
+			for i := range entry.Message.Content {
+				if b := &entry.Message.Content[i]; b.Type == "tool_result" {
+					patch, created, unchanged = tr.editResult(b.ToolUseID, entry.ToolUseResult)
+				}
 			}
 		}
 		for i := range entry.Message.Content {
@@ -426,18 +422,15 @@ type patchHunk struct {
 // tool reported making a new file, unchanged that it rewrote one with the same
 // content.
 func (tr *Transcript) result(id string, isErr bool, raw json.RawMessage, patch []patchHunk, created, unchanged bool) {
-	at := -1
-	for i := len(tr.Steps) - 1; i >= 0 && i >= len(tr.Steps)-resultLookBack; i-- {
-		if tr.Steps[i].ID == id {
-			at = i
-			break
-		}
-	}
-	if at < 0 || tr.Steps[at].Done {
+	at := tr.openStep(id)
+	if at < 0 {
 		return
 	}
 	st := &tr.Steps[at]
 	text := resultText(raw)
+	if isErr {
+		text = unwrapToolUseError(text)
+	}
 	st.Done, st.Failed = true, isErr
 	for rest := text; rest != ""; {
 		var ln string
@@ -478,6 +471,60 @@ func (tr *Transcript) result(id string, isErr bool, raw json.RawMessage, patch [
 	}
 	tr.Version++
 	tr.trimDetail()
+}
+
+// openStep is the index of the recent, unfinished step with this id, or -1.
+func (tr *Transcript) openStep(id string) int {
+	for i := len(tr.Steps) - 1; i >= 0 && i >= len(tr.Steps)-resultLookBack; i-- {
+		if tr.Steps[i].ID == id {
+			if tr.Steps[i].Done {
+				return -1
+			}
+			return i
+		}
+	}
+	return -1
+}
+
+// editResult decodes the structured patch of a toolUseResult r when id is an
+// open Edit, Write or MultiEdit step. Other tools are not decoded: a Read's
+// result embeds the whole file, and nothing in it is used. r is an object for
+// edits and often a plain string for failures; only an object is decoded.
+func (tr *Transcript) editResult(id string, r json.RawMessage) (patch []patchHunk, created, unchanged bool) {
+	if len(r) == 0 || r[0] != '{' {
+		return
+	}
+	at := tr.openStep(id)
+	if at < 0 {
+		return
+	}
+	switch tr.Steps[at].Tool {
+	case "Edit", "Write", "MultiEdit":
+	default:
+		return
+	}
+	var tur struct {
+		Type            string      `json:"type"`
+		StructuredPatch []patchHunk `json:"structuredPatch"`
+	}
+	if json.Unmarshal(r, &tur) != nil {
+		return
+	}
+	patch, created = tur.StructuredPatch, tur.Type == "create"
+	// Present but empty, unlike a missing or null patch (nil).
+	unchanged = tur.Type == "update" && patch != nil && len(patch) == 0
+	return
+}
+
+// unwrapToolUseError takes off the <tool_use_error> tags Claude Code wraps a
+// refused tool call's message in.
+func unwrapToolUseError(s string) string {
+	const open, close = "<tool_use_error>", "</tool_use_error>"
+	t := strings.TrimSpace(s)
+	if !strings.HasPrefix(t, open) {
+		return s
+	}
+	return strings.TrimSuffix(t[len(open):], close)
 }
 
 // keepError swaps step at's detail for the first lines of its error, unless
