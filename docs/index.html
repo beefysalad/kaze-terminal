@@ -60,7 +60,7 @@
       </div>
     </div>
   </section>
-  <div class="wrap news"><span class="tag">0.40</span><a href="#changelog">A simpler Settings menu <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
+  <div class="wrap news"><span class="tag">0.40.1</span><a href="#changelog">Cleaner subagent panels <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
 
   <section class="k-sec wrap" aria-labelledby="demo-title">
     <header class="k-head">
@@ -141,7 +141,19 @@
     </header>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.40</span><span class="badge">Latest</span><time datetime="2026-11-09">Nov 9, 2026</time></div>
+        <div class="release-meta"><span class="version">0.40.1</span><span class="badge">Latest</span><time datetime="2026-11-10">Nov 10, 2026</time></div>
+        <div class="release-body">
+          <h3>Cleaner subagent panels</h3>
+          <ul>
+            <li><b>Plain error messages:</b> a refused or failed step in a subagent's panel shows just its message, without the <code>&lt;tool_use_error&gt;</code> tags around it.</li>
+            <li><b>Right colours for paths:</b> a Go raw string or a shell single-quoted string that ends in a backslash, like a Windows path, no longer colours the rest of the line as a string.</li>
+            <li><b>Smoother long runs:</b> open diffs that are still on screen are no longer redrawn when many edits pile up, and long file reads are read once when a panel catches up.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.40</span><time datetime="2026-11-09">Nov 9, 2026</time></div>
         <div class="release-body">
           <h3>A simpler Settings menu</h3>
           <ul>
@@ -160,12 +172,6 @@
         </div>
       </li>
 
-      <li class="release">
-        <div class="release-meta"><span class="version">0.38</span><time datetime="2026-11-09">Nov 9, 2026</time></div>
-        <div class="release-body">
-          <h3>Read subagent edits right in the panel</h3>
-          <ul>
-            <li><b>Edits open inline:</b> in a subagent’s Readable view, each edit opens by itself with its real line numbers and its added and removed counts.</li>
             <li><b>Code colours:</b> diffs are coloured for common languages, in every theme.</li>
             <li><b>Failures show why:</b> a failed edit opens with its error, while quiet notebook and patch edits stay folded on one line.</li>
           </ul>

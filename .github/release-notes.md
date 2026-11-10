@@ -1,6 +1,8 @@
 ## What's changed
 
-- Removed the unused experimental Devbox Settings page and its pairing and network integration. Existing external pairing files stay intact.
+- A failed or refused step in a subagent panel shows just its message, without the <tool_use_error> tags.
+- A Go raw string or shell single-quoted string ending in a backslash no longer colours the rest of the line.
+- Open diffs still on screen are no longer redrawn when many edits pile up, and long file reads are decoded once.
 
 ## Download
 
