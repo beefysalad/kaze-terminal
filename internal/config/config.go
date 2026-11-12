@@ -50,6 +50,8 @@ type Config struct {
 	Sidebar             bool              `toml:"sidebar"`              // agent sidebar beside the terminal; default true
 	StartupWorkspace    string            `toml:"startup_workspace"`    // workspace ID to run at startup; "" opens a home tab
 	CheckUpdates        bool              `toml:"check_updates"`        // ask GitHub for a newer release once a day; default true
+	DiscordPresence     bool              `toml:"discord_presence"`     // show Kaze on the Discord profile; default true
+	DiscordShowProject  bool              `toml:"discord_show_project"` // put the project name on the Discord card; default true
 }
 
 // KnownActions are the action names accepted under [keys]; the window binds each one.
@@ -85,6 +87,8 @@ func Default() Config {
 		ShowUsage:           true,
 		CheckUpdates:        true,
 		Sidebar:             true,
+		DiscordPresence:     true,
+		DiscordShowProject:  true,
 		Colors:              map[string]string{},
 		Keys:                map[string]string{},
 	}
@@ -232,6 +236,10 @@ func Load(path string) (Config, []string, error) {
 			loadBool(v, k, &cfg.SystemNotifications, warn)
 		case "show_usage":
 			loadBool(v, k, &cfg.ShowUsage, warn)
+		case "discord_presence":
+			loadBool(v, k, &cfg.DiscordPresence, warn)
+		case "discord_show_project":
+			loadBool(v, k, &cfg.DiscordShowProject, warn)
 		case "sidebar_launcher", "sidebar_launcher_agent":
 			// The branch launcher was removed; older configs still carry these.
 		case "sidebar":
