@@ -157,3 +157,37 @@ func clientOptions(clock *fakeClock, dial func() (io.ReadWriteCloser, error)) Op
 	return Options{ClientID: "id", Dial: dial, Now: clock.Now, After: clock.After, Pid: 42, Spacing: 15 * time.Second, Reply: 5 * time.Second}
 }
 func waitClosed(t *testing.T, c *Client) { t.Helper(); c.Close(); receive(t, c.done) }
+
+// writeProbe observes a particular transport write without adding any buffering.
+// writeFrame sends a header then a body, so write 1 is the handshake header and
+// write 4 is the first activity body after the handshake's two writes.
+type writeProbe struct {
+	io.ReadWriteCloser
+	at, calls         int
+	entered, returned chan struct{}
+}
+
+func (p *writeProbe) Write(b []byte) (int, error) {
+	p.calls++
+	observed := p.calls == p.at
+	if observed {
+		close(p.entered)
+	}
+	n, err := p.ReadWriteCloser.Write(b)
+	if observed {
+		close(p.returned)
+	}
+	return n, err
+}
+
+func closePromptly(t *testing.T, c *Client) {
+	t.Helper()
+	done := make(chan struct{})
+	go func() { c.Close(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("Close waited for a peer that never reads")
+	}
+	receive(t, c.done)
+}

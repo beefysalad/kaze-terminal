@@ -191,18 +191,49 @@ func TestClientCloseNeverWaits(t *testing.T) {
 	clock := newFakeClock()
 	local, peer := net.Pipe()
 	defer peer.Close()
-	called := make(chan struct{}, 1)
-	c := New(clientOptions(clock, func() (io.ReadWriteCloser, error) { called <- struct{}{}; return local, nil }))
+	probe := &writeProbe{ReadWriteCloser: local, at: 1, entered: make(chan struct{}), returned: make(chan struct{})}
+	c := New(clientOptions(clock, func() (io.ReadWriteCloser, error) { return probe, nil }))
+	t.Cleanup(func() { waitClosed(t, c) })
 	c.Set(testActivity("x"))
-	receive(t, called)
-	done := make(chan struct{})
-	go func() { c.Close(); close(done) }()
+	receive(t, probe.entered)
+	// The peer never reads, and the observed handshake write is still pending.
 	select {
-	case <-done:
-	case <-time.After(100 * time.Millisecond):
-		t.Fatal("Close waited for a peer that never reads")
+	case <-probe.returned:
+		t.Fatal("handshake write returned before Close")
+	case <-time.After(20 * time.Millisecond):
 	}
-	receive(t, c.done)
+	closePromptly(t, c)
+	receive(t, probe.returned)
+}
+
+func TestClientCloseCancelsFrozenActivityWrite(t *testing.T) {
+	clock := newFakeClock()
+	local, peer := net.Pipe()
+	defer peer.Close()
+	probe := &writeProbe{ReadWriteCloser: local, at: 4, entered: make(chan struct{}), returned: make(chan struct{})}
+	c := New(clientOptions(clock, func() (io.ReadWriteCloser, error) { return probe, nil }))
+	t.Cleanup(func() { waitClosed(t, c) })
+	c.Set(testActivity("x"))
+	peer.SetDeadline(time.Now().Add(2 * time.Second))
+	if _, _, err := readFrame(peer); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeFrame(peer, opFrame, []byte(`{"evt":"READY"}`)); err != nil {
+		t.Fatal(err)
+	}
+	var header [8]byte
+	if _, err := io.ReadFull(peer, header[:]); err != nil {
+		t.Fatal(err)
+	}
+	receive(t, probe.entered)
+	// Stop consuming the activity body after the handshake succeeded.
+	select {
+	case <-probe.returned:
+		t.Fatal("activity body write returned before Close")
+	case <-time.After(20 * time.Millisecond):
+	}
+	closePromptly(t, c)
+	receive(t, probe.returned)
 }
 func TestClientFrozenActivityWriteTimesOut(t *testing.T) {
 	clock := newFakeClock()
