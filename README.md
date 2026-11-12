@@ -518,7 +518,7 @@ sidebar, and it closes with that row's ×. Its menu on the left has:
   font size, line spacing, cursor shape and blinking.
 - **Workspaces:** saved launch recipes, one card each with its state, plus Start folder, startup and session restoration choices (see Workspaces below).
 - **Agents:** shared alert choices (chimes, taskbar flash and done-toast duration), Claude usage,
-  and separate setup checks for Claude Code and Codex.
+  the Discord card (see Discord below), and separate setup checks for Claude Code and Codex.
 - **Shortcuts:** every shortcut with its keys and config name, grouped and searchable, and kaze's
   command line (`kaze --workspace`, `kaze --version`, and the hook commands). Read-only for now.
 - **Updates:** whether a newer kaze is out, and the update itself (see Updates below).
@@ -788,6 +788,26 @@ beside `config.toml`, with a limit of 128 sessions and 1 MiB; exceeded limits sh
 and preserve the last valid snapshot. A second Kaze instance opens fresh and does not
 replace the first instance's saved sessions.
 
+## Discord
+
+While kaze is open and the Discord desktop app is running on the same computer, your Discord profile
+shows a "Playing Kaze" card:
+
+- **Top line:** `Working on <project>`. The project is the repo name of the tab you are looking at, or
+  the folder name outside a repo. In your home folder, or with the name hidden, it says `In the terminal`.
+- **Second line:** how many agent sessions are open, Claude first: `3 Claude, 1 Codex`, or
+  `2 Claude sessions`, or `No agents running`. Plain shells are not counted.
+- **Timer:** how long kaze has been open. It does not restart when you switch tabs.
+
+The card is on by default. It goes only to the Discord app on your own computer, over a local socket;
+kaze sends nothing anywhere else, never shows paths, branches, remotes, prompts or commands, and does
+nothing when Discord is not running. It updates at most every 15 seconds. If you run a second copy of
+kaze, only the first one owns the card.
+
+Turn it off in Settings, Agents, Discord (or `discord_presence = false`), which clears the card at
+once. Keep the card but hide the project name with "Show the project name" (or
+`discord_show_project = false`). Quitting kaze removes the card.
+
 ## Config
 
 kaze reads one TOML file at startup:
@@ -817,6 +837,8 @@ error makes kaze use all defaults.
 | `done_toast` | How long a "done" alert card stays: `3s`, `6s`, `10s` or `until_seen` | `6s` |
 | `show_usage` | Show the Claude usage readout in the status bar | `true` |
 | `check_updates` | Ask GitHub once a day whether a newer kaze is out (see Updates) | `true` |
+| `discord_presence` | Show Kaze on your Discord profile (see Discord) | `true` |
+| `discord_show_project` | Put the project name on the Discord card; off shows "In the terminal" | `true` |
 | `start_dir` | Start folder for fresh plain sessions and new plain tabs; `~` expands to home | empty, home folder |
 | `restore_sessions` | Restore folders and exact Claude/Codex conversations on launch | `true` |
 | `startup_workspace` | The workspace to run when kaze starts (chosen in Settings > Workspaces, stored as its ID) | none, a normal tab |
@@ -1083,6 +1105,7 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 Done:
 
+- Discord Rich Presence (#55, built on `feat/discord-presence`, release waits for the Discord Application ID): a "Playing Kaze" card with your project, how long kaze has been open and your Claude and Codex session count.
 - Editable shortcuts: change any of them in Settings > Shortcuts, or write `none` to drop one (built on `feat/shortcuts-edit`, ships in 0.31 with the palette redesign).
 - Find in the terminal and the docked tabs (#155): Ctrl+Shift+F or Cmd+F, every match marked, on the whole scrollback (built on `feat/find`, release next).
 - Next release (built on `feat/pane-reading`): the subagent panel and the board preview open edits inline with line numbers and code colours, fold quiet commands and open failures.

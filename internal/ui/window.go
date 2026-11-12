@@ -30,6 +30,7 @@ import (
 
 	"github.com/beefysalad/kaze-terminal/internal/bench"
 	"github.com/beefysalad/kaze-terminal/internal/config"
+	"github.com/beefysalad/kaze-terminal/internal/discord"
 	"github.com/beefysalad/kaze-terminal/internal/input"
 	"github.com/beefysalad/kaze-terminal/internal/notify"
 	"github.com/beefysalad/kaze-terminal/internal/ptyx"
@@ -117,6 +118,11 @@ type window struct {
 	topFn     func(string) string
 	resources *resourceWork
 	battery   *batteryWork
+
+	discord         presenceSink      // the Discord card; nil in bench mode
+	startedAt       time.Time         // when this Kaze started, for the card's timer
+	presenceSent    *discord.Activity // the card last handed to the client
+	presenceCleared bool              // the client was told to show nothing
 
 	memMB   float64
 	memRead time.Time
@@ -240,8 +246,9 @@ func Run(w *app.Window, opt Options) error {
 		custom: customTitleBar,
 		capTag: new(int),
 
-		toastTag: new(int),
-		cfgPath:  config.Path(),
+		toastTag:  new(int),
+		cfgPath:   config.Path(),
+		startedAt: time.Now(),
 	}
 	win.opt.Warnings = append(win.opt.Warnings, win.applyKeys(opt.Config.Keys)...)
 	win.applyTheme(startTheme(opt.Config))
@@ -267,6 +274,7 @@ func Run(w *app.Window, opt Options) error {
 	win.initResources()
 	win.initBattery()
 	win.initSystemNotifications(sysnotify.New)
+	win.initDiscord()
 	if !win.custom {
 		win.lights = newMacBridge(win.nativeRunner(), win.w.Invalidate, 42, 14) // nil off macOS
 	}
@@ -444,6 +452,7 @@ func (win *window) shutdown() {
 	win.system.close()
 	win.resources.close()
 	win.battery.close()
+	win.closeDiscord()
 	start := time.Now()
 	if win.restore != nil {
 		win.freezeRestore()
@@ -649,6 +658,7 @@ func (win *window) frame(gtx layout.Context) error {
 			win.restoreLastWarning = ""
 		}
 	}
+	win.updatePresence()
 	barH, statusH, pad := gtx.Dp(42), gtx.Dp(32), gtx.Dp(8)
 	px := gtx.Metric.PxPerSp * win.opt.Config.FontSize
 	if win.rend == nil || win.rendStale || px != win.rendPx {
