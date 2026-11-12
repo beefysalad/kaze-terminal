@@ -1,8 +1,7 @@
 ## What's changed
 
-- Kaze now shows on your Discord profile while the Discord desktop app is open: a "Playing Kaze" card with the project you are working on, how long Kaze has been open and how many Claude and Codex sessions are running.
-- The card names only the repo or folder, never paths, branches or prompts, and it goes only to the Discord app on your computer.
-- Settings, Agents, Discord turns the card off or hides the project name.
+- Fixes a freeze at launch on the Mac. Kaze could open, show a spinner in the Dock and never respond, so macOS reported it as not responding. It happened when macOS had not yet allowed Kaze's notifications, often right after a restart or an update.
+- Your saved sessions and settings were not touched.
 
 ## Download
 

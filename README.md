@@ -1108,6 +1108,7 @@ Done:
 - Editable shortcuts: change any of them in Settings > Shortcuts, or write `none` to drop one (built on `feat/shortcuts-edit`, ships in 0.31 with the palette redesign).
 - Find in the terminal and the docked tabs (#155): Ctrl+Shift+F or Cmd+F, every match marked, on the whole scrollback (built on `feat/find`, release next).
 - Next release (built on `feat/pane-reading`): the subagent panel and the board preview open edits inline with line numbers and code colours, fold quiet commands and open failures.
+- 0.41.1: fixes a launch freeze on the Mac when notification permission was not yet allowed (PR #203). Native-notification callbacks now run off the AppKit main thread.
 - 0.41: Kaze on your Discord profile (#55, PR #201): a "Playing Kaze" card with your project, how long kaze has been open and your Claude and Codex session count.
 - 0.40.1: subagent panels show plain error messages without tool_use_error tags, colour raw strings ending in a backslash correctly, and keep visible diffs cached (#188, PR #198).
 - 0.40: the unused experimental Devbox Settings page and its integration removed; external pairing files stay intact.
