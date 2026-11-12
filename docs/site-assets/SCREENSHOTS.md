@@ -1,5 +1,9 @@
 # Product captures
 
+Release 0.41 adds a Discord section at the bottom of Settings > Agents. No published capture shows
+that page, so nothing needs retaking for it. A capture of the card itself would come from the owner's own
+Discord profile, so none is published.
+
 Release 0.40 removes the paired-machine Devbox Settings entry. Any private capture
 showing that entry needs a native retake. No published Devbox captures are reused
 or fabricated for this release.
