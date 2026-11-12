@@ -58,6 +58,12 @@ func sharedAgentRows(win *window) []settingRow {
 		settingRow{heading: "Status bar"},
 		settingRow{label: "Show Claude usage in the status bar", hint: "Claude's 5-hour and weekly limits, and this session's context.",
 			ctrls: []ctrl{{kind: ctlToggle, id: "show_usage", on: c.ShowUsage}}},
+		settingRow{heading: "Discord"},
+		settingRow{label: "Show Kaze on your Discord profile",
+			hint:  "Your project, the time Kaze has been open and your session count. Needs the Discord app running.",
+			ctrls: []ctrl{{kind: ctlToggle, id: "discord_presence", on: c.DiscordPresence}}},
+		settingRow{label: "Show the project name", hint: `Off shows "In the terminal" instead.`,
+			ctrls: []ctrl{{kind: ctlToggle, id: "discord_show_project", on: c.DiscordShowProject}}},
 	}
 }
 
@@ -233,6 +239,12 @@ func claudeAct(win *window, id string, arg int) {
 		}
 	case "show_usage":
 		win.opt.Config.ShowUsage = on
+		win.saveSetting(id, on)
+	case "discord_presence":
+		win.opt.Config.DiscordPresence = on
+		win.saveSetting(id, on)
+	case "discord_show_project":
+		win.opt.Config.DiscordShowProject = on
 		win.saveSetting(id, on)
 	case "claude_fix":
 		win.openFix()
