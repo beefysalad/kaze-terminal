@@ -8,19 +8,19 @@
     "#1": {
       "0000": {
         "fixed": {
-          "file_version": "0.41.0.0",
-          "product_version": "0.41.0.0"
+          "file_version": "0.41.1.0",
+          "product_version": "0.41.1.0"
         },
         "info": {
           "0409": {
             "CompanyName": "patrick-gogo",
             "FileDescription": "Kaze terminal",
-            "FileVersion": "0.41",
+            "FileVersion": "0.41.1",
             "InternalName": "kaze",
             "LegalCopyright": "Copyright (c) 2026 patrick-gogo. MIT License.",
             "OriginalFilename": "kaze.exe",
             "ProductName": "Kaze",
-            "ProductVersion": "0.41"
+            "ProductVersion": "0.41.1"
           }
         }
       }
