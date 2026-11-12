@@ -1,8 +1,8 @@
 ## What's changed
 
-- A failed or refused step in a subagent panel shows just its message, without the <tool_use_error> tags.
-- A Go raw string or shell single-quoted string ending in a backslash no longer colours the rest of the line.
-- Open diffs still on screen are no longer redrawn when many edits pile up, and long file reads are decoded once.
+- Kaze now shows on your Discord profile while the Discord desktop app is open: a "Playing Kaze" card with the project you are working on, how long Kaze has been open and how many Claude and Codex sessions are running.
+- The card names only the repo or folder, never paths, branches or prompts, and it goes only to the Discord app on your computer.
+- Settings, Agents, Discord turns the card off or hides the project name.
 
 ## Download
 
