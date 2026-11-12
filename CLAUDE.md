@@ -43,6 +43,17 @@ checklist and what's next. The authority for behaviour is the spec
 - **Never inject global keyboard or mouse input** (SendInput, SendKeys, posting to other windows) when
   testing the GUI. The owner works on the same machine; stray keystrokes have landed in their live
   sessions before. Test through the code paths, or use the bench mode, which drops real input by default.
+- **Native callbacks never run Go or Gio code on the AppKit main thread.** Any `//export`ed Go function
+  that macOS calls (the notification status and click callbacks in `internal/sysnotify`, and anything like
+  them) arrives on the main thread. Hand the work to a new goroutine (`go cb()`). Never call
+  `Window.Invalidate`, `Window.Run`, `Option` or any UI code inline from one: Gio's `Invalidate` holds
+  `invMu` while the macOS driver runs its wakeup inline on the main thread, and `nextEvent` locks it
+  again, so the whole app freezes for good ("not responding"). This shipped in 0.36 to 0.41 and was fixed
+  in PR #203. Such code only runs inside the `.app` bundle (the native bridge is skipped for a plain
+  binary), so `go test` and `go run` will not show it: test it with a bounded test that the callback does
+  not run on the delivering thread, and check a bundled build (`tools/package-macos.sh`, run
+  `Kaze.app/Contents/MacOS/kaze` with a temporary `HOME`) is still inside `NSApplication run` after
+  startup. To find a freeze, send SIGQUIT to an unstripped build for a goroutine dump.
 - **Commits:** `type(scope): Verb ...` (e.g. `fix(render): Keep text readable on colored backgrounds`).
   **No AI attribution** of any kind (no `Co-Authored-By`, no "Generated with").
 - **Never push to `main`.** Branch, push the branch, open a PR. The owner merges.
