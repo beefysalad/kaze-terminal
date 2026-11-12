@@ -75,14 +75,46 @@ func TestDarwinBackendDropsCallbacksAndOperationsAfterClose(t *testing.T) {
 
 func TestDarwinBackendStatusAndActivationAreIsolated(t *testing.T) {
 	first, second := "", ""
+	got := make(chan string, 1)
 	b1 := newDarwinBackend(&fakeDarwinNative{}, Callbacks{Activate: func(id string) { first = id }})
-	b2 := newDarwinBackend(&fakeDarwinNative{}, Callbacks{Activate: func(id string) { second = id }})
+	b2 := newDarwinBackend(&fakeDarwinNative{}, Callbacks{Activate: func(id string) { got <- id }})
 	defer b1.Close()
 	defer b2.Close()
 	darwinStatus(b1.id, "Blocked in macOS notification settings")
 	darwinActivated(b2.id, "2-3-4")
+	select {
+	case second = <-got:
+	case <-time.After(time.Second):
+		t.Fatal("activation never reached its backend")
+	}
 	if b1.Status() != "Blocked in macOS notification settings" || b2.Status() != "" || first != "" || second != "2-3-4" {
 		t.Fatalf("status/activation crossed instances %q %q %q %q", b1.Status(), b2.Status(), first, second)
+	}
+}
+
+// AppKit delivers both callbacks on the main thread. Gio's Window.Invalidate
+// run there locks the window's own mutex twice and freezes the app for good, so
+// neither callback may run on the thread that delivered it.
+func TestDarwinCallbacksNeverRunOnTheDeliveringThread(t *testing.T) {
+	release := make(chan struct{})
+	t.Cleanup(func() { close(release) })
+	ran := make(chan string, 2)
+	b := newDarwinBackend(&fakeDarwinNative{}, Callbacks{
+		Changed:  func() { ran <- "changed"; <-release },
+		Activate: func(string) { ran <- "activate"; <-release },
+	})
+	defer b.Close()
+	for name, deliver := range map[string]func(){
+		"status":     func() { darwinStatus(b.id, "Waiting for notification permission") },
+		"activation": func() { darwinActivated(b.id, "a-b-c") },
+	} {
+		returned := make(chan struct{})
+		go func() { deliver(); close(returned) }()
+		select {
+		case <-returned:
+		case <-time.After(time.Second):
+			t.Fatalf("%s callback ran on the delivering thread and blocked it", name)
+		}
 	}
 }
 

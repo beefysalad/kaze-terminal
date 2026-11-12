@@ -136,7 +136,9 @@ func darwinActivated(id uint64, notification string) {
 	}
 	b.mu.Unlock()
 	if cb != nil {
-		cb(notification)
+		// AppKit's main thread delivers this. Never run Gio or UI code on it:
+		// Window.Invalidate there locks its own mutex twice and freezes the app.
+		go cb(notification)
 	}
 }
 func darwinStatus(id uint64, status string) {
@@ -154,7 +156,7 @@ func darwinStatus(id uint64, status string) {
 	b.status = status
 	b.mu.Unlock()
 	if cb != nil {
-		cb()
+		go cb() // off AppKit's main thread, as in darwinActivated
 	}
 }
 
