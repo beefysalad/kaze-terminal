@@ -10,8 +10,9 @@ import (
 	"time"
 )
 
-// ClientID is the owner's Discord Application ID. Empty disables presence.
-const ClientID = ""
+// ClientID is the Kaze application's Discord Application ID. It is public, not a
+// secret. Empty disables presence.
+const ClientID = "1570286297514516651"
 
 // Options supplies the local transport and clock. Zero timing values use defaults.
 type Options struct {

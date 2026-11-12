@@ -10,11 +10,11 @@ Spec `docs/superpowers/specs/2026-11-12-kaze-discord-presence-design.md`, plan
 card text, per-platform dial, `discord.lock` single-owner lock, the `Client` goroutine; built by Codex on
 `feat/discord-presence-client`, merged in); wiring in `internal/ui/discord.go`; two settings,
 `discord_presence` and `discord_show_project`, both on by default (the owner's call, which differs from
-the issue). `discord.ClientID` is **empty**, so nothing dials yet. The release (0.41) waits for the owner to:
-1. create an application named `Kaze` in the Discord Developer Portal;
-2. upload the wind K (at least 512 by 512) under Rich Presence, Art Assets with the key `kaze`;
-3. send the Application ID (a follow-up PR sets `ClientID`);
-4. check by hand with Discord running, on the Mac and on Windows: the card appears, the project follows
+the issue). `discord.ClientID` is set to the owner's `Kaze` application (created 2026-11-12). The release
+(0.41) waits for the owner to:
+1. confirm the wind K is uploaded under Rich Presence, Art Assets with the key `kaze` (without it the card
+   has no image);
+2. check by hand with Discord running, on the Mac and on Windows: the card appears, the project follows
    tab switches, the count changes when Claude starts and exits, the Settings switch clears it, quitting
    Kaze clears it, a second copy of Kaze leaves it alone, and Kaze starts normally with Discord closed.
 Also unverified: the Windows named-pipe client has only been built and vetted from macOS, not run.
