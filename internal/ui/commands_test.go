@@ -57,10 +57,19 @@ func TestFormatShortcut(t *testing.T) {
 	}
 }
 
+// paletteOnlyCommands are the sidebar side commands: listed on the Shortcuts page with
+// no key, and not [keys] actions.
+const paletteOnlyCommands = 2
+
 func TestEveryKnownActionIsListed(t *testing.T) {
 	seen := map[string]int{}
+	paletteOnly := 0 // commands that are not [keys] actions
 	for _, c := range kazeCommands {
 		seen[c.Config]++
+		if c.Config == "sidebar_left" || c.Config == "sidebar_right" {
+			paletteOnly++
+			continue
+		}
 		if c.Act != actionByName[c.Config] || c.Label == "" {
 			t.Errorf("%+v does not match actionByName", c)
 		}
@@ -70,8 +79,8 @@ func TestEveryKnownActionIsListed(t *testing.T) {
 			t.Errorf("%s listed %d times", name, seen[name])
 		}
 	}
-	if len(kazeCommands) != len(config.KnownActions) {
-		t.Errorf("%d commands for %d actions", len(kazeCommands), len(config.KnownActions))
+	if len(kazeCommands)-paletteOnly != len(config.KnownActions) {
+		t.Errorf("%d commands for %d actions", len(kazeCommands)-paletteOnly, len(config.KnownActions))
 	}
 	if kazeCommands[0].Config != "new_tab" || kazeCommands[len(kazeCommands)-1].Config != "palette" {
 		t.Errorf("order: first %s, last %s", kazeCommands[0].Config, kazeCommands[len(kazeCommands)-1].Config)

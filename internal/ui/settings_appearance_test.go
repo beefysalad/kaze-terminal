@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -80,7 +81,7 @@ func TestAppearanceRows(t *testing.T) {
 		}
 	}
 	// The rows come in the spec's order.
-	order := []string{"theme", "font", "spacing", "cursor", "blink"}
+	order := []string{"theme", "font", "spacing", "cursor", "blink", "sideside", "sidemode"}
 	var seen []string
 	for _, c := range win.set.controls {
 		if len(seen) == 0 || seen[len(seen)-1] != c.id {
@@ -331,5 +332,98 @@ func TestThemeSwatchesKeepTheirWidthWhenNarrow(t *testing.T) {
 	}
 	if slices.Contains(win.set.texts, "Sets the terminal colors and kaze's own chrome.") {
 		t.Errorf("the hint is one line in a narrow window: %q", win.set.texts)
+	}
+}
+
+func sidebarRows(win *window) (side, width settingRow) {
+	for _, r := range appearanceRows(win) {
+		switch r.label {
+		case "Side":
+			side = r
+		case "Width":
+			width = r
+		}
+	}
+	return side, width
+}
+
+func TestAppearanceSidebarRows(t *testing.T) {
+	win := appearanceWindow(t, filepath.Join(t.TempDir(), "config.toml"))
+	hasHeading := false
+	for _, r := range appearanceRows(win) {
+		hasHeading = hasHeading || r.heading == "Sidebar"
+	}
+	if !hasHeading {
+		t.Fatal("no Sidebar heading")
+	}
+	side, width := sidebarRows(win)
+	if len(side.ctrls) != 1 || side.ctrls[0].id != "sideside" || side.ctrls[0].selected != 0 ||
+		!slices.Equal(side.ctrls[0].options, []string{"Left", "Right"}) {
+		t.Fatalf("side row %+v", side)
+	}
+	if len(width.ctrls) != 1 || width.ctrls[0].id != "sidemode" ||
+		!slices.Equal(width.ctrls[0].options, []string{"Full", "Rail", "Hidden"}) {
+		t.Fatalf("width row %+v", width)
+	}
+	win.opt.Config.SidebarSide, win.opt.Config.SidebarMode = "right", "rail"
+	side, width = sidebarRows(win)
+	if side.ctrls[0].selected != 1 || width.ctrls[0].selected != 1 {
+		t.Fatalf("selected %d, %d; want 1, 1", side.ctrls[0].selected, width.ctrls[0].selected)
+	}
+}
+
+func TestAppearanceSidebarWidthHintNamesKey(t *testing.T) {
+	win := appearanceWindow(t, "")
+	win.binds, _ = resolveBindings(runtime.GOOS, nil)
+	_, width := sidebarRows(win)
+	want := "Ctrl+Shift+B"
+	if runtime.GOOS == "darwin" {
+		want = "Cmd+B"
+	}
+	if !strings.HasPrefix(width.hint, want) {
+		t.Fatalf("hint %q does not start with %q", width.hint, want)
+	}
+}
+
+func TestAppearanceSidebarActs(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.toml")
+	win := appearanceWindow(t, path)
+	appearanceAct(win, "sideside", 1)
+	if !win.sideRight() || !strings.Contains(readFile(t, path), `sidebar_side = "right"`) {
+		t.Fatalf("side not saved: %q", readFile(t, path))
+	}
+	appearanceAct(win, "sidemode", 2)
+	if win.savedSideMode() != sideHidden || !strings.Contains(readFile(t, path), `sidebar_mode = "hidden"`) {
+		t.Fatalf("mode not saved: %q", readFile(t, path))
+	}
+	appearanceAct(win, "sideside", 0)
+	if win.sideRight() {
+		t.Fatal("still right")
+	}
+	appearanceAct(win, "sidemode", 9) // out of range: ignored
+	if win.savedSideMode() != sideHidden {
+		t.Fatal("bad arg changed the mode")
+	}
+}
+
+func TestSidebarSideCommands(t *testing.T) {
+	win, _ := alertWindow(t, 1)
+	win.opt.Config = config.Default()
+	gtx := pageContext(800, 600)
+	win.runShortcut(gtx, actSidebarRight)
+	if !win.sideRight() {
+		t.Fatal("actSidebarRight did not put the sidebar on the right")
+	}
+	win.runShortcut(gtx, actSidebarLeft)
+	if win.sideRight() {
+		t.Fatal("actSidebarLeft did not put the sidebar on the left")
+	}
+	for _, name := range []string{"sidebar_left", "sidebar_right"} {
+		if _, ok := defaultBindings(runtime.GOOS)[name]; ok {
+			t.Errorf("%s has a default binding", name)
+		}
+		if _, ok := config.KnownActions[name]; ok {
+			t.Errorf("%s is a [keys] action", name)
+		}
 	}
 }

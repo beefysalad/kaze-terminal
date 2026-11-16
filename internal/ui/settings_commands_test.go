@@ -2,6 +2,7 @@ package ui
 
 import (
 	"image"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -35,7 +36,8 @@ func TestCommandsListsEveryShortcut(t *testing.T) {
 	win, _ := alertWindow(t, 1)
 	text := commandsPage(t, win)
 	for _, c := range kazeCommands {
-		if !strings.Contains(text, c.Label) || !strings.Contains(text, c.Config) {
+		_, bound := defaultBindings(runtime.GOOS)[c.Config] // only editable rows show the config name
+		if !strings.Contains(text, c.Label) || (bound && !strings.Contains(text, c.Config)) {
 			t.Errorf("missing %s / %s", c.Label, c.Config)
 		}
 	}

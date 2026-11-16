@@ -130,7 +130,7 @@ func (p *page) iconTile(name string) (op.CallOp, image.Point) {
 var iconNames = map[string]bool{
 	"doc": true, "appearance": true, "workspaces": true, "claude": true, "shortcuts": true, "updates": true,
 	"about": true, "check": true, "alert": true, "prompt": true, "chart": true, "download": true,
-	"panel": true, "search": true, "terminal": true, "cog": true, "agents": true, "plus": true, "folder": true, "branch": true, "chip": true, "tabs": true, "up": true,
+	"panel": true, "panelRight": true, "search": true, "terminal": true, "cog": true, "agents": true, "plus": true, "folder": true, "branch": true, "chip": true, "tabs": true, "up": true,
 	"chevup": true, "down": true, "close": true, "reset": true,
 }
 
@@ -237,6 +237,9 @@ func (c *chrome) icon(gtx layout.Context, name string, r image.Rectangle, col co
 	case "panel":
 		rrect(3, 4, 18, 16, 3)
 		line(9.5, 4, 9.5, 20)
+	case "panelRight": // "panel" with the sidebar's line on the right
+		rrect(3, 4, 18, 16, 3)
+		line(14.5, 4, 14.5, 20)
 	case "search":
 		circle(10.5, 10.5, 7.2, 2*math.Pi, 0)
 		line(15.6, 15.6, 20.6, 20.6)

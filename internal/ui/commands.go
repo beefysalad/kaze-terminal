@@ -26,6 +26,8 @@ var kazeCommands = []kazeCommand{
 	{"paste", "Paste", actPaste},
 	{"open_settings", "Open settings", actOpenSettings},
 	{"toggle_sidebar", "Toggle sidebar", actToggleSidebar},
+	{"sidebar_left", "Sidebar on the left", actSidebarLeft},    // palette only: not a [keys] action
+	{"sidebar_right", "Sidebar on the right", actSidebarRight}, // palette only: not a [keys] action
 	{"next_waiting", "Go to the next session that needs you", actNextWaiting},
 	{"find", "Find in the terminal", actFind},
 	{"agents_board", "Show agents", actAgentsBoard},

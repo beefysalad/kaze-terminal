@@ -1350,6 +1350,10 @@ func (win *window) runShortcut(gtx layout.Context, a action) {
 		win.openSettings()
 	case actToggleSidebar:
 		win.toggleSidebar()
+	case actSidebarLeft:
+		win.setSideRight(false)
+	case actSidebarRight:
+		win.setSideRight(true)
 	case actNextWaiting:
 		win.nextWaiting()
 	case actPalette:

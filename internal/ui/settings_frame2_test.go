@@ -71,7 +71,7 @@ func TestAppearanceHasALivePreviewAndCards(t *testing.T) {
 	if n := len(controlsOf(win, "cursor")); n != 3 {
 		t.Fatalf("%d cursor chips, want 3", n)
 	}
-	if len(win.set.cards) != 3 {
-		t.Fatalf("%d cards, want theme, text and cursor", len(win.set.cards))
+	if len(win.set.cards) != 4 {
+		t.Fatalf("%d cards, want theme, text, cursor and sidebar", len(win.set.cards))
 	}
 }
