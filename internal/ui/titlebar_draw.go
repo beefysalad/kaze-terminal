@@ -90,7 +90,9 @@ func (win *window) drawBar(gtx layout.Context, barH int) {
 		win.titleCache.locale = gtx.Locale
 	}
 	wordFace, wordSize := font.Font{Typeface: chromeFace, Weight: font.Bold}, unit.Sp(13)
-	b := win.titleCache.layout(titleIn{Size: size, Mac: !win.custom, LightsW: lights, SideW: side, Crumb: win.crumb(),
+	right := win.sideRight()
+	b := win.titleCache.layout(titleIn{Size: size, Mac: !win.custom, LightsW: lights, SideW: side,
+		Right: right, NoPlus: win.side.mode != sideFull, Crumb: win.crumb(),
 		Key: key, WordW: c.textWidth(gtx, titleWord, wordSize, wordFace), Dims: d, Measure: measure}, gtx.Metric, c.shaper)
 	win.titleCache.font = c.shaper
 	win.bar = b
@@ -101,7 +103,11 @@ func (win *window) drawBar(gtx layout.Context, barH int) {
 	paint.FillShape(ops, bg, clip.Rect{Max: size}.Op())
 	if side > 0 {
 		paint.FillShape(ops, th.Chrome, clip.Rect(b.Lead).Op())
-		paint.FillShape(ops, th.Border, clip.Rect(image.Rect(b.Lead.Max.X-1, 0, b.Lead.Max.X, size.Y)).Op())
+		div := image.Rect(b.Lead.Max.X-1, 0, b.Lead.Max.X, size.Y)
+		if right {
+			div = image.Rect(b.Lead.Min.X, 0, b.Lead.Min.X+1, size.Y)
+		}
+		paint.FillShape(ops, th.Border, clip.Rect(div).Op())
 	}
 	paint.FillShape(ops, th.Border, clip.Rect(image.Rect(0, size.Y-1, size.X, size.Y)).Op())
 
@@ -131,7 +137,11 @@ func (win *window) drawBar(gtx layout.Context, barH int) {
 		}
 		c.toolIcon(gtx, name, r, fg)
 	}
-	icon(capToggle, b.Toggle, "panel")
+	toggle := "panel"
+	if right {
+		toggle = "panelRight"
+	}
+	icon(capToggle, b.Toggle, toggle)
 	icon(capPlus, b.Plus, "plus")
 	icon(capAgents, b.Agents, "agents")
 	icon(capGear, b.Gear, "cog")
