@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "docs/design/sidebar-v3-mockup.html"
+        ],
+        "createdAt": "2026-11-16T05:55:50.967Z",
+        "reason": "Claude: scanner measured #8a90a2 against #ffffff, but the page background is #07080c (dark-only Midnight mockup); real ratio is about 6:1"
+      }
+    ]
+  }
+}

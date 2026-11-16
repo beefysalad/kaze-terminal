@@ -85,8 +85,10 @@ type crumbParts struct{ Repo, Title, Cmd, State string }
 type titleIn struct {
 	Size    image.Point // the bar, px
 	Mac     bool
-	LightsW int // px the native traffic lights take from the left; 0 off Mac or in full screen
-	SideW   int // the sidebar's width; 0 while hidden
+	LightsW int  // px the native traffic lights take from the left; 0 off Mac or in full screen
+	SideW   int  // the sidebar's width; 0 while hidden
+	Right   bool // the sidebar sits on the right: its strip and buttons move there
+	NoPlus  bool // no new-session button (the sidebar is a rail or hidden)
 	Crumb   crumbParts
 	Key     string // the palette key cap text
 	WordW   int    // the width of the name "Kaze" beside the mark; 0 leaves it out
@@ -170,9 +172,32 @@ func layoutTitle(in titleIn) titleLayout {
 		r = l.Buttons[0].Min.X
 	}
 	r -= d.LeadPad
+	if in.Right { // the toggle follows the sidebar to the right end
+		l.Toggle = btn(r - d.Btn)
+		r = l.Toggle.Min.X - 2
+	}
 	l.Gear = btn(r - d.Btn)
 	l.Agents = btn(l.Gear.Min.X - 2 - d.Btn)
 	hi := l.Agents.Min.X - d.Gap
+	if in.Right {
+		// The lead strip over the right sidebar holds the buttons; it is never
+		// narrower than they need (a rail is narrower than the caption buttons).
+		// In full mode it is the sidebar's width, so the dividers line up, and the
+		// new session button sits at its left end, or just left of it when the
+		// caption buttons leave it no room there.
+		need := in.Size.X - l.Agents.Min.X + d.LeadPad
+		lw := max(in.SideW, need)
+		l.Lead = image.Rect(in.Size.X-lw, 0, in.Size.X, h)
+		hi = l.Lead.Min.X - d.Pad
+		if !in.NoPlus {
+			if need+d.Btn+d.Gap <= lw {
+				l.Plus = btn(l.Lead.Min.X + d.LeadPad)
+			} else {
+				l.Plus = btn(l.Lead.Min.X - d.Gap - d.Btn)
+				hi = l.Plus.Min.X - d.Gap
+			}
+		}
+	}
 
 	// Left: the lights (macOS), the mark and the name, the toggle, and the lead strip.
 	x := d.Pad
@@ -188,7 +213,7 @@ func layoutTitle(in titleIn) titleLayout {
 		wx := l.Mark.Max.X + d.Gap/4
 		tx := wx + in.WordW + d.Gap
 		var fits bool
-		if in.SideW > 0 {
+		if in.SideW > 0 && !in.Right {
 			fits = tx+d.Btn+d.Gap+d.Btn+d.LeadPad <= in.SideW
 		} else {
 			fits = hi-(tx+d.Btn+d.LeadPad+d.Pad) >= 2*d.SearchMin
@@ -198,17 +223,27 @@ func layoutTitle(in titleIn) titleLayout {
 			x = tx
 		}
 	}
-	l.Toggle = btn(x)
-	if in.SideW > 0 {
+	var lo int // where the middle starts
+	switch {
+	case in.Right: // nothing else on the left: the middle starts after the mark or the name
+		lo = l.Mark.Max.X + d.Pad
+		if !l.Word.Empty() {
+			lo = l.Word.Max.X + d.Pad
+		}
+	case in.SideW > 0 && !in.NoPlus:
+		l.Toggle = btn(x)
 		right := max(in.SideW, l.Toggle.Max.X+d.Gap+d.Btn+d.LeadPad)
 		l.Lead = image.Rect(0, 0, right, h)
 		l.Plus = btn(right - d.LeadPad - d.Btn)
-	} else {
-		l.Lead = image.Rect(0, 0, l.Toggle.Max.X+d.LeadPad, h)
+	default: // a rail or a hidden sidebar: no new session button
+		l.Toggle = btn(x)
+		l.Lead = image.Rect(0, 0, max(in.SideW, l.Toggle.Max.X+d.LeadPad), h)
+	}
+	if !in.Right {
+		lo = l.Lead.Max.X + d.Pad
 	}
 
 	// The middle: the crumb and the search field share what is left.
-	lo := l.Lead.Max.X + d.Pad
 	avail := max(hi-lo, 0)
 	keyW := 0 // no key cap when the palette has no shortcut
 	if in.Key != "" {

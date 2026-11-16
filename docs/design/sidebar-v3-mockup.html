@@ -1,0 +1,275 @@
+<title>Kaze Sidebar Variations</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+/* Layout: labelled mini Kaze windows built from the shipped Midnight chrome (headless renders of sidebar.go and the title bar), one per variation. Dark only, like the app. */
+:root {
+  --page:#07080c; --chrome:#0b0d12; --term:#0f1117; --raise:#151925; --line:#1d2230;
+  --fg:#e7e9f0; --white:#ffffff; --muted:#8a90a2; --status:#7d8394; --acc:#8b7bff; --accsoft:#2a2457; --acctext:#b9a6ff;
+  --branch:#62d39a; --done:#62d39a; --needs:#f2b84b; --del:#ff6b6b; --folder:#c9cdd8; --claude:#d97757;
+  --mono:'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing:border-box; }
+body { background:var(--page); color:var(--fg); font:14px/1.55 var(--mono); margin:0;
+  padding-block:40px 64px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width:1180px; margin:0 auto; display:flex; flex-direction:column; gap:44px; }
+header h1 { font-size:26px; margin:0 0 8px; font-weight:700; }
+header p { color:var(--muted); margin:0; max-width:80ch; }
+.rec { border:1px solid var(--accsoft); background:#120f24; border-radius:10px; padding:16px 18px; display:flex; flex-direction:column; gap:6px; }
+.rec b { color:var(--acctext); } .rec p { margin:0; color:#cfd2dc; max-width:92ch; }
+h3.part { font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:400; margin:0; border-top:1px solid var(--line); padding-top:20px; }
+section.var { display:flex; flex-direction:column; gap:14px; }
+.vh { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+.vh .tag { font-size:12px; color:var(--acctext); background:var(--accsoft); border-radius:5px; padding:1px 8px; }
+.vh h2 { font-size:18px; margin:0; }
+.vh .pick { font-size:12px; color:var(--done); border:1px solid #1f4a35; border-radius:5px; padding:1px 8px; }
+.vh .base { font-size:12px; color:var(--muted); border:1px solid var(--line); border-radius:5px; padding:1px 8px; }
+.say { margin:0; color:#cfd2dc; max-width:90ch; font-size:13px; }
+.notes { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:18px; font-size:13px; }
+.notes h4 { margin:0 0 4px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:400; }
+.notes ul { margin:0; padding-left:16px; color:#cfd2dc; } .notes li { margin:2px 0; }
+.pair { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.pair .cap { font-size:12px; color:var(--muted); margin-bottom:6px; }
+@media (max-width:900px){ .notes, .pair { grid-template-columns:1fr; } }
+
+/* ---- mini window (sizes in px = dp at 100%) ---- */
+.scroller { overflow-x:auto; border-radius:12px; }
+.win { width:1100px; height:540px; background:var(--term); border:1px solid var(--line); border-radius:12px; overflow:hidden;
+  display:grid; grid-template-rows:38px 1fr 26px; font-size:12.5px; position:relative; }
+.pair .win { width:760px; height:470px; }
+.tb { background:var(--chrome); border-bottom:1px solid var(--line); display:flex; align-items:stretch; }
+.tcol { display:flex; align-items:center; gap:8px; padding:0 10px; flex:none; }
+.tcol.l { border-right:1px solid var(--line); } .tcol.r { border-left:1px solid var(--line); }
+.tmain { flex:1; min-width:0; display:flex; align-items:center; gap:12px; padding:0 12px; }
+.lights { display:flex; gap:7px; margin-right:4px; } .lights i { width:11px; height:11px; border-radius:50%; background:#2a2f3c; display:block; }
+.brand { display:flex; align-items:center; gap:6px; font-weight:700; color:var(--white); }
+.brand svg { width:18px; height:18px; }
+.crumb { display:flex; align-items:center; gap:8px; white-space:nowrap; font-weight:700; color:var(--white); }
+.crumb .cmd { color:var(--acctext); font-weight:400; }
+.pill { background:var(--accsoft); color:var(--acctext); border-radius:9px; padding:0 7px; font-size:11px; font-weight:400; }
+.search { margin:0 auto; border:1px solid var(--line); border-radius:8px; padding:3px 6px 3px 10px; color:var(--status); width:360px; display:flex; align-items:center; gap:8px; }
+.search svg { width:14px; height:14px; } .search .k { margin-left:auto; border:1px solid var(--line); border-radius:5px; padding:0 6px; font-size:10.5px; }
+.ib { width:26px; height:26px; display:grid; place-items:center; border-radius:6px; color:var(--muted); flex:none; }
+.ib svg { width:17px; height:17px; }
+.grow { flex:1; }
+.body { display:flex; min-height:0; }
+.term { flex:1; min-width:0; padding:8px 12px; color:#c9cdd8; white-space:pre; overflow:hidden; line-height:1.62; }
+.term .p { color:var(--acctext); } .term .g { color:var(--branch); } .term .y { color:var(--needs); } .term .d { color:var(--status); }
+.sbar { background:var(--chrome); border-top:1px solid var(--line); display:flex; align-items:center; justify-content:flex-end; gap:16px; padding:0 12px; color:var(--status); font-size:11px; white-space:nowrap; }
+.sbar .wp { background:#3a2c10; color:var(--needs); border-radius:9px; padding:0 8px; }
+.sbar .up i { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--done); margin-right:3px; }
+.sbar b { color:var(--fg); font-weight:400; }
+
+/* ---- sidebar, as sidebar.go draws it ---- */
+.side { width:260px; flex:none; background:var(--chrome); display:flex; flex-direction:column; min-height:0; padding:8px 8px 0; }
+.side.l { border-right:1px solid var(--line); } .side.r { border-left:1px solid var(--line); }
+.flt { height:30px; border:1px solid var(--line); border-radius:7px; padding:0 9px; color:var(--status); display:flex; align-items:center; font-size:12.5px; flex:none; }
+.list { flex:1; overflow:hidden; display:flex; flex-direction:column; padding-top:6px; }
+.grp { display:flex; align-items:center; gap:9px; height:28px; padding:0 4px 0 6px; font-weight:700; color:var(--white); font-size:12.5px; }
+.grp .car { width:8px; height:8px; color:var(--status); flex:none; }
+.grp .n { margin-left:auto; color:var(--status); font-weight:400; } .grp .n.w { color:var(--needs); }
+.row { border-radius:7px; padding:5px 6px 6px 4px; display:flex; flex-direction:column; gap:3px; position:relative; }
+.row.on { background:var(--active, #151925); }
+.row.on::before { content:""; position:absolute; left:-8px; top:4px; bottom:4px; width:2px; background:var(--acc); }
+.side.r .row.on::before { left:auto; right:-8px; }
+.l1 { display:flex; align-items:center; gap:6px; white-space:nowrap; min-width:0; }
+.l1 .t { overflow:hidden; text-overflow:ellipsis; min-width:0; color:var(--fg); }
+.row.on .l1 .t { color:var(--white); }
+.l1 .s { margin-left:auto; flex:none; padding-left:6px; }
+.s.run { color:var(--acctext); } .s.need { color:var(--needs); } .s.done { color:var(--done); }
+.l2 { display:flex; gap:8px; font-size:12px; padding-left:28px; white-space:nowrap; overflow:hidden; }
+.l2 .br { color:var(--branch); overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.l2 .lc { margin-left:auto; flex:none; } .l2 .lc b { color:var(--done); font-weight:400; } .l2 .lc i { color:var(--del); font-style:normal; }
+.logo { width:14px; height:14px; flex:none; display:block; }
+.st { width:14px; height:14px; flex:none; display:grid; place-items:center; }
+.st i { display:block; border-radius:50%; }
+.st.run i { width:12px; height:12px; border:1.5px solid var(--acc); background:radial-gradient(circle, var(--acc) 0 2.6px, transparent 3px); }
+.st.need i { width:12px; height:12px; background:var(--needs); box-shadow:0 0 0 1.5px #5a4410 inset; }
+.st.done i { width:7px; height:7px; background:var(--done); }
+.st.idle i { width:7px; height:7px; background:#6b7080; }
+.tray { position:relative; margin-left:14px; padding-left:10px; display:flex; flex-direction:column; }
+.tray::before { content:""; position:absolute; left:0; top:0; bottom:10px; width:1px; background:var(--line); }
+.sub { display:flex; align-items:center; gap:6px; height:22px; font-size:12px; white-space:nowrap; overflow:hidden; color:var(--fg); }
+.sub .st i { width:11px; height:11px; }
+.sub b { color:var(--acctext); font-weight:400; flex:none; } .sub .k { overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.sub .tm { margin-left:auto; color:var(--status); padding-left:6px; flex:none; }
+.wsec { border-top:1px solid var(--line); margin:0 -8px; padding:6px 8px 8px; display:flex; flex-direction:column; flex:none; }
+.wsec .lbl { font-size:11px; letter-spacing:.06em; color:var(--status); height:24px; display:flex; align-items:center; padding-left:6px; }
+.wsec .grp { font-weight:400; color:var(--fg); }
+.wsec .grp .n { color:var(--done); }
+.mem { display:flex; align-items:center; gap:8px; height:24px; padding:0 6px; }
+.mem .bar { width:3px; height:14px; border-radius:2px; } .mem .s { margin-left:auto; color:var(--status); }
+
+/* ---- rail (52dp) ---- */
+.rail { width:52px; flex:none; background:var(--chrome); display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 0; }
+.rail.l { border-right:1px solid var(--line); } .rail.r { border-left:1px solid var(--line); }
+.av { width:36px; height:36px; border-radius:8px; display:grid; place-items:center; position:relative; }
+.av .logo { width:18px; height:18px; }
+.av.on { background:var(--raise); }
+.av.on::before { content:""; position:absolute; left:-8px; top:6px; bottom:6px; width:2px; background:var(--acc); }
+.rail.r .av.on::before { left:auto; right:-8px; }
+.av .st { position:absolute; right:1px; bottom:1px; width:12px; height:12px; background:var(--chrome); border-radius:50%; }
+.av .st i { transform:scale(.8); }
+.rail .div { width:24px; height:1px; background:var(--line); margin:4px 0; }
+.rail .gl { font-size:9.5px; color:var(--status); letter-spacing:.02em; width:44px; text-align:center; overflow:hidden; white-space:nowrap; text-overflow:clip; }
+.rail .wsd { display:flex; gap:3px; margin:4px 0; } .rail .wsd i { width:4px; height:16px; border-radius:2px; display:block; }
+.rail .sp { flex:1; }
+.tip { position:absolute; background:var(--raise); border:1px solid #2a3142; border-radius:7px; padding:6px 10px; font-size:12px; white-space:nowrap; box-shadow:0 8px 24px #0009; }
+.tip .st { display:inline-grid; vertical-align:-2px; margin-right:6px; } .tip span { color:var(--needs); margin-left:8px; }
+
+/* ---- other variations ---- */
+.fly { position:absolute; top:38px; bottom:26px; width:260px; box-shadow:0 0 44px #000c; display:flex; }
+.fly .side { width:100%; }
+.body.float { padding:8px; gap:8px; background:var(--chrome); }
+.termbox { flex:1; min-width:0; background:var(--term); border:1px solid var(--line); border-radius:10px; display:flex; overflow:hidden; }
+.body.float .side { border:1px solid var(--line); border-radius:10px; background:#0d1016; }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="claude" viewBox="0 0 16 16"><g stroke="#d97757" stroke-width="1.7" stroke-linecap="round"><path d="M8 1.6v4"/><path d="M8 10.4v4"/><path d="M1.6 8h4"/><path d="M10.4 8h4"/><path d="M3.5 3.5l2.8 2.8"/><path d="M9.7 9.7l2.8 2.8"/><path d="M12.5 3.5L9.7 6.3"/><path d="M6.3 9.7l-2.8 2.8"/><path d="M5.6 2.2l1.2 3.6"/><path d="M10.4 13.8l-1.2-3.6"/><path d="M13.8 5.6l-3.6 1.2"/><path d="M2.2 10.4l3.6-1.2"/></g></symbol>
+    <symbol id="codex" viewBox="0 0 16 16"><g fill="none" stroke="#c9cdd8" stroke-width="1.2"><ellipse cx="8" cy="8" rx="6" ry="2.6"/><ellipse cx="8" cy="8" rx="6" ry="2.6" transform="rotate(60 8 8)"/><ellipse cx="8" cy="8" rx="6" ry="2.6" transform="rotate(120 8 8)"/></g></symbol>
+    <symbol id="shell" viewBox="0 0 16 16"><path d="M3 4.5l3.2 3.5L3 11.5M8.3 11.5h4.7" fill="none" stroke="#a7adbd" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="kmark" viewBox="0 0 18 18"><path d="M2.5 2h3.6v5.4L10.8 2h4.3l-5.3 6 5.6 8H11L7.4 10.6l-1.3 1.4V16H2.5z" fill="#8b7bff"/><path d="M13 15.2h3.4" stroke="#8b7bff" stroke-width="1.6"/></symbol>
+    <symbol id="car" viewBox="0 0 8 8"><path d="M1 2.5l3 3 3-3z" fill="currentColor"/></symbol>
+    <symbol id="panel" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.8 2.5v11" stroke="currentColor" stroke-width="1.3"/></symbol>
+    <symbol id="panelr" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M10.2 2.5v11" stroke="currentColor" stroke-width="1.3"/></symbol>
+    <symbol id="plus" viewBox="0 0 16 16"><path d="M8 2.5v11M2.5 8h11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+    <symbol id="gear" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 1.6v1.8M8 12.6v1.8M1.6 8h1.8M12.6 8h1.8M3.5 3.5l1.3 1.3M11.2 11.2l1.3 1.3M3.5 12.5l1.3-1.3M11.2 4.8l1.3-1.3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="8" cy="8" r="4.6" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
+    <symbol id="agents" viewBox="0 0 16 16"><circle cx="8" cy="3.5" r="1.9" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="3.5" cy="12.5" r="1.9" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="12.5" cy="12.5" r="1.9" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 5.4v3M8 8.4l-3.4 2.5M8 8.4l3.4 2.5" stroke="currentColor" stroke-width="1.3"/></symbol>
+    <symbol id="mag" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.4" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10.3 10.3L13.6 13.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header>
+    <h1>Sidebar, where and how wide</h1>
+    <p>Built from today's Kaze (a headless render of the current sidebar and title bar): filter field, repo groups with a bold name and count, two-line rows with the state mark, agent logo, status and branch with line counts, the agent tray, and Workspaces at the bottom. Same sessions in every window.</p>
+  </header>
+
+  <div class="rec">
+    <b>My pick: one side setting, and the rail follows it.</b>
+    <p>A new setting chooses left (today's default) or right. Cmd B then cycles full, rail, hidden, and the rail always sits on the same side as the sidebar. So it is two choices, side and width, and every combination works the same way. Part 1 shows those four windows. Part 2 has the other ideas.</p>
+  </div>
+
+  <h3 class="part">Part 1. The recommendation: side and width</h3>
+  <div id="p1" class="wrap" style="gap:48px"></div>
+
+  <h3 class="part">Part 2. Other directions</h3>
+  <div id="p2" class="wrap" style="gap:48px"></div>
+</div>
+
+<script>
+const ic = (id, cls='logo') => `<svg class="${cls}"><use href="#${id}"/></svg>`;
+const st = s => `<span class="st ${s}"><i></i></span>`;
+const S = [
+  { g:'kaze-terminal', n:'2', rows:[
+    { t:'Redesign the sidebar', logo:'claude', st:'run', sl:'2 agents', br:'feat/sidebar-v3', lc:['+148','-37'], on:true,
+      subs:[['run','Explore','Map the sidebar draw path','1m'],['run','Plan','Rail and side setting','<1m']] },
+    { t:'codex', logo:'codex', st:'done', sl:'done', br:'release/0.42', lc:['+12','-4'] } ]},
+  { g:'todo-api', n:'1 waiting', w:true, rows:[
+    { t:'Add login rate limit', logo:'claude', st:'need', sl:'needs you', br:'feature/auth', lc:['+7',''] },
+    { t:'zsh', logo:'shell', st:'idle', sl:'', br:'main', lc:null } ]},
+];
+const WS = [['API','#5fd4e6'],['Web','#a99cff'],['Health','#62d39a']];
+
+function rows() {
+  let h = '';
+  for (const g of S) {
+    h += `<div class="grp">${ic('car','car')}<span>${g.g}</span><span class="n${g.w?' w':''}">${g.n}</span></div>`;
+    for (const r of g.rows) {
+      h += `<div class="row${r.on?' on':''}"><div class="l1">${st(r.st)}${ic(r.logo)}<span class="t">${r.t}</span><span class="s ${r.st}">${r.sl}</span></div>
+        <div class="l2"><span class="br">${r.br}</span>${r.lc?`<span class="lc"><b>${r.lc[0]}</b> <i>${r.lc[1]}</i></span>`:''}</div></div>`;
+      if (r.subs) h += `<div class="tray">${r.subs.map(s=>`<div class="sub">${st(s[0])}<b>${s[1]}</b><span class="k">${s[2]}</span><span class="tm">${s[3]}</span></div>`).join('')}</div>`;
+    }
+  }
+  return h;
+}
+const wsec = () => `<div class="wsec"><div class="lbl">WORKSPACES</div><div class="grp">${ic('car','car')}<span>Todo API</span><span class="n">all up</span></div>`
+  + WS.map(m=>`<div class="mem"><span class="bar" style="background:${m[1]}"></span>${m[0]}<span class="s">Running</span></div>`).join('') + `</div>`;
+const sidebar = side => `<div class="side ${side}"><div class="flt">Filter sessions…</div><div class="list">${rows()}</div>${wsec()}</div>`;
+
+function rail(side) {
+  const av = (logo, s, on) => `<div class="av${on?' on':''}">${ic(logo)}${st(s)}</div>`;
+  return `<div class="rail ${side}">
+    <div class="gl">kaze-te</div>${av('claude','run',true)}${av('codex','done')}
+    <div class="div"></div><div class="gl">todo-api</div>${av('claude','need')}${av('shell','idle')}
+    <div class="sp"></div><div class="wsd">${WS.map(m=>`<i style="background:${m[1]}"></i>`).join('')}</div></div>`;
+}
+
+const TERM = `<span class="p">~/kaze-terminal</span> <span class="d">on</span> <span class="g">feat/sidebar-v3</span>
+<span class="p">❯</span> go test ./internal/ui/
+ok   github.com/beefysalad/kaze-terminal/internal/ui  4.112s
+<span class="p">❯</span> git diff --stat
+ internal/ui/sidebar.go         | 96 <span class="g">++++++++</span><span class="y">--</span>
+ internal/ui/sidebar_window.go  | 61 <span class="g">++++++</span>
+ internal/ui/window.go          | 28 <span class="g">+++</span><span class="y">-</span>
+ 3 files changed, 148 insertions(+), 37 deletions(-)
+<span class="p">❯</span> <span style="background:#c9cdd8;color:#0f1117"> </span>`;
+const term = () => `<div class="term">${TERM}</div>`;
+
+// Title bar: the column above the sidebar (or rail) holds the toggle and +, on the sidebar's side.
+function titlebar(side, width) {
+  const tog = ic(side==='r'?'panelr':'panel','');
+  const lights = `<div class="lights"><i></i><i></i><i></i></div>`;
+  const brand = `<span class="brand">${ic('kmark','')}Kaze</span>`;
+  const crumb = `<span class="crumb">Redesign the sidebar <span class="cmd">/brainstorm</span><span class="pill">running</span></span>`;
+  const search = `<span class="search">${ic('mag','')}Search sessions, skills, commands<span class="k">Cmd+K</span></span>`;
+  const right = `<span class="ib">${ic('agents','')}</span><span class="ib">${ic('gear','')}</span>`;
+  if (side==='l') {
+    const col = width==='full'
+      ? `<div class="tcol l" style="width:260px">${lights}${brand}<span class="ib">${tog}</span><span class="grow"></span><span class="ib">${ic('plus','')}</span></div>`
+      : width==='rail'
+      ? `<div class="tcol l" style="width:160px">${lights}<span class="ib">${tog}</span><span class="grow"></span></div>`
+      : `<div class="tcol" style="padding-right:0">${lights}<span class="ib">${tog}</span></div>`;
+    return `<div class="tb">${col}<div class="tmain">${crumb}${search}${right}</div></div>`;
+  }
+  const col = width==='full'
+    ? `<div class="tcol r" style="width:260px"><span class="ib">${ic('plus','')}</span><span class="grow"></span>${right}<span class="ib">${tog}</span></div>`
+    : `<div class="tcol r" style="width:${width==='rail'?120:96}px"><span class="grow"></span>${right}<span class="ib">${tog}</span></div>`;
+  return `<div class="tb"><div class="tcol">${lights}${brand}</div><div class="tmain">${crumb}${search}</div>${col}</div>`;
+}
+const sbar = `<div class="sbar"><span class="wp">3 agents · 1 waiting</span><span class="up"><i></i><i></i><i></i><b>3/3</b> UP</span><span>CPU <b>2%</b> · 234 MB</span><span>4 tabs</span></div>`;
+const win = (side, width, body, extra='') => `<div class="scroller"><div class="win">${titlebar(side,width)}<div class="body">${body}</div>${sbar}${extra}</div></div>`;
+
+function notes(gain, cost, code) {
+  const ul = a => `<ul>${a.map(x=>`<li>${x}</li>`).join('')}</ul>`;
+  return `<div class="notes"><div><h4>Gains</h4>${ul(gain)}</div><div><h4>Costs</h4>${ul(cost)}</div><div><h4>What changes in code</h4>${ul(code)}</div></div>`;
+}
+const sec = (tag, name, badge, inner, say='') => `<section class="var"><div class="vh"><span class="tag">${tag}</span><h2>${name}</h2>${badge}</div>${say?`<p class="say">${say}</p>`:''}${inner}</section>`;
+const PICK = '<span class="pick">recommended</span>', BASE = '<span class="base">today</span>';
+
+const railTip = `<div class="tip" style="left:58px;top:146px">${st('need')}Add login rate limit<span>needs you</span></div>`;
+const railTipR = `<div class="tip" style="right:58px;top:146px">${st('need')}Add login rate limit<span>needs you</span></div>`;
+
+document.getElementById('p1').innerHTML = [
+  sec('1', 'Left, full', BASE, win('l','full', sidebar('l')+term()),
+    'What ships now, unchanged. Everything below starts from this.'),
+  sec('2', 'Right, full', PICK, win('r','full', term()+sidebar('r')),
+    'The same sidebar mirrored. Traffic lights and the Kaze mark stay at the top left; the toggle and + move to the column above the sidebar, next to the agents and settings buttons. The active row\'s accent line moves to the outer edge.')
+    + notes(['The prompt starts at the window\'s left edge, where your eyes already are','Alert cards and the docked panel already live on the right, so all session info is on one side','Rows, tray and Workspaces stay exactly as they are'],
+            ['On macOS the toggle is no longer right after the traffic lights','A mirrored layout to keep correct on both platforms'],
+            ['New sidebar_side = "left" | "right" in config.toml and Settings, Appearance','window.go places the sidebar rect on the chosen side','Title bar column and the accent line mirror with it']),
+  sec('3', 'Rail on the side you chose', PICK,
+    `<div class="pair"><div><div class="cap">Left setting: rail on the left (hovering a session shows its name)</div>${win('l','rail', rail('l')+term(), railTip)}</div>
+     <div><div class="cap">Right setting: rail on the right</div>${win('r','rail', term()+rail('r'), railTipR)}</div></div>`,
+    'Second press of Cmd B. One 36dp tile per session: the agent logo with its state mark in the corner, a short repo label above each group, and the workspace members as three colour bars at the bottom. Hover shows the title and status; click shows the session.')
+    + notes(['About 200dp more terminal while keeping needs-you and done visible','Same order as the full sidebar, so muscle memory carries over'],
+            ['Titles only on hover','The agent tray and filter field are in the full view only'],
+            ['New rail drawing path that reuses the row model, marks and logos','toggle_sidebar cycles full, rail, hidden; saved as sidebar = "full" | "rail" | "hidden" (old true/false still loads)']),
+  sec('4', 'Hidden', '', `<div class="pair"><div><div class="cap">Left setting</div>${win('l','hidden', term())}</div><div><div class="cap">Right setting</div>${win('r','hidden', term())}</div></div>`,
+    'Third press. Today\'s hidden state: only the toggle stays in the title bar, on the same side as the sidebar.'),
+].join('');
+
+document.getElementById('p2').innerHTML = [
+  sec('A', 'Rail with a flyout', '', `<div class="pair"><div><div class="cap">Left</div>${win('l','rail', rail('l')+term(), `<div class="fly" style="left:52px">${sidebar('l')}</div>`)}</div>
+     <div><div class="cap">Right</div>${win('r','rail', term()+rail('r'), `<div class="fly" style="right:52px">${sidebar('r')}</div>`)}</div></div>`,
+    'The rail from 3, but clicking it opens the full sidebar over the terminal instead of beside it. The terminal never resizes.')
+    + notes(['Full list on demand, no text reflow when it opens'],['Covers part of the terminal while open; needs a close-on-click-away rule'],['The rail from 3 plus an overlay layer, like the palette']),
+  sec('B', 'Floating panels', '', `<div class="pair"><div><div class="cap">Left</div>${win('l','full', sidebar('l')+`<div class="termbox">${term()}</div>`).replace('class="body"','class="body float"')}</div>
+     <div><div class="cap">Right</div>${win('r','full', `<div class="termbox">${term()}</div>`+sidebar('r')).replace('class="body"','class="body float"')}</div></div>`,
+    'Same content, but the sidebar and terminal sit as two inset panels with rounded corners on the title bar colour.')
+    + notes(['Looks more finished with no change to the rows'],['About 16dp lost to the gaps'],['Inset and corner drawing in window.go; works with either side']),
+].join('');
+</script>

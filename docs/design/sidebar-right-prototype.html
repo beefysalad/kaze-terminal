@@ -1,0 +1,343 @@
+<title>Kaze Right Sidebar</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+/* Layout: labelled mini Kaze windows built from the shipped Midnight chrome (headless renders of sidebar.go and the title bar), one per variation. Dark only, like the app. */
+:root {
+  --page:#07080c; --chrome:#0b0d12; --term:#0f1117; --raise:#151925; --line:#1d2230;
+  --fg:#e7e9f0; --white:#ffffff; --muted:#8a90a2; --status:#7d8394; --acc:#8b7bff; --accsoft:#2a2457; --acctext:#b9a6ff;
+  --branch:#62d39a; --done:#62d39a; --needs:#f2b84b; --del:#ff6b6b; --folder:#c9cdd8; --claude:#d97757;
+  --mono:'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing:border-box; }
+body { background:var(--page); color:var(--fg); font:14px/1.55 var(--mono); margin:0;
+  padding-block:40px 64px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width:1180px; margin:0 auto; display:flex; flex-direction:column; gap:44px; }
+header h1 { font-size:26px; margin:0 0 8px; font-weight:700; }
+header p { color:var(--muted); margin:0; max-width:80ch; }
+.rec { border:1px solid var(--accsoft); background:#120f24; border-radius:10px; padding:16px 18px; display:flex; flex-direction:column; gap:6px; }
+.rec b { color:var(--acctext); } .rec p { margin:0; color:#cfd2dc; max-width:92ch; }
+h3.part { font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:400; margin:0; border-top:1px solid var(--line); padding-top:20px; }
+section.var { display:flex; flex-direction:column; gap:14px; }
+.vh { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+.vh .tag { font-size:12px; color:var(--acctext); background:var(--accsoft); border-radius:5px; padding:1px 8px; }
+.vh h2 { font-size:18px; margin:0; }
+.vh .pick { font-size:12px; color:var(--done); border:1px solid #1f4a35; border-radius:5px; padding:1px 8px; }
+.vh .base { font-size:12px; color:var(--muted); border:1px solid var(--line); border-radius:5px; padding:1px 8px; }
+.say { margin:0; color:#cfd2dc; max-width:90ch; font-size:13px; }
+.notes { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:18px; font-size:13px; }
+.notes h4 { margin:0 0 4px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:400; }
+.notes ul { margin:0; padding-left:16px; color:#cfd2dc; } .notes li { margin:2px 0; }
+.pair { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.pair .cap { font-size:12px; color:var(--muted); margin-bottom:6px; }
+@media (max-width:900px){ .notes, .pair { grid-template-columns:1fr; } }
+
+/* ---- mini window (sizes in px = dp at 100%) ---- */
+.scroller { overflow-x:auto; border-radius:12px; }
+.win { width:1100px; height:540px; background:var(--term); border:1px solid var(--line); border-radius:12px; overflow:hidden;
+  display:grid; grid-template-rows:38px 1fr 26px; font-size:12.5px; position:relative; }
+.pair .win { width:760px; height:470px; }
+.tb { background:var(--chrome); border-bottom:1px solid var(--line); display:flex; align-items:stretch; }
+.tcol { display:flex; align-items:center; gap:8px; padding:0 10px; flex:none; }
+.tcol.l { border-right:1px solid var(--line); } .tcol.r { border-left:1px solid var(--line); }
+.tmain { flex:1; min-width:0; display:flex; align-items:center; gap:12px; padding:0 12px; }
+.lights { display:flex; gap:7px; margin-right:4px; } .lights i { width:11px; height:11px; border-radius:50%; background:#2a2f3c; display:block; }
+.brand { display:flex; align-items:center; gap:6px; font-weight:700; color:var(--white); }
+.brand svg { width:18px; height:18px; }
+.crumb { display:flex; align-items:center; gap:8px; white-space:nowrap; font-weight:700; color:var(--white); }
+.crumb .cmd { color:var(--acctext); font-weight:400; }
+.pill { background:var(--accsoft); color:var(--acctext); border-radius:9px; padding:0 7px; font-size:11px; font-weight:400; }
+.search { margin:0 auto; border:1px solid var(--line); border-radius:8px; padding:3px 6px 3px 10px; color:var(--status); width:360px; display:flex; align-items:center; gap:8px; }
+.search svg { width:14px; height:14px; } .search .k { margin-left:auto; border:1px solid var(--line); border-radius:5px; padding:0 6px; font-size:10.5px; }
+.ib { width:26px; height:26px; display:grid; place-items:center; border-radius:6px; color:var(--muted); flex:none; }
+.ib svg { width:17px; height:17px; }
+.grow { flex:1; }
+.body { display:flex; min-height:0; }
+.term { flex:1; min-width:0; padding:8px 12px; color:#c9cdd8; white-space:pre; overflow:hidden; line-height:1.62; }
+.term .p { color:var(--acctext); } .term .g { color:var(--branch); } .term .y { color:var(--needs); } .term .d { color:var(--status); }
+.sbar { background:var(--chrome); border-top:1px solid var(--line); display:flex; align-items:center; justify-content:flex-end; gap:16px; padding:0 12px; color:var(--status); font-size:11px; white-space:nowrap; }
+.sbar .wp { background:#3a2c10; color:var(--needs); border-radius:9px; padding:0 8px; }
+.sbar .up i { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--done); margin-right:3px; }
+.sbar b { color:var(--fg); font-weight:400; }
+
+/* ---- sidebar, as sidebar.go draws it ---- */
+.side { width:260px; flex:none; background:var(--chrome); display:flex; flex-direction:column; min-height:0; padding:8px 8px 0; }
+.side.l { border-right:1px solid var(--line); } .side.r { border-left:1px solid var(--line); }
+.flt { height:30px; border:1px solid var(--line); border-radius:7px; padding:0 9px; color:var(--status); display:flex; align-items:center; font-size:12.5px; flex:none; }
+.list { flex:1; overflow:hidden; display:flex; flex-direction:column; padding-top:6px; }
+.grp { display:flex; align-items:center; gap:9px; height:28px; padding:0 4px 0 6px; font-weight:700; color:var(--white); font-size:12.5px; }
+.grp .car { width:8px; height:8px; color:var(--status); flex:none; }
+.grp .n { margin-left:auto; color:var(--status); font-weight:400; } .grp .n.w { color:var(--needs); }
+.row { border-radius:7px; padding:5px 6px 6px 4px; display:flex; flex-direction:column; gap:3px; position:relative; }
+.row.on { background:var(--active, #151925); }
+.row.on::before { content:""; position:absolute; left:-8px; top:4px; bottom:4px; width:2px; background:var(--acc); }
+.side.r .row.on::before { left:auto; right:-8px; }
+.l1 { display:flex; align-items:center; gap:6px; white-space:nowrap; min-width:0; }
+.l1 .t { overflow:hidden; text-overflow:ellipsis; min-width:0; color:var(--fg); }
+.row.on .l1 .t { color:var(--white); }
+.l1 .s { margin-left:auto; flex:none; padding-left:6px; }
+.s.run { color:var(--acctext); } .s.need { color:var(--needs); } .s.done { color:var(--done); }
+.l2 { display:flex; gap:8px; font-size:12px; padding-left:28px; white-space:nowrap; overflow:hidden; }
+.l2 .br { color:var(--branch); overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.l2 .lc { margin-left:auto; flex:none; } .l2 .lc b { color:var(--done); font-weight:400; } .l2 .lc i { color:var(--del); font-style:normal; }
+.logo { width:14px; height:14px; flex:none; display:block; }
+.st { width:14px; height:14px; flex:none; display:grid; place-items:center; }
+.st i { display:block; border-radius:50%; }
+.st.run i { width:12px; height:12px; border:1.5px solid var(--acc); background:radial-gradient(circle, var(--acc) 0 2.6px, transparent 3px); }
+.st.need i { width:12px; height:12px; background:var(--needs); box-shadow:0 0 0 1.5px #5a4410 inset; }
+.st.done i { width:7px; height:7px; background:var(--done); }
+.st.idle i { width:7px; height:7px; background:#6b7080; }
+.tray { position:relative; margin-left:14px; padding-left:10px; display:flex; flex-direction:column; }
+.tray::before { content:""; position:absolute; left:0; top:0; bottom:10px; width:1px; background:var(--line); }
+.sub { display:flex; align-items:center; gap:6px; height:22px; font-size:12px; white-space:nowrap; overflow:hidden; color:var(--fg); }
+.sub .st i { width:11px; height:11px; }
+.sub b { color:var(--acctext); font-weight:400; flex:none; } .sub .k { overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.sub .tm { margin-left:auto; color:var(--status); padding-left:6px; flex:none; }
+.wsec { border-top:1px solid var(--line); margin:0 -8px; padding:6px 8px 8px; display:flex; flex-direction:column; flex:none; }
+.wsec .lbl { font-size:11px; letter-spacing:.06em; color:var(--status); height:24px; display:flex; align-items:center; padding-left:6px; }
+.wsec .grp { font-weight:400; color:var(--fg); }
+.wsec .grp .n { color:var(--done); }
+.mem { display:flex; align-items:center; gap:8px; height:24px; padding:0 6px; }
+.mem .bar { width:3px; height:14px; border-radius:2px; } .mem .s { margin-left:auto; color:var(--status); }
+
+/* ---- rail (52dp) ---- */
+.rail { width:52px; flex:none; background:var(--chrome); display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 0; }
+.rail.l { border-right:1px solid var(--line); } .rail.r { border-left:1px solid var(--line); }
+.av { width:36px; height:36px; border-radius:8px; display:grid; place-items:center; position:relative; }
+.av .logo { width:18px; height:18px; }
+.av.on { background:var(--raise); }
+.av.on::before { content:""; position:absolute; left:-8px; top:6px; bottom:6px; width:2px; background:var(--acc); }
+.rail.r .av.on::before { left:auto; right:-8px; }
+.av .st { position:absolute; right:1px; bottom:1px; width:12px; height:12px; background:var(--chrome); border-radius:50%; }
+.av .st i { transform:scale(.8); }
+.rail .div { width:24px; height:1px; background:var(--line); margin:4px 0; }
+.rail .gl { font-size:9.5px; color:var(--status); letter-spacing:.02em; width:44px; text-align:center; overflow:hidden; white-space:nowrap; text-overflow:clip; }
+.rail .wsd { display:flex; gap:3px; margin:4px 0; } .rail .wsd i { width:4px; height:16px; border-radius:2px; display:block; }
+.rail .sp { flex:1; }
+.tip { position:absolute; background:var(--raise); border:1px solid #2a3142; border-radius:7px; padding:6px 10px; font-size:12px; white-space:nowrap; box-shadow:0 8px 24px #0009; }
+.tip .st { display:inline-grid; vertical-align:-2px; margin-right:6px; } .tip span { color:var(--needs); margin-left:8px; }
+
+/* ---- other variations ---- */
+.fly { position:absolute; top:38px; bottom:26px; width:260px; box-shadow:0 0 44px #000c; display:flex; }
+.fly .side { width:100%; }
+.body.float { padding:8px; gap:8px; background:var(--chrome); }
+.termbox { flex:1; min-width:0; background:var(--term); border:1px solid var(--line); border-radius:10px; display:flex; overflow:hidden; }
+.body.float .side { border:1px solid var(--line); border-radius:10px; background:#0d1016; }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="claude" viewBox="0 0 16 16"><g stroke="#d97757" stroke-width="1.7" stroke-linecap="round"><path d="M8 1.6v4"/><path d="M8 10.4v4"/><path d="M1.6 8h4"/><path d="M10.4 8h4"/><path d="M3.5 3.5l2.8 2.8"/><path d="M9.7 9.7l2.8 2.8"/><path d="M12.5 3.5L9.7 6.3"/><path d="M6.3 9.7l-2.8 2.8"/><path d="M5.6 2.2l1.2 3.6"/><path d="M10.4 13.8l-1.2-3.6"/><path d="M13.8 5.6l-3.6 1.2"/><path d="M2.2 10.4l3.6-1.2"/></g></symbol>
+    <symbol id="codex" viewBox="0 0 16 16"><g fill="none" stroke="#c9cdd8" stroke-width="1.2"><ellipse cx="8" cy="8" rx="6" ry="2.6"/><ellipse cx="8" cy="8" rx="6" ry="2.6" transform="rotate(60 8 8)"/><ellipse cx="8" cy="8" rx="6" ry="2.6" transform="rotate(120 8 8)"/></g></symbol>
+    <symbol id="shell" viewBox="0 0 16 16"><path d="M3 4.5l3.2 3.5L3 11.5M8.3 11.5h4.7" fill="none" stroke="#a7adbd" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="kmark" viewBox="0 0 18 18"><path d="M2.5 2h3.6v5.4L10.8 2h4.3l-5.3 6 5.6 8H11L7.4 10.6l-1.3 1.4V16H2.5z" fill="#8b7bff"/><path d="M13 15.2h3.4" stroke="#8b7bff" stroke-width="1.6"/></symbol>
+    <symbol id="car" viewBox="0 0 8 8"><path d="M1 2.5l3 3 3-3z" fill="currentColor"/></symbol>
+    <symbol id="panel" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.8 2.5v11" stroke="currentColor" stroke-width="1.3"/></symbol>
+    <symbol id="panelr" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M10.2 2.5v11" stroke="currentColor" stroke-width="1.3"/></symbol>
+    <symbol id="plus" viewBox="0 0 16 16"><path d="M8 2.5v11M2.5 8h11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+    <symbol id="gear" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 1.6v1.8M8 12.6v1.8M1.6 8h1.8M12.6 8h1.8M3.5 3.5l1.3 1.3M11.2 11.2l1.3 1.3M3.5 12.5l1.3-1.3M11.2 4.8l1.3-1.3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="8" cy="8" r="4.6" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
+    <symbol id="agents" viewBox="0 0 16 16"><circle cx="8" cy="3.5" r="1.9" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="3.5" cy="12.5" r="1.9" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="12.5" cy="12.5" r="1.9" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 5.4v3M8 8.4l-3.4 2.5M8 8.4l3.4 2.5" stroke="currentColor" stroke-width="1.3"/></symbol>
+    <symbol id="mag" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.4" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10.3 10.3L13.6 13.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+<style>
+/* Prototype additions: a single live window that fills the page width. */
+.wrap { gap:18px; }
+.win.live { width:100%; min-width:900px; height:min(640px, calc(100vh - 220px)); min-height:480px; }
+.hint { display:flex; flex-wrap:wrap; gap:8px 18px; align-items:center; color:var(--muted); font-size:13px; }
+.hint .k { border:1px solid var(--line); border-radius:5px; padding:0 6px; color:var(--fg); font-size:12px; }
+.modes { display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+.modes button { background:transparent; color:var(--muted); border:0; padding:4px 12px; font:inherit; font-size:12px; cursor:pointer; }
+.modes button[aria-pressed="true"] { background:var(--accsoft); color:var(--acctext); }
+.modes button:focus-visible, .ib:focus-visible, .row:focus-visible, .av:focus-visible { outline:2px solid var(--acc); outline-offset:-2px; }
+.ib { cursor:pointer; background:none; border:0; } .ib:hover { background:var(--raise); color:var(--fg); }
+.row, .av, .grp, .mem, .sub { cursor:pointer; }
+.row:hover:not(.on) { background:#11141c; } .av:hover:not(.on) { background:#11141c; }
+.grp .car { transition:transform .12s; } .grp.folded .car { transform:rotate(-90deg); }
+.row .x { display:none; color:var(--status); margin-left:6px; } .row:hover .x { display:inline; }
+.row:hover .s { display:none; }
+.flt input { all:unset; width:100%; color:var(--fg); font-size:12.5px; } .flt input::placeholder { color:var(--status); }
+.flt:focus-within { border-color:var(--acc); }
+.empty { color:var(--status); padding:10px 6px; font-size:12px; }
+.mem.on { background:var(--raise); border-radius:6px; }
+.tip { pointer-events:none; z-index:5; }
+.term .y2 { color:var(--needs); }
+@media (prefers-reduced-motion: reduce) { .grp .car { transition:none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Right sidebar with rail</h1>
+    <p>Clickable prototype of the sidebar on the right with three widths. Click sessions, agents and workspace members, fold groups, type in the filter, and press <b>Cmd B</b> (or Ctrl B) to cycle full, rail and hidden.</p>
+  </header>
+  <div class="hint">
+    <div class="modes" role="group" aria-label="Sidebar width">
+      <button id="m-full" type="button">Full</button><button id="m-rail" type="button">Rail</button><button id="m-hidden" type="button">Hidden</button>
+    </div>
+    <span><span class="k">Cmd B</span> cycles</span>
+    <span><span class="k">Ctrl Tab</span> next session</span>
+    <span>Hover a rail tile for its name</span>
+  </div>
+  <div class="scroller"><div class="win live" id="win"></div></div>
+</div>
+
+<script>
+const ic = (id, cls='logo') => `<svg class="${cls}"><use href="#${id}"/></svg>`;
+const st = s => `<span class="st ${s}"><i></i></span>`;
+const esc = s => s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+const SESS = [
+  { id:1, g:'kaze-terminal', t:'Redesign the sidebar', cmd:'/brainstorm', logo:'claude', st:'run', br:'feat/sidebar-v3', lc:['+148','-37'],
+    subs:[['run','Explore','Map the sidebar draw path','1m'],['run','Plan','Rail and side setting','<1m']],
+    term:`<span class="p">~/kaze-terminal</span> <span class="d">on</span> <span class="g">feat/sidebar-v3</span>
+<span class="p">❯</span> claude
+<span class="d">  Claude Code</span>
+
+  <span class="p">●</span> Reading internal/ui/sidebar.go
+  <span class="p">●</span> 2 agents running: Explore, Plan
+  <span class="d">    Explore  Map the sidebar draw path        1m</span>
+  <span class="d">    Plan     Rail and side setting            &lt;1m</span>
+
+<span class="p">❯</span> <span style="background:#c9cdd8;color:#0f1117"> </span>` },
+  { id:2, g:'kaze-terminal', t:'codex', cmd:'', logo:'codex', st:'done', br:'release/0.42', lc:['+12','-4'],
+    term:`<span class="p">~/kaze-terminal</span> <span class="d">on</span> <span class="g">release/0.42</span>
+<span class="p">❯</span> codex
+  Bumped the version to 0.42 in three places.
+  Updated docs/changelog.html and the lander.
+  <span class="g">All checks pass.</span>
+
+<span class="p">❯</span> <span style="background:#c9cdd8;color:#0f1117"> </span>` },
+  { id:3, g:'todo-api', t:'Add login rate limit', cmd:'/fix', logo:'claude', st:'need', br:'feature/auth', lc:['+7',''],
+    term:`<span class="p">~/projects/todo-api-auth</span> <span class="d">on</span> <span class="g">feature/auth</span>
+<span class="p">❯</span> claude
+
+  <span class="y2">Claude needs your permission to use Bash</span>
+
+    go test ./internal/session/...
+
+  <span class="d">1. Yes   2. Yes, and don't ask again   3. No</span>
+<span class="p">❯</span> <span style="background:#c9cdd8;color:#0f1117"> </span>` },
+  { id:4, g:'todo-api', t:'zsh', cmd:'', logo:'shell', st:'idle', br:'main', lc:null,
+    term:`<span class="p">~/projects/todo-api</span> <span class="d">on</span> <span class="g">main</span>
+<span class="p">❯</span> git log --oneline -3
+<span class="y">72b1937</span> Add a make check target
+<span class="y">8411835</span> Document the API and setup
+<span class="y">26d1f73</span> Serve todos over HTTP
+<span class="p">❯</span> <span style="background:#c9cdd8;color:#0f1117"> </span>` },
+];
+const WS = [
+  { id:'API', c:'#5fd4e6', term:`<span class="p">~/projects/todo-api</span> <span class="p">❯</span> go run ./cmd/api
+listening on :8080
+<span class="d">GET /todos 200 1.2ms</span>
+<span class="d">GET /todos 200 0.9ms</span>` },
+  { id:'Web', c:'#a99cff', term:`<span class="p">~/projects/todo-web</span> <span class="p">❯</span> npm run dev
+  <span class="g">ready</span> on http://localhost:5173` },
+  { id:'Health', c:'#62d39a', term:`<span class="p">~/projects/todo-api</span> <span class="p">❯</span> ./scripts/health.sh
+<span class="g">api ok</span>   <span class="g">web ok</span>   <span class="g">db ok</span>` },
+];
+const STATUS = { run:'', need:'needs you', done:'done', idle:'' };
+const MODES = ['full','rail','hidden'];
+const S = { mode:'full', shown:1, member:null, folded:{}, trayFolded:{}, filter:'', wsFolded:false, tip:null };
+try { const m = localStorage.getItem('kaze-proto-mode'); if (MODES.includes(m)) S.mode = m; } catch (e) {}
+
+const groups = () => [...new Set(SESS.map(s=>s.g))];
+const visible = () => { const f = S.filter.toLowerCase(); return SESS.filter(s => !f || (s.t+' '+s.g+' '+s.br+' '+s.cmd).toLowerCase().includes(f)); };
+const statusText = s => s.st==='run' && s.subs ? `${s.subs.length} agents` : STATUS[s.st];
+
+function sideHTML() {
+  const vis = visible();
+  let h = `<div class="side r"><div class="flt"><input id="flt" type="text" placeholder="Filter sessions…" value="${esc(S.filter)}" aria-label="Filter sessions"></div><div class="list">`;
+  if (!vis.length) h += `<div class="empty">No sessions match.</div>`;
+  for (const g of groups()) {
+    const rs = vis.filter(s=>s.g===g); if (!rs.length) continue;
+    const waiting = rs.filter(s=>s.st==='need').length;
+    const folded = S.folded[g] && !S.filter;
+    h += `<div class="grp${folded?' folded':''}" data-fold="${g}">${ic('car','car')}<span>${g}</span><span class="n${waiting?' w':''}">${waiting?waiting+' waiting':rs.length}</span></div>`;
+    if (folded) continue;
+    for (const r of rs) {
+      const on = S.member===null && S.shown===r.id;
+      h += `<div class="row${on?' on':''}" tabindex="0" data-id="${r.id}"><div class="l1">${st(r.st)}${ic(r.logo)}<span class="t">${esc(r.t)}</span><span class="s ${r.st}">${statusText(r)}</span><span class="x">×</span></div>
+        <div class="l2"><span class="br">${r.br}</span>${r.lc?`<span class="lc"><b>${r.lc[0]}</b> <i>${r.lc[1]}</i></span>`:''}</div></div>`;
+      if (r.subs && !S.trayFolded[r.id]) h += `<div class="tray">${r.subs.map(s=>`<div class="sub" data-id="${r.id}">${st(s[0])}<b>${s[1]}</b><span class="k">${s[2]}</span><span class="tm">${esc(s[3])}</span></div>`).join('')}</div>`;
+    }
+  }
+  h += `</div><div class="wsec"><div class="lbl">WORKSPACES</div><div class="grp${S.wsFolded?' folded':''}" data-wsfold="1">${ic('car','car')}<span>Todo API</span><span class="n">all up</span></div>`;
+  if (!S.wsFolded) h += WS.map(m=>`<div class="mem${S.member===m.id?' on':''}" data-mem="${m.id}"><span class="bar" style="background:${m.c}"></span>${m.id}<span class="s">Running</span></div>`).join('');
+  return h + `</div></div>`;
+}
+function railHTML() {
+  let h = `<div class="rail r">`;
+  groups().forEach((g,i) => {
+    if (i) h += `<div class="div"></div>`;
+    h += `<div class="gl" title="${g}">${g.slice(0,7)}</div>`;
+    for (const s of SESS.filter(x=>x.g===g)) h += `<div class="av${S.member===null&&S.shown===s.id?' on':''}" tabindex="0" data-id="${s.id}" data-tip="${s.id}" aria-label="${esc(s.t)}">${ic(s.logo)}${st(s.st)}</div>`;
+  });
+  h += `<div class="sp"></div><div class="wsd">${WS.map(m=>`<i style="background:${m.c};cursor:pointer" data-mem="${m.id}" title="${m.id}"></i>`).join('')}</div></div>`;
+  return h;
+}
+function titleHTML() {
+  const cur = S.member ? null : SESS.find(s=>s.id===S.shown);
+  const crumb = cur
+    ? `<span class="crumb">${esc(cur.t)} ${cur.cmd?`<span class="cmd">${cur.cmd}</span>`:''}${cur.st==='run'?'<span class="pill">running</span>':cur.st==='need'?'<span class="pill" style="background:#3a2c10;color:var(--needs)">needs you</span>':''}</span>`
+    : `<span class="crumb">${S.member} <span class="cmd">Todo API</span></span>`;
+  const search = `<span class="search">${ic('mag','')}Search sessions, skills, commands<span class="k">Cmd+K</span></span>`;
+  const right = `<span class="ib">${ic('agents','')}</span><span class="ib">${ic('gear','')}</span>`;
+  const tog = `<button class="ib" id="tog" type="button" aria-label="Sidebar width: ${S.mode}">${ic('panelr','')}</button>`;
+  const w = S.mode==='full' ? 260 : S.mode==='rail' ? 120 : 96;
+  const plus = S.mode==='full' ? `<span class="ib">${ic('plus','')}</span><span class="grow"></span>` : `<span class="grow"></span>`;
+  return `<div class="tb"><div class="tcol"><div class="lights"><i></i><i></i><i></i></div><span class="brand">${ic('kmark','')}Kaze</span></div>
+    <div class="tmain">${crumb}${search}</div><div class="tcol${S.mode==='hidden'?'':' r'}" style="width:${w}px">${plus}${right}${tog}</div></div>`;
+}
+function termText() { return S.member ? WS.find(m=>m.id===S.member).term : SESS.find(s=>s.id===S.shown).term; }
+function render() {
+  const waiting = SESS.filter(s=>s.st==='need').length;
+  const side = S.mode==='full' ? sideHTML() : S.mode==='rail' ? railHTML() : '';
+  let tip = '';
+  if (S.mode==='rail' && S.tip) {
+    const s = SESS.find(x=>x.id===S.tip.id);
+    tip = `<div class="tip" style="right:58px;top:${S.tip.y}px">${st(s.st)}${esc(s.t)}${statusText(s)?`<span style="color:${s.st==='need'?'var(--needs)':s.st==='done'?'var(--done)':'var(--acctext)'}">${statusText(s)}</span>`:''}</div>`;
+  }
+  const hadFocus = document.activeElement && document.activeElement.id==='flt';
+  const caret = hadFocus ? document.activeElement.selectionStart : 0;
+  document.getElementById('win').innerHTML = titleHTML() + `<div class="body"><div class="term">${termText()}</div>${side}</div>`
+    + `<div class="sbar"><span class="wp">2 agents · ${waiting} waiting</span><span class="up"><i></i><i></i><i></i><b>3/3</b> UP</span><span>CPU <b>2%</b> · 234 MB</span><span>${SESS.length} tabs</span></div>` + tip;
+  MODES.forEach(m => document.getElementById('m-'+m).setAttribute('aria-pressed', String(S.mode===m)));
+  if (hadFocus) { const f = document.getElementById('flt'); if (f) { f.focus(); f.setSelectionRange(caret, caret); } }
+}
+function setMode(m) { S.mode = m; S.tip = null; try { localStorage.setItem('kaze-proto-mode', m); } catch (e) {} render(); }
+const cycle = () => setMode(MODES[(MODES.indexOf(S.mode)+1) % MODES.length]);
+
+const win = document.getElementById('win');
+win.addEventListener('click', e => {
+  const t = e.target.closest('[data-fold],[data-wsfold],[data-mem],.x,[data-id],#tog'); if (!t) return;
+  if (t.id==='tog') return cycle();
+  if (t.classList.contains('x')) { return; }
+  if (t.dataset.fold) { S.folded[t.dataset.fold] = !S.folded[t.dataset.fold]; return render(); }
+  if (t.dataset.wsfold) { S.wsFolded = !S.wsFolded; return render(); }
+  if (t.dataset.mem) { S.member = t.dataset.mem; return render(); }
+  if (t.dataset.id) { S.shown = +t.dataset.id; S.member = null; render(); }
+});
+win.addEventListener('input', e => { if (e.target.id==='flt') { S.filter = e.target.value; render(); } });
+win.addEventListener('keydown', e => {
+  if (e.target.id==='flt') {
+    if (e.key==='Escape') { S.filter=''; render(); }
+    if (e.key==='Enter') { const v = visible(); if (v.length) { S.shown = v[0].id; S.member = null; render(); } }
+    return;
+  }
+  if ((e.key==='Enter' || e.key===' ') && e.target.dataset && e.target.dataset.id) { e.preventDefault(); S.shown = +e.target.dataset.id; S.member = null; render(); }
+});
+win.addEventListener('mouseover', e => {
+  const a = e.target.closest('[data-tip]');
+  const id = a ? +a.dataset.tip : null;
+  if ((S.tip && S.tip.id) === id) return;
+  S.tip = a ? { id, y: a.getBoundingClientRect().top - win.getBoundingClientRect().top + 6 } : null;
+  render();
+});
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase()==='b') { e.preventDefault(); cycle(); }
+  if (e.ctrlKey && e.key==='Tab') { e.preventDefault(); const i = SESS.findIndex(s=>s.id===S.shown); S.shown = SESS[(i + (e.shiftKey?-1:1) + SESS.length) % SESS.length].id; S.member = null; render(); }
+});
+MODES.forEach(m => document.getElementById('m-'+m).addEventListener('click', () => setMode(m)));
+render();
+</script>

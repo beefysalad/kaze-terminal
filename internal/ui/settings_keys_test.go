@@ -882,7 +882,7 @@ func TestRowLayout(t *testing.T) {
 	win, _, _, _ := shortcutsWindow(t, "[keys]\nfind = \"ctrl+alt+f\"\n")
 	rows := win.set.keyRows
 	if len(rows) != len(editableActions(runtime.GOOS))+len(mouseLines) {
-		t.Fatalf("%d rows laid out", len(rows))
+		t.Fatalf("%d rows laid out, want %d", len(rows), len(editableActions(runtime.GOOS))+len(mouseLines))
 	}
 	for _, g := range rows {
 		if g.action == "" {

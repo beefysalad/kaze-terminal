@@ -48,7 +48,24 @@ func appearanceRows(win *window) []settingRow {
 			selected: choiceIndex(cursorStyles, c.CursorStyle, 0), cursorChips: true,
 		}}},
 		{label: "Blinking cursor", hint: "Off keeps idle CPU at zero", ctrls: []ctrl{{kind: ctlToggle, id: "blink", on: c.CursorBlink}}},
+		{heading: "Sidebar"},
+		{label: "Side", hint: "Which edge of the window the sidebar sits on.", ctrls: []ctrl{{
+			kind: ctlSegmented, id: "sideside", options: []string{"Left", "Right"},
+			selected: choiceIndex([]string{"left", "right"}, c.SidebarSide, 0),
+		}}},
+		{label: "Width", hint: sidebarWidthHint(win), ctrls: []ctrl{{
+			kind: ctlSegmented, id: "sidemode", options: []string{"Full", "Rail", "Hidden"},
+			selected: int(win.savedSideMode()),
+		}}},
 	}
+}
+
+// sidebarWidthHint names the key that cycles the width, as the shortcuts page shows it.
+func sidebarWidthHint(win *window) string {
+	if k := win.keyText("toggle_sidebar"); k != "" {
+		return k + " cycles these."
+	}
+	return "Cycle them from the title bar or the palette."
 }
 
 // choiceIndex is v's place in choices, or def for an unset value.
@@ -79,6 +96,14 @@ func appearanceAct(win *window, id string, arg int) {
 		}
 	case "blink":
 		win.setBlink(arg == 1)
+	case "sideside":
+		if arg == 0 || arg == 1 {
+			win.setSideRight(arg == 1)
+		}
+	case "sidemode":
+		if arg >= 0 && arg <= int(sideHidden) {
+			win.setSideMode(sideMode(arg))
+		}
 	}
 }
 

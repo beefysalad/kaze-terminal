@@ -59,8 +59,16 @@ func TestFormatShortcut(t *testing.T) {
 
 func TestEveryKnownActionIsListed(t *testing.T) {
 	seen := map[string]int{}
+	paletteOnly := 0 // commands that are not [keys] actions
 	for _, c := range kazeCommands {
 		seen[c.Config]++
+		if c.paletteOnly() {
+			paletteOnly++
+			if config.KnownActions[c.Config] || c.Label == "" {
+				t.Errorf("%+v: a palette-only command must not be a [keys] action", c)
+			}
+			continue
+		}
 		if c.Act != actionByName[c.Config] || c.Label == "" {
 			t.Errorf("%+v does not match actionByName", c)
 		}
@@ -70,8 +78,8 @@ func TestEveryKnownActionIsListed(t *testing.T) {
 			t.Errorf("%s listed %d times", name, seen[name])
 		}
 	}
-	if len(kazeCommands) != len(config.KnownActions) {
-		t.Errorf("%d commands for %d actions", len(kazeCommands), len(config.KnownActions))
+	if len(kazeCommands)-paletteOnly != len(config.KnownActions) {
+		t.Errorf("%d commands for %d actions", len(kazeCommands)-paletteOnly, len(config.KnownActions))
 	}
 	if kazeCommands[0].Config != "new_tab" || kazeCommands[len(kazeCommands)-1].Config != "palette" {
 		t.Errorf("order: first %s, last %s", kazeCommands[0].Config, kazeCommands[len(kazeCommands)-1].Config)

@@ -272,7 +272,7 @@ func TestGroupHeaderFolds(t *testing.T) {
 	}
 }
 
-func TestToggleSidebarHidesAndSaves(t *testing.T) {
+func TestToggleSidebarCyclesAndSaves(t *testing.T) {
 	win, _ := sideWindow(t, true)
 	openIn(t, win, "")
 	win.cfgPath = filepath.Join(t.TempDir(), "config.toml")
@@ -284,44 +284,49 @@ func TestToggleSidebarHidesAndSaves(t *testing.T) {
 	ctrlShiftB := key.Event{Name: "B", Modifiers: key.ModCtrl | key.ModShift, State: key.Press}
 	win.route(layout.Context{}, []event.Event{ctrlShiftB}, 8, 16)
 	sideFrame(t, win, &r)
-	if !win.side.hidden || win.opt.Config.Sidebar {
-		t.Fatalf("after Ctrl+Shift+B: hidden %v, config %v", win.side.hidden, win.opt.Config.Sidebar)
+	if win.side.hidden || win.side.mode != sideRail {
+		t.Fatalf("after Ctrl+Shift+B: hidden %v, mode %v, want the rail", win.side.hidden, win.side.mode)
 	}
-	if win.gridMin.X != 8 {
-		t.Fatalf("grid starts at x=%d with the sidebar hidden, want 8", win.gridMin.X)
+	if win.gridMin.X != railW+8 {
+		t.Fatalf("grid starts at x=%d with the rail, want %d", win.gridMin.X, railW+8)
 	}
 	b, err := os.ReadFile(win.cfgPath)
-	if err != nil || !strings.Contains(string(b), "sidebar = false") {
-		t.Fatalf("config file %q (%v), want sidebar = false", b, err)
+	if err != nil || !strings.Contains(string(b), `sidebar_mode = "rail"`) {
+		t.Fatalf("config file %q (%v), want sidebar_mode = \"rail\"", b, err)
 	}
 	win.route(layout.Context{}, []event.Event{ctrlShiftB}, 8, 16)
 	sideFrame(t, win, &r)
-	if win.side.hidden || !win.opt.Config.Sidebar {
-		t.Fatal("a second Ctrl+Shift+B did not show the sidebar")
+	if !win.side.hidden || win.gridMin.X != 8 {
+		t.Fatalf("a second Ctrl+Shift+B: hidden %v, grid x %d", win.side.hidden, win.gridMin.X)
 	}
-	if b, _ := os.ReadFile(win.cfgPath); !strings.Contains(string(b), "sidebar = true") {
-		t.Fatalf("config file %q, want sidebar = true", b)
+	win.route(layout.Context{}, []event.Event{ctrlShiftB}, 8, 16)
+	sideFrame(t, win, &r)
+	if win.side.hidden || win.side.mode != sideFull || len(win.side.hits.rows) != 1 {
+		t.Fatal("a third Ctrl+Shift+B did not bring the full sidebar back")
+	}
+	if b, _ := os.ReadFile(win.cfgPath); !strings.Contains(string(b), `sidebar_mode = "full"`) {
+		t.Fatalf("config file %q, want sidebar_mode = \"full\"", b)
 	}
 }
 
-func TestNarrowWindowHidesTheSidebarWithoutSaving(t *testing.T) {
+func TestNarrowWindowShowsTheRailWithoutSaving(t *testing.T) {
 	win, _ := sideWindow(t, true)
 	openIn(t, win, "")
 	win.cfgPath = filepath.Join(t.TempDir(), "config.toml")
 	var r input.Router
 	sizedFrame(t, win, &r, 500, 600)
-	if !win.side.hidden || len(win.side.hits.rows) != 0 || win.gridMin.X != 8 {
-		t.Fatalf("500px wide: hidden %v, %d rows, grid x %d", win.side.hidden, len(win.side.hits.rows), win.gridMin.X)
+	if win.side.hidden || win.side.mode != sideRail || len(win.side.hits.rows) != 1 || !win.side.hits.filter.Empty() || win.gridMin.X != railW+8 {
+		t.Fatalf("500px wide: hidden %v, mode %v, %d rows, grid x %d", win.side.hidden, win.side.mode, len(win.side.hits.rows), win.gridMin.X)
 	}
-	if !win.opt.Config.Sidebar {
-		t.Fatal("a narrow window turned the setting off")
+	if win.savedSideMode() != sideFull {
+		t.Fatal("a narrow window changed the setting")
 	}
 	if _, err := os.Stat(win.cfgPath); !os.IsNotExist(err) {
 		t.Fatalf("a narrow window wrote the config (%v)", err)
 	}
 	sizedFrame(t, win, &r, 1000, 600)
-	if win.side.hidden || len(win.side.hits.rows) != 1 {
-		t.Fatal("widening the window did not bring the sidebar back")
+	if win.side.hidden || win.side.mode != sideFull || len(win.side.hits.rows) != 1 {
+		t.Fatal("widening the window did not bring the full sidebar back")
 	}
 }
 
@@ -376,7 +381,7 @@ func TestKeyboardSelectionScrollsIntoView(t *testing.T) {
 }
 
 // macOS draws Kaze's own title bar too (spec 5): the sidebar starts below it,
-// and hiding the sidebar leaves no rail behind.
+// and hiding the sidebar leaves nothing behind.
 func TestMacHasTheSharedTitleBar(t *testing.T) {
 	win, _ := sideWindow(t, false)
 	openIn(t, win, "")
@@ -395,12 +400,17 @@ func TestMacHasTheSharedTitleBar(t *testing.T) {
 	win.hideSettings()
 	click(win, win.bar.Toggle)
 	sideFrame(t, win, &r)
-	if !win.side.hidden || win.gridMin.X != 8 {
-		t.Fatalf("hidden: grid x %d, want 8 (no rail)", win.gridMin.X)
+	if win.side.mode != sideRail || win.gridMin.X != railW+8 {
+		t.Fatalf("one click: mode %v, grid x %d, want the rail", win.side.mode, win.gridMin.X)
 	}
 	click(win, win.bar.Toggle)
 	sideFrame(t, win, &r)
-	if win.side.hidden {
+	if !win.side.hidden || win.gridMin.X != 8 {
+		t.Fatalf("hidden: grid x %d, want 8 (nothing left behind)", win.gridMin.X)
+	}
+	click(win, win.bar.Toggle)
+	sideFrame(t, win, &r)
+	if win.side.hidden || win.side.mode != sideFull {
 		t.Fatal("the toggle did not bring the sidebar back")
 	}
 }
@@ -632,7 +642,7 @@ func TestMemberMarksShowOnTheirLinesAndAFoldedHeader(t *testing.T) {
 	}
 }
 
-func TestToggleInANarrowWindowChangesNothing(t *testing.T) {
+func TestToggleInANarrowWindowCyclesTheSetting(t *testing.T) {
 	for _, custom := range []bool{true, false} {
 		win, _ := sideWindow(t, custom)
 		openIn(t, win, "")
@@ -641,17 +651,20 @@ func TestToggleInANarrowWindowChangesNothing(t *testing.T) {
 		sizedFrame(t, win, &r, 500, 600)
 		win.route(layout.Context{}, []event.Event{key.Event{Name: "B", Modifiers: key.ModCtrl | key.ModShift, State: key.Press}}, 8, 16)
 		sizedFrame(t, win, &r, 500, 600)
+		if win.savedSideMode() != sideRail || win.side.mode != sideRail {
+			t.Fatalf("custom %v: Ctrl+Shift+B in a narrow window saved %v, shows %v", custom, win.savedSideMode(), win.side.mode)
+		}
 		click(win, win.bar.Toggle)
 		sizedFrame(t, win, &r, 500, 600)
-		if !win.opt.Config.Sidebar {
-			t.Fatalf("custom %v: the toggle in a narrow window turned the setting off", custom)
+		if win.savedSideMode() != sideHidden || !win.side.hidden {
+			t.Fatalf("custom %v: the toggle in a narrow window saved %v, hidden %v", custom, win.savedSideMode(), win.side.hidden)
 		}
-		if _, err := os.Stat(win.cfgPath); !os.IsNotExist(err) {
-			t.Fatalf("custom %v: the toggle in a narrow window wrote the config (%v)", custom, err)
+		if b, err := os.ReadFile(win.cfgPath); err != nil || !strings.Contains(string(b), `sidebar_mode = "hidden"`) {
+			t.Fatalf("custom %v: config file %q (%v)", custom, b, err)
 		}
 		sizedFrame(t, win, &r, 1000, 600)
-		if win.side.hidden {
-			t.Fatalf("custom %v: widening did not show the sidebar", custom)
+		if !win.side.hidden {
+			t.Fatalf("custom %v: widening showed a sidebar saved hidden", custom)
 		}
 	}
 }

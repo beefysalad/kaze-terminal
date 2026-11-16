@@ -34,6 +34,8 @@ const (
 	actPalette
 	actAgentsBoard
 	actFind
+	actSidebarLeft
+	actSidebarRight
 )
 
 // actionByName maps config [keys] names to actions; it must match config.KnownActions.

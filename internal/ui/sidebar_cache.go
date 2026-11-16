@@ -40,8 +40,10 @@ type sideDrawKey struct {
 	shown, hover, docked  tabs.TabID
 	renaming              tabs.TabID
 	doc, hoverDoc         docID
-	scroll                int
+	scroll, tipRoom       int
 	settings, settingsOn  bool
+	right                 bool
+	mode                  sideMode
 	theme                 theme.Chrome
 	shaper                *text.Shaper
 	generation            uint64
@@ -116,6 +118,9 @@ func (win *window) cachedSide(now time.Time) sideModel {
 		dirty = true
 	}
 	filter := s.filterText()
+	if s.mode == sideRail {
+		filter = "" // the rail shows every session; the text waits for the full sidebar
+	}
 	if dirty {
 		in := win.sideIn()
 		in.Tabs = s.tabs

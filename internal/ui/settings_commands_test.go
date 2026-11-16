@@ -2,6 +2,7 @@ package ui
 
 import (
 	"image"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -35,7 +36,11 @@ func TestCommandsListsEveryShortcut(t *testing.T) {
 	win, _ := alertWindow(t, 1)
 	text := commandsPage(t, win)
 	for _, c := range kazeCommands {
-		if !strings.Contains(text, c.Label) || !strings.Contains(text, c.Config) {
+		if c.paletteOnly() {
+			continue // no key runs it; TestCommandsLeavesOutPaletteOnly keeps it off
+		}
+		_, bound := defaultBindings(runtime.GOOS)[c.Config] // only editable rows show the config name
+		if !strings.Contains(text, c.Label) || (bound && !strings.Contains(text, c.Config)) {
 			t.Errorf("missing %s / %s", c.Label, c.Config)
 		}
 	}
@@ -125,5 +130,25 @@ func TestShortcutSearchNarrowsTheList(t *testing.T) {
 	win.set.cmdFilter = "zzz"
 	if text := commandsPage(t, win); !strings.Contains(text, "No shortcut matches") {
 		t.Fatalf("no empty message:\n%s", text)
+	}
+}
+
+// Commands with no [keys] action (the sidebar side) stay in the palette and off
+// the Shortcuts page, which lists only what a key can run.
+func TestCommandsLeavesOutPaletteOnly(t *testing.T) {
+	win, _ := alertWindow(t, 1)
+	text := commandsPage(t, win)
+	n := 0
+	for _, c := range kazeCommands {
+		if _, ok := actionByName[c.Config]; ok {
+			continue
+		}
+		n++
+		if strings.Contains(text, c.Label) {
+			t.Errorf("palette-only %q is on the Shortcuts page", c.Label)
+		}
+	}
+	if n == 0 {
+		t.Fatal("setup: no palette-only commands")
 	}
 }

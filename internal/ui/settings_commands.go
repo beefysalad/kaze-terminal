@@ -140,7 +140,7 @@ func drawCommands(p *page, r image.Rectangle, win *window) int {
 		for _, cfg := range g.configs {
 			grouped[cfg] = true
 			for _, c := range kazeCommands {
-				if c.Config == cfg {
+				if c.Config == cfg && !c.paletteOnly() {
 					rows = append(rows, row(c))
 				}
 			}
@@ -154,7 +154,7 @@ func drawCommands(p *page, r image.Rectangle, win *window) int {
 	}
 	var other []shortcutRow
 	for _, c := range kazeCommands {
-		if !grouped[c.Config] {
+		if !grouped[c.Config] && !c.paletteOnly() { // no key can run it: the palette lists it
 			other = append(other, row(c))
 		}
 	}

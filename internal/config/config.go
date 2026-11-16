@@ -48,6 +48,8 @@ type Config struct {
 	DoneToast           string            `toml:"done_toast"`           // 3s|6s|10s|until_seen
 	ShowUsage           bool              `toml:"show_usage"`           // usage readout in the status bar; default true
 	Sidebar             bool              `toml:"sidebar"`              // agent sidebar beside the terminal; default true
+	SidebarSide         string            `toml:"sidebar_side"`         // left|right; default left
+	SidebarMode         string            `toml:"sidebar_mode"`         // full|rail|hidden; "" follows the old sidebar bool
 	StartupWorkspace    string            `toml:"startup_workspace"`    // workspace ID to run at startup; "" opens a home tab
 	CheckUpdates        bool              `toml:"check_updates"`        // ask GitHub for a newer release once a day; default true
 	DiscordPresence     bool              `toml:"discord_presence"`     // show Kaze on the Discord profile; default true
@@ -87,6 +89,7 @@ func Default() Config {
 		ShowUsage:           true,
 		CheckUpdates:        true,
 		Sidebar:             true,
+		SidebarSide:         "left",
 		DiscordPresence:     true,
 		DiscordShowProject:  true,
 		Colors:              map[string]string{},
@@ -244,6 +247,10 @@ func Load(path string) (Config, []string, error) {
 			// The branch launcher was removed; older configs still carry these.
 		case "sidebar":
 			loadBool(v, k, &cfg.Sidebar, warn)
+		case "sidebar_side":
+			loadChoice(v, k, &cfg.SidebarSide, []string{"left", "right"}, warn)
+		case "sidebar_mode":
+			loadChoice(v, k, &cfg.SidebarMode, []string{"full", "rail", "hidden"}, warn)
 		case "restore_sessions":
 			loadBool(v, k, &cfg.RestoreSessions, warn)
 		case "check_updates":

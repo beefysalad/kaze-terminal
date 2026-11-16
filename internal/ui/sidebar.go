@@ -49,6 +49,8 @@ type sideState struct {
 	static        bool            // editors are drawn live over the retained chrome
 	runFolded     map[uint64]bool // workspace runs whose header is folded
 	docked        tabs.TabID      // the member tab the shown panel draws, highlighted like shown
+	right         bool            // the sidebar sits at the window's right edge: its divider and accent mirror
+	tipRoom       int             // px of window beside the rail on the terminal's side, for its tooltip; 0 for no limit
 }
 
 type sideRowHit struct {
@@ -57,6 +59,7 @@ type sideRowHit struct {
 	title       image.Rectangle // a session row's title line, where a double click renames
 	fold        image.Rectangle // its agent tray's fold control, empty when it has no tray
 	mark        mark            // the alert dot a member line drew
+	on          bool            // a rail tile drawn highlighted
 }
 
 type sideKeyHit struct {
@@ -83,6 +86,7 @@ type sideHits struct {
 	next                    image.Rectangle // the "Next waiting" button
 	list                    image.Rectangle // the scrollable area, for wheel events
 	tip                     image.Rectangle // the hovered agent's step tooltip, empty when none shows
+	tipCall                 op.CallOp       // the rail's tooltip, drawn over the terminal by drawSideTip
 	rename                  image.Rectangle // the rename editor, empty while none is drawn
 	scrollMax               int
 	noMatches               bool      // the filter hides every session
@@ -194,7 +198,12 @@ func (c *chrome) layoutSidebar(gtx layout.Context, m sideModel, st sideState, si
 	ops, th := gtx.Ops, c.sideTheme()
 	var h sideHits
 	paint.FillShape(ops, th.Chrome, clip.Rect{Max: size}.Op())
-	paint.FillShape(ops, th.Border, clip.Rect(image.Rect(size.X-1, 0, size.X, size.Y)).Op())
+	// The 1 px divider sits on the edge that faces the terminal; the list stays off it.
+	edge, listL, listR := size.X-1, 0, size.X-1
+	if st.right {
+		edge, listL, listR = 0, 1, size.X
+	}
+	paint.FillShape(ops, th.Border, clip.Rect(image.Rect(edge, 0, edge+1, size.Y)).Op())
 	root := clip.Rect{Max: size}.Push(ops)
 	defer root.Pop()
 
@@ -251,7 +260,7 @@ func (c *chrome) layoutSidebar(gtx layout.Context, m sideModel, st sideState, si
 		secH = min(secH+gtx.Dp(6), max(size.Y/2, 0))
 		secTop = size.Y - secH
 	}
-	h.list = image.Rect(0, min(y, secTop), size.X-1, secTop)
+	h.list = image.Rect(listL, min(y, secTop), listR, secTop)
 
 	c.sideList(gtx, &h, m, st, closeCall, closeSize)
 	if len(m.Runs) > 0 {
@@ -371,7 +380,11 @@ func (c *chrome) sideList(gtx layout.Context, h *sideHits, m sideModel, st sideS
 		fg := th.Folder
 		if on {
 			paint.FillShape(ops, th.Active, clip.UniformRRect(rect, gtx.Dp(7)).Op(ops))
-			paint.FillShape(ops, th.Accent, clip.UniformRRect(image.Rect(rect.Min.X, rect.Min.Y+gtx.Dp(8), rect.Min.X+gtx.Dp(2), rect.Max.Y-gtx.Dp(8)), gtx.Dp(1)).Op(ops))
+			ax := rect.Min.X // the accent sits on the row's outer side, mirrored with the sidebar
+			if st.right {
+				ax = rect.Max.X - gtx.Dp(2)
+			}
+			paint.FillShape(ops, th.Accent, clip.UniformRRect(image.Rect(ax, rect.Min.Y+gtx.Dp(8), ax+gtx.Dp(2), rect.Max.Y-gtx.Dp(8)), gtx.Dp(1)).Op(ops))
 			fg = th.ActiveFG
 		}
 		tx := rect.Min.X + gap + dot + gap
@@ -563,10 +576,13 @@ func (c *chrome) sideRuns(gtx layout.Context, h *sideHits, m sideModel, st sideS
 	ops, th := gtx.Ops, c.sideTheme()
 	pad, gap, hitPad := gtx.Dp(8), gtx.Dp(8), gtx.Dp(4)
 	hdH, memH := gtx.Dp(26), gtx.Dp(24)
-	right := size.X - 1
-	area := image.Rect(0, secTop, right, size.Y)
+	left, right := 0, size.X-1 // off the 1 px divider, whichever edge it is on
+	if st.right {
+		left, right = 1, size.X
+	}
+	area := image.Rect(left, secTop, right, size.Y)
 	paint.FillShape(ops, th.Chrome, clip.Rect(area).Op())
-	paint.FillShape(ops, th.Border, clip.Rect(image.Rect(0, secTop, right, secTop+1)).Op())
+	paint.FillShape(ops, th.Border, clip.Rect(image.Rect(left, secTop, right, secTop+1)).Op())
 	cl := clip.Rect(area).Push(ops)
 	defer cl.Pop()
 
