@@ -388,3 +388,41 @@ func TestRetiredLauncherKeysLoadQuietly(t *testing.T) {
 		t.Fatal("the retired shortcut should not be loaded")
 	}
 }
+
+func TestSidebarSideAndModeLoad(t *testing.T) {
+	cfg, warns, err := Load(write(t, "sidebar_side = \"right\"\nsidebar_mode = \"rail\"\n"))
+	if err != nil || len(warns) != 0 {
+		t.Fatalf("err %v warns %v", err, warns)
+	}
+	if cfg.SidebarSide != "right" || cfg.SidebarMode != "rail" {
+		t.Fatalf("got %q %q", cfg.SidebarSide, cfg.SidebarMode)
+	}
+}
+
+func TestSidebarDefaultsKeepOldBool(t *testing.T) {
+	cfg, warns, _ := Load(write(t, "sidebar = false\n"))
+	if len(warns) != 0 || cfg.SidebarSide != "left" || cfg.SidebarMode != "" || cfg.Sidebar {
+		t.Fatalf("%+v %v", cfg, warns)
+	}
+}
+
+func TestSidebarBadValuesWarn(t *testing.T) {
+	cfg, warns, _ := Load(write(t, "sidebar_side = \"top\"\nsidebar_mode = \"wide\"\n"))
+	if len(warns) != 2 || cfg.SidebarSide != "left" || cfg.SidebarMode != "" {
+		t.Fatalf("%+v %v", cfg, warns)
+	}
+}
+
+func TestSetWritesSidebarSideAndMode(t *testing.T) {
+	p := write(t, "")
+	if err := Set(p, "sidebar_side", "right"); err != nil {
+		t.Fatal(err)
+	}
+	if err := Set(p, "sidebar_mode", "hidden"); err != nil {
+		t.Fatal(err)
+	}
+	cfg, warns, err := Load(p)
+	if err != nil || len(warns) != 0 || cfg.SidebarSide != "right" || cfg.SidebarMode != "hidden" {
+		t.Fatalf("%+v %v %v", cfg, warns, err)
+	}
+}
