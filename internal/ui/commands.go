@@ -17,6 +17,13 @@ type kazeCommand struct {
 	Act    action
 }
 
+// paletteOnly reports a command that is not a [keys] action (the sidebar side):
+// the palette lists it, the Shortcuts page does not.
+func (c kazeCommand) paletteOnly() bool {
+	_, ok := actionByName[c.Config]
+	return !ok
+}
+
 var kazeCommands = []kazeCommand{
 	{"new_tab", "New session", actNewTab},
 	{"close_tab", "Close session", actCloseTab},

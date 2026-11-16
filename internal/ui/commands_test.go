@@ -57,17 +57,16 @@ func TestFormatShortcut(t *testing.T) {
 	}
 }
 
-// paletteOnlyCommands are the sidebar side commands: listed on the Shortcuts page with
-// no key, and not [keys] actions.
-const paletteOnlyCommands = 2
-
 func TestEveryKnownActionIsListed(t *testing.T) {
 	seen := map[string]int{}
 	paletteOnly := 0 // commands that are not [keys] actions
 	for _, c := range kazeCommands {
 		seen[c.Config]++
-		if c.Config == "sidebar_left" || c.Config == "sidebar_right" {
+		if c.paletteOnly() {
 			paletteOnly++
+			if config.KnownActions[c.Config] || c.Label == "" {
+				t.Errorf("%+v: a palette-only command must not be a [keys] action", c)
+			}
 			continue
 		}
 		if c.Act != actionByName[c.Config] || c.Label == "" {
