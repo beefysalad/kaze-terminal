@@ -1,5 +1,12 @@
 # Product captures
 
+The folded terminal K branding update (2026-11-16, local, unreleased) changes
+the title bar, Settings footer and About logo. Retake all captures with these
+areas visible after native owner review, especially `kaze-about.png`. Existing
+product captures stay unchanged; development renders under `docs/audits/branding/`
+are verification evidence, not replacement product screenshots. Deferred retakes and Discord
+artwork are tracked in [issue #205](https://github.com/beefysalad/kaze-terminal/issues/205).
+
 Release 0.41 adds a Discord section at the bottom of Settings > Agents. No published capture shows
 that page, so nothing needs retaking for it. A capture of the card itself would come from the owner's own
 Discord profile, so none is published.

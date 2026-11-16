@@ -28,11 +28,11 @@ func TestLockupShapesMatchTheSVG(t *testing.T) {
 		t.Fatalf("mark %d shapes, word %d, want 3 and 4", len(lk.mark), len(lk.word))
 	}
 	mb, wb := lk.markBounds, lk.wordBounds
-	if !nearF(mb.Min.X, 24) || !nearF(mb.Min.Y, 28) || !nearF(mb.Max.X, 128) || !nearF(mb.Max.Y, 140) {
-		t.Errorf("mark bounds %v, want about (24,28)-(128,140)", mb)
+	if !nearF(mb.Min.X, 24) || !nearF(mb.Min.Y, 28) || !nearF(mb.Max.X, 168) || !nearF(mb.Max.Y, 140) {
+		t.Errorf("mark bounds %v, want about (24,28)-(168,140)", mb)
 	}
 	// The k's stem starts 139 font units in at scale 0.056; the e ends near 397.
-	if !nearF(wb.Min.X, 168+139*0.056) || wb.Max.X < 394 || wb.Max.X > 400 {
+	if !nearF(wb.Min.X, 198+139*0.056) || wb.Max.X < 424 || wb.Max.X > 430 {
 		t.Errorf("word x %v..%v", wb.Min.X, wb.Max.X)
 	}
 	if wb.Max.Y < 118 || wb.Max.Y > 122 {

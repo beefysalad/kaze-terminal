@@ -27,10 +27,12 @@ const (
 	aboutMeaning = "Kaze means “wind”."
 )
 
-// The mark's lilac on dark pages, and a deeper one that holds contrast on light pages.
+// The canonical violet gradient, with a deeper variant for light pages.
 var (
-	aboutMarkDark  = color.NRGBA{R: 0xc2, G: 0xb4, B: 0xeb, A: 0xff}
-	aboutMarkLight = color.NRGBA{R: 0x75, G: 0x63, B: 0xbf, A: 0xff}
+	aboutMarkDarkEnd  = color.NRGBA{R: 0x8b, G: 0x7b, B: 0xff, A: 0xff}
+	aboutMarkLightEnd = color.NRGBA{R: 0x60, G: 0x48, B: 0xbd, A: 0xff}
+	aboutMarkDark     = color.NRGBA{R: 0xb9, G: 0xa6, B: 0xff, A: 0xff}
+	aboutMarkLight    = color.NRGBA{R: 0x79, G: 0x62, B: 0xd8, A: 0xff}
 )
 
 // aboutGeom is where the About page put things, for tests.

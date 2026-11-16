@@ -114,6 +114,9 @@ if it fails to start, kaze falls back to the default shell and says so in the fi
 shell can start at all, kaze shows the error in a message box on Windows (on macOS it prints
 it to stderr) and exits.
 
+The folded K and terminal underscore are shared across the app, website and README.
+The editable SVGs and icon export commands are in [the branding guide](assets/branding/README.md).
+
 On Windows the kaze icon (exe file, taskbar, title bar, Alt+Tab) and the version details come
 from `cmd/kaze/rsrc_windows_*.syso`, which `go build` picks up by itself. They are generated
 from `cmd/kaze/winres/winres.json` and `assets/branding/kaze-icon-512.png`. After changing the
