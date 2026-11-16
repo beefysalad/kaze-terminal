@@ -22,7 +22,8 @@ import (
 )
 
 const (
-	// minSideWindow is the narrowest window, in dp, that still shows the sidebar.
+	// minSideWindow is the narrowest window, in dp, that still shows the full sidebar;
+	// below it a saved full sidebar shows as the rail.
 	minSideWindow = 560
 	// doubleClick is the longest gap between two presses on a row's title that renames it.
 	doubleClick = 500 * time.Millisecond
@@ -40,7 +41,7 @@ type sideUI struct {
 	st            sideState
 	folded        map[string]bool     // repo groups the owner folded, by key
 	trayFolded    map[tabs.TabID]bool // sessions whose agent tray is folded away
-	hidden        bool                // off in the settings, or the window is too narrow
+	hidden        bool                // this frame's mode is hidden (saved so, or the window is too narrow)
 	w             int                 // this frame's sidebar width in px, set once at the frame's start
 	hits          sideHits            // sidebar-local, like the pointer events on tag
 	at            image.Point         // the sidebar's top-left in the window
@@ -49,7 +50,8 @@ type sideUI struct {
 	redraws       int                 // frames the sidebar's pointer input asked for; tests count them
 	ed            widget.Editor       // the filter field
 	filtering     bool                // the filter field has the keyboard
-	narrow        bool                // the window is too narrow for the sidebar
+	narrow        bool                // the window is too narrow for the full sidebar
+	mode          sideMode            // this frame's effective mode, set by sideWidth
 	filters       []event.Filter      // the filter's own keys, built once
 	ren           widget.Editor       // the title of the row being renamed
 	renaming      tabs.TabID          // 0 when no row is being renamed
@@ -151,32 +153,33 @@ func (win *window) afterClose(id tabs.TabID) tabs.TabID {
 	return 0
 }
 
-// toggleSidebar shows or hides the sidebar and saves the choice. While only the
-// window's width hides it, flipping the setting would change nothing visible, so it is a no-op.
+// toggleSidebar steps the saved mode full, rail, hidden, full and saves it. A
+// narrow window still steps the saved mode, even while it shows full as the rail.
 func (win *window) toggleSidebar() {
-	if win.side.narrow && win.opt.Config.Sidebar {
-		return
-	}
-	win.dropSideEdit()
-	on := !win.opt.Config.Sidebar
-	win.opt.Config.Sidebar = on
-	win.side.st.hover = 0
-	win.saveSetting("sidebar", on)
+	win.setSideMode(win.savedSideMode().next())
 }
 
-// sideWidth is how wide the sidebar is in a window this wide (0 while hidden),
-// and sets hidden. A narrow window hides it without touching the setting.
+// sideWidth is how wide the sidebar is in a window this wide (0 while hidden) and
+// sets this frame's effective mode. A narrow window narrows it without touching the setting.
 func (win *window) sideWidth(gtx layout.Context, width int) int {
+	pxPerDp := gtx.Metric.PxPerDp
+	if pxPerDp <= 0 {
+		pxPerDp = 1 // Gio's own rule for an unset metric
+	}
+	m := effectiveSideMode(win.savedSideMode(), int(float32(width)/pxPerDp))
+	win.side.mode = m
 	win.side.narrow = width < gtx.Dp(minSideWindow)
-	on := win.opt.Config.Sidebar && !win.side.narrow
-	win.side.hidden = !on
-	if !on {
-		win.dropSideEdit() // an invisible field must not keep the keyboard
+	win.side.hidden = m == sideHidden
+	if m != sideFull {
+		win.dropSideEdit() // only the full sidebar has editors; an invisible field must not keep the keyboard
 	}
-	if !on {
-		return 0 // its buttons live in the title bar
+	switch m {
+	case sideFull:
+		return min(gtx.Dp(sidebarW), width)
+	case sideRail:
+		return min(gtx.Dp(railW), width)
 	}
-	return min(gtx.Dp(sidebarW), width)
+	return 0 // its buttons live in the title bar
 }
 
 // drawSide draws the sidebar into r and
@@ -186,11 +189,20 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 	s.at = r.Min
 	if r.Empty() {
 		s.hits, s.st.hover, s.st.hoverAgent, s.reveal = sideHits{}, 0, subagents.Key{}, false
+		s.cache.drawValid = false // the cached ops still match the full list; its hits are gone
 		return
 	}
 	ops := gtx.Ops
 	off := op.Offset(r.Min).Push(ops)
 	defer off.Pop()
+	if s.mode == sideRail {
+		// The rail's tiles come later; for now a bare strip with its inner edge.
+		paint.FillShape(ops, win.ui.th.Chrome, clip.Rect{Max: r.Size()}.Op())
+		paint.FillShape(ops, win.ui.th.Border, clip.Rect(image.Rect(r.Dx()-1, 0, r.Dx(), r.Dy())).Op())
+		s.hits, s.st.hover, s.st.hoverAgent, s.reveal = sideHits{}, 0, subagents.Key{}, false
+		s.cache.drawValid = false
+		return
+	}
 	sg := gtx
 	sg.Constraints = layout.Exact(r.Size())
 	{ // r is this frame's sidebar, decided before any toggle in it: draw it, never leave it bare

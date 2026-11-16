@@ -202,8 +202,8 @@ func TestToggleWhileFilteringGivesTheTerminalTheKeyboard(t *testing.T) {
 	win, st, r, tb := filterWindow(t)
 	focusFilter(t, win, r)
 	pressKey(t, win, r, "B", key.ModCtrl|key.ModShift)
-	if !win.side.hidden || win.side.filtering || !r.Source().Focused(win.termTag) {
-		t.Fatalf("after Ctrl+Shift+B: hidden %v, filtering %v", win.side.hidden, win.side.filtering)
+	if win.side.mode != sideRail || win.side.filtering || !r.Source().Focused(win.termTag) {
+		t.Fatalf("after Ctrl+Shift+B: mode %v, filtering %v", win.side.mode, win.side.filtering)
 	}
 	if win.mgr.Active().ID != tb[0].ID {
 		t.Fatal("hiding the sidebar changed the shown session")
@@ -216,8 +216,8 @@ func TestNarrowingWhileFilteringGivesTheTerminalTheKeyboard(t *testing.T) {
 	focusFilter(t, win, r)
 	sizedFrame(t, win, r, 500, 600)
 	sizedFrame(t, win, r, 500, 600)
-	if !win.side.hidden || win.side.filtering || !r.Source().Focused(win.termTag) {
-		t.Fatalf("narrowed: hidden %v, filtering %v", win.side.hidden, win.side.filtering)
+	if win.side.mode != sideRail || win.side.filtering || !r.Source().Focused(win.termTag) {
+		t.Fatalf("narrowed: mode %v, filtering %v", win.side.mode, win.side.filtering)
 	}
 	r.Queue(key.EditEvent{Text: "z"})
 	sizedFrame(t, win, r, 500, 600)
