@@ -4,6 +4,7 @@ import (
 	"gioui.org/font"
 	"image"
 	"image/color"
+	"math"
 	"runtime/debug"
 	"slices"
 	"strings"
@@ -753,14 +754,15 @@ func (p *page) nav(r image.Rectangle, secs []settingsSection) {
 	tx := x0 + inner
 	// The approved K, drawn from the lockup's vector mark like the title bar's.
 	mark := gtx.Dp(22)
-	box := image.Rect(tx, y+(vs.Y+ss.Y-mark)/2, tx+mark, y+(vs.Y+ss.Y-mark)/2+mark)
+	markW := int(math.Ceil(float64(float32(mark) * lockupShapes().markBounds.Dx() / lockupShapes().markBounds.Dy())))
+	box := image.Rect(tx, y+(vs.Y+ss.Y-mark)/2, tx+markW, y+(vs.Y+ss.Y-mark)/2+mark)
 	markCol := aboutMarkDark
 	if isLight(col.nav) {
 		markCol = aboutMarkLight
 	}
 	lockupShapes().drawMark(ops, box, mark, markCol)
 	p.st.footMark = box
-	tx += mark + gtx.Dp(10)
+	tx += markW + gtx.Dp(10)
 	place(ops, vc, image.Pt(tx, y))
 	if state != "" {
 		place(ops, sc, image.Pt(tx, y+vs.Y))

@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"encoding/xml"
+	"fmt"
 	"image"
 	"image/color"
 	"math"
@@ -48,17 +50,9 @@ type lockup struct {
 	bounds                 lockBox // mark and word together
 }
 
-// Fill colours the SVG gives each group.
-const (
-	lockMarkFill = "#c2b4eb"
-	lockWordFill = "#efedf3"
-)
-
 var (
-	lockOnce sync.Once
-	lockData lockup
-
-	lockGroup = regexp.MustCompile(`(?s)<g fill="(#[0-9a-f]{6})" transform="translate\(([-\d.]+) ([-\d.]+)\)">(.*?)</g>`)
+	lockOnce  sync.Once
+	lockData  lockup
 	lockPathR = regexp.MustCompile(`<path d="([^"]*)"(?: transform="translate\(([-\d.]+) ([-\d.]+)\) scale\(([-\d.]+) ([-\d.]+)\)")?/>`)
 	lockToken = regexp.MustCompile(`[MLHVCQZ]|-?(?:\d+\.?\d*|\.\d+)`)
 )
@@ -71,18 +65,29 @@ func lockupShapes() *lockup {
 
 func parseLockup(svg string) lockup {
 	var lk lockup
-	for _, g := range lockGroup.FindAllStringSubmatch(svg, -1) {
+	var doc struct {
+		Groups []struct {
+			ID        string `xml:"id,attr"`
+			Transform string `xml:"transform,attr"`
+			Paths     string `xml:",innerxml"`
+		} `xml:"g"`
+	}
+	if xml.Unmarshal([]byte(svg), &doc) != nil {
+		return lk
+	}
+	for _, g := range doc.Groups {
 		var dst *[]lockPath
-		switch g[1] {
-		case lockMarkFill:
+		switch g.ID {
+		case "mark":
 			dst = &lk.mark
-		case lockWordFill:
+		case "word":
 			dst = &lk.word
 		default:
 			continue
 		}
-		gx, gy := atof(g[2]), atof(g[3])
-		for _, m := range lockPathR.FindAllStringSubmatch(g[4], -1) {
+		var gx, gy float32
+		fmt.Sscanf(g.Transform, "translate(%f %f)", &gx, &gy)
+		for _, m := range lockPathR.FindAllStringSubmatch(g.Paths, -1) {
 			tx, ty, sx, sy := float32(0), float32(0), float32(1), float32(1)
 			if m[2] != "" {
 				tx, ty, sx, sy = atof(m[2]), atof(m[3]), atof(m[4]), atof(m[5])
@@ -201,7 +206,7 @@ func (lk *lockup) place(at image.Point, w int) lockupGeom {
 func (lk *lockup) draw(ops *op.Ops, g lockupGeom, markCol, wordCol color.NRGBA) {
 	o := f32.Pt(float32(g.rect.Min.X), float32(g.rect.Min.Y))
 	at := func(p f32.Point) f32.Point { return p.Sub(lk.bounds.Min).Mul(g.scale).Add(o) }
-	fillLock(ops, lk.mark, at, markCol)
+	lk.fillMark(ops, at, markCol)
 	fillLock(ops, lk.word, at, wordCol)
 }
 
@@ -210,13 +215,30 @@ func (lk *lockup) drawMark(ops *op.Ops, box image.Rectangle, h int, col color.NR
 	if len(lk.mark) == 0 || lk.markBounds.Dy() <= 0 {
 		return
 	}
-	s := float32(h) / lk.markBounds.Dy()
-	o := f32.Pt(float32(box.Min.X)+(float32(box.Dx())-lk.markBounds.Dx()*s)/2, float32(box.Min.Y+(box.Dy()-h)/2))
-	fillLock(ops, lk.mark, func(p f32.Point) f32.Point { return p.Sub(lk.markBounds.Min).Mul(s).Add(o) }, col)
+	s := min(float32(h)/lk.markBounds.Dy(), float32(box.Dx())/lk.markBounds.Dx())
+	o := f32.Pt(float32(box.Min.X)+(float32(box.Dx())-lk.markBounds.Dx()*s)/2, float32(box.Min.Y)+(float32(box.Dy())-lk.markBounds.Dy()*s)/2)
+	lk.fillMark(ops, func(p f32.Point) f32.Point { return p.Sub(lk.markBounds.Min).Mul(s).Add(o) }, col)
+}
+
+// fillMark uses the same gradient coordinates as the canonical SVG. Light
+// themes use the deeper contrast variant of the same purple palette.
+func (lk *lockup) fillMark(ops *op.Ops, at func(f32.Point) f32.Point, col color.NRGBA) {
+	end := aboutMarkDarkEnd
+	if col == aboutMarkLight {
+		end = aboutMarkLightEnd
+	}
+	paint.LinearGradientOp{Stop1: at(lk.markBounds.Min), Color1: col,
+		Stop2: at(lk.markBounds.Min.Add(f32.Pt(100, 112))), Color2: end}.Add(ops)
+	fillLockPaths(ops, lk.mark, at)
 }
 
 // fillLock fills each path, its points mapped through at.
 func fillLock(ops *op.Ops, ps []lockPath, at func(f32.Point) f32.Point, col color.NRGBA) {
+	paint.ColorOp{Color: col}.Add(ops)
+	fillLockPaths(ops, ps, at)
+}
+
+func fillLockPaths(ops *op.Ops, ps []lockPath, at func(f32.Point) f32.Point) {
 	for _, lp := range ps {
 		var p clip.Path
 		p.Begin(ops)
@@ -234,6 +256,8 @@ func fillLock(ops *op.Ops, ps []lockPath, at func(f32.Point) f32.Point, col colo
 				p.Close()
 			}
 		}
-		paint.FillShape(ops, col, clip.Outline{Path: p.End()}.Op())
+		stack := clip.Outline{Path: p.End()}.Op().Push(ops)
+		paint.PaintOp{}.Add(ops)
+		stack.Pop()
 	}
 }

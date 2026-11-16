@@ -3,8 +3,8 @@ package branding
 
 import _ "embed"
 
-// Lockup is the approved logo: the wind K, the outlined "kaze" wordmark and
-// an outlined byline, as SVG paths (docs/design/logo-premium).
+// Lockup is the approved folded terminal K and outlined "kaze" wordmark as
+// SVG paths (see README.md in this directory).
 //
 //go:embed kaze-lockup.svg
 var Lockup []byte

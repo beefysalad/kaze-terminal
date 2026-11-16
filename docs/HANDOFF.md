@@ -4,6 +4,27 @@ Last updated: 2026-11-12, release 0.41.1 prepared on `release/0.41.1` (fixes the
 
 ## Where things stand
 
+**Folded terminal K branding is implemented for review (2026-11-16), not released.**
+The owner approved the enhanced violet folded K with terminal underscore, the hand-built SVG
+pack, and the rollout plan `docs/superpowers/plans/2026-11-16-kaze-folded-dev-branding.md`.
+Canonical artwork is now under `assets/branding/`; About, the title bar and Settings footer
+use its paths and matching dark/light violet gradients. Website header/footer/favicon and README
+use the new vectors. macOS ICNS and both Windows resource objects are regenerated without a
+version bump. `assets/branding/README.md` documents the repeatable resvg export in `tools/branding/`.
+Bounded checks caught the old geometry, flat fill and missing underscore before implementation;
+full Go tests, vet, gradient/contrast checks in all ten themes, native macOS build, signed bundle
+verification and Windows amd64/arm64 cross-builds pass. Headless app renders cover all ten themes,
+wide/narrow About and Mac/Windows title layouts; representative captures were inspected. Local
+website checks cover 1440px and 390px with loaded logo assets and no horizontal overflow.
+Audit and selected evidence: `docs/audits/2026-11-16-folded-dev-branding.md`, `docs/audits/branding/`.
+Existing native product screenshots remain historical and need retakes as listed in SCREENSHOTS.md.
+No installed app was changed. Native Dock/taskbar display and Windows runtime remain owner checks.
+Discord's externally uploaded Rich Presence `kaze` art must be replaced separately in the Discord
+developer portal; this source update cannot change that uploaded asset. Deferred Discord artwork and
+product screenshot retakes are tracked in [issue #205](https://github.com/beefysalad/kaze-terminal/issues/205).
+The owner authorized committing, pushing and opening a PR. No merge, version bump or release was
+requested; after the branding PR merges, follow CLAUDE.md's release workflow.
+
 **Release 0.41.1 fixes a Mac launch freeze (2026-11-12, PR #203).** Kaze 0.36 to 0.41 could freeze for good at
 launch inside the `.app` when the notification permission was not already allowed: `darwinStatus` ran the UI's
 `invalidate` on the AppKit main thread, and Gio's `Window.Invalidate` then locked `invMu` twice. Found with a

@@ -1,0 +1,6 @@
+{
+  "name": "kaze-branding-export",
+  "private": true,
+  "scripts": { "export": "node export.cjs" },
+  "dependencies": { "@resvg/resvg-js": "2.6.2" }
+}

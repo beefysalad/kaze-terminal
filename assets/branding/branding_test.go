@@ -11,10 +11,10 @@ import (
 	"testing"
 )
 
-// The approved wind K is flat lilac; the old icon was a violet gradient.
+// The folded terminal K uses the enhanced violet gradient.
 var (
-	lilac     = color.NRGBA{R: 0xc2, G: 0xb4, B: 0xeb, A: 0xff}
-	oldViolet = []color.NRGBA{{R: 0x8b, G: 0x7b, B: 0xff, A: 0xff}, {R: 0xb9, G: 0xa6, B: 0xff, A: 0xff}}
+	oldLilac = color.NRGBA{R: 0xc2, G: 0xb4, B: 0xeb, A: 0xff}
+	violet   = []color.NRGBA{{R: 0x8b, G: 0x7b, B: 0xff, A: 0xff}, {R: 0xb9, G: 0xa6, B: 0xff, A: 0xff}}
 )
 
 func near(a, b color.NRGBA, tol int) bool {
@@ -27,8 +27,7 @@ func near(a, b color.NRGBA, tol int) bool {
 	return d(a.R, b.R) <= tol && d(a.G, b.G) <= tol && d(a.B, b.B) <= tol
 }
 
-// checkIcon wants transparent corners, a solid tile, the approved lilac and
-// none of the old violet.
+// Check transparency, the solid tile and the violet gradient in every export.
 func checkIcon(t *testing.T, name string, img image.Image) {
 	t.Helper()
 	b := img.Bounds()
@@ -46,21 +45,21 @@ func checkIcon(t *testing.T, name string, img image.Image) {
 			if c.A < 250 {
 				continue
 			}
-			if near(c, lilac, 6) {
+			if near(c, oldLilac, 6) {
 				lil++
 			}
-			for _, o := range oldViolet {
+			for _, o := range violet {
 				if near(c, o, 10) {
 					old++
 				}
 			}
 		}
 	}
-	if lil < b.Dx()*b.Dy()/60 {
-		t.Errorf("%s %v: only %d approved-lilac pixels", name, b.Size(), lil)
+	if lil > 0 {
+		t.Errorf("%s %v: %d obsolete lilac pixels", name, b.Size(), lil)
 	}
-	if old > 0 {
-		t.Errorf("%s %v: %d pixels of the old violet", name, b.Size(), old)
+	if old < b.Dx()*b.Dy()/200 {
+		t.Errorf("%s %v: only %d violet pixels", name, b.Size(), old)
 	}
 }
 
@@ -114,14 +113,14 @@ func TestMacIconSetIsTheApprovedMark(t *testing.T) {
 
 // The icon SVGs (the app's and the website's copy) draw the approved mark.
 func TestIconSVGsUseTheApprovedMark(t *testing.T) {
-	for _, p := range []string{"kaze-icon.svg", "kaze-mark.svg", "../../docs/site-assets/kaze-icon.svg"} {
+	for _, p := range []string{"kaze-icon.svg", "kaze-mark.svg", "../../docs/site-assets/kaze-icon.svg", "kaze-logo.svg", "kaze-lockup.svg", "../../docs/site-assets/kaze-lockup.svg"} {
 		b, err := os.ReadFile(p)
 		if err != nil {
 			t.Fatal(err)
 		}
 		s := strings.ToLower(string(b))
-		if !strings.Contains(s, "#c2b4eb") || strings.Contains(s, "#8b7bff") || strings.Contains(s, "#b9a6ff") {
-			t.Errorf("%s is not the approved lilac mark", p)
+		if strings.Contains(s, "#c2b4eb") || !strings.Contains(s, "#8b7bff") || !strings.Contains(s, "#b9a6ff") || !strings.Contains(s, "m114 100h139") {
+			t.Errorf("%s is not the approved folded terminal K", p)
 		}
 	}
 }
