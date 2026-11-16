@@ -172,7 +172,7 @@ func (win *window) palInput() palInput {
 // palActionIcons are the action tiles' icons (Ruling 9); others get none.
 var palActionIcons = map[string]string{
 	"new_tab": "plus", "open_settings": "cog",
-	"toggle_sidebar": "panel", "find": "search", "agents_board": "agents",
+	"toggle_sidebar": "panel", "sidebar_left": "panel", "sidebar_right": "panel", "find": "search", "agents_board": "agents",
 }
 
 // palActions are the Kaze actions the palette can run, with their shortcuts
