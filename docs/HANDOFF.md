@@ -16,6 +16,9 @@ owner confirmations: bars wrap 5 per line, a divider above the bars, the tooltip
 on its tile, shell sessions show the terminal icon, and on Windows the right strip is wider (286 px)
 than the 260 px sidebar so the + does not line up with the sidebar edge. After the PR merges, the
 release (0.43, changelog, lander, README) follows per CLAUDE.md.
+PR #208 review follow-up: scrolling a rail clears the old hovered tile and tooltip when the
+list moves; the next pointer move identifies the new tile. A bounded router regression failed
+on both sides before the fix and passes afterward.
 
 **Folded terminal K branding merged in PR #206; release 0.42 is prepared (2026-11-16).**
 The owner approved the enhanced violet folded K with terminal underscore, the hand-built SVG

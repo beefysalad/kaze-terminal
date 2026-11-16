@@ -558,6 +558,11 @@ func (win *window) sidePointer(e pointer.Event) {
 		}
 		if sc := min(max(s.st.scroll+int(e.Scroll.Y), 0), s.hits.scrollMax); sc != s.st.scroll {
 			s.st.scroll = sc
+			if s.mode == sideRail {
+				// Tiles moved under the pointer. Drop the old title until the
+				// next pointer move identifies the tile now under it.
+				s.st.hover = 0
+			}
 			win.sideRedraw()
 		}
 	case pointer.Press:

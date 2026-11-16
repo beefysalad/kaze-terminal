@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"gioui.org/f32"
 	"gioui.org/io/input"
 	"gioui.org/io/pointer"
 	"gioui.org/op"
@@ -288,5 +289,48 @@ func TestRailTipStaysInWindow(t *testing.T) {
 		if tip.Min.X < 0 || tip.Max.X > 320 {
 			t.Fatalf("right %v: tip %v leaves the 320 px window", right, tip)
 		}
+	}
+}
+
+// Scrolling moves tiles under a stationary pointer. Until the pointer moves
+// again, the old tile's title must not follow it up or down the rail.
+func TestRailScrollClearsStaleTooltip(t *testing.T) {
+	for _, right := range []bool{false, true} {
+		t.Run(map[bool]string{false: "left", true: "right"}[right], func(t *testing.T) {
+			win := railWindow(t)
+			win.setSideRight(right)
+			for range 15 {
+				openIn(t, win, "")
+			}
+			var router input.Router
+			frame := func() { sizedFrame(t, win, &router, 1000, 400) }
+			frame()
+			frame()
+			win.side.st.scroll, win.side.reveal = 0, false
+			frame()
+			old := win.side.hits.rows[2]
+			at := centre(old.rect)
+			sideMove(win, &router, pointer.Move, at)
+			frame()
+			if win.side.st.hover != old.id || win.side.hits.tip.Empty() {
+				t.Fatal("setup: expected the hovered tile's tooltip")
+			}
+			router.Queue(pointer.Event{Kind: pointer.Scroll, Source: pointer.Mouse,
+				Position: sidePt(win, at), Scroll: f32.Pt(0, 40)})
+			frame()
+			frame()
+			now, ok := win.side.hits.lineAt(at)
+			if !ok || now.id == old.id {
+				t.Fatal("setup: scrolling did not move a different tile under the pointer")
+			}
+			if win.side.st.hover != 0 || !win.side.hits.tip.Empty() {
+				t.Fatalf("after scrolling: hover %d, tooltip %v still identify the old tile", win.side.st.hover, win.side.hits.tip)
+			}
+			sideMove(win, &router, pointer.Move, at)
+			frame()
+			if win.side.st.hover != now.id || win.side.hits.tip.Empty() {
+				t.Fatalf("after moving: hover %d, tooltip %v; want session %d", win.side.st.hover, win.side.hits.tip, now.id)
+			}
+		})
 	}
 }
