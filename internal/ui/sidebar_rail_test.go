@@ -201,3 +201,59 @@ func TestRailNoAllocsWhenUnchanged(t *testing.T) {
 		t.Fatal("unchanged rail rebuilt or reshaped")
 	}
 }
+
+// A filter typed in full mode never hides tiles in the rail, and the keyboard
+// never stays in the filter field the rail does not draw.
+func TestRailIgnoresFilterAndDropsItsFocus(t *testing.T) {
+	for _, narrow := range []bool{false, true} {
+		win, _ := sideWindow(t, true)
+		a := openIn(t, win, osPath("/code/alpha/api"))
+		b := openIn(t, win, osPath("/code/beta/web"))
+		var r input.Router
+		sizedFrame(t, win, &r, 1000, 600)
+		win.side.ed.SetText("api")
+		win.side.filtering = true
+		sizedFrame(t, win, &r, 1000, 600)
+		if len(win.side.hits.rows) != 1 {
+			t.Fatalf("narrow %v: the filter shows %d rows in full, want 1", narrow, len(win.side.hits.rows))
+		}
+		w := 1000
+		if narrow {
+			w = 500
+		} else {
+			win.opt.Config.SidebarMode = "rail" // the setting, without setSideMode's own drop
+		}
+		sizedFrame(t, win, &r, w, 600)
+		sizedFrame(t, win, &r, w, 600)
+		var ids []tabs.TabID
+		for _, h := range win.side.hits.rows {
+			ids = append(ids, h.id)
+		}
+		if win.side.mode != sideRail || !slices.Contains(ids, a.ID) || !slices.Contains(ids, b.ID) {
+			t.Fatalf("narrow %v: mode %v, tiles %v, want %d and %d", narrow, win.side.mode, ids, a.ID, b.ID)
+		}
+		if win.side.filtering || win.focusTarget() == &win.side.ed {
+			t.Fatalf("narrow %v: the keyboard stays in the hidden filter field", narrow)
+		}
+	}
+}
+
+// A shown doc or agent panel keeps its session's tile highlighted; Settings does not.
+func TestRailHighlightsSessionOfShownDoc(t *testing.T) {
+	onOf := func(st sideState) map[tabs.TabID]bool {
+		h, _ := railDraw(t, twoGroupsOneLoose(), st, 600)
+		on := map[tabs.TabID]bool{}
+		for _, r := range h.rows {
+			if r.on {
+				on[r.id] = true
+			}
+		}
+		return on
+	}
+	if on := onOf(sideState{shown: 2, doc: 7}); !on[2] || len(on) != 1 {
+		t.Fatalf("with a doc of 2 shown, highlighted %v, want only 2", on)
+	}
+	if on := onOf(sideState{shown: 2, settingsOn: true}); len(on) != 0 {
+		t.Fatalf("with Settings shown, highlighted %v, want none", on)
+	}
+}

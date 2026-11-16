@@ -58,6 +58,7 @@ type sideRowHit struct {
 	title       image.Rectangle // a session row's title line, where a double click renames
 	fold        image.Rectangle // its agent tray's fold control, empty when it has no tray
 	mark        mark            // the alert dot a member line drew
+	on          bool            // a rail tile drawn highlighted
 }
 
 type sideKeyHit struct {

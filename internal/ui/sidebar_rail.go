@@ -200,7 +200,8 @@ func (c *chrome) layoutRail(gtx layout.Context, m sideModel, st sideState, size 
 				if !r.Overlaps(h.list) {
 					continue
 				}
-				on := row.ID == st.shown && !st.settingsOn && st.doc == 0 || row.ID != 0 && row.ID == st.docked
+				// A shown doc or agent panel keeps its session's tile highlighted.
+				on := row.ID == st.shown && !st.settingsOn || row.ID != 0 && row.ID == st.docked
 				tileBG(r, on)
 				fg := th.Folder
 				if on {
@@ -212,7 +213,7 @@ func (c *chrome) layoutRail(gtx layout.Context, m sideModel, st sideState, size 
 				paint.FillShape(ops, th.Chrome, clip.Ellipse(disc).Op(ops))
 				in := (d - dot) / 2
 				c.stateDot(gtx, image.Rect(disc.Min.X+in, disc.Min.Y+in, disc.Min.X+in+dot, disc.Min.Y+in+dot), row.Mark, row.Running, false)
-				hit := sideRowHit{id: row.ID, rect: r.Intersect(h.list)}
+				hit := sideRowHit{id: row.ID, rect: r.Intersect(h.list), on: on}
 				h.rows = append(h.rows, hit)
 				if st.hover != 0 && row.ID == st.hover {
 					wcol := th.Accent

@@ -118,6 +118,9 @@ func (win *window) cachedSide(now time.Time) sideModel {
 		dirty = true
 	}
 	filter := s.filterText()
+	if s.mode == sideRail {
+		filter = "" // the rail shows every session; the text waits for the full sidebar
+	}
 	if dirty {
 		in := win.sideIn()
 		in.Tabs = s.tabs

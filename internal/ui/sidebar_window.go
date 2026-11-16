@@ -246,6 +246,9 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 		s.cache.call.Add(ops)
 		win.drawSideEditors(sg)
 		h := s.hits
+		if s.filtering && h.filter.Empty() {
+			win.leaveFilter() // no field is drawn (the rail): the keyboard must not stay in it
+		}
 		if s.renaming != 0 && h.rename.Empty() {
 			// Gio drops focus from an editor it no longer lays out; give the keyboard back.
 			win.endRename(true)
