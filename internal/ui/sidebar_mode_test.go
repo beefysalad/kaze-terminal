@@ -25,7 +25,7 @@ func TestEffectiveSideMode(t *testing.T) {
 		{sideFull, 560, sideFull},
 		{sideRail, 300, sideRail},
 	} {
-		if got := effectiveSideMode(c.saved, c.width); got != c.want {
+		if got := effectiveSideMode(c.saved, c.width, minRailWindow, minSideWindow); got != c.want {
 			t.Errorf("effectiveSideMode(%v, %d) = %v, want %v", c.saved, c.width, got, c.want)
 		}
 	}

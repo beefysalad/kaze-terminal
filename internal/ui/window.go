@@ -671,9 +671,14 @@ func (win *window) frame(gtx layout.Context) error {
 	cw, ch := win.rend.CellSize()
 	size := gtx.Constraints.Max
 	bottom := max(size.Y-statusH, barH)
-	sideRect := image.Rect(0, barH, win.sideWidth(gtx, size.X), bottom)
+	sw := win.sideWidth(gtx, size.X)
+	sideRect := image.Rect(0, barH, sw, bottom)
+	termRect := image.Rect(sw, barH, size.X, bottom)
+	if win.sideRight() {
+		sideRect = image.Rect(size.X-sw, barH, size.X, bottom)
+		termRect = image.Rect(0, barH, size.X-sw, bottom)
+	}
 	win.side.w = sideRect.Dx() // the title bar's lead strip follows this, even if a toggle lands mid-frame
-	termRect := image.Rect(sideRect.Max.X, barH, size.X, bottom)
 	grid := image.Rect(termRect.Min.X+pad, termRect.Min.Y+pad/2, termRect.Max.X-pad, termRect.Max.Y-pad/2)
 	win.gridMin, win.gridRect = grid.Min, grid
 	cols, rows := gridSize(grid.Dx(), grid.Dy(), cw, ch)

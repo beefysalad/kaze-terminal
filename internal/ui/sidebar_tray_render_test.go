@@ -86,8 +86,8 @@ func TestSidebarTrayRenders(t *testing.T) {
 	}
 }
 
-// writeRender draws ops in a headless GPU window of size and saves it as a PNG at path.
-func writeRender(t *testing.T, ops *op.Ops, size image.Point, path string) {
+// renderImage draws ops in a headless GPU window of size and returns the pixels.
+func renderImage(t *testing.T, ops *op.Ops, size image.Point) *image.RGBA {
 	t.Helper()
 	gpu, e := headless.NewWindow(size.X, size.Y)
 	if e != nil {
@@ -101,6 +101,13 @@ func writeRender(t *testing.T, ops *op.Ops, size image.Point, path string) {
 	if e = gpu.Screenshot(img); e != nil {
 		t.Fatal(e)
 	}
+	return img
+}
+
+// writeRender draws ops in a headless GPU window of size and saves it as a PNG at path.
+func writeRender(t *testing.T, ops *op.Ops, size image.Point, path string) {
+	t.Helper()
+	img := renderImage(t, ops, size)
 	f, e := os.Create(path)
 	if e != nil {
 		t.Fatal(e)

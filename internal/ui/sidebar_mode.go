@@ -59,13 +59,15 @@ func (win *window) savedSideMode() sideMode {
 // sideRight reports whether the sidebar sits at the window's right edge.
 func (win *window) sideRight() bool { return win.opt.Config.SidebarSide == "right" }
 
-// effectiveSideMode is the mode a window widthDp wide shows for the saved one: under
-// minRailWindow nothing, under minSideWindow full narrows to the rail. Never saved.
-func effectiveSideMode(saved sideMode, widthDp int) sideMode {
+// effectiveSideMode is the mode a window width px wide shows for the saved one: under
+// railMin px (gtx.Dp(minRailWindow)) nothing, under fullMin px (gtx.Dp(minSideWindow))
+// full narrows to the rail. Comparing in px keeps it in step with the rest of the
+// layout at a fractional scale. Never saved.
+func effectiveSideMode(saved sideMode, width, railMin, fullMin int) sideMode {
 	switch {
-	case widthDp < minRailWindow:
+	case width < railMin:
 		return sideHidden
-	case widthDp < minSideWindow && saved == sideFull:
+	case width < fullMin && saved == sideFull:
 		return sideRail
 	}
 	return saved

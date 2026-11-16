@@ -42,6 +42,7 @@ type sideDrawKey struct {
 	doc, hoverDoc         docID
 	scroll                int
 	settings, settingsOn  bool
+	right                 bool
 	theme                 theme.Chrome
 	shaper                *text.Shaper
 	generation            uint64

@@ -50,7 +50,6 @@ type sideUI struct {
 	redraws       int                 // frames the sidebar's pointer input asked for; tests count them
 	ed            widget.Editor       // the filter field
 	filtering     bool                // the filter field has the keyboard
-	narrow        bool                // the window is too narrow for the full sidebar
 	mode          sideMode            // this frame's effective mode, set by sideWidth
 	filters       []event.Filter      // the filter's own keys, built once
 	ren           widget.Editor       // the title of the row being renamed
@@ -162,13 +161,8 @@ func (win *window) toggleSidebar() {
 // sideWidth is how wide the sidebar is in a window this wide (0 while hidden) and
 // sets this frame's effective mode. A narrow window narrows it without touching the setting.
 func (win *window) sideWidth(gtx layout.Context, width int) int {
-	pxPerDp := gtx.Metric.PxPerDp
-	if pxPerDp <= 0 {
-		pxPerDp = 1 // Gio's own rule for an unset metric
-	}
-	m := effectiveSideMode(win.savedSideMode(), int(float32(width)/pxPerDp))
+	m := effectiveSideMode(win.savedSideMode(), width, gtx.Dp(minRailWindow), gtx.Dp(minSideWindow))
 	win.side.mode = m
-	win.side.narrow = width < gtx.Dp(minSideWindow)
 	win.side.hidden = m == sideHidden
 	if m != sideFull {
 		win.dropSideEdit() // only the full sidebar has editors; an invisible field must not keep the keyboard
@@ -198,7 +192,11 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 	if s.mode == sideRail {
 		// The rail's tiles come later; for now a bare strip with its inner edge.
 		paint.FillShape(ops, win.ui.th.Chrome, clip.Rect{Max: r.Size()}.Op())
-		paint.FillShape(ops, win.ui.th.Border, clip.Rect(image.Rect(r.Dx()-1, 0, r.Dx(), r.Dy())).Op())
+		edge := r.Dx() - 1
+		if win.sideRight() {
+			edge = 0
+		}
+		paint.FillShape(ops, win.ui.th.Border, clip.Rect(image.Rect(edge, 0, edge+1, r.Dy())).Op())
 		s.hits, s.st.hover, s.st.hoverAgent, s.reveal = sideHits{}, 0, subagents.Key{}, false
 		s.cache.drawValid = false
 		return
@@ -227,7 +225,8 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 		s.st.doc = win.docs.shown
 		s.st.settings, s.st.settingsOn = win.set.open, win.set.shown
 		s.st.docked = win.shownMember()
-		key := sideDrawKey{activeRepo: s.st.activeRepo, openAgent: s.st.openAgent, hoverAgent: s.st.hoverAgent, size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, docked: s.st.docked, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds, renaming: s.renaming}
+		s.st.right = win.sideRight()
+		key := sideDrawKey{activeRepo: s.st.activeRepo, openAgent: s.st.openAgent, hoverAgent: s.st.hoverAgent, size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, right: s.st.right, docked: s.st.docked, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds, renaming: s.renaming}
 		if !s.cache.drawValid || s.cache.drawKey != key || s.reveal {
 			s.cache.ops.Reset()
 			cg := sg
