@@ -60,7 +60,7 @@
       </div>
     </div>
   </section>
-  <div class="wrap news"><span class="tag">0.42</span><a href="#changelog">A new purple Kaze icon <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
+  <div class="wrap news"><span class="tag">0.43</span><a href="#changelog">The sidebar on either side, and a slim rail <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
 
   <section class="k-sec wrap" aria-labelledby="demo-title">
     <header class="k-head">
@@ -98,7 +98,7 @@
     <div class="lead-feature">
       <div>
         <h3>A sidebar of sessions</h3>
-        <p>Sessions group by repo, worktrees included, with a bold name for the project you’re in. Each row shows the agent, its name and state above the branch and lines changed. See what <span class="state needs">needs you</span>, what is <span class="state running">running</span> and what is <span class="state done">done</span> without switching.</p>
+        <p>Sessions group by repo, worktrees included, with a bold name for the project you’re in. Each row shows the agent, its name and state above the branch and lines changed. See what <span class="state needs">needs you</span>, what is <span class="state running">running</span> and what is <span class="state done">done</span> without switching. Put it on the left or the right, or fold it to a slim rail of session tiles.</p>
         <button class="k-link" type="button" data-open="sessions">See the sidebar</button>
       </div>
       <button class="plate plate-btn" type="button" data-open="sessions" aria-label="See the sidebar"><img src="site-assets/kaze-sessions.png" alt="" width="2200" height="1440" loading="lazy"></button>
@@ -141,7 +141,19 @@
     </header>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.42</span><span class="badge">Latest</span><time datetime="2026-11-16">Nov 16, 2026</time></div>
+        <div class="release-meta"><span class="version">0.43</span><span class="badge">Latest</span><time datetime="2026-11-16">Nov 16, 2026</time></div>
+        <div class="release-body">
+          <h3>The sidebar on either side, and a slim rail</h3>
+          <ul>
+            <li><b>Left or right:</b> Settings, Appearance, Sidebar puts the sidebar on the right edge of the window. The title bar's buttons above it move with it. Left stays the default.</li>
+            <li><b>A slim rail:</b> <kbd>⌘</kbd> <kbd>B</kbd> (Ctrl+Shift+B on Windows) now steps through full, rail and hidden. The rail shows each session as a small tile with its agent and whether it needs you, is running or is done. Hover a tile for its name; click it to open the session.</li>
+            <li><b>Small windows:</b> a narrow window shows the rail instead of hiding the sidebar.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.42</span><time datetime="2026-11-16">Nov 16, 2026</time></div>
         <div class="release-body">
           <h3>A new purple Kaze icon</h3>
           <ul>
@@ -161,13 +173,6 @@
           </ul>
         </div>
       </li>
-
-      <li class="release">
-        <div class="release-meta"><span class="version">0.41</span><time datetime="2026-11-12">Nov 12, 2026</time></div>
-        <div class="release-body">
-          <h3>Kaze on your Discord profile</h3>
-          <ul>
-            <li><b>A Playing Kaze card:</b> while the Discord desktop app is open, your profile shows the project you are working on, how long Kaze has been open and how many Claude and Codex sessions are running.</li>
             <li><b>Nothing private:</b> the card names the repo or folder, never paths, branches, prompts or commands, and it goes only to the Discord app on your own computer.</li>
             <li><b>Yours to turn off:</b> Settings, Agents, Discord has a switch for the card and another to hide the project name.</li>
           </ul>
