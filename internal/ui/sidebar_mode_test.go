@@ -128,13 +128,14 @@ func TestSideChangeDropsEditors(t *testing.T) {
 	}
 }
 
-func TestRailFrameDrawsNoHits(t *testing.T) {
+// The rail draws a tile per session and no filter field.
+func TestRailFrameDrawsTiles(t *testing.T) {
 	win, _ := sideWindow(t, true)
 	openIn(t, win, "")
 	win.opt.Config.SidebarMode = "rail"
 	var r input.Router
 	sideFrame(t, win, &r)
-	if win.side.mode != sideRail || win.side.w != railW || len(win.side.hits.rows) != 0 {
-		t.Fatalf("rail: mode %v, width %d, %d rows", win.side.mode, win.side.w, len(win.side.hits.rows))
+	if win.side.mode != sideRail || win.side.w != railW || len(win.side.hits.rows) != 1 || !win.side.hits.filter.Empty() {
+		t.Fatalf("rail: mode %v, width %d, %d rows, filter %v", win.side.mode, win.side.w, len(win.side.hits.rows), win.side.hits.filter)
 	}
 }

@@ -43,6 +43,7 @@ type sideDrawKey struct {
 	scroll                int
 	settings, settingsOn  bool
 	right                 bool
+	mode                  sideMode
 	theme                 theme.Chrome
 	shaper                *text.Shaper
 	generation            uint64

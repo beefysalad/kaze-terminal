@@ -315,7 +315,7 @@ func TestNarrowWindowShowsTheRailWithoutSaving(t *testing.T) {
 	win.cfgPath = filepath.Join(t.TempDir(), "config.toml")
 	var r input.Router
 	sizedFrame(t, win, &r, 500, 600)
-	if win.side.hidden || win.side.mode != sideRail || len(win.side.hits.rows) != 0 || win.gridMin.X != railW+8 {
+	if win.side.hidden || win.side.mode != sideRail || len(win.side.hits.rows) != 1 || !win.side.hits.filter.Empty() || win.gridMin.X != railW+8 {
 		t.Fatalf("500px wide: hidden %v, mode %v, %d rows, grid x %d", win.side.hidden, win.side.mode, len(win.side.hits.rows), win.gridMin.X)
 	}
 	if win.savedSideMode() != sideFull {

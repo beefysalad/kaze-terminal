@@ -858,6 +858,7 @@ func (win *window) frame(gtx layout.Context) error {
 		win.drawFind(gtx, win.findPane(termRect)) // over its pane, so it takes the clicks it covers
 	}
 	win.syncDockMember()
+	win.drawSideTip(gtx) // the rail's tooltip sits over the terminal, so after it
 
 	// Status bar.
 	sg := gtx

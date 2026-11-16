@@ -189,18 +189,6 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 	ops := gtx.Ops
 	off := op.Offset(r.Min).Push(ops)
 	defer off.Pop()
-	if s.mode == sideRail {
-		// The rail's tiles come later; for now a bare strip with its inner edge.
-		paint.FillShape(ops, win.ui.th.Chrome, clip.Rect{Max: r.Size()}.Op())
-		edge := r.Dx() - 1
-		if win.sideRight() {
-			edge = 0
-		}
-		paint.FillShape(ops, win.ui.th.Border, clip.Rect(image.Rect(edge, 0, edge+1, r.Dy())).Op())
-		s.hits, s.st.hover, s.st.hoverAgent, s.reveal = sideHits{}, 0, subagents.Key{}, false
-		s.cache.drawValid = false
-		return
-	}
 	sg := gtx
 	sg.Constraints = layout.Exact(r.Size())
 	{ // r is this frame's sidebar, decided before any toggle in it: draw it, never leave it bare
@@ -226,7 +214,7 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 		s.st.settings, s.st.settingsOn = win.set.open, win.set.shown
 		s.st.docked = win.shownMember()
 		s.st.right = win.sideRight()
-		key := sideDrawKey{activeRepo: s.st.activeRepo, openAgent: s.st.openAgent, hoverAgent: s.st.hoverAgent, size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, right: s.st.right, docked: s.st.docked, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds, renaming: s.renaming}
+		key := sideDrawKey{activeRepo: s.st.activeRepo, openAgent: s.st.openAgent, hoverAgent: s.st.hoverAgent, size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, right: s.st.right, mode: s.mode, docked: s.st.docked, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds, renaming: s.renaming}
 		if !s.cache.drawValid || s.cache.drawKey != key || s.reveal {
 			s.cache.ops.Reset()
 			cg := sg
@@ -236,15 +224,15 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 			static.ed = nil
 			static.ren = nil
 			static.static = true
-			h := win.ui.layoutSidebar(cg, m, static, r.Size())
+			h := win.layoutSide(cg, m, static, r.Size())
 			call := rec.Stop()
 			if s.reveal {
 				s.reveal = false
-				if sc, ok := revealScroll(cg, m, s.st, h); ok && sc != s.st.scroll {
+				if sc, ok := win.sideReveal(cg, m, s.st, h); ok && sc != s.st.scroll {
 					s.st.scroll = sc
 					static.scroll = sc
 					rec = op.Record(cg.Ops)
-					h = win.ui.layoutSidebar(cg, m, static, r.Size())
+					h = win.layoutSide(cg, m, static, r.Size())
 					call = rec.Stop()
 				}
 			}
@@ -267,6 +255,22 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 	area := clip.Rect{Max: r.Size()}.Push(ops)
 	event.Op(ops, &s.tag)
 	area.Pop()
+}
+
+// layoutSide lays out this frame's mode: the full sidebar or the rail.
+func (win *window) layoutSide(gtx layout.Context, m sideModel, st sideState, size image.Point) sideHits {
+	if win.side.mode == sideRail {
+		return win.ui.layoutRail(gtx, m, st, size)
+	}
+	return win.ui.layoutSidebar(gtx, m, st, size)
+}
+
+// sideReveal is the scroll that shows the shown session in this frame's mode.
+func (win *window) sideReveal(gtx layout.Context, m sideModel, st sideState, h sideHits) (int, bool) {
+	if win.side.mode == sideRail {
+		return railReveal(gtx, m, st, h)
+	}
+	return revealScroll(gtx, m, st, h)
 }
 
 // revealScroll is the scroll that shows the shown row whole, if it is in an open group.

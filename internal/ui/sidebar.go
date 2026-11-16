@@ -84,6 +84,7 @@ type sideHits struct {
 	next                    image.Rectangle // the "Next waiting" button
 	list                    image.Rectangle // the scrollable area, for wheel events
 	tip                     image.Rectangle // the hovered agent's step tooltip, empty when none shows
+	tipCall                 op.CallOp       // the rail's tooltip, drawn over the terminal by drawSideTip
 	rename                  image.Rectangle // the rename editor, empty while none is drawn
 	scrollMax               int
 	noMatches               bool      // the filter hides every session
