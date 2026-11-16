@@ -1,8 +1,8 @@
 ## What's changed
 
-- A new purple folded K with a terminal underscore represents Kaze in the macOS Dock and Finder, Windows taskbar and Alt+Tab.
-- The app title bar, About, Settings footer, website and README share the new logo, with a deeper purple for light backgrounds.
-- If macOS keeps the old Dock icon cached, quit and reopen Kaze after updating.
+- The sidebar can sit on the right: Settings, Appearance, Sidebar, Side. The title bar's buttons above it move with it. Left stays the default.
+- Cmd+B (Ctrl+Shift+B on Windows) now steps through full, rail and hidden. The rail shows each session as a small tile with its agent and its state; hover for the name, click to open it.
+- A narrow window shows the rail instead of hiding the sidebar.
 
 ## Download
 

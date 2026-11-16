@@ -155,7 +155,7 @@ and flags, and colour emoji on Linux.
 | Close session | Ctrl+Shift+W | Cmd+W |
 | Next session | Ctrl+Tab | Ctrl+Tab |
 | Previous session | Ctrl+Shift+Tab | Ctrl+Shift+Tab |
-| Hide or show the sidebar | Ctrl+Shift+B | Cmd+B |
+| Cycle the sidebar: full, rail, hidden | Ctrl+Shift+B | Cmd+B |
 | Jump to the newest alert card, or the next session that needs you | Ctrl+Shift+J | Cmd+J |
 | Open the palette | Ctrl+Shift+K | Cmd+K |
 | Show or hide the agents board | Ctrl+Shift+A | Cmd+Shift+A |
@@ -275,12 +275,20 @@ Sessions are listed down the left side, in place of a tab strip.
   card's session while cards are showing. Without cards they jump to the next session
   that needs you, wrapping around. With none, the status bar says "Nothing is waiting on you."
 - **Workspaces:** a section at the bottom lists each running workspace (see Workspaces below).
-- **Hiding it:** the sidebar toggle (Ctrl+Shift+B, Cmd+B on macOS) hides or shows it, and kaze
-  remembers the choice as `sidebar` in the config. Below 560 dp of window width it also hides
-  by itself, without saving that, and the toggle does nothing until the window is wider.
+- **Left or right:** Settings, Appearance, Sidebar, Side puts it on the left (the default) or the
+  right edge of the window, saved as `sidebar_side`. The palette has "Sidebar on the left" and
+  "Sidebar on the right" too. On the right, the title bar's toggle, + and buttons sit over it.
+- **Full, rail, hidden:** the sidebar toggle (Ctrl+Shift+B, Cmd+B on macOS) steps through the full
+  sidebar, a 52 dp rail and hidden, saved as `sidebar_mode` (Settings, Appearance, Sidebar, Width
+  too). The rail shows one tile per session with its agent and its state, a short repo label per
+  group and each workspace member as a colour bar. Hover a tile for its name and status, click it to
+  open the session, middle-click to close it. The rail has no filter or rename; switch back to full
+  for those. Below 560 dp of window width a full sidebar shows as the rail, and below 300 dp it
+  hides, without saving either.
 - **Title bar:** Kaze draws one title bar, laid out the same on macOS and Windows. On the left,
   over the sidebar: the window buttons on macOS (the real traffic lights) or the K mark on Windows,
-  the sidebar toggle and **+** for a new session. Then the session you're in (repo, title, command
+  the sidebar toggle and **+** for a new session. With the sidebar on the right, that part moves to
+  the right edge over it. Then the session you're in (repo, title, command
   and its state), a search field that opens the palette, and on the right Agents
   (with a badge) and Settings; on Windows, minimize, maximize and close follow. Drag any
   empty part of it to move the window; double-click it to zoom (macOS follows your setting) or
@@ -846,7 +854,8 @@ error makes kaze use all defaults.
 | `restore_sessions` | Restore folders and exact Claude/Codex conversations on launch | `true` |
 | `startup_workspace` | The workspace to run when kaze starts (chosen in Settings > Workspaces, stored as its ID) | none, a normal tab |
 | `[colors]` | `fg`, `bg`, `cursor`, `selection`, `color0` to `color15`, as `"#rrggbb"` | the built-in Midnight palette |
-| `sidebar` | Show the session sidebar (the toggle saves it here) | `true` |
+| `sidebar_side` | Which edge the sidebar sits on: `left` or `right` | `left` |
+| `sidebar_mode` | `full`, `rail` or `hidden` (the toggle saves it here); without it, an older `sidebar = true\|false` still decides | `full` |
 | `[keys]` | `new_tab`, `close_tab`, `next_tab`, `prev_tab`, `copy`, `paste`, `find`, `toggle_sidebar`, `next_waiting`, `palette`, `agents_board`, `open_settings` (old `scratch_shell` and `new_branch_session` lines are ignored with a warning) | the shortcuts above; `none` removes one |
 | `font_family` | **Not supported yet.** Setting it only adds a warning; kaze always uses its bundled font. | |
 
@@ -1111,6 +1120,7 @@ Done:
 - Editable shortcuts: change any of them in Settings > Shortcuts, or write `none` to drop one (built on `feat/shortcuts-edit`, ships in 0.31 with the palette redesign).
 - Find in the terminal and the docked tabs (#155): Ctrl+Shift+F or Cmd+F, every match marked, on the whole scrollback (built on `feat/find`, release next).
 - Next release (built on `feat/pane-reading`): the subagent panel and the board preview open edits inline with line numbers and code colours, fold quiet commands and open failures.
+- 0.43: the sidebar on the left or the right, and a slim rail of session tiles; Cmd+B cycles full, rail and hidden (PR #208).
 - 0.42: the purple folded K and terminal underscore across the app, macOS and Windows icons, website and README (PR #206).
 - 0.41.1: fixes a launch freeze on the Mac when notification permission was not yet allowed (PR #203). Native-notification callbacks now run off the AppKit main thread.
 - 0.41: Kaze on your Discord profile (#55, PR #201): a "Playing Kaze" card with your project, how long kaze has been open and your Claude and Codex session count.
