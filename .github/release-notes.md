@@ -1,7 +1,8 @@
 ## What's changed
 
-- Fixes a freeze at launch on the Mac. Kaze could open, show a spinner in the Dock and never respond, so macOS reported it as not responding. It happened when macOS had not yet allowed Kaze's notifications, often right after a restart or an update.
-- Your saved sessions and settings were not touched.
+- A new purple folded K with a terminal underscore represents Kaze in the macOS Dock and Finder, Windows taskbar and Alt+Tab.
+- The app title bar, About, Settings footer, website and README share the new logo, with a deeper purple for light backgrounds.
+- If macOS keeps the old Dock icon cached, quit and reopen Kaze after updating.
 
 ## Download
 
