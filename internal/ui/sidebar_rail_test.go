@@ -1,8 +1,11 @@
 package ui
 
 import (
+	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/vt"
 	"image"
 	"slices"
+	"strings"
 	"testing"
 
 	"gioui.org/io/input"
@@ -176,9 +179,9 @@ func TestRailNoAllocsWhenUnchanged(t *testing.T) {
 	win := railWindow(t)
 	openIn(t, win, osPath("/code/repo/api"))
 	openMember(t, win, "api")
-	win.side.st.hover = win.mgr.Tabs()[0].ID
 	var router input.Router
 	sideFrame(t, win, &router)
+	win.side.st.hover = win.mgr.Tabs()[0].ID // after the first frame, whose switch to the rail drops any hover
 	var ops op.Ops
 	g := pageContext(1000, 600)
 	g.Ops = &ops
@@ -255,5 +258,35 @@ func TestRailHighlightsSessionOfShownDoc(t *testing.T) {
 	}
 	if on := onOf(sideState{shown: 2, settingsOn: true}); len(on) != 0 {
 		t.Fatalf("with Settings shown, highlighted %v, want none", on)
+	}
+}
+
+// The rail's tooltip stays inside the window: on a right rail in a narrow window
+// a long title is cut to the room on the terminal's side.
+func TestRailTipStaysInWindow(t *testing.T) {
+	for _, right := range []bool{false, true} {
+		win := railWindow(t)
+		win.setSideRight(right)
+		a := openIn(t, win, "")
+		s := a.Session
+		s.Lock()
+		vt.NewParser(s.Applier()).Feed([]byte("\x1b]2;" + strings.Repeat("a very long session title ", 6) + "\x07"))
+		s.Unlock()
+		openIn(t, win, "") // shown, so a's needs mark stays
+		deliverNow(win, notify.Msg{Tab: int(a.ID), Kind: notify.KindNeeds}, t0)
+		if win.alerts.markOf(a.ID) != markNeeds {
+			t.Fatal("setup: needs did not mark")
+		}
+		var r input.Router
+		sizedFrame(t, win, &r, 320, 600)
+		win.side.st.hover = a.ID
+		sizedFrame(t, win, &r, 320, 600)
+		tip := win.side.hits.tip.Add(win.side.at)
+		if win.side.mode != sideRail || win.side.hits.tip.Empty() {
+			t.Fatalf("right %v: mode %v, tip %v, want the rail with a tooltip", right, win.side.mode, win.side.hits.tip)
+		}
+		if tip.Min.X < 0 || tip.Max.X > 320 {
+			t.Fatalf("right %v: tip %v leaves the 320 px window", right, tip)
+		}
 	}
 }

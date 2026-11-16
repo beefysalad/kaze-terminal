@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -138,4 +139,47 @@ func TestRailFrameDrawsTiles(t *testing.T) {
 	if win.side.mode != sideRail || win.side.w != railW || len(win.side.hits.rows) != 1 || !win.side.hits.filter.Empty() {
 		t.Fatalf("rail: mode %v, width %d, %d rows, filter %v", win.side.mode, win.side.w, len(win.side.hits.rows), win.side.hits.filter)
 	}
+}
+
+// A width change that switches full and rail drops the hover: the row under the
+// pointer in one mode is not the tile under it in the other.
+func TestNarrowModeChangeClearsHover(t *testing.T) {
+	win, _ := sideWindow(t, true)
+	a := openIn(t, win, "")
+	var r input.Router
+	sizedFrame(t, win, &r, 1000, 600)
+	win.side.st.hover = a.ID
+	sizedFrame(t, win, &r, 500, 600)
+	if win.side.mode != sideRail || win.side.st.hover != 0 {
+		t.Fatalf("full to rail: mode %v, hover %d, want rail and no hover", win.side.mode, win.side.st.hover)
+	}
+	win.side.st.hover = a.ID
+	sizedFrame(t, win, &r, 1000, 600)
+	if win.side.mode != sideFull || win.side.st.hover != 0 {
+		t.Fatalf("rail to full: mode %v, hover %d, want full and no hover", win.side.mode, win.side.st.hover)
+	}
+}
+
+// A width change that switches full and rail scrolls the shown session into view.
+func TestNarrowModeChangeRevealsShown(t *testing.T) {
+	win, _ := sideWindow(t, true)
+	var last *tabs.Tab
+	for range 30 {
+		last = openIn(t, win, "")
+	}
+	win.mgr.SetActive(last.ID)
+	var r input.Router
+	inside := func(w int, want sideMode) {
+		t.Helper()
+		win.side.st.scroll = 0 // the other mode's scroll, which does not show the last session
+		sizedFrame(t, win, &r, w, 400)
+		sizedFrame(t, win, &r, w, 400)
+		h := rowHit(t, win, last.ID)
+		if win.side.mode != want || !h.rect.In(win.side.hits.list) {
+			t.Fatalf("%dpx: mode %v, shown %v outside the list %v", w, win.side.mode, h.rect, win.side.hits.list)
+		}
+	}
+	sizedFrame(t, win, &r, 1000, 400)
+	inside(500, sideRail)
+	inside(1000, sideFull)
 }

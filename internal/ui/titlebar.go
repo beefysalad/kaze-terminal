@@ -180,18 +180,23 @@ func layoutTitle(in titleIn) titleLayout {
 	l.Agents = btn(l.Gear.Min.X - 2 - d.Btn)
 	hi := l.Agents.Min.X - d.Gap
 	if in.Right {
-		// The lead strip over the right sidebar holds the buttons, and the new
-		// session button at its left end; it is never narrower than they need.
+		// The lead strip over the right sidebar holds the buttons; it is never
+		// narrower than they need (a rail is narrower than the caption buttons).
+		// In full mode it is the sidebar's width, so the dividers line up, and the
+		// new session button sits at its left end, or just left of it when the
+		// caption buttons leave it no room there.
 		need := in.Size.X - l.Agents.Min.X + d.LeadPad
-		if !in.NoPlus {
-			need += d.Btn + d.Gap
-		}
 		lw := max(in.SideW, need)
 		l.Lead = image.Rect(in.Size.X-lw, 0, in.Size.X, h)
-		if !in.NoPlus {
-			l.Plus = btn(l.Lead.Min.X + d.LeadPad)
-		}
 		hi = l.Lead.Min.X - d.Pad
+		if !in.NoPlus {
+			if need+d.Btn+d.Gap <= lw {
+				l.Plus = btn(l.Lead.Min.X + d.LeadPad)
+			} else {
+				l.Plus = btn(l.Lead.Min.X - d.Gap - d.Btn)
+				hi = l.Plus.Min.X - d.Gap
+			}
+		}
 	}
 
 	// Left: the lights (macOS), the mark and the name, the toggle, and the lead strip.

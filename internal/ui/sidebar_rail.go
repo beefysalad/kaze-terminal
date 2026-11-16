@@ -274,7 +274,7 @@ func (c *chrome) layoutRail(gtx layout.Context, m sideModel, st sideState, size 
 
 	if tip.found {
 		rec := op.Record(ops)
-		h.tip = c.railTip(gtx, tip, size, st.right, ink)
+		h.tip = c.railTip(gtx, tip, size, st.right, st.tipRoom, ink)
 		h.tipCall = rec.Stop()
 	}
 	return h
@@ -296,23 +296,36 @@ func (c *chrome) railLogo(gtx layout.Context, agent string, r image.Rectangle, f
 
 // railTip draws the hovered tile's tooltip beside it, on the terminal's side of the
 // rail, and returns its box: the tile's state dot, its title and its status word.
-func (c *chrome) railTip(gtx layout.Context, t railTipFor, size image.Point, right bool, ink sideInk) image.Rectangle {
+func (c *chrome) railTip(gtx layout.Context, t railTipFor, size image.Point, right bool, room int, ink sideInk) image.Rectangle {
 	ops := gtx.Ops
 	padX, padY, dot, gap := gtx.Dp(10), gtx.Dp(6), gtx.Dp(8), gtx.Dp(6)
-	tCall, tSize := c.fitSide(gtx, t.title, 12, gtx.Dp(railTipMaxW), ink.tipFG)
 	var wCall op.CallOp
 	var wSize image.Point
 	if t.word != "" {
 		wCall, wSize = c.label(gtx, t.word, 12, render.Readable(t.wordCol, ink.tipBG))
 	}
-	w := padX + dot + gap + tSize.X + padX
+	wordW := 0
 	if wSize.X > 0 {
-		w += gap + gap/3 + wSize.X
+		wordW = gap + gap/3 + wSize.X
 	}
+	// The title gets what the window leaves on the terminal's side, a gap off each edge.
+	titleRoom := gtx.Dp(railTipMaxW)
+	if room > 0 {
+		titleRoom = min(titleRoom, max(room-2*gtx.Dp(railTipGap)-(padX+dot+gap+padX)-wordW, 0))
+	}
+	tCall, tSize := c.fitSide(gtx, t.title, 12, titleRoom, ink.tipFG)
+	w := padX + dot + gap + tSize.X + padX + wordW
 	ht := max(tSize.Y, wSize.Y, dot) + 2*padY
 	x := size.X + gtx.Dp(railTipGap)
 	if right {
 		x = -gtx.Dp(railTipGap) - w
+	}
+	if room > 0 { // never past the window's far edge, even when the word alone is too wide
+		if right {
+			x = max(x, -room) // the window's left edge, in the rail's coordinates
+		} else {
+			x = min(x, size.X+room-w)
+		}
 	}
 	y := t.tile.Min.Y + (t.tile.Dy()-ht)/2
 	y = max(min(y, size.Y-ht), 0)

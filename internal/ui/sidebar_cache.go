@@ -40,7 +40,7 @@ type sideDrawKey struct {
 	shown, hover, docked  tabs.TabID
 	renaming              tabs.TabID
 	doc, hoverDoc         docID
-	scroll                int
+	scroll, tipRoom       int
 	settings, settingsOn  bool
 	right                 bool
 	mode                  sideMode

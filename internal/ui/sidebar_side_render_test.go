@@ -39,7 +39,7 @@ func TestSidebarSideRenders(t *testing.T) {
 				a := openIn(t, win, osPath("/code/kaze-terminal/app"))
 				b := openIn(t, win, osPath("/code/kaze-terminal/web"))
 				c := openIn(t, win, osPath("/code/todo-api/api"))
-				d := openIn(t, win, "")
+				openIn(t, win, "") // a plain shell, for a tile with the terminal icon
 				openMember(t, win, "api")
 				openMember(t, win, "web")
 				win.agents = map[tabs.TabID]agentState{}
@@ -51,7 +51,6 @@ func TestSidebarSideRenders(t *testing.T) {
 					startAgent(win, a.ID, "s", string(rune('a'+i)))
 				}
 				stepAgent(win, a.ID, "a")
-				_ = d
 				win.mgr.SetActive(a.ID)
 				var r input.Router
 				sizedFrame(t, win, &r, size.X, size.Y)

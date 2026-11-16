@@ -50,6 +50,7 @@ type sideState struct {
 	runFolded     map[uint64]bool // workspace runs whose header is folded
 	docked        tabs.TabID      // the member tab the shown panel draws, highlighted like shown
 	right         bool            // the sidebar sits at the window's right edge: its divider and accent mirror
+	tipRoom       int             // px of window beside the rail on the terminal's side, for its tooltip; 0 for no limit
 }
 
 type sideRowHit struct {

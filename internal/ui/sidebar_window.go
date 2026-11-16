@@ -162,6 +162,12 @@ func (win *window) toggleSidebar() {
 // sets this frame's effective mode. A narrow window narrows it without touching the setting.
 func (win *window) sideWidth(gtx layout.Context, width int) int {
 	m := effectiveSideMode(win.savedSideMode(), width, gtx.Dp(minRailWindow), gtx.Dp(minSideWindow))
+	if m != win.side.mode {
+		// The rows and tiles move: what was under the pointer is not now, and the
+		// other mode's scroll need not show the shown session.
+		win.side.st.hover, win.side.st.hoverAgent = 0, subagents.Key{}
+		win.side.reveal = true
+	}
 	win.side.mode = m
 	win.side.hidden = m == sideHidden
 	if m != sideFull {
@@ -214,7 +220,8 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 		s.st.settings, s.st.settingsOn = win.set.open, win.set.shown
 		s.st.docked = win.shownMember()
 		s.st.right = win.sideRight()
-		key := sideDrawKey{activeRepo: s.st.activeRepo, openAgent: s.st.openAgent, hoverAgent: s.st.hoverAgent, size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, right: s.st.right, mode: s.mode, docked: s.st.docked, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds, renaming: s.renaming}
+		s.st.tipRoom = max(gtx.Constraints.Max.X-r.Dx(), 1) // the tooltip stays inside the window
+		key := sideDrawKey{activeRepo: s.st.activeRepo, openAgent: s.st.openAgent, hoverAgent: s.st.hoverAgent, size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, right: s.st.right, tipRoom: s.st.tipRoom, mode: s.mode, docked: s.st.docked, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds, renaming: s.renaming}
 		if !s.cache.drawValid || s.cache.drawKey != key || s.reveal {
 			s.cache.ops.Reset()
 			cg := sg

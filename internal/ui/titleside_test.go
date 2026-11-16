@@ -138,3 +138,35 @@ func TestPanelRightIconKnown(t *testing.T) {
 		t.Fatal("panelRight is not a known icon")
 	}
 }
+
+// In full mode on Windows the right strip is exactly the sidebar's width, so its
+// divider lines up with the sidebar's; the new session button that does not fit
+// sits just left of it.
+func TestTitleRightFullWindowsMatchesSidebar(t *testing.T) {
+	for _, w := range []int{560, 800, 1200} {
+		l := sideTitle(w, 38, false, 260, true, false)
+		if l.Lead.Min.X != w-260 || l.Lead.Max.X != w {
+			t.Fatalf("%dpx: lead %v, want exactly the sidebar's 260 px", w, l.Lead)
+		}
+		if l.Plus.Empty() || (l.Plus.Max.X > l.Lead.Min.X && !l.Plus.In(l.Lead)) {
+			t.Fatalf("%dpx: plus %v must sit inside or just left of the lead %v", w, l.Plus, l.Lead)
+		}
+		rs := []image.Rectangle{l.Crumb, l.Search, l.Plus, l.Agents, l.Gear, l.Toggle, l.Buttons[0], l.Buttons[1], l.Buttons[2]}
+		for i, a := range rs {
+			for _, b := range rs[i+1:] {
+				if !a.Empty() && !b.Empty() && a.Overlaps(b) {
+					t.Fatalf("%dpx: %v overlaps %v", w, a, b)
+				}
+			}
+		}
+		if l.Crumb.Max.X > l.Plus.Min.X || l.Search.Max.X > l.Plus.Min.X {
+			t.Fatalf("%dpx: crumb %v or search %v past the plus %v", w, l.Crumb, l.Search, l.Plus)
+		}
+	}
+}
+
+func TestPaletteSidebarRightIcon(t *testing.T) {
+	if got := palActionIcons["sidebar_right"]; got != "panelRight" {
+		t.Fatalf("Sidebar on the right shows icon %q, want panelRight", got)
+	}
+}
