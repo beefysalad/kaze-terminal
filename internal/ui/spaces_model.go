@@ -103,6 +103,9 @@ type agentRow struct {
 	Subtitle string // the running command, else the branch or folder
 	Since    time.Time
 	State    agentGroup
+	Space    string // the name of the space holding its session
+	Mark     mark   // the session's alert mark, for the state dot
+	Running  bool
 }
 
 type agentsModel struct{ Rows []agentRow }
@@ -111,7 +114,7 @@ type agentsModel struct{ Rows []agentRow }
 // then Idle, each in space then tab order. Build side with an empty Filter.
 func buildAgents(side sideModel) agentsModel {
 	var by [3][]agentRow
-	add := func(rows []sideRow) {
+	add := func(space string, rows []sideRow) {
 		for _, r := range rows {
 			if r.Agent == "" {
 				continue
@@ -124,16 +127,20 @@ func buildAgents(side sideModel) agentsModel {
 				st = agentWorking
 			}
 			sub := r.Command
+			if sub == "" && r.Title != r.Agent {
+				sub = r.Title
+			}
 			if sub == "" {
 				sub = r.Detail
 			}
-			by[st] = append(by[st], agentRow{ID: r.ID, Name: r.Agent, Subtitle: sub, Since: r.Since, State: st})
+			by[st] = append(by[st], agentRow{ID: r.ID, Name: r.Agent, Subtitle: sub, Since: r.Since, State: st,
+				Space: space, Mark: r.Mark, Running: r.Running})
 		}
 	}
 	for _, g := range side.Groups {
-		add(g.Rows)
+		add(g.Name, g.Rows)
 	}
-	add(side.Loose)
+	add("Shell", side.Loose)
 	var m agentsModel
 	for _, rows := range by {
 		m.Rows = append(m.Rows, rows...)

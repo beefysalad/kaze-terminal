@@ -136,3 +136,44 @@ func TestAgentsExcludeMembersAndEmpty(t *testing.T) {
 		t.Fatal("empty model has rows")
 	}
 }
+
+func TestSideModelCarriesSpacesAndAgents(t *testing.T) {
+	ts, locs := sideFixture()
+	in := sideIn(ts, locs)
+	in.Agent = func(id tabs.TabID) agentState {
+		if id == 3 {
+			return agentState{claude: true, running: true, command: "go test"}
+		}
+		return agentState{}
+	}
+	m := buildSide(in)
+	if got := []string{m.Spaces[0].Key, m.Spaces[1].Key, m.Spaces[2].Key}; !reflect.DeepEqual(got, []string{"X", "Y", shellSpaceKey}) {
+		t.Fatalf("model spaces %v", got)
+	}
+	if len(m.Agents) != 1 || m.Agents[0].ID != 3 || m.Agents[0].Space != "y" || !m.Agents[0].Running || m.Agents[0].Subtitle != "go test" {
+		t.Fatalf("model agents %+v", m.Agents)
+	}
+}
+
+func TestFilterNarrowsSpacesAndAgents(t *testing.T) {
+	ts, locs := sideFixture()
+	in := sideIn(ts, locs)
+	in.Agent = func(id tabs.TabID) agentState {
+		if id == 1 || id == 3 {
+			return agentState{claude: true}
+		}
+		return agentState{}
+	}
+	in.Filter = "y" // the name of space Y; it also appears in no other space
+	m := buildSide(in)
+	if len(m.Spaces) != 1 || m.Spaces[0].Key != "Y" || m.Spaces[0].Count != 1 {
+		t.Fatalf("spaces after filter %+v", m.Spaces)
+	}
+	if len(m.Agents) != 1 || m.Agents[0].ID != 3 {
+		t.Fatalf("agents after filter %+v", m.Agents)
+	}
+	in.Filter = "shell"
+	if m := buildSide(in); len(m.Spaces) != 1 || m.Spaces[0].Key != shellSpaceKey {
+		t.Fatalf("filtering by the Shell space's name gave %+v", m.Spaces)
+	}
+}

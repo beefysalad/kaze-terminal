@@ -64,6 +64,8 @@ type sideModel struct {
 	Groups []sideGroup
 	Loose  []sideRow
 	Runs   []sideRun
+	Spaces []spaceEntry // the spaces as drawn: one per group, then Shell; filtered like the groups
+	Agents []agentRow   // the Agents section's rows, filtered like the groups
 }
 
 type sideInput struct {
@@ -178,13 +180,14 @@ func buildSide(in sideInput) sideModel {
 		members[i] = append(members[i], row)
 	}
 	for i, g := range all {
+		nameHit := filter != "" && strings.Contains(strings.ToLower(g.Name), filter) // a space's name shows all its sessions
 		g.Count = len(members[i])
 		for _, r := range members[i] {
 			if r.Mark == markNeeds {
 				g.Waiting++
 			}
 			g.AgentCount += r.AgentCount
-			if r.matches(filter) {
+			if nameHit || r.matches(filter) {
 				g.Rows = append(g.Rows, r)
 			}
 		}
@@ -194,11 +197,14 @@ func buildSide(in sideInput) sideModel {
 		g.Folded = in.Folded[g.Key] && filter == ""
 		m.Groups = append(m.Groups, g)
 	}
+	shellHit := filter != "" && strings.Contains("shell", filter)
 	for _, r := range loose {
-		if r.matches(filter) {
+		if shellHit || r.matches(filter) {
 			m.Loose = append(m.Loose, r)
 		}
 	}
+	m.Spaces = buildSpaces(m, 0).Spaces
+	m.Agents = buildAgents(m).Rows
 	return m
 }
 
