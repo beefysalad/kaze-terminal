@@ -48,14 +48,15 @@ type settingsState struct {
 	tag               int             // its address is the page's event tag
 
 	// Laid out each frame.
-	controls []control
-	nav      []navHit
-	texts    []string          // every string drawn, so tests can read the page
-	cards    []image.Rectangle // every card drawn this frame, for tests
-	about    aboutGeom         // the About page's layout this frame, for tests
-	footMark image.Rectangle   // where the sidebar footer drew the K, for tests
-	keyRows  []keyRowGeom      // the Shortcuts page's rows this frame, for tests
-	keyStrip keyStripGeom      // its message strip this frame, for tests
+	controls   []control
+	nav        []navHit
+	texts      []string          // every string drawn, so tests can read the page
+	cards      []image.Rectangle // every card drawn this frame, for tests
+	updateHero updHeroGeom
+	about      aboutGeom       // the About page's layout this frame, for tests
+	footMark   image.Rectangle // where the sidebar footer drew the K, for tests
+	keyRows    []keyRowGeom    // the Shortcuts page's rows this frame, for tests
+	keyStrip   keyStripGeom    // its message strip this frame, for tests
 	// memberFolderX is where each list member's folder starts, so tests can check the columns.
 	memberFolderX []int
 
@@ -698,11 +699,39 @@ func (p *page) text(s string, size unit.Sp, col color.NRGBA) (op.CallOp, image.P
 	return p.c.labelW(p.gtx, s, size, col, font.Normal)
 }
 
-// wrap breaks s into lines no wider than w, at spaces; a word wider than w gets its own line.
+// wrap breaks copy at spaces, splitting long paths at rune boundaries.
+// Each iteration consumes at least one rune, even below a single glyph's width.
 func (p *page) wrap(s string, size unit.Sp, w int) []string {
 	var lines []string
 	cur := ""
 	for _, word := range strings.Fields(s) {
+		if _, sz := p.c.labelW(p.gtx, word, size, p.col.dim, font.Normal); sz.X > w && w > 0 {
+			if cur != "" {
+				lines = append(lines, cur)
+				cur = ""
+			}
+			runes := []rune(word)
+			for len(runes) > 0 {
+				lo, hi := 1, len(runes)
+				for lo < hi {
+					mid := (lo + hi + 1) / 2
+					_, sz := p.c.labelW(p.gtx, string(runes[:mid]), size, p.col.dim, font.Normal)
+					if sz.X <= w {
+						lo = mid
+					} else {
+						hi = mid - 1
+					}
+				}
+				part := string(runes[:lo])
+				runes = runes[lo:]
+				if len(runes) > 0 {
+					lines = append(lines, part)
+				} else {
+					cur = part
+				}
+			}
+			continue
+		}
 		try := word
 		if cur != "" {
 			try = cur + " " + word
@@ -811,12 +840,28 @@ func (p *page) pane(r image.Rectangle, sec settingsSection, win *window) int {
 	}
 	y := p.heading(r, sec.title, sec.hint)
 	if sec.actions != nil {
-		p.headerActions(r, sec.actions(win))
+		y = p.headerActions(r, sec.actions(win), y)
 	}
 	if sec.rows == nil {
 		return y
 	}
 	return p.rows(r, y, sec.rows(win))
+}
+
+// textBlock lays out wrapped copy and reports its actual bounds.
+func (p *page) textBlock(text string, size unit.Sp, col color.NRGBA, weight font.Weight, width int) (op.CallOp, image.Point) {
+	if _, sz := p.c.labelW(p.gtx, text, size, col, weight); sz.X <= width {
+		return p.textW(text, size, col, weight)
+	}
+	rec := op.Record(p.gtx.Ops)
+	var bounds image.Point
+	for _, line := range p.wrap(text, size, max(width, 1)) {
+		call, sz := p.textW(line, size, col, weight)
+		place(p.gtx.Ops, call, image.Pt(0, bounds.Y))
+		bounds.X = max(bounds.X, sz.X)
+		bounds.Y += sz.Y
+	}
+	return rec.Stop(), bounds
 }
 
 // heading draws a section's title and hint and returns where its rows start.
@@ -827,7 +872,7 @@ func (p *page) heading(r image.Rectangle, title, hint string) int {
 	place(ops, call, image.Pt(r.Min.X, y))
 	y += size.Y + gtx.Dp(2)
 	if hint != "" {
-		call, size = p.text(hint, 13, col.muted)
+		call, size = p.textBlock(hint, 13, col.muted, font.Normal, r.Dx())
 		place(ops, call, image.Pt(r.Min.X, y))
 		y += size.Y
 	}
@@ -835,17 +880,27 @@ func (p *page) heading(r image.Rectangle, title, hint string) int {
 }
 
 // headerActions draws buttons at the right of a section's heading.
-func (p *page) headerActions(r image.Rectangle, cs []ctrl) {
+func (p *page) headerActions(r image.Rectangle, cs []ctrl, contentY int) int {
 	gtx, ops := p.gtx, p.gtx.Ops
 	x := r.Max.X
+	stacked := r.Dx() < gtx.Dp(480)
+	height := 0
 	for i := len(cs) - 1; i >= 0; i-- {
 		call, size, from := p.ctrl(cs[i], 0)
 		x -= size.X
 		at := image.Pt(x, r.Min.Y+gtx.Dp(8))
+		if stacked {
+			at = image.Pt(r.Min.X, contentY)
+			height = max(height, size.Y)
+		}
 		p.st.shift(from, len(p.st.controls), at)
 		place(ops, call, at)
 		x -= gtx.Dp(8)
 	}
+	if stacked && height > 0 {
+		return contentY + height + gtx.Dp(16)
+	}
+	return contentY
 }
 
 // rows draws rows from y in r and returns where the next would start: each
@@ -888,7 +943,7 @@ func (p *page) row(r image.Rectangle, y int, row settingRow) int {
 		tc, tsz = p.iconTile(row.icon)
 		lx += tsz.X + gtx.Dp(14)
 	}
-	lc, ls := p.textW(row.label, 13.5, col.title, font.SemiBold)
+	lc, ls := p.textBlock(row.label, 13.5, col.title, font.SemiBold, max(r.Max.X-lx, 1))
 	var hc op.CallOp
 	var hs image.Point
 	type text struct {
@@ -918,6 +973,17 @@ func (p *page) row(r image.Rectangle, y int, row settingRow) int {
 		w, h = size.X, size.Y
 	}
 	for _, k := range row.ctrls {
+		if k.kind == ctlText {
+			width := k.width
+			if width <= 0 {
+				width = fieldWidth
+			}
+			scale := gtx.Metric.PxPerDp
+			if scale == 0 {
+				scale = 1
+			}
+			k.width = min(width, max(int(float32(r.Max.X-lx)/scale), 1))
+		}
 		call, size, from := p.ctrl(k, 0)
 		cs = append(cs, laid{call, size, from, len(p.st.controls)})
 		if w > 0 {
@@ -945,18 +1011,10 @@ func (p *page) row(r image.Rectangle, y int, row settingRow) int {
 		hc, hs = p.fitMonoHint(row.hint, max(r.Dx(), 0))
 	case row.hint != "":
 		room := r.Dx()
-		if w > 0 {
+		if w > 0 && room-w-2*gap > gtx.Dp(160) {
 			room -= w + 2*gap
 		}
-		if _, full := p.c.labelW(gtx, row.hint, 12, col.muted, font.Normal); full.X > room && room > gtx.Dp(160) {
-			for _, l := range p.wrap(row.hint, 12, room) {
-				call, size := p.text(l, 12, col.muted)
-				extra = append(extra, text{call, size})
-				extraH += size.Y
-			}
-		} else {
-			hc, hs = p.text(row.hint, 12, col.muted)
-		}
+		hc, hs = p.textBlock(row.hint, 12, col.muted, font.Normal, room)
 	}
 	labelH := ls.Y + extraH + hs.Y
 	labelW := max(ls.X, hs.X)

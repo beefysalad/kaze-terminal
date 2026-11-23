@@ -4,6 +4,17 @@ Last updated: 2026-11-23, spaces and tabs rework finished on `feat/spaces-tabs` 
 
 ## Where things stand
 
+**Floating Settings sheet: built on `feat/settings-sheet`, not merged or released (2026-11-23).**
+Settings now floats over the running terminal and its dock, with a theme-aware dimmed backdrop,
+rounded border and shadow; below 900 x 680 dp it fills the window. Escape and backdrop clicks dismiss
+it without reaching the terminal, and focus returns to the original terminal or docked member.
+All six sections, including the workspace editor, were checked at sheet width and the narrow fallback;
+headless Midnight and Washi captures were inspected. The overlay adds zero allocations and no idle
+wakeups; the existing settings content still allocates, so the spec's zero-total-allocation goal is
+not met. Evidence and remaining concerns: `.superpowers/sdd/settings-sheet/report.md`.
+Owner checks: real Mac and Windows windows, a real keyboard Escape, and resize while open.
+No version bump, lander, changelog, push or release.
+
 **Spaces and tabs rework: finished on `feat/spaces-tabs`, not merged, no release yet (2026-11-23).**
 Spec `docs/superpowers/specs/2026-11-23-kaze-spaces-tabs-design.md`. The sidebar now lists spaces (one
 per repo, plus Shell) instead of one row per session, and an Agents section groups the running agent

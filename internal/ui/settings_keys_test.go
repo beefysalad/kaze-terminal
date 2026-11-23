@@ -455,7 +455,8 @@ func TestEditingOff(t *testing.T) {
 		if !strings.HasPrefix(win.set.keysErr, c.want) {
 			t.Fatalf("%q: hint %q, want %q", c.cfg, win.set.keysErr, c.want)
 		}
-		if !strings.Contains(flatText(win), flat(win.set.keysErr)) {
+		compact := func(s string) string { return strings.Join(strings.Fields(s), "") }
+		if !strings.Contains(compact(strings.Join(win.set.texts, "")), compact(win.set.keysErr)) {
 			t.Fatalf("%q: the page does not show %q:\n%s", c.cfg, win.set.keysErr, pageText(win))
 		}
 		clickKeys(t, win, r, "find")
