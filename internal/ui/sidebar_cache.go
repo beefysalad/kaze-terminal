@@ -33,7 +33,7 @@ type sideDrawKey struct {
 	hoverSpace           string
 	hoverBtn             sideBtn
 	filterOpen           bool
-	ages                 uint64 // the shown agent ages, so a minute turning rebuilds the ops
+	ages                 uint64 // the shown agent ages: the text refreshes on the next frame that runs after a minute turns (no timer wakes an idle window)
 	launchVersion        uint64
 	launcher             bool
 	size                 image.Point

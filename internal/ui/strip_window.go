@@ -251,6 +251,9 @@ func (win *window) newTabInSpace() {
 func (win *window) drawStrip(gtx layout.Context, r image.Rectangle) {
 	s := &win.strip
 	s.rect = r
+	if win.mgr != nil && win.side.renaming != 0 && win.mgr.Lookup(win.side.renaming) == nil {
+		win.endRename(false) // its tab closed; an empty strip below would skip the check
+	}
 	if r.Empty() || win.mgr == nil {
 		s.lay, s.layOK, s.keyOK = tabStripLayout{}, false, false
 		s.hover, s.hoverID = hitNone, 0
@@ -353,7 +356,7 @@ func (c *chrome) layoutStrip(gtx layout.Context, m sideModel, lay tabStripLayout
 	paint.FillShape(ops, th.Chrome, clip.Rect(image.Rectangle{Max: size}).Op())
 	paint.FillShape(ops, th.Border, clip.Rect(image.Rect(0, size.Y-1, size.X, size.Y)).Op())
 
-	inset, top, rad, gap := gtx.Dp(1), gtx.Dp(4), gtx.Dp(9), gtx.Dp(8)
+	inset, top, rad, gap := gtx.Dp(1), gtx.Dp(stripTopDp), gtx.Dp(9), gtx.Dp(8)
 	logoPx, dot := gtx.Dp(14), gtx.Dp(7)
 	cl := clip.Rect(image.Rect(0, 0, lay.ViewW, size.Y)).Push(ops)
 	for _, t := range lay.Tabs {

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"gioui.org/io/event"
 	"gioui.org/io/input"
 	"gioui.org/io/pointer"
 
@@ -174,5 +175,26 @@ func TestStripUnchangedFramesAllocateNothingAndWakeNothing(t *testing.T) {
 	}
 	if win.strip.draws == 0 || win.strip.draws > 3 {
 		t.Fatalf("strip built its ops %d times for an unchanged scene", win.strip.draws)
+	}
+}
+
+// A rename must end with its tab, even when the strip is gone because the window
+// has no tabs left (the early return in drawStrip must not skip the cleanup).
+func TestRenameEndsWhenItsOnlyTabCloses(t *testing.T) {
+	win, _ := sideWindow(t, true)
+	a := openIn(t, win, osPath("/code/alpha/a"))
+	r := new(input.Router)
+	twoFrames(t, win, r)
+	win.startRename(a.ID)
+	if win.side.renaming != a.ID {
+		t.Fatalf("setup: renaming = %d, want %d", win.side.renaming, a.ID)
+	}
+	win.closeTab(a.ID)
+	sideFrame(t, win, r)
+	if win.side.renaming != 0 {
+		t.Fatalf("renaming = %d after its tab closed, want 0", win.side.renaming)
+	}
+	if win.focusTarget() == event.Tag(&win.side.ren) {
+		t.Fatal("the keyboard is still on the rename editor of a closed tab")
 	}
 }

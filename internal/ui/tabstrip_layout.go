@@ -9,6 +9,7 @@ import (
 // Tab strip metrics in dp (see the spaces and tabs design).
 const (
 	stripHeightDp = 36
+	stripTopDp    = 4 // the gap above the tab bodies
 	stripTabMinDp = 120
 	stripTabMaxDp = 230
 	stripCloseDp  = 18
@@ -17,12 +18,12 @@ const (
 )
 
 // stripMetrics holds the strip sizes in pixels.
-type stripMetrics struct{ Height, TabMin, TabMax, Close, Plus, ClosePad int }
+type stripMetrics struct{ Height, TabMin, TabMax, Close, Plus, ClosePad, Top int }
 
 // newStripMetrics converts the dp sizes at pxPerDp pixels per dp.
 func newStripMetrics(pxPerDp float32) stripMetrics {
 	c := func(dp int) int { return int(float32(dp)*pxPerDp + 0.5) }
-	return stripMetrics{c(stripHeightDp), c(stripTabMinDp), c(stripTabMaxDp), c(stripCloseDp), c(stripPlusDp), c(stripClosePad)}
+	return stripMetrics{c(stripHeightDp), c(stripTabMinDp), c(stripTabMaxDp), c(stripCloseDp), c(stripPlusDp), c(stripClosePad), c(stripTopDp)}
 }
 
 // stripTab is one tab's rects, relative to the strip's top-left, scroll applied.
@@ -116,7 +117,7 @@ func layoutTabStrip(m stripMetrics, width int, ids []tabs.TabID, active tabs.Tab
 	}
 	l.Scroll = scroll
 	l.Tabs = make([]stripTab, n)
-	cy := (m.Height - m.Close) / 2
+	cy := (m.Top + m.Height - m.Close) / 2 // centred on the tab body, which starts Top below the strip
 	for i, id := range ids {
 		x := i*tw - scroll
 		r := image.Rect(x, 0, x+tw, m.Height)

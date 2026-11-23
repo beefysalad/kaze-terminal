@@ -157,3 +157,13 @@ func TestStripScaleAndBounds(t *testing.T) {
 		t.Fatal("many tabs")
 	}
 }
+
+// The close hit rect is centred on the line the glyph is drawn on: the middle of
+// the tab body, which starts stripTopDp below the strip's top.
+func TestStripCloseIsCentredOnTheTabBody(t *testing.T) {
+	l := layoutTabStrip(m1, 1000, ids(1), 1, 0)
+	c := l.Tabs[0].Close
+	if got, want := c.Min.Y+c.Dy()/2, (stripTopDp+stripHeightDp)/2; got != want {
+		t.Fatalf("close centre y = %d, want %d (tab body middle)", got, want)
+	}
+}
