@@ -94,7 +94,11 @@ func openMember(t *testing.T, win *window, title string) *tabs.Tab {
 	return tab
 }
 
-func sideFrame(t *testing.T, win *window, r *input.Router) { sizedFrame(t, win, r, 1000, 600) }
+// sideFrame is one frame at the usual test size: 1000 x 600 plus the tab strip,
+// so the terminal area is the one these tests were written against.
+func sideFrame(t *testing.T, win *window, r *input.Router) {
+	sizedFrame(t, win, r, 1000, 600+stripHeightDp)
+}
 
 // sidePt is a sidebar-local point in window pixels.
 func sidePt(win *window, p image.Point) f32.Point {
@@ -207,17 +211,20 @@ func TestNextPrevFollowSidebarOrder(t *testing.T) {
 	c := openIn(t, win, osPath("/code/X/c"))
 	win.mgr.SetActive(a.ID)
 	ctrlTab := key.Event{Name: key.NameTab, Modifiers: key.ModCtrl, State: key.Press}
-	want := []tabs.TabID{c.ID, b.ID, a.ID}
+	// The tab strip shows one space: a and c are space X, b is the Shell space.
+	// Next and prev wrap inside the shown space; members are skipped.
+	want := []tabs.TabID{c.ID, a.ID, c.ID}
 	for i, w := range want {
 		win.route(layout.Context{}, []event.Event{ctrlTab}, 8, 16)
 		if got := win.mgr.Active().ID; got != w {
-			t.Fatalf("Ctrl+Tab %d went to %d, want %d (order a, c, b; members skipped)", i+1, got, w)
+			t.Fatalf("Ctrl+Tab %d went to %d, want %d (a, c wrap inside space X; members skipped)", i+1, got, w)
 		}
 	}
 	win.runShortcut(layout.Context{}, actPrevTab)
-	if got := win.mgr.Active().ID; got != b.ID {
-		t.Fatalf("prev from a went to %d, want b (%d)", got, b.ID)
+	if got := win.mgr.Active().ID; got != a.ID {
+		t.Fatalf("prev from c went to %d, want a (%d)", got, a.ID)
 	}
+	_ = b
 
 	// Settings sits at the start of the order while open, as before.
 	win.openSettings()
@@ -390,7 +397,7 @@ func TestMacHasTheSharedTitleBar(t *testing.T) {
 	if win.bar.Toggle.Empty() || win.bar.Gear.Empty() || win.bar.Buttons[0] != (image.Rectangle{}) {
 		t.Fatalf("mac bar %+v", win.bar)
 	}
-	if win.side.at != image.Pt(0, 42) || win.gridMin.Y != 42+4 {
+	if win.side.at != image.Pt(0, 42) || win.gridMin.Y != 42+stripHeightDp+4 {
 		t.Fatalf("sidebar at %v, grid at %v", win.side.at, win.gridMin)
 	}
 	click(win, win.bar.Gear)
@@ -428,7 +435,7 @@ func TestWindowsBarHasTheToggleAndGear(t *testing.T) {
 	if !(b.Mark.Max.X <= b.Toggle.Min.X && b.Toggle.Max.X <= b.Search.Min.X && b.Gear.Max.X <= b.Buttons[0].Min.X) {
 		t.Fatalf("bar out of order: %+v", b)
 	}
-	if win.side.at != image.Pt(0, 42) || win.gridMin != image.Pt(260+8, 42+4) {
+	if win.side.at != image.Pt(0, 42) || win.gridMin != image.Pt(260+8, 42+stripHeightDp+4) {
 		t.Fatalf("sidebar at %v, grid at %v", win.side.at, win.gridMin)
 	}
 }

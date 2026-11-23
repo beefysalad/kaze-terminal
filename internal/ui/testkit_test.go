@@ -44,7 +44,7 @@ func twoFrames(t *testing.T, win *window, r *input.Router) {
 // frameAt runs one 1000x600 frame at now.
 func frameAt(t *testing.T, win *window, r *input.Router, now time.Time) {
 	t.Helper()
-	gtx := pageContext(1000, 600)
+	gtx := pageContext(1000, 600+stripHeightDp) // plus the tab strip, as sideFrame
 	gtx.Source, gtx.Now = r.Source(), now
 	if err := win.frame(gtx); err != nil {
 		t.Fatal(err)

@@ -36,7 +36,7 @@ func TestDockMemberGetsPanelGrid(t *testing.T) {
 		t.Fatalf("member pty %v, want the panel body's %v", got, want)
 	}
 	cw, ch := win.rend.CellSize()
-	top := image.Rect(panel.Min.X, 42, panel.Max.X, panel.Min.Y)
+	top := image.Rect(panel.Min.X, win.strip.rect.Max.Y, panel.Max.X, panel.Min.Y) // under the bar and the tab strip
 	c, rows := gridSize(top.Dx()-16, top.Dy()-8, cw, ch)
 	if got := ptyOf(st, 0).lastSize(); got != [2]int{c, rows} {
 		t.Fatalf("session pty %v, want the area above %v", got, [2]int{c, rows})

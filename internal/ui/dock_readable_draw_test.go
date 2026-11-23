@@ -645,7 +645,7 @@ func TestDiffRedrawnOnThemeAndWidth(t *testing.T) {
 	sizedFrame(t, win, r, 1200, 600)
 	sizedFrame(t, win, r, 1200, 600)
 	again("width")
-	gtx := pageContext(1200, 600)
+	gtx := pageContext(1200, 600+2*stripHeightDp) // at 2x the tab strip is twice as tall
 	gtx.Source, gtx.Now = r.Source(), time.Unix(1000, 0)
 	gtx.Metric = unit.Metric{PxPerDp: 2, PxPerSp: 2}
 	if err := win.frame(gtx); err != nil {
