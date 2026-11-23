@@ -3,6 +3,7 @@ package ui
 import (
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/beefysalad/kaze-terminal/internal/subagents"
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
@@ -20,6 +21,7 @@ type sideRow struct {
 	Claude                bool // Claude Code has reported from this tab
 	Add, Del              int  // lines added and removed in the folder's repo
 	Mark                  mark
+	Since                 time.Time            // when the agent's current turn began; zero when idle
 	Agents                []sideAgent          // its tray's lines; empty while folded
 	Hidden                subagents.TrayCounts // tray agents past the lines, by state
 	AgentCount            int                  // running and waiting, for the group chip
@@ -143,6 +145,7 @@ func buildSide(in sideInput) sideModel {
 			Running: a.running,
 			Claude:  a.claude,
 			Mark:    in.Mark(t.ID),
+			Since:   a.since,
 		}
 		row.Detail = row.Branch
 		if loc.repo == "" {
