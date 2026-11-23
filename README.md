@@ -10,10 +10,10 @@
   <em>Light, fast, and out of the way.</em>
 </p>
 
-kaze is my personal terminal: a small, fast terminal with a session sidebar, written in Go with
+kaze is my personal terminal: a small, fast terminal with project spaces and tabs, written in Go with
 [Gio](https://gioui.org). I built it for working in [Claude Code](https://claude.com/claude-code)
-all day, so it does a few things well (a sidebar of sessions, fast redraws, Japanese text, Claude Code's
-symbols and colour emoji) and leaves out most of what a full terminal suite has. It has a small settings page for
+all day, so it does a few things well (project spaces, fast redraws, Japanese text, Claude Code's
+symbols and colour emoji) and leaves out most of what a full terminal suite has. Settings floats over the live terminal for
 the everyday choices, and everything it changes lives in one config file you can also edit by hand.
 
 ## Why "kaze"
@@ -25,7 +25,7 @@ never in the way.
   four tabs open) and its memory stays flat.
 - **Fast:** only the rows that changed are redrawn. Replaying a Claude Code reply as it streams,
   99% of frames took 5.1ms or less to draw, well inside the 16.7ms a 60Hz screen allows.
-- **Out of the way:** a sidebar of sessions, a nudge when a Claude Code session needs you or is done, and not
+- **Out of the way:** project spaces and tabs, a nudge when a Claude Code session needs you or is done, and not
   much else.
 
 These numbers were measured on Windows; the details are in
@@ -237,47 +237,24 @@ of that pane. In a full-screen program (vim, htop) it searches the program's scr
 
 ## The sidebar
 
-Sessions are listed down the left side, in place of a tab strip.
+The sidebar lists spaces, one per project plus a Shell space. The tab strip sits above the terminal.
 
-- **Groups:** sessions in the same git repo sit under one header, and worktrees count as the
-  same repo. The project you are in is marked by a thin accent rail down the left edge, from its
-  header to its last row and agent tray, with its name in bold, alongside the selected session's
-  highlight. That project context stays visible
-  in Settings, documents and while a docked member has the keyboard. Groups start open. Click a header to fold or unfold
-  it. A folded header shows an amber "N waiting" when a session in it needs you.
-- **Rows:** two lines: state dot, agent logo and name with status on the right;
-  branch and `+N −M` below. Linked worktrees show their folder and branch unless
-  the folder already ends in the branch's slug. Outside a repo, the second line
-  shows the shortened folder. Hover for ×, or middle-click to close.
-  - **Agent:** Claude and Codex have their own logos. Hooks or foreground-program
-    detection identify the agent. Normal local Codex launches inside Kaze use
-    `--no-daemon` automatically so each tab keeps its own hooks.
-  - **Status:** `needs you`, `done`, the active subagent count, then `running`, in
-    that order. A session with subagents shows its tray's fold control (`N agents ⌄`) there
-    instead, and its dot keeps the state. Running uses a closed ring with a bright core, drawn still
-    without animation frames.
-  - **Name:** your Kaze rename, then the last slash command's first argument,
-    then the active agent's title without its leading status symbol (a spinner frame such as
-    `✳` or `◐`). Otherwise Kaze
-    uses a folder name that differs from the repo, or the program's name.
-    Linked worktree folder names appear only on the second line. Command arguments
-    keep their name after the agent exits; old agent titles do not.
-  - **Rename:** double-click the title. Enter saves, Esc cancels, and blank
-    returns to the name rule. Workspace members keep their fixed names.
-  - **Line counts:** `+N −M` compares the folder with `HEAD`, on prompt/hook
-    events, with a two-second background Git limit and no index refresh.
-- **Filter:** the "Filter sessions…" field at the top. Click it to type. Typing narrows the list
-  by title, folder, branch and command, and folded groups open while you filter. Enter shows the first
-  match (on an empty field it only gives the keyboard back). Esc clears the field and gives the
-  keyboard back to the terminal. Switching or opening a session, opening Settings or hiding the
-  sidebar also gives the keyboard back and keeps the text.
+- **Spaces:** select a space to return to its last used tab. The strip shows only that space's tabs.
+  Its + opens a new tab in the selected space's folder. Double-click a tab to rename it;
+  Enter saves and Esc cancels. Close it with its close button or your usual shortcut.
+- **Agents:** a separate section groups agent sessions as Needs you, Working and Idle.
+  Click an agent to jump to its tab. Claude uses the Claude Code pixel mascot; Codex has its own logo.
+- **Header:** use + to open a session or the magnifier to open search. Cmd/Ctrl+K stays unchanged
+  (the default Windows palette shortcut is Ctrl+Shift+K).
+- **Simpler rows:** sidebar rows no longer show line counts or a subagent tray.
+  Read subagents in the dock panel or agents board; line changes remain in the status bar.
 - **Next waiting:** Cmd+J / Ctrl+Shift+J and its palette action open the newest alert
   card's session while cards are showing. Without cards they jump to the next session
   that needs you, wrapping around. With none, the status bar says "Nothing is waiting on you."
 - **Workspaces:** a section at the bottom lists each running workspace (see Workspaces below).
 - **Left or right:** Settings, Appearance, Sidebar, Side puts it on the left (the default) or the
   right edge of the window, saved as `sidebar_side`. The palette has "Sidebar on the left" and
-  "Sidebar on the right" too. On the right, the title bar's toggle, + and buttons sit over it.
+  "Sidebar on the right" too. The title bar's sidebar controls move with it.
 - **Full, rail, hidden:** the sidebar toggle (Ctrl+Shift+B, Cmd+B on macOS) steps through the full
   sidebar, a 52 dp rail and hidden, saved as `sidebar_mode` (Settings, Appearance, Sidebar, Width
   too). The rail shows one tile per session with its agent and its state, a short repo label per
@@ -285,14 +262,10 @@ Sessions are listed down the left side, in place of a tab strip.
   open the session, middle-click to close it. The rail has no filter or rename; switch back to full
   for those. Below 560 dp of window width a full sidebar shows as the rail, and below 300 dp it
   hides, without saving either.
-- **Title bar:** Kaze draws one title bar, laid out the same on macOS and Windows. On the left,
-  over the sidebar: the window buttons on macOS (the real traffic lights) or the K mark on Windows,
-  the sidebar toggle and **+** for a new session. With the sidebar on the right, that part moves to
-  the right edge over it. Then the session you're in (repo, title, command
-  and its state), a search field that opens the palette, and on the right Agents
-  (with a badge) and Settings; on Windows, minimize, maximize and close follow. Drag any
-  empty part of it to move the window; double-click it to zoom (macOS follows your setting) or
-  maximize. Hiding the sidebar leaves the title bar's buttons where they are.
+- **Title bar:** Kaze draws one title bar on macOS and Windows, with native traffic lights on
+  macOS and caption buttons on Windows. While the sidebar is open, the title bar drops its + and
+  search field; use the sidebar header instead. Agents and Settings stay in the title bar.
+  Drag empty space to move the window, or double-click to zoom or maximize.
 
 ## The status bar
 
@@ -382,18 +355,8 @@ in doubt, kaze matches each agent to its own prompt (the first message of its tr
 most 3 times and 64 KiB at a time, and only when two agents could be mixed up). A wrong early
 guess swaps; a name that has settled never moves.
 
-- **In the sidebar:** each session's subagents sit in a slim tray under its row, behind a thin
-  tree line. Each agent is one line: its state mark, type, task and how long it has run. A dot
-  inside a ring means running, an amber dot means it is waiting for your approval, a green dot
-  means done. Hover a line to see the step it is on now (for example `Grep authMiddleware in src`).
-  Finished ones leave the list at your next prompt.
-  - **Click a line** to open that agent's tab in the panel; click it again to hide the panel.
-  - **Three lines, then a chip:** a tray shows at most 3 agents, waiting ones first. The rest are
-    summed up in a chip such as "+17 more · 15 running, 2 done ⌄", with "N need you" in amber when
-    a hidden agent waits. When the sidebar is narrow the chip keeps "+N more" and its `⌄` and drops
-    the counts first. Click it to open the board filtered to that session.
-  - **Fold:** the row's "N agents ⌄" folds the whole tray ("N agents ›" brings it back). The count
-    turns amber when a folded tray holds an agent waiting on you.
+- **Finding subagents:** use the running-subagents text in the status bar or the agents board.
+  The sidebar tray has been removed.
 - **Agent panel:** click a subagent to open it as a tab in the panel docked under the terminal
   (click it again to hide the panel). Nothing covers the terminal; only that session's terminal gets shorter. Drag the line
   between them to any height; Kaze remembers it (`agent_panel_height` in `config.toml`). Under
@@ -522,8 +485,9 @@ skills you started show under Recent while kaze runs.
 
 ## Settings
 
-Open it with the gear button in the title bar or with Ctrl+, (Cmd+, on macOS). While it is open, a pinned Settings row sits at the top of the
-sidebar, and it closes with that row's ×. Its menu on the left has:
+Open it with the gear button in the title bar or with Ctrl+, (Cmd+, on macOS). Settings opens
+as a floating sheet over the live terminal and dock. Press Esc or click outside to close it and
+return focus to your terminal. In a small window it fills the window. Its menu on the left has:
 
 - **Appearance:** theme cards (each a small terminal in that theme's colors), a live preview,
   font size, line spacing, cursor shape and blinking.
@@ -594,7 +558,7 @@ not found**. It checks these handlers:
 | PreToolUse | `kaze notify tool --agent codex` |
 | SessionStart | `kaze notify session --agent codex` |
 
-SessionStart shows Codex on its sidebar row as soon as it opens. SubagentStart, SubagentStop and PreToolUse show Codex helpers in the sidebar, live panes and board, like Claude Code
+SessionStart shows Codex on its sidebar row as soon as it opens. SubagentStart, SubagentStop and PreToolUse show Codex helpers in the live panes and board, like Claude Code
 subagents (see Subagents). A helper is named after its `spawn_agent` task, and a helper that
 gets a follow-up turn shows as running again.
 
@@ -1120,6 +1084,7 @@ Done:
 - Editable shortcuts: change any of them in Settings > Shortcuts, or write `none` to drop one (built on `feat/shortcuts-edit`, ships in 0.31 with the palette redesign).
 - Find in the terminal and the docked tabs (#155): Ctrl+Shift+F or Cmd+F, every match marked, on the whole scrollback (built on `feat/find`, release next).
 - Next release (built on `feat/pane-reading`): the subagent panel and the board preview open edits inline with line numbers and code colours, fold quiet commands and open failures.
+- 0.44: project spaces in the sidebar, an Agents section, tabs above the terminal, the Claude Code pixel mascot, and Settings as a floating sheet over the live terminal. Sidebar subagent trays and row line counts removed (included with PR #210).
 - 0.43: the sidebar on the left or the right, and a slim rail of session tiles; Cmd+B cycles full, rail and hidden (PR #208).
 - 0.42: the purple folded K and terminal underscore across the app, macOS and Windows icons, website and README (PR #206).
 - 0.41.1: fixes a launch freeze on the Mac when notification permission was not yet allowed (PR #203). Native-notification callbacks now run off the AppKit main thread.
@@ -1155,7 +1120,7 @@ Done:
 - Plan 6a: the session sidebar, replacing the tab strip, with repo groups, a filter and the running workspaces.
 - Plan 6b: agent awareness, titles you can rename, line counts and the Next waiting shortcut.
 - 0.22: two-line session rows, retained sidebar drawing, a branch/worktree launcher and confirmed cleanup of Kaze-created worktrees (#101).
-- Subagents: each session's subagents in the sidebar, a live pane per subagent and the agents board (replaces Plan 2's child tabs).
+- Subagents: a live pane per subagent and the agents board (replaces Plan 2's child tabs); the sidebar tray was removed in 0.44.
 - 0.16: clickable links, Codex helpers alongside Claude Code subagents, and screenshot paste with Cmd+V.
 - 0.17: Claude and Codex logos on the sidebar rows as soon as an agent opens, and links drawn in blue.
 - Start folder (#77): choose where new plain tabs open in Settings > Workspaces > Startup.
