@@ -832,7 +832,7 @@ func (win *window) frame(gtx layout.Context) error {
 		area.Pop()
 	}
 	b := win.bar
-	for _, r := range []image.Rectangle{b.Toggle, b.Plus, b.Search, b.Agents, b.Gear, b.Buttons[0], b.Buttons[1], b.Buttons[2]} {
+	for _, r := range []image.Rectangle{b.Toggle, b.Search, b.Agents, b.Gear, b.Buttons[0], b.Buttons[1], b.Buttons[2]} {
 		if r.Empty() {
 			continue
 		}
@@ -1055,8 +1055,6 @@ func (win *window) captionEvent(e pointer.Event) {
 		win.toggleSidebar()
 	case capSearch:
 		win.openPalette()
-	case capPlus:
-		win.newTab()
 	case capAgents:
 		win.toggleBoard()
 	default:

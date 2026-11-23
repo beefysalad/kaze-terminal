@@ -158,6 +158,7 @@ func TestLosingFocusClearsCaptionHover(t *testing.T) {
 func TestClickingSearchOpensThePalette(t *testing.T) {
 	win, _ := sideWindow(t, true)
 	openIn(t, win, "")
+	win.setSideMode(sideRail) // a full sidebar's header holds the search
 	var r input.Router
 	sizedFrame(t, win, &r, 1200, 600)
 	if win.bar.Search.Empty() {

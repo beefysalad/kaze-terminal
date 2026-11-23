@@ -429,7 +429,7 @@ func TestWindowsBarHasTheToggleAndGear(t *testing.T) {
 	if b.Toggle.Empty() || b.Mark.Empty() || b.Gear.Empty() || len(b.Drag) == 0 {
 		t.Fatalf("bar %+v", b)
 	}
-	if !(b.Mark.Max.X <= b.Toggle.Min.X && b.Toggle.Max.X <= b.Search.Min.X && b.Gear.Max.X <= b.Buttons[0].Min.X) {
+	if !(b.Mark.Max.X <= b.Toggle.Min.X && b.Toggle.Max.X <= b.Agents.Min.X && b.Gear.Max.X <= b.Buttons[0].Min.X) {
 		t.Fatalf("bar out of order: %+v", b)
 	}
 	if win.side.at != image.Pt(0, 42) || win.gridMin != image.Pt(260+8, 42+stripHeightDp+4) {
@@ -488,7 +488,7 @@ func TestPlusOpensASessionAndMemberClickShowsIt(t *testing.T) {
 		t.Fatalf("member click: active %d, docked in %d; want it docked in %d", win.mgr.Active().ID, win.memberDeck(m.ID), a.ID)
 	}
 	n := len(win.mgr.Tabs())
-	click(win, win.bar.Plus) // + moved to the title bar
+	clickAt(t, win, &r, stripPoint(win, win.strip.lay.Plus)) // the strip's +
 	sideFrame(t, win, &r)
 	if len(win.mgr.Tabs()) != n+1 {
 		t.Fatalf("+ left %d tabs, want %d", len(win.mgr.Tabs()), n+1)
@@ -766,14 +766,16 @@ func TestMacTitleSearchOpensPalette(t *testing.T) {
 	win, _ := sideWindow(t, false)
 	openIn(t, win, "")
 	var r input.Router
-	for _, hide := range []bool{false, true} {
-		if hide {
-			win.toggleSidebar()
-		}
+	sideFrame(t, win, &r)
+	if !win.bar.Search.Empty() {
+		t.Fatalf("full sidebar: the bar keeps a search field %v", win.bar.Search)
+	}
+	for _, m := range []sideMode{sideRail, sideHidden} {
+		win.setSideMode(m)
 		sideFrame(t, win, &r)
 		click(win, win.bar.Search)
 		if !win.palette.open {
-			t.Fatalf("hidden=%v: the search field did not open the palette", hide)
+			t.Fatalf("mode %v: the search field did not open the palette", m)
 		}
 		win.closePalette()
 	}

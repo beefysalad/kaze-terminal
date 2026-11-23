@@ -159,9 +159,10 @@ func TestEmptyWindowTitleBarActions(t *testing.T) {
 	var r input.Router
 	sideFrame(t, win, &r)
 	sideFrame(t, win, &r)
-	clickAt(t, win, &r, centre(win.bar.Plus))
+	sideClick(win, &r, win.side.hits.plus, pointer.ButtonPrimary) // the sidebar header's +
+	sideFrame(t, win, &r)
 	if win.mgr.Active() == nil {
-		t.Fatal("title-bar New session did not work")
+		t.Fatal("sidebar New session did not work")
 	}
 	win.closeTab(win.mgr.Active().ID)
 	sideFrame(t, win, &r)

@@ -40,11 +40,8 @@ func TestTitleClicksReachActions(t *testing.T) {
 	openIn(t, win, "")
 	r := new(input.Router)
 	sideFrame(t, win, r)
-	n := len(win.mgr.Tabs())
-	click(win, win.bar.Plus)
-	if len(win.mgr.Tabs()) != n+1 {
-		t.Fatal("+ did not open a session")
-	}
+	win.setSideMode(sideRail) // a full sidebar's header holds the search
+	sideFrame(t, win, r)
 	click(win, win.bar.Agents)
 	if !win.board.open {
 		t.Fatal("Agents did not open the board")
@@ -81,7 +78,7 @@ func TestTitleBarDrawsInEveryTheme(t *testing.T) {
 			win.side.w = sidebarW // what the frame sets before it draws the bar
 			win.drawBar(barContext(1200), 42)
 			b := win.bar
-			for name, r := range map[string]image.Rectangle{"toggle": b.Toggle, "plus": b.Plus, "search": b.Search, "agents": b.Agents, "gear": b.Gear,
+			for name, r := range map[string]image.Rectangle{"toggle": b.Toggle, "agents": b.Agents, "gear": b.Gear,
 				"mark": b.Mark, "name": b.Word} {
 				if r.Empty() {
 					t.Fatalf("%s custom=%v: %s empty", th.Key, custom, name)
