@@ -24,8 +24,9 @@ const (
 // palAllocsSlash bounds the Skills scope on "/": 97 measured after the
 // final-review fixes (skill rows built once per scan, 230 before), then 106
 // once all UI text moved to JetBrains Mono (wider, so more rows are cut with
-// "…" each frame), plus a small margin.
-const palAllocsSlash = 112
+// "…" each frame), plus a small margin. 116 once the whole frame also draws
+// the tab strip and the spaces sidebar (114 measured on Windows CI, 2026-11-23).
+const palAllocsSlash = 116
 
 // palAllocScene is palWindow with five sessions (one needing you) and 40 fake
 // skills: 15 user, 9 devbox, 6 superpowers, 5 v3-gauntlet, 5 project.
