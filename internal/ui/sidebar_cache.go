@@ -10,7 +10,6 @@ import (
 	"gioui.org/op"
 	"gioui.org/text"
 	"gioui.org/unit"
-	"github.com/beefysalad/kaze-terminal/internal/subagents"
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
 	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
@@ -30,23 +29,25 @@ type sideDocInput struct {
 	doc     sideDoc
 }
 type sideDrawKey struct {
-	activeRepo            string
-	openAgent, hoverAgent subagents.Key
-	launchVersion         uint64
-	launcher              bool
-	size                  image.Point
-	metric                unit.Metric
-	locale                system.Locale
-	shown, hover, docked  tabs.TabID
-	renaming              tabs.TabID
-	doc, hoverDoc         docID
-	scroll, tipRoom       int
-	settings, settingsOn  bool
-	right                 bool
-	mode                  sideMode
-	theme                 theme.Chrome
-	shaper                *text.Shaper
-	generation            uint64
+	activeRepo, space    string
+	hoverSpace           string
+	hoverBtn             sideBtn
+	filterOpen           bool
+	ages                 uint64 // the shown agent ages: the text refreshes on the next frame that runs after a minute turns (no timer wakes an idle window)
+	launchVersion        uint64
+	launcher             bool
+	size                 image.Point
+	metric               unit.Metric
+	locale               system.Locale
+	shown, hover, docked tabs.TabID
+	doc, hoverDoc        docID
+	scroll, tipRoom      int
+	settings, settingsOn bool
+	right                bool
+	mode                 sideMode
+	theme                theme.Chrome
+	shaper               *text.Shaper
+	generation           uint64
 }
 type sideCache struct {
 	valid             bool
@@ -54,11 +55,11 @@ type sideCache struct {
 	docs              []sideDocInput
 	folded            map[string]bool
 	runFolded         map[uint64]bool
-	trayFolded        map[tabs.TabID]bool
 	filter, home, def string
 	revision          uint64
 	until             time.Time
 	base, model       sideModel
+	spaces            spaceModel // derived from base, for the tab strip and space navigation
 	order             []tabs.TabID
 	builds, draws     uint64
 	ops               op.Ops
@@ -109,8 +110,7 @@ func (win *window) cachedSide(now time.Time) sideModel {
 			dirty = true
 		}
 	}
-	if !maps.Equal(c.folded, s.folded) || !maps.Equal(c.runFolded, s.st.runFolded) ||
-		!maps.Equal(c.trayFolded, s.trayFolded) {
+	if !maps.Equal(c.folded, s.folded) || !maps.Equal(c.runFolded, s.st.runFolded) {
 		dirty = true
 	}
 	runs := win.curRuns()
@@ -128,9 +128,9 @@ func (win *window) cachedSide(now time.Time) sideModel {
 		c.base = buildSide(in)
 		c.base.Runs = cloneSideRuns(runs)
 		c.order = sessionOrder(c.base)
+		c.spaces = buildSpaces(c.base, 0)
 		c.folded = maps.Clone(s.folded)
 		c.runFolded = maps.Clone(s.st.runFolded)
-		c.trayFolded = maps.Clone(s.trayFolded)
 		c.docs = c.docs[:0]
 		for _, d := range win.docs.list {
 			c.docs = append(c.docs, sideDocInput{d.session, sideDoc{d.id, d.name, d.folder}})

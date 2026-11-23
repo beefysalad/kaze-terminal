@@ -228,6 +228,7 @@ type window struct {
 	dock       dockState                           // the docked agent panel; UI goroutine only
 	find       findState                           // the find bar; UI goroutine only
 	side       sideUI                              // the sidebar; UI goroutine only
+	strip      stripState                          // the tab strip over the terminal; UI goroutine only
 	wsp        wsPage                              // the Workspaces section: its list and the open draft; UI goroutine only
 	actEvery   bool                                // agent Activity shows every step, not the readable view (dock and board); UI goroutine only
 }
@@ -559,13 +560,16 @@ func (win *window) start(env []string, dir string) (ptyx.Session, error) {
 	return ptyx.Start(win.opt.Shell, cols, rows, env, dir)
 }
 
-func (win *window) newTab() {
+func (win *window) newTab() { win.newTabIn(win.plainStartDir()) }
+
+// newTabIn opens a tab whose shell starts in dir.
+func (win *window) newTabIn(dir string) {
 	win.hideDoc()
 	win.dropSideEdit()
 	win.hideSettings() // the new tab is shown
 	win.closeBoard()
 	win.wantFocus = true
-	if _, err := win.mgr.NewOpts(tabs.StartOpts{Dir: win.plainStartDir()}); err != nil {
+	if _, err := win.mgr.NewOpts(tabs.StartOpts{Dir: dir}); err != nil {
 		log.Printf("kaze: new tab: %v", err)
 		// A windowsgui build has no console, so the status bar is where this can be seen.
 		win.notice = "new tab failed: " + err.Error()
@@ -679,6 +683,15 @@ func (win *window) frame(gtx layout.Context) error {
 		termRect = image.Rect(0, barH, size.X-sw, bottom)
 	}
 	win.side.w = sideRect.Dx() // the title bar's lead strip follows this, even if a toggle lands mid-frame
+	// The tab strip takes the top of the terminal area, before the grid and the dock panel are fitted.
+	stripRect := image.Rectangle{}
+	if win.mgr == nil || !win.mgr.Empty() {
+		if h := min(newStripMetrics(gtx.Metric.PxPerDp).Height, termRect.Dy()); h > 0 {
+			stripRect = image.Rect(termRect.Min.X, termRect.Min.Y, termRect.Max.X, termRect.Min.Y+h)
+			termRect.Min.Y += h
+		}
+	}
+	win.strip.rect = stripRect
 	grid := image.Rect(termRect.Min.X+pad, termRect.Min.Y+pad/2, termRect.Max.X-pad, termRect.Max.Y-pad/2)
 	win.gridMin, win.gridRect = grid.Min, grid
 	cols, rows := gridSize(grid.Dx(), grid.Dy(), cw, ch)
@@ -725,6 +738,7 @@ func (win *window) frame(gtx layout.Context) error {
 		win.barEvents(gtx)
 		win.statusEvents(gtx)
 		win.sideEvents(gtx)
+		win.stripEvents(gtx)
 		win.filterEvents(gtx)
 		win.renameEvents(gtx)
 		win.toastEvents(gtx)
@@ -752,7 +766,6 @@ func (win *window) frame(gtx layout.Context) error {
 	list := win.mgr.Tabs()
 	win.pruneDocs(list)
 	win.pruneDock(list)
-	win.pruneTray(list)
 	win.pruneSels(list)
 	win.pruneLocs(list)
 	win.drainLocations()
@@ -819,7 +832,7 @@ func (win *window) frame(gtx layout.Context) error {
 		area.Pop()
 	}
 	b := win.bar
-	for _, r := range []image.Rectangle{b.Toggle, b.Plus, b.Search, b.Agents, b.Gear, b.Buttons[0], b.Buttons[1], b.Buttons[2]} {
+	for _, r := range []image.Rectangle{b.Toggle, b.Search, b.Agents, b.Gear, b.Buttons[0], b.Buttons[1], b.Buttons[2]} {
 		if r.Empty() {
 			continue
 		}
@@ -831,6 +844,7 @@ func (win *window) frame(gtx layout.Context) error {
 	runs := win.reuseSideRuns()
 	win.frameRuns = &runs
 	win.drawSide(gtx, sideRect)
+	win.drawStrip(gtx, stripRect)
 
 	if at, ok := win.docTick(gtx.Now); ok {
 		gtx.Execute(op.InvalidateCmd{At: at})
@@ -838,10 +852,7 @@ func (win *window) frame(gtx layout.Context) error {
 	if win.set.shown || win.board.open || win.docs.shown != 0 || active != nil {
 		win.empty.shown = false
 	}
-	if win.set.shown {
-		win.drawSettings(gtx, termRect) // the renderer is not laid out
-		win.wsr.hits = win.wsr.hits[:0]
-	} else if win.board.open {
+	if win.board.open {
 		win.drawBoard(gtx, termRect)
 		win.wsr.hits = win.wsr.hits[:0]
 	} else if d := win.shownDoc(); d != nil {
@@ -851,7 +862,7 @@ func (win *window) frame(gtx layout.Context) error {
 		win.drawEmpty(gtx, termRect)
 		win.wsr.hits = win.wsr.hits[:0]
 	} else {
-		win.rend.SetFocused(win.focused && !win.dockMemberKeys())
+		win.rend.SetFocused(win.focused && !win.set.shown && !win.dockMemberKeys())
 		win.drawTerminal(gtx, active, termRect, grid, &sel)
 		win.drawWsBanner(gtx, active, termRect) // after the terminal, so it takes the clicks it covers
 		win.drawShownDock(gtx)
@@ -888,6 +899,10 @@ func (win *window) frame(gtx layout.Context) error {
 	}
 	win.drawUsageCard(gtx) // over the terminal and toasts; takes no input
 	win.drawResourceCard(gtx)
+	if win.set.shown {
+		win.drawSettingsSheet(gtx, image.Rectangle{Max: size})
+		win.wsr.hits = win.wsr.hits[:0]
+	}
 	win.drawPalette(gtx, termRect) // last: it sits over everything, toasts included
 
 	if win.wantFocus {
@@ -1041,8 +1056,6 @@ func (win *window) captionEvent(e pointer.Event) {
 		win.toggleSidebar()
 	case capSearch:
 		win.openPalette()
-	case capPlus:
-		win.newTab()
 	case capAgents:
 		win.toggleBoard()
 	default:
@@ -1072,7 +1085,7 @@ func (win *window) focusTarget() event.Tag {
 	if win.palette.open {
 		return &win.palette.ed
 	}
-	if win.side.renaming != 0 && !win.side.hidden {
+	if win.side.renaming != 0 {
 		return &win.side.ren
 	}
 	if win.side.filtering && !win.side.hidden {

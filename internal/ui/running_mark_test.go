@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"gioui.org/gpu/headless"
+	"gioui.org/op"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"github.com/beefysalad/kaze-terminal/internal/theme"
@@ -65,7 +66,7 @@ func TestRunningMarkPixels(t *testing.T) {
 	}
 }
 
-func TestActiveProjectHeaderPaint(t *testing.T) {
+func TestSelectedSpaceLinePaint(t *testing.T) {
 	if os.Getenv("KAZE_RUNNING_RENDER_DIR") == "" {
 		t.Skip("set KAZE_RUNNING_RENDER_DIR for headless pixel verification")
 	}
@@ -78,7 +79,8 @@ func TestActiveProjectHeaderPaint(t *testing.T) {
 	capture := func(active string) *image.RGBA {
 		g := pageContext(260, 40)
 		paint.Fill(g.Ops, c.th.Chrome)
-		c.sideGroupHeader(g, sideGroup{Key: "repo", Name: "Project", Count: 1}, sideState{activeRepo: active}, image.Rect(8, 6, 252, 34))
+		h := sideHits{list: image.Rect(0, 0, 260, 40)}
+		c.spaceLine(g, &h, spaceEntry{Key: "repo", Name: "Project", Badge: 'P', Color: spacePalette[0], Count: 1}, sideState{space: active}, 3, op.CallOp{}, image.Point{})
 		if err := gpu.Frame(g.Ops); err != nil {
 			t.Fatal(err)
 		}
@@ -91,10 +93,10 @@ func TestActiveProjectHeaderPaint(t *testing.T) {
 	inactive := capture("")
 	active := capture("repo")
 	if active.RGBAAt(150, 12) == inactive.RGBAAt(150, 12) {
-		t.Fatal("active repository header is not tinted")
+		t.Fatal("the selected space line is not tinted")
 	}
 	unrelated := capture("different-repo")
 	if !bytes.Equal(unrelated.Pix, inactive.Pix) {
-		t.Fatal("another project highlighted this header")
+		t.Fatal("another space highlighted this line")
 	}
 }

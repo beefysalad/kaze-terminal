@@ -30,7 +30,7 @@ func TestTitleSameLayoutBothPlatforms(t *testing.T) {
 	mac, win := titleAt(1200, true, 248), titleAt(1200+3*46, false, 248)
 	for name, pair := range map[string][2]image.Rectangle{
 		"Search": {mac.Search, win.Search},
-		"Agents": {mac.Agents, win.Agents}, "Gear": {mac.Gear, win.Gear}, "Plus": {mac.Plus, win.Plus},
+		"Agents": {mac.Agents, win.Agents}, "Gear": {mac.Gear, win.Gear},
 	} {
 		if pair[0].Empty() || pair[0] != pair[1] {
 			t.Errorf("%s: mac %v windows %v", name, pair[0], pair[1])
@@ -43,12 +43,12 @@ func TestTitleSameLayoutBothPlatforms(t *testing.T) {
 
 func TestTitleLeadMatchesSidebar(t *testing.T) {
 	l := titleAt(1200, true, 248)
-	if l.Lead.Dx() != 248 || l.Plus.Max.X != 248-8 {
-		t.Fatalf("lead %v plus %v", l.Lead, l.Plus)
+	if l.Lead.Dx() != 248 {
+		t.Fatalf("lead %v", l.Lead)
 	}
 	h := titleAt(1200, true, 0)
-	if !h.Plus.Empty() || h.Lead.Max.X != h.Toggle.Max.X+8 {
-		t.Fatalf("hidden sidebar: lead %v toggle %v plus %v", h.Lead, h.Toggle, h.Plus)
+	if h.Lead.Max.X != h.Toggle.Max.X+8 {
+		t.Fatalf("hidden sidebar: lead %v toggle %v", h.Lead, h.Toggle)
 	}
 	if h.Crumb.Min.X > h.Lead.Max.X+14 {
 		t.Fatalf("crumb %v should start right after the lead %v", h.Crumb, h.Lead)
@@ -116,7 +116,7 @@ func TestTitleCrumbDropOrder(t *testing.T) {
 				t.Fatalf("%dpx: repo dropped before the command", w)
 			}
 		}
-		for name, r := range map[string]image.Rectangle{"toggle": l.Toggle, "plus": l.Plus, "search": l.Search, "agents": l.Agents, "gear": l.Gear} {
+		for name, r := range map[string]image.Rectangle{"toggle": l.Toggle, "search": l.Search, "agents": l.Agents, "gear": l.Gear} {
 			if r.Empty() {
 				t.Fatalf("%dpx: %s gone", w, name)
 			}
@@ -144,7 +144,7 @@ func TestTitleLongShortcutFits(t *testing.T) {
 func TestTitleDragCoversEmptySpace(t *testing.T) {
 	for _, mac := range []bool{true, false} {
 		l := titleAt(1200, mac, 248)
-		buttons := []image.Rectangle{l.Toggle, l.Plus, l.Search, l.Agents, l.Gear, l.Buttons[0], l.Buttons[1], l.Buttons[2]}
+		buttons := []image.Rectangle{l.Toggle, l.Search, l.Agents, l.Gear, l.Buttons[0], l.Buttons[1], l.Buttons[2]}
 		for x := 0; x < 1200; x++ {
 			p := image.Pt(x, 21)
 			inBtn, inDrag := false, false
@@ -192,7 +192,7 @@ func TestTitleHitLookup(t *testing.T) {
 	w := titleAt(1200, false, 248)
 	mid := func(r image.Rectangle) image.Point { return r.Min.Add(r.Size().Div(2)) }
 	for want, r := range map[captionButton]image.Rectangle{
-		capToggle: w.Toggle, capPlus: w.Plus, capSearch: w.Search,
+		capToggle: w.Toggle, capSearch: w.Search,
 		capAgents: w.Agents, capGear: w.Gear, capMinimize: w.Buttons[0], capMaximize: w.Buttons[1], capClose: w.Buttons[2],
 	} {
 		if got := w.at(mid(r)); got != want {

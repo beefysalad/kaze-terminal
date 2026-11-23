@@ -37,7 +37,7 @@ func TestRightSidebarMirrorsDividerAndAccent(t *testing.T) {
 		size := image.Pt(sidebarW, 400)
 		gtx := pageContext(size.X, size.Y)
 		c := newChrome()
-		h := c.layoutSidebar(gtx, twoGroupsOneLoose(), sideState{shown: 1, right: right}, size)
+		h := c.layoutSidebar(gtx, withSpaces(twoGroupsOneLoose()), sideState{space: "a", right: right}, size)
 		img := renderImage(t, gtx.Ops, size)
 		th := c.sideTheme()
 		border, inner := image.Pt(size.X-1, 200), image.Pt(0, 200)
@@ -48,13 +48,13 @@ func TestRightSidebarMirrorsDividerAndAccent(t *testing.T) {
 			t.Fatalf("right %v: border at %v is %v, outer edge %v is %v", right, border, img.RGBAAt(border.X, border.Y), inner, img.RGBAAt(inner.X, inner.Y))
 		}
 		var row image.Rectangle
-		for _, r := range h.rows {
-			if r.id == 1 {
+		for _, r := range h.spaces {
+			if r.key == "a" {
 				row = r.rect
 			}
 		}
 		if row.Empty() {
-			t.Fatalf("right %v: the shown row has no rect", right)
+			t.Fatalf("right %v: the selected space has no rect", right)
 		}
 		mid := (row.Min.Y + row.Max.Y) / 2
 		on, off := image.Pt(row.Min.X, mid), image.Pt(row.Max.X-1, mid)
@@ -69,18 +69,18 @@ func TestRightSidebarMirrorsDividerAndAccent(t *testing.T) {
 
 func TestRightSidebarClicksStillHit(t *testing.T) {
 	win, _ := sideWindow(t, true)
-	a := openIn(t, win, "")
-	b := openIn(t, win, "")
+	a := openIn(t, win, osPath("/code/alpha/x"))
+	b := openIn(t, win, osPath("/code/beta/x"))
 	win.mgr.SetActive(a.ID)
 	win.opt.Config.SidebarSide = "right"
 	var r input.Router
 	sideFrame(t, win, &r)
-	if len(win.side.hits.rows) < 2 {
-		t.Fatalf("%d rows", len(win.side.hits.rows))
+	if len(win.side.hits.spaces) < 2 {
+		t.Fatalf("%d spaces", len(win.side.hits.spaces))
 	}
-	hit := win.side.hits.rows[1]
-	if hit.id != b.ID {
-		t.Fatalf("second row is %d, want %d", hit.id, b.ID)
+	hit := win.side.hits.spaces[1]
+	if hit.key != "key-beta" {
+		t.Fatalf("second space is %q, want key-beta", hit.key)
 	}
 	p := hit.rect.Min.Add(hit.rect.Max).Div(2).Add(win.side.at)
 	clickAt(t, win, &r, p)

@@ -120,8 +120,8 @@ func drawCommands(p *page, r image.Rectangle, win *window) int {
 		place(ops, call, image.Pt(r.Min.X, y-gtx.Dp(22)))
 		y += size.Y
 	}
-	p.headerActions(r, []ctrl{{kind: ctlText, id: "cmd_filter", val: win.set.cmdFilter, placeholder: "Search shortcuts", width: 220,
-		set: func(s string) { win.set.cmdFilter = s }}})
+	y = p.headerActions(r, []ctrl{{kind: ctlText, id: "cmd_filter", val: win.set.cmdFilter, placeholder: "Search shortcuts", width: 220,
+		set: func(s string) { win.set.cmdFilter = s }}}, y)
 
 	q := strings.ToLower(strings.TrimSpace(win.set.cmdFilter))
 	match := func(r shortcutRow) bool {

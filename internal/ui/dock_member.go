@@ -42,7 +42,7 @@ func (win *window) drawDockMember(gtx layout.Context, m tabs.TabID, body image.R
 		rend.Release() // another member's strips: draw this one in full
 	}
 	win.dock.rendFor = m
-	rend.SetFocused(win.focused && win.dockMemberKeys())
+	rend.SetFocused(win.focused && !win.set.shown && win.dockMemberKeys())
 	grid := dockMemberGrid(win.dock.lastRect, gtx.Dp, gtx.Dp(8))
 	sel := win.checkSel(t)
 	g := clip.Rect(grid.Intersect(body)).Push(ops)

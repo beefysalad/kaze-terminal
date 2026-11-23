@@ -4,6 +4,7 @@ import (
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -164,8 +165,8 @@ func TestNarrowModeChangeClearsHover(t *testing.T) {
 func TestNarrowModeChangeRevealsShown(t *testing.T) {
 	win, _ := sideWindow(t, true)
 	var last *tabs.Tab
-	for range 30 {
-		last = openIn(t, win, "")
+	for i := range 30 { // a space each, so the full sidebar's list scrolls too
+		last = openIn(t, win, osPath("/code/r"+strconv.Itoa(i)+"/x"))
 	}
 	win.mgr.SetActive(last.ID)
 	var r input.Router
@@ -174,7 +175,12 @@ func TestNarrowModeChangeRevealsShown(t *testing.T) {
 		win.side.st.scroll = 0 // the other mode's scroll, which does not show the last session
 		sizedFrame(t, win, &r, w, 400)
 		sizedFrame(t, win, &r, w, 400)
-		h := rowHit(t, win, last.ID)
+		var h sideRowHit
+		if want == sideRail {
+			h = rowHit(t, win, last.ID)
+		} else {
+			h.rect = spaceRect(t, win, "key-r29").rect
+		}
 		if win.side.mode != want || !h.rect.In(win.side.hits.list) {
 			t.Fatalf("%dpx: mode %v, shown %v outside the list %v", w, win.side.mode, h.rect, win.side.hits.list)
 		}

@@ -19,7 +19,7 @@ func wsDraw(p *page, r image.Rectangle, win *window) int {
 	if d == nil {
 		win.wsp.flagged = win.wsp.flagged[:0]
 		if win.wsp.loadErr == "" && len(win.wsp.doc.Workspaces) > 0 {
-			p.headerActions(r, []ctrl{wsNewButton()})
+			y = p.headerActions(r, []ctrl{wsNewButton()}, y)
 		}
 		return p.rows(r, y, rows)
 	}

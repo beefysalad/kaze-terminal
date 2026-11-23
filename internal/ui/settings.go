@@ -8,6 +8,7 @@ import (
 	"runtime/debug"
 	"slices"
 	"strings"
+	"time"
 
 	"gioui.org/io/event"
 	"gioui.org/io/key"
@@ -23,8 +24,8 @@ import (
 	"github.com/beefysalad/kaze-terminal/internal/version"
 )
 
-// settingsState is the Settings page: a special tab with no shell behind it.
-// open means its row is in the sidebar; shown means it is in front instead of the terminal.
+// settingsState is the modal Settings sheet.
+// open keeps its sidebar entry; shown places the sheet over the terminal.
 type settingsState struct {
 	aboutCopy   string     // pending clipboard content, consumed by the About layout
 	cmdCopy     string     // the same for the Shortcuts section
@@ -43,17 +44,19 @@ type settingsState struct {
 	scroll, scrollMax int             // vertical pane position, clamped after each layout
 	scrollFocus       int             // last control revealed by keyboard focus
 	pane              image.Rectangle // visible content area for pointer hits
+	sheet             image.Rectangle // modal bounds; empty for direct page layouts
 	tag               int             // its address is the page's event tag
 
 	// Laid out each frame.
-	controls []control
-	nav      []navHit
-	texts    []string          // every string drawn, so tests can read the page
-	cards    []image.Rectangle // every card drawn this frame, for tests
-	about    aboutGeom         // the About page's layout this frame, for tests
-	footMark image.Rectangle   // where the sidebar footer drew the K, for tests
-	keyRows  []keyRowGeom      // the Shortcuts page's rows this frame, for tests
-	keyStrip keyStripGeom      // its message strip this frame, for tests
+	controls   []control
+	nav        []navHit
+	texts      []string          // every string drawn, so tests can read the page
+	cards      []image.Rectangle // every card drawn this frame, for tests
+	updateHero updHeroGeom
+	about      aboutGeom       // the About page's layout this frame, for tests
+	footMark   image.Rectangle // where the sidebar footer drew the K, for tests
+	keyRows    []keyRowGeom    // the Shortcuts page's rows this frame, for tests
+	keyStrip   keyStripGeom    // its message strip this frame, for tests
 	// memberFolderX is where each list member's folder starts, so tests can check the columns.
 	memberFolderX []int
 
@@ -233,6 +236,22 @@ func (win *window) cycleTab(d int) {
 	if len(order) == 0 {
 		return
 	}
+	// The tab strip's tabs are the selected space's: cycle among them. A space
+	// of one tab would trap the keyboard, so there the key goes to the
+	// neighbouring space's last used tab.
+	if a := win.mgr.Active(); a != nil {
+		win.cachedSide(time.Now())
+		if sp := win.side.cache.spaces.Spaces; spaceIndex(sp, a.ID) >= 0 {
+			i := spaceIndex(sp, a.ID)
+			switch {
+			case len(sp[i].Tabs) > 1:
+				order = sp[i].Tabs
+			case len(sp) > 1 && !win.set.open:
+				win.selectSession(win.spaceTarget(sp[(i+d+len(sp))%len(sp)]))
+				return
+			}
+		}
+	}
 	edge := func() tabs.TabID {
 		if d < 0 {
 			return order[len(order)-1]
@@ -325,6 +344,15 @@ func (win *window) settingsEvents(gtx layout.Context) {
 		}
 	}
 	win.fieldEvents(gtx)
+	if !win.set.shown {
+		// Register the returning keyboard target before the focus command.
+		// Gio otherwise drops it because the sheet owned this frame's filters.
+		for {
+			if _, ok := gtx.Event(key.FocusFilter{Target: win.focusTarget()}); !ok {
+				break
+			}
+		}
+	}
 	if edited {
 		// Typed text has nowhere to go here; drop Gio's copy so it cannot pile up.
 		gtx.Execute(key.SnippetCmd{Tag: tag})
@@ -335,7 +363,7 @@ func (win *window) settingsEvents(gtx layout.Context) {
 // settingsPointer handles a press on the page: a menu entry or a control.
 func (win *window) settingsPointer(e pointer.Event) {
 	if e.Kind == pointer.Scroll {
-		if !win.dialogShown() {
+		if !win.dialogShown() && (win.set.sheet.Empty() || e.Position.Round().In(win.set.pane)) {
 			win.set.scroll = min(max(win.set.scroll+int(e.Scroll.Y), 0), win.set.scrollMax)
 			win.w.Invalidate()
 		}
@@ -349,6 +377,10 @@ func (win *window) settingsPointer(e pointer.Event) {
 	win.stopRecording()  // a click anywhere cancels; one on a shortcut starts it again
 	win.set.editing = "" // a press the page gets is off every field's editor
 	p := e.Position.Round()
+	if !win.set.sheet.Empty() && !p.In(win.set.sheet) {
+		win.closeSettings()
+		return
+	}
 	for i, n := range win.set.nav {
 		if p.In(n.rect) {
 			win.set.navFocus, win.set.navIndex = true, i
@@ -382,6 +414,10 @@ func (win *window) settingsKey(gtx layout.Context, e key.Event) {
 		return
 	}
 	if e.State != key.Press {
+		return
+	}
+	if e.Name == key.NameEscape && e.Modifiers == 0 {
+		win.closeSettings()
 		return
 	}
 	if a, ok := win.km[input.Shortcut{Name: e.Name, Mods: e.Modifiers}]; ok {
@@ -663,11 +699,39 @@ func (p *page) text(s string, size unit.Sp, col color.NRGBA) (op.CallOp, image.P
 	return p.c.labelW(p.gtx, s, size, col, font.Normal)
 }
 
-// wrap breaks s into lines no wider than w, at spaces; a word wider than w gets its own line.
+// wrap breaks copy at spaces, splitting long paths at rune boundaries.
+// Each iteration consumes at least one rune, even below a single glyph's width.
 func (p *page) wrap(s string, size unit.Sp, w int) []string {
 	var lines []string
 	cur := ""
 	for _, word := range strings.Fields(s) {
+		if _, sz := p.c.labelW(p.gtx, word, size, p.col.dim, font.Normal); sz.X > w && w > 0 {
+			if cur != "" {
+				lines = append(lines, cur)
+				cur = ""
+			}
+			runes := []rune(word)
+			for len(runes) > 0 {
+				lo, hi := 1, len(runes)
+				for lo < hi {
+					mid := (lo + hi + 1) / 2
+					_, sz := p.c.labelW(p.gtx, string(runes[:mid]), size, p.col.dim, font.Normal)
+					if sz.X <= w {
+						lo = mid
+					} else {
+						hi = mid - 1
+					}
+				}
+				part := string(runes[:lo])
+				runes = runes[lo:]
+				if len(runes) > 0 {
+					lines = append(lines, part)
+				} else {
+					cur = part
+				}
+			}
+			continue
+		}
 		try := word
 		if cur != "" {
 			try = cur + " " + word
@@ -776,12 +840,28 @@ func (p *page) pane(r image.Rectangle, sec settingsSection, win *window) int {
 	}
 	y := p.heading(r, sec.title, sec.hint)
 	if sec.actions != nil {
-		p.headerActions(r, sec.actions(win))
+		y = p.headerActions(r, sec.actions(win), y)
 	}
 	if sec.rows == nil {
 		return y
 	}
 	return p.rows(r, y, sec.rows(win))
+}
+
+// textBlock lays out wrapped copy and reports its actual bounds.
+func (p *page) textBlock(text string, size unit.Sp, col color.NRGBA, weight font.Weight, width int) (op.CallOp, image.Point) {
+	if _, sz := p.c.labelW(p.gtx, text, size, col, weight); sz.X <= width {
+		return p.textW(text, size, col, weight)
+	}
+	rec := op.Record(p.gtx.Ops)
+	var bounds image.Point
+	for _, line := range p.wrap(text, size, max(width, 1)) {
+		call, sz := p.textW(line, size, col, weight)
+		place(p.gtx.Ops, call, image.Pt(0, bounds.Y))
+		bounds.X = max(bounds.X, sz.X)
+		bounds.Y += sz.Y
+	}
+	return rec.Stop(), bounds
 }
 
 // heading draws a section's title and hint and returns where its rows start.
@@ -792,7 +872,7 @@ func (p *page) heading(r image.Rectangle, title, hint string) int {
 	place(ops, call, image.Pt(r.Min.X, y))
 	y += size.Y + gtx.Dp(2)
 	if hint != "" {
-		call, size = p.text(hint, 13, col.muted)
+		call, size = p.textBlock(hint, 13, col.muted, font.Normal, r.Dx())
 		place(ops, call, image.Pt(r.Min.X, y))
 		y += size.Y
 	}
@@ -800,17 +880,27 @@ func (p *page) heading(r image.Rectangle, title, hint string) int {
 }
 
 // headerActions draws buttons at the right of a section's heading.
-func (p *page) headerActions(r image.Rectangle, cs []ctrl) {
+func (p *page) headerActions(r image.Rectangle, cs []ctrl, contentY int) int {
 	gtx, ops := p.gtx, p.gtx.Ops
 	x := r.Max.X
+	stacked := r.Dx() < gtx.Dp(480)
+	height := 0
 	for i := len(cs) - 1; i >= 0; i-- {
 		call, size, from := p.ctrl(cs[i], 0)
 		x -= size.X
 		at := image.Pt(x, r.Min.Y+gtx.Dp(8))
+		if stacked {
+			at = image.Pt(r.Min.X, contentY)
+			height = max(height, size.Y)
+		}
 		p.st.shift(from, len(p.st.controls), at)
 		place(ops, call, at)
 		x -= gtx.Dp(8)
 	}
+	if stacked && height > 0 {
+		return contentY + height + gtx.Dp(16)
+	}
+	return contentY
 }
 
 // rows draws rows from y in r and returns where the next would start: each
@@ -853,7 +943,7 @@ func (p *page) row(r image.Rectangle, y int, row settingRow) int {
 		tc, tsz = p.iconTile(row.icon)
 		lx += tsz.X + gtx.Dp(14)
 	}
-	lc, ls := p.textW(row.label, 13.5, col.title, font.SemiBold)
+	lc, ls := p.textBlock(row.label, 13.5, col.title, font.SemiBold, max(r.Max.X-lx, 1))
 	var hc op.CallOp
 	var hs image.Point
 	type text struct {
@@ -883,6 +973,17 @@ func (p *page) row(r image.Rectangle, y int, row settingRow) int {
 		w, h = size.X, size.Y
 	}
 	for _, k := range row.ctrls {
+		if k.kind == ctlText {
+			width := k.width
+			if width <= 0 {
+				width = fieldWidth
+			}
+			scale := gtx.Metric.PxPerDp
+			if scale == 0 {
+				scale = 1
+			}
+			k.width = min(width, max(int(float32(r.Max.X-lx)/scale), 1))
+		}
 		call, size, from := p.ctrl(k, 0)
 		cs = append(cs, laid{call, size, from, len(p.st.controls)})
 		if w > 0 {
@@ -910,18 +1011,10 @@ func (p *page) row(r image.Rectangle, y int, row settingRow) int {
 		hc, hs = p.fitMonoHint(row.hint, max(r.Dx(), 0))
 	case row.hint != "":
 		room := r.Dx()
-		if w > 0 {
+		if w > 0 && room-w-2*gap > gtx.Dp(160) {
 			room -= w + 2*gap
 		}
-		if _, full := p.c.labelW(gtx, row.hint, 12, col.muted, font.Normal); full.X > room && room > gtx.Dp(160) {
-			for _, l := range p.wrap(row.hint, 12, room) {
-				call, size := p.text(l, 12, col.muted)
-				extra = append(extra, text{call, size})
-				extraH += size.Y
-			}
-		} else {
-			hc, hs = p.text(row.hint, 12, col.muted)
-		}
+		hc, hs = p.textBlock(row.hint, 12, col.muted, font.Normal, room)
 	}
 	labelH := ls.Y + extraH + hs.Y
 	labelW := max(ls.X, hs.X)

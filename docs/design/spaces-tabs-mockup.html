@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kaze Spaces and Tabs</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+/* Mockup: spaces in the sidebar, the selected space's tabs on top. Built from kaze's shipped Midnight chrome (colours, state marks, agent logos, accent rail, branch line). Click a space or a tab. Dark only, one font. */
+:root {
+  --page:#07080c; --chrome:#0b0d12; --deep:#090b0f; --term:#0f1117; --raise:#151925; --line:#1d2230; --line2:#2a3142;
+  --fg:#e7e9f0; --white:#fff; --muted:#8a90a2; --status:#7d8394; --acc:#8b7bff; --accsoft:#2a2457; --acctext:#b9a6ff;
+  --branch:#62d39a; --done:#62d39a; --needs:#f2b84b; --del:#ff6b6b;
+  --mono:'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing:border-box; }
+body { background:var(--page); color:var(--fg); font:14px/1.55 var(--mono); margin:0; padding:36px 16px 64px; }
+.wrap { max-width:1180px; margin:0 auto; display:flex; flex-direction:column; gap:24px; }
+h1 { font-size:24px; margin:0 0 6px; }
+p.lead { margin:0; color:var(--muted); max-width:86ch; font-size:13px; }
+.scroller { overflow-x:auto; border-radius:14px; padding-bottom:4px; }
+svg { display:block; }
+.i14 { width:14px; height:14px; } .i16 { width:16px; height:16px; }
+
+.win { width:1120px; height:640px; background:var(--chrome); border:1px solid var(--line2); border-radius:14px; overflow:hidden;
+  display:grid; grid-template-columns:252px 1fr; grid-template-rows:1fr 28px; font-size:12.5px; box-shadow:0 24px 70px #000c; }
+
+/* ---- sidebar ---- */
+.side { grid-row:1 / 3; background:var(--chrome); border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; }
+.sbtop { height:44px; display:flex; align-items:center; gap:8px; padding:0 14px; flex:none; }
+.lights { display:flex; gap:7px; } .lights i { width:12px; height:12px; border-radius:50%; background:#2a2f3c; display:block; }
+.brand { display:flex; align-items:center; gap:7px; font-weight:700; color:var(--white); margin-left:8px; letter-spacing:.01em; }
+.brand svg { width:17px; height:17px; }
+.grow { flex:1; }
+.ib { width:28px; height:28px; display:grid; place-items:center; border-radius:7px; color:var(--status); flex:none; }
+.ib:hover { background:var(--raise); color:var(--fg); }
+.hd { display:flex; align-items:center; gap:2px; padding:8px 8px 6px 18px; height:40px; flex:none; }
+.hd .lbl { font-size:11px; letter-spacing:.08em; color:var(--status); text-transform:uppercase; }
+.hd .grow { flex:1; }
+.list { padding:2px 10px 8px; display:flex; flex-direction:column; gap:2px; overflow:hidden; min-height:0; }
+
+/* a space: group header + its agent rows, as the sidebar draws them */
+.spc { border-radius:9px; padding:8px 8px 8px 10px; position:relative; cursor:default; }
+.spc:hover { background:#0e1118; }
+.spc.on { background:var(--raise); }
+.spc.on::before { content:""; position:absolute; left:-10px; top:8px; bottom:8px; width:2px; background:var(--acc); border-radius:0 2px 2px 0; }
+.l1 { display:flex; align-items:center; gap:9px; min-width:0; }
+.av { width:20px; height:20px; border-radius:6px; display:grid; place-items:center; font-weight:700; font-size:11px; color:#0b0d12; flex:none; }
+.l1 .t { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#cfd2dc; font-weight:700; }
+.spc.on .l1 .t { color:var(--white); }
+.l1 .n { color:var(--status); font-size:11px; flex:none; } .l1 .n.w { color:var(--needs); }
+.l2 { display:flex; gap:8px; font-size:11.5px; padding:3px 0 0 29px; white-space:nowrap; overflow:hidden; }
+.l2 .br { color:var(--branch); overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.l2 .lc { margin-left:auto; flex:none; color:var(--status); } .l2 .lc b { color:var(--done); font-weight:400; } .l2 .lc i { color:var(--del); font-style:normal; }
+.tray { margin:5px 0 0 29px; padding-left:10px; position:relative; display:flex; flex-direction:column; }
+.tray::before { content:""; position:absolute; left:0; top:0; bottom:6px; width:1px; background:var(--line2); }
+.sub { display:flex; align-items:center; gap:7px; height:22px; font-size:11.5px; white-space:nowrap; overflow:hidden; color:#cfd2dc; }
+.sub .k { overflow:hidden; text-overflow:ellipsis; min-width:0; color:var(--status); flex:1; }
+.sub b { font-weight:400; color:var(--acctext); flex:none; }
+.sub .tm { color:var(--status); flex:none; }
+.logo { width:13px; height:13px; flex:none; }
+
+/* state marks from the app: running ring with core, needs, done, idle */
+.st { width:13px; height:13px; flex:none; display:grid; place-items:center; }
+.st i { display:block; border-radius:50%; }
+.st.run i { width:11px; height:11px; border:1.5px solid var(--acc); background:radial-gradient(circle, var(--acc) 0 2.4px, transparent 2.8px); }
+.st.need i { width:11px; height:11px; background:var(--needs); box-shadow:0 0 0 1.5px #5a4410 inset; }
+.st.done i { width:7px; height:7px; background:var(--done); }
+.st.idle i { width:7px; height:7px; background:#6b7080; }
+
+.fill { flex:1; }
+.spc { padding:7px 10px; }
+.agh { border-top:1px solid var(--line); height:44px; padding-top:10px; }
+.agl { padding:0 10px 10px; display:flex; flex-direction:column; }
+.agl .gh { font-size:11px; color:var(--status); padding:8px 8px 3px; }
+.ar { display:flex; align-items:center; gap:8px; height:30px; padding:0 8px; border-radius:7px; color:#cfd2dc; min-width:0; white-space:nowrap; }
+.ar:hover { background:#0e1118; }
+.ar b { color:var(--white); font-weight:700; flex:none; max-width:100px; overflow:hidden; text-overflow:ellipsis; }
+.ar .sb { color:var(--status); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.ar .tm { color:var(--status); font-size:11px; flex:none; }
+.foot { border-top:1px solid var(--line); padding:6px 10px; display:flex; flex-direction:column; gap:1px; flex:none; }
+.fr { display:flex; align-items:center; gap:9px; height:30px; padding:0 8px; color:var(--muted); border-radius:7px; }
+.fr:hover { background:#0e1118; color:var(--fg); }
+.fr .k { margin-left:auto; color:var(--status); font-size:11px; }
+
+/* ---- main column: floating terminal card on chrome ---- */
+.main { display:flex; flex-direction:column; min-width:0; min-height:0; background:var(--chrome); }
+.tabs { height:44px; display:flex; align-items:flex-end; gap:2px; padding:0 12px; flex:none; }
+.tab { height:34px; display:flex; align-items:center; gap:8px; padding:0 8px 0 12px; color:var(--status); max-width:230px; border-radius:9px 9px 0 0; position:relative; margin-bottom:-1px; }
+.tab:hover { color:var(--fg); }
+.tab.on { background:var(--term); color:var(--white); border:1px solid var(--line2); border-bottom:none; }
+.tab.on::before { content:""; position:absolute; left:10px; right:10px; top:-1px; height:2px; background:var(--acc); border-radius:0 0 2px 2px; }
+.tab .tt { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tab .x { width:18px; height:18px; display:grid; place-items:center; border-radius:5px; color:var(--status); flex:none; }
+.tab .x:hover { background:var(--raise); color:var(--fg); }
+.tab .x svg { width:9px; height:9px; }
+.tabs .ib { height:30px; margin:0 0 3px 4px; }
+.card { flex:1; min-height:0; background:var(--term); border:1px solid var(--line2); border-radius:0 10px 10px 10px; margin:0 12px 12px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 0 0 1px #8b7bff14, 0 10px 30px #0008; }
+.crumb { height:36px; display:flex; align-items:center; gap:9px; padding:0 14px; border-bottom:1px solid var(--line); flex:none; white-space:nowrap; }
+.crumb b { color:var(--white); }
+.crumb .cmd { color:var(--acctext); }
+.crumb .pill { background:var(--accsoft); color:var(--acctext); border-radius:9px; padding:0 8px; font-size:11px; }
+.crumb .pill.w { background:#3a2c10; color:var(--needs); }
+.crumb .path { color:var(--status); }
+.term { flex:1; padding:10px 16px; color:#c9cdd8; white-space:pre; overflow:hidden; line-height:1.62; }
+.term .p { color:var(--acctext); } .term .g { color:var(--branch); } .term .y { color:var(--needs); } .term .d { color:var(--status); } .term .r { color:var(--del); }
+
+.sbar { grid-column:2; background:var(--chrome); display:flex; align-items:center; gap:16px; padding:0 14px; color:var(--status); font-size:11px; }
+.sbar b { color:var(--fg); font-weight:400; }
+.sbar .wp { background:#3a2c10; color:var(--needs); border-radius:9px; padding:0 8px; }
+
+.notes { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:20px; font-size:13px; }
+.notes h2 { margin:0 0 6px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:400; }
+.notes ul { margin:0; padding-left:18px; color:#cfd2dc; } .notes li { margin:4px 0; }
+@media (max-width:900px){ .notes { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="claude" viewBox="0 0 16 16"><g stroke="#d97757" stroke-width="1.7" stroke-linecap="round"><path d="M8 1.6v4"/><path d="M8 10.4v4"/><path d="M1.6 8h4"/><path d="M10.4 8h4"/><path d="M3.5 3.5l2.8 2.8"/><path d="M9.7 9.7l2.8 2.8"/><path d="M12.5 3.5l-2.8 2.8"/><path d="M6.3 9.7l-2.8 2.8"/></g></symbol>
+    <symbol id="codex" viewBox="0 0 16 16"><g fill="none" stroke="#c9cdd8" stroke-width="1.2"><ellipse cx="8" cy="8" rx="6" ry="2.6"/><ellipse cx="8" cy="8" rx="6" ry="2.6" transform="rotate(60 8 8)"/><ellipse cx="8" cy="8" rx="6" ry="2.6" transform="rotate(120 8 8)"/></g></symbol>
+    <symbol id="shell" viewBox="0 0 16 16"><path d="M3 4.5l3.2 3.5L3 11.5M8.3 11.5h4.7" fill="none" stroke="#a7adbd" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="kmark" viewBox="0 0 18 18"><path d="M2.5 2h3.6v5.4L10.8 2h4.3l-5.3 6 5.6 8H11L7.4 10.6l-1.3 1.4V16H2.5z" fill="#8b7bff"/><path d="M13 15.2h3.4" stroke="#8b7bff" stroke-width="1.6"/></symbol>
+    <symbol id="panel" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="11" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.8 2.5v11" stroke="currentColor" stroke-width="1.3"/></symbol>
+    <symbol id="plus" viewBox="0 0 16 16"><path d="M8 2.5v11M2.5 8h11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+    <symbol id="search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.4" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10.4 10.4l3.2 3.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+    <symbol id="gear" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 1.6v1.8M8 12.6v1.8M1.6 8h1.8M12.6 8h1.8M3.5 3.5l1.3 1.3M11.2 11.2l1.3 1.3M3.5 12.5l1.3-1.3M11.2 4.8l1.3-1.3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></symbol>
+    <symbol id="agents" viewBox="0 0 16 16"><circle cx="8" cy="3.5" r="1.9" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="3.5" cy="12.5" r="1.9" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="12.5" cy="12.5" r="1.9" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 5.4v2.2M6.2 9.2L4.6 10.8M9.8 9.2l1.6 1.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></symbol>
+    <symbol id="x" viewBox="0 0 10 10"><path d="M2 2l6 6M8 2L2 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header>
+    <h1>Spaces on the left, tabs on top</h1>
+    <p class="lead">Each project is a space. The sidebar lists spaces, each with its branch, its changes and its agents. The tab strip shows only the tabs of the selected space, and the active tab joins the terminal card below it. Search and the new-space plus sit together in the sidebar header. Click a space or a tab.</p>
+  </header>
+
+  <div class="scroller">
+  <div class="win">
+    <aside class="side">
+      <div class="sbtop">
+        <div class="lights"><i></i><i></i><i></i></div>
+        <div class="brand"><svg><use href="#kmark"/></svg>Kaze</div>
+        <div class="grow"></div>
+        <span class="ib" title="Hide sidebar"><svg class="i16"><use href="#panel"/></svg></span>
+      </div>
+
+      <div class="hd"><span class="lbl">Spaces</span><span class="grow"></span>
+        <span class="ib" title="Search sessions and commands"><svg class="i14"><use href="#search"/></svg></span>
+        <span class="ib" title="New space"><svg class="i14"><use href="#plus"/></svg></span>
+      </div>
+      <div class="list" id="spaces"></div>
+
+      <div class="fill"></div>
+      <div class="hd agh"><span class="lbl">Agents</span><span class="grow"></span>
+        <span class="ib" title="Open the agents board"><svg class="i14"><use href="#agents"/></svg></span>
+      </div>
+      <div class="agl" id="agentlist"></div>
+      <div class="foot">
+        <div class="fr"><svg class="i14"><use href="#gear"/></svg>Settings<span class="k">Cmd ,</span></div>
+      </div>
+    </aside>
+
+    <section class="main">
+      <div class="tabs" id="tabs"></div>
+      <div class="card">
+        <div class="crumb" id="crumb"></div>
+        <div class="term" id="term"></div>
+      </div>
+    </section>
+
+    <div class="sbar" id="sbar"></div>
+  </div>
+  </div>
+
+  <div class="notes">
+    <div><h2>What changed</h2><ul>
+      <li>The sidebar's top list is now spaces, one calm line per project. Agents get their own section below, grouped Needs you, Working, Idle, as in herdr.</li>
+      <li>Tabs move to a strip above the terminal and show only the selected space's tabs.</li>
+      <li>Search and + sit in the sidebar header next to the Spaces label.</li>
+    </ul></div>
+    <div><h2>Kept from today</h2><ul>
+      <li>Midnight colours, JetBrains Mono only, the real agent logos and state marks, the accent rail on the active row.</li>
+      <li>Agent tray under a space, status bar, amber for waiting.</li>
+      <li>The status bar now sits under the terminal column only.</li>
+    </ul></div>
+    <div><h2>Questions for you</h2><ul>
+      <li>Is a space one repo, as sessions are grouped today, or something you create and name?</li>
+      <li>Does a click on an agent row jump to its space and tab, as here?</li>
+      <li>Should closing the last tab of a space close the space?</li>
+    </ul></div>
+  </div>
+</div>
+
+<script>
+function logo(a){ return '<svg class="logo"><use href="#'+a+'"/></svg>'; }
+function st(k){ return '<span class="st '+k+'"><i></i></span>'; }
+var DATA = {
+  kaze: { name:'kaze-terminal', letter:'K', col:'#e8845f', branch:'main', add:'+12', del:'-3', n:'3 tabs', warn:false, state:'idle',
+    tray:[['Explore','idle','2m']],
+    tabs:[['claude','Kaze agent-to-agent','idle'],['shell','go test ./...',''],['shell','zsh','']],
+    cmd:'/loop', path:'~/Documents/coding/kaze-terminal', pills:['Idle'], body:
+'<span class="p">&gt;</span> add agent-to-agent communication to kaze\n\n  Things that shape the design\n\n  1. A socket handler cannot read <span class="p">win.agents</span>, so the control layer\n     needs a small registry the UI updates.\n  2. Status is only as good as the hooks.\n  3. Idle CPU stays at 0%: a blocked <span class="p">Accept()</span> costs nothing.\n\n<span class="d">  Brewed for 38s  done 5:05 PM</span>\n\n<span class="p">&gt;</span> whatever you think is best\n' },
+  job: { name:'ai-job-search', letter:'A', col:'#3fc3a3', branch:'feat/resume-tailor', add:'+48', del:'-9', n:'1 waiting', warn:true, state:'need',
+    tray:[['Reviewer','run','40s'],['Researcher','done','3m']],
+    tabs:[['claude','Resume tailoring','need'],['shell','dev server','']],
+    cmd:'', path:'~/Documents/coding/ai-job-search', pills:['Needs you'], body:
+'<span class="p">&gt;</span> tailor my resume for the staff role\n\n  <span class="g">Read</span> 3 files\n  <span class="g">Edited</span> resume.md <span class="g">+18</span> <span class="r">-4</span>\n\n  <span class="y">Claude needs your permission to edit cover-letter.md</span>\n\n  1. Yes\n  2. Yes, and do not ask again\n  3. No\n\n<span class="d">  waiting for you 2m</span>\n' },
+  web: { name:'kaze-lander', letter:'W', col:'#8b7bff', branch:'site/changelog', add:'+24', del:'-6', n:'2 tabs', warn:false, state:'run',
+    tray:[],
+    tabs:[['codex','codex: changelog','run'],['shell','preview','']],
+    cmd:'', path:'~/Documents/coding/kaze-terminal/docs', pills:['Working 2m 10s'], body:
+'<span class="p">&gt;</span> restyle the changelog page\n\n  <span class="g">Edited</span> docs/changelog.html <span class="g">+24</span> <span class="r">-6</span>\n  <span class="g">Ran</span> local preview, passed\n\n<span class="d">  working 2m 10s</span>\n' }
+};
+var order=['kaze','job','web'], cur='kaze', curTab=0;
+function render(){
+  var s=DATA[cur];
+  document.getElementById('spaces').innerHTML = order.map(function(k){
+    var d=DATA[k];
+    return '<div class="spc'+(k===cur?' on':'')+'" data-k="'+k+'"><div class="l1"><span class="av" style="background:'+d.col+'">'+d.letter+'</span><span class="t">'+d.name+'</span><span class="n'+(d.warn?' w':'')+'">'+d.n+'</span></div></div>';
+  }).join('');
+  document.getElementById("agentlist").innerHTML =
+    '<div class="gh">Needs you 1</div>'+
+    '<div class="ar" data-k="job">'+logo('claude')+'<b>ai-job-search</b><span class="sb">Approve edit?</span><span class="tm">now</span>'+st('need')+'</div>'+
+    '<div class="gh">Working 1</div>'+
+    '<div class="ar" data-k="web">'+logo('codex')+'<b>kaze-lander</b><span class="sb">Restyle changelog</span><span class="tm">2m</span>'+st('run')+'</div>'+
+    '<div class="gh">Idle 1</div>'+
+    '<div class="ar" data-k="kaze">'+logo('claude')+'<b>kaze-terminal</b><span class="sb">Kaze agent-to-agent</span><span class="tm">1m</span>'+st('idle')+'</div>';
+  document.getElementById('tabs').innerHTML = s.tabs.map(function(t,i){
+    return '<div class="tab'+(i===curTab?' on':'')+'" data-i="'+i+'">'+logo(t[0])+'<span class="tt">'+t[1]+'</span>'+(t[2]?st(t[2]):'')+'<span class="x"><svg><use href="#x"/></svg></span></div>';
+  }).join('')+'<span class="ib" title="New tab"><svg class="i14"><use href="#plus"/></svg></span>';
+  var t=s.tabs[curTab];
+  document.getElementById('crumb').innerHTML = logo(t[0])+'<b>'+(t[0]==='claude'?'Claude Code':t[0]==='codex'?'Codex':'zsh')+'</b>'+(curTab===0&&s.cmd?'<span class="cmd">'+s.cmd+'</span>':'')+'<span class="path">'+s.path+'</span><span class="grow"></span>'+(curTab===0?s.pills.map(function(p){return '<span class="pill'+(s.warn?' w':'')+'">'+p+'</span>';}).join(''):'');
+  document.getElementById('term').innerHTML = curTab===0 ? s.body : '<span class="p">$</span> <span class="d">'+t[1]+'</span>\n';
+  document.getElementById('sbar').innerHTML = '<span><b>'+s.name+'</b></span><span>'+s.branch+'</span><span class="grow"></span>'+(s.warn?'<span class="wp">1 waiting</span>':'')+'<span><b>3</b> agents</span><span>5h 89%</span><span>ctx 10%</span><span>RAM 410 MB</span>';
+}
+document.addEventListener('click',function(e){
+  var sp=e.target.closest('.spc'); if(sp){cur=sp.dataset.k;curTab=0;render();return;}
+  var tb=e.target.closest('.tab'); if(tb){curTab=+tb.dataset.i;render();}
+});
+render();
+</script>
+</body>
+</html>

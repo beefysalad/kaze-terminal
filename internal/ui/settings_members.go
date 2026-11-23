@@ -4,6 +4,7 @@ import (
 	"gioui.org/font"
 	"gioui.org/op"
 	"image"
+	"image/color"
 	"strings"
 
 	"gioui.org/op/clip"
@@ -15,6 +16,9 @@ import (
 // (dot, title, folder, commands, wait tag) with the columns lined up, and its
 // buttons under the table.
 func (p *page) memberRow(r image.Rectangle, y int, row settingRow) int {
+	if r.Dx() < p.gtx.Dp(480) {
+		return p.memberNarrow(r, y, row)
+	}
 	gtx, ops, col := p.gtx, p.gtx.Ops, p.col
 
 	// The header: an initial badge, the name and tab count, the state pill and the buttons.
@@ -136,6 +140,41 @@ func (p *page) memberRow(r image.Rectangle, y int, row settingRow) int {
 		y += rowH
 	}
 	return y + gtx.Dp(6)
+}
+
+// memberNarrow preserves every member's title, folder, command chain and wait
+// state in a vertical list when the table's columns would become unreadable.
+func (p *page) memberNarrow(r image.Rectangle, y int, row settingRow) int {
+	header := row
+	header.members = nil
+	y = p.row(r, y, header)
+	gtx, ops, col := p.gtx, p.gtx.Ops, p.col
+	pad, gap := gtx.Dp(18), gtx.Dp(8)
+	x := r.Min.X + pad
+	width := max(r.Max.X-x, 1)
+	for _, m := range row.members {
+		paint.FillShape(ops, col.line, clip.Rect(image.Rect(r.Min.X-gtx.Dp(18), y, r.Max.X+gtx.Dp(18), y+1)).Op())
+		top := y + gap
+		y = top
+		put := func(text string, size unit.Sp, weight font.Weight, color color.NRGBA) {
+			call, sz := p.textBlock(text, size, color, weight, width)
+			place(ops, call, image.Pt(x, y))
+			y += sz.Y
+		}
+		put(m.title, 13, font.SemiBold, col.title)
+		p.st.memberFolderX = append(p.st.memberFolderX, x)
+		put(m.folder, 11.5, font.Normal, col.muted)
+		for _, line := range p.chain(m.cmds, 12, width) {
+			put(line, 12, font.Normal, mix(col.accent, col.title, 0.55))
+		}
+		if m.tag != "" {
+			put(m.tag, 11.5, font.Normal, col.muted)
+		}
+		bar := image.Rect(r.Min.X, top, r.Min.X+gtx.Dp(4), max(y, top+gtx.Dp(26)))
+		paint.FillShape(ops, p.c.memberColor(m.color), clip.UniformRRect(bar, gtx.Dp(2)).Op(ops))
+		y += gap
+	}
+	return y
 }
 
 // chain lays commands out as "a → b → c" lines no wider than w, breaking only

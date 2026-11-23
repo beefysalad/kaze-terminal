@@ -21,7 +21,6 @@ const (
 	capGear   // opens settings; sits left of minimize, outside Buttons
 	capToggle // shows or hides the sidebar; at the bar's left end
 	capSearch // opens the palette; centred between the mark and the gear
-	capPlus   // opens a new session; at the lead strip's right end
 	capAgents // opens or closes the agents board; left of the gear
 )
 
@@ -83,33 +82,33 @@ type crumbParts struct{ Repo, Title, Cmd, State string }
 
 // titleIn is what the shared title bar is laid out from (spec 5.1).
 type titleIn struct {
-	Size    image.Point // the bar, px
-	Mac     bool
-	LightsW int  // px the native traffic lights take from the left; 0 off Mac or in full screen
-	SideW   int  // the sidebar's width; 0 while hidden
-	Right   bool // the sidebar sits on the right: its strip and buttons move there
-	NoPlus  bool // no new-session button (the sidebar is a rail or hidden)
-	Crumb   crumbParts
-	Key     string // the palette key cap text
-	WordW   int    // the width of the name "Kaze" beside the mark; 0 leaves it out
-	Dims    titleDims
-	Measure func(s string, mono bool) int
+	Size     image.Point // the bar, px
+	Mac      bool
+	LightsW  int  // px the native traffic lights take from the left; 0 off Mac or in full screen
+	SideW    int  // the sidebar's width; 0 while hidden
+	Right    bool // the sidebar sits on the right: its strip and buttons move there
+	SideFull bool // the sidebar is full: its header holds the search and new-session buttons, so the bar has neither
+	Crumb    crumbParts
+	Key      string // the palette key cap text
+	WordW    int    // the width of the name "Kaze" beside the mark; 0 leaves it out
+	Dims     titleDims
+	Measure  func(s string, mono bool) int
 }
 
 // titleLayout is where the shared title bar's parts go, in px.
 type titleLayout struct {
-	Lead               image.Rectangle // the strip over the sidebar
-	Mark, Toggle, Plus image.Rectangle // Plus only while the sidebar shows
-	Word               image.Rectangle // the name beside the mark; empty when it gives way
-	Crumb              image.Rectangle
-	CrumbShow          crumbParts // the parts that fit (spec 5.3); Title may still need shortening to Crumb
-	Search             image.Rectangle
-	SearchIconOnly     bool // the compact search: an icon, and the key cap when SearchKey
-	SearchKey          bool
-	Agents             image.Rectangle
-	Gear               image.Rectangle
-	Buttons            [3]image.Rectangle // Windows only: minimize, maximize, close
-	Drag               []image.Rectangle  // empty bar space, the crumb included
+	Lead           image.Rectangle // the strip over the sidebar
+	Mark, Toggle   image.Rectangle
+	Word           image.Rectangle // the name beside the mark; empty when it gives way
+	Crumb          image.Rectangle
+	CrumbShow      crumbParts // the parts that fit (spec 5.3); Title may still need shortening to Crumb
+	Search         image.Rectangle
+	SearchIconOnly bool // the compact search: an icon, and the key cap when SearchKey
+	SearchKey      bool
+	Agents         image.Rectangle
+	Gear           image.Rectangle
+	Buttons        [3]image.Rectangle // Windows only: minimize, maximize, close
+	Drag           []image.Rectangle  // empty bar space, the crumb included
 }
 
 // statePill is the crumb's state word.
@@ -182,21 +181,11 @@ func layoutTitle(in titleIn) titleLayout {
 	if in.Right {
 		// The lead strip over the right sidebar holds the buttons; it is never
 		// narrower than they need (a rail is narrower than the caption buttons).
-		// In full mode it is the sidebar's width, so the dividers line up, and the
-		// new session button sits at its left end, or just left of it when the
-		// caption buttons leave it no room there.
+		// In full mode it is the sidebar's width, so the dividers line up.
 		need := in.Size.X - l.Agents.Min.X + d.LeadPad
 		lw := max(in.SideW, need)
 		l.Lead = image.Rect(in.Size.X-lw, 0, in.Size.X, h)
 		hi = l.Lead.Min.X - d.Pad
-		if !in.NoPlus {
-			if need+d.Btn+d.Gap <= lw {
-				l.Plus = btn(l.Lead.Min.X + d.LeadPad)
-			} else {
-				l.Plus = btn(l.Lead.Min.X - d.Gap - d.Btn)
-				hi = l.Plus.Min.X - d.Gap
-			}
-		}
 	}
 
 	// Left: the lights (macOS), the mark and the name, the toggle, and the lead strip.
@@ -214,7 +203,7 @@ func layoutTitle(in titleIn) titleLayout {
 		tx := wx + in.WordW + d.Gap
 		var fits bool
 		if in.SideW > 0 && !in.Right {
-			fits = tx+d.Btn+d.Gap+d.Btn+d.LeadPad <= in.SideW
+			fits = tx+d.Btn+d.LeadPad <= in.SideW
 		} else {
 			fits = hi-(tx+d.Btn+d.LeadPad+d.Pad) >= 2*d.SearchMin
 		}
@@ -230,12 +219,7 @@ func layoutTitle(in titleIn) titleLayout {
 		if !l.Word.Empty() {
 			lo = l.Word.Max.X + d.Pad
 		}
-	case in.SideW > 0 && !in.NoPlus:
-		l.Toggle = btn(x)
-		right := max(in.SideW, l.Toggle.Max.X+d.Gap+d.Btn+d.LeadPad)
-		l.Lead = image.Rect(0, 0, right, h)
-		l.Plus = btn(right - d.LeadPad - d.Btn)
-	default: // a rail or a hidden sidebar: no new session button
+	default:
 		l.Toggle = btn(x)
 		l.Lead = image.Rect(0, 0, max(in.SideW, l.Toggle.Max.X+d.LeadPad), h)
 	}
@@ -253,6 +237,13 @@ func layoutTitle(in titleIn) titleLayout {
 	c := in.Crumb
 	sw := 0
 	switch cw := crumbWidth(c, d, in.Measure); {
+	case in.SideFull: // the sidebar header has the search: the crumb keeps the whole middle
+		for _, drop := range []func(*crumbParts){func(p *crumbParts) { p.Cmd = "" }, func(p *crumbParts) { p.Repo = "" }} {
+			if crumbWidth(c, d, in.Measure) <= avail {
+				break
+			}
+			drop(&c)
+		}
 	case avail-cw-d.Gap >= d.SearchMin:
 		sw = min(avail-cw-d.Gap, d.SearchMax)
 	default:
@@ -268,7 +259,11 @@ func layoutTitle(in titleIn) titleLayout {
 		}
 	}
 	l.CrumbShow = c
-	cw := min(crumbWidth(c, d, in.Measure), max(avail-sw-d.Gap, 0))
+	room := max(avail-sw-d.Gap, 0)
+	if in.SideFull {
+		room = avail
+	}
+	cw := min(crumbWidth(c, d, in.Measure), room)
 	l.Crumb = image.Rect(lo, 0, lo+cw, h)
 	// Centre the search in the space between the crumb and the right buttons.
 	left := l.Crumb.Max.X + d.Gap
@@ -277,14 +272,16 @@ func layoutTitle(in titleIn) titleLayout {
 	}
 	sx := left + max(hi-left-sw, 0)/2
 	sy := (h - d.SearchH) / 2
-	if sx+sw <= hi+d.Gap { // never over the right buttons; the palette key still works
+	if in.SideFull { // no search field in the bar; the palette key still works
+		l.SearchIconOnly, l.SearchKey = false, false
+	} else if sx+sw <= hi+d.Gap { // never over the right buttons; the palette key still works
 		l.Search = image.Rect(sx, sy, sx+sw, sy+d.SearchH)
 	} else {
 		l.SearchIconOnly, l.SearchKey = true, false
 	}
 
 	// Drag: every full-height gap between the controls, minus the traffic lights.
-	cols := []image.Rectangle{l.Toggle, l.Plus, l.Search, l.Agents, l.Gear, l.Buttons[0], l.Buttons[1], l.Buttons[2]}
+	cols := []image.Rectangle{l.Toggle, l.Search, l.Agents, l.Gear, l.Buttons[0], l.Buttons[1], l.Buttons[2]}
 	from := 0
 	if in.Mac {
 		from = in.LightsW
@@ -313,7 +310,7 @@ func (l titleLayout) at(p image.Point) captionButton {
 		c captionButton
 		r image.Rectangle
 	}{
-		{capToggle, l.Toggle}, {capPlus, l.Plus}, {capSearch, l.Search},
+		{capToggle, l.Toggle}, {capSearch, l.Search},
 		{capAgents, l.Agents}, {capGear, l.Gear},
 		{capMinimize, l.Buttons[0]}, {capMaximize, l.Buttons[1]}, {capClose, l.Buttons[2]},
 	} {

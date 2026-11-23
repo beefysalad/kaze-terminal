@@ -477,6 +477,10 @@ func (win *window) fieldKey(gtx layout.Context, f *textField, e key.Event) bool 
 	}
 	switch {
 	case e.Name == key.NameEscape:
+		if !win.set.sheet.Empty() && e.Modifiers == 0 {
+			win.closeSettings()
+			return true
+		}
 		win.editField("")
 	case e.Name == key.NameTab && e.Modifiers == 0:
 		win.moveFocus(1)

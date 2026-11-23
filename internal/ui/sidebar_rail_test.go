@@ -42,8 +42,8 @@ func TestRailTilesInSidebarOrder(t *testing.T) {
 		if r.rect.Empty() || !r.rect.In(image.Rectangle{Max: size}) {
 			t.Fatalf("tile %d rect %v outside %v", r.id, r.rect, size)
 		}
-		if !r.title.Empty() || !r.fold.Empty() || !r.close.Empty() {
-			t.Fatalf("tile %d has title %v fold %v close %v", r.id, r.title, r.fold, r.close)
+		if !r.close.Empty() {
+			t.Fatalf("tile %d has a close %v", r.id, r.close)
 		}
 	}
 	if want := []tabs.TabID{1, 2, 10, 20}; !slices.Equal(got, want) {
@@ -113,8 +113,8 @@ func TestRailSettingsTile(t *testing.T) {
 	}
 	sideClick(win, &r, rowHit(t, win, a.ID).rect, pointer.ButtonPrimary)
 	sideFrame(t, win, &r)
-	if win.set.shown {
-		t.Fatal("a session tile click left Settings shown")
+	if !win.set.shown {
+		t.Fatal("a covered session tile answered through Settings")
 	}
 }
 
@@ -218,8 +218,8 @@ func TestRailIgnoresFilterAndDropsItsFocus(t *testing.T) {
 		win.side.ed.SetText("api")
 		win.side.filtering = true
 		sizedFrame(t, win, &r, 1000, 600)
-		if len(win.side.hits.rows) != 1 {
-			t.Fatalf("narrow %v: the filter shows %d rows in full, want 1", narrow, len(win.side.hits.rows))
+		if len(win.side.hits.spaces) != 1 {
+			t.Fatalf("narrow %v: the filter shows %d spaces in full, want 1", narrow, len(win.side.hits.spaces))
 		}
 		w := 1000
 		if narrow {

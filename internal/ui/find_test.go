@@ -403,7 +403,7 @@ func TestFindKeysLeaveWhenPanelBodyClicked(t *testing.T) {
 
 func TestFindFromSidebarFilterTakesKeyboard(t *testing.T) {
 	win, _, r, _, _, _, _ := memberWindow(t)
-	sideClick(win, r, win.side.hits.filter, pointer.ButtonPrimary)
+	sideClick(win, r, win.side.hits.search, pointer.ButtonPrimary)
 	twoFrames(t, win, r)
 	if !win.side.filtering {
 		t.Fatal("filter did not open")

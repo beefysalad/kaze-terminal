@@ -80,6 +80,8 @@ func TestPickingASessionAfterExpandGoesBack(t *testing.T) {
 	clickMember(t, win, r, m2.ID)
 	clickMember(t, win, r, m1.ID)
 	clickAt(t, win, r, centre(win.dock.hits.expand))
+	markAgent(win, a.ID)
+	twoFrames(t, win, r)
 	sideClick(win, r, rowHit(t, win, a.ID).rect, pointer.ButtonPrimary)
 	twoFrames(t, win, r)
 	if win.mgr.Active().ID != a.ID || !memberShownIn(win, a.ID, m2.ID) || win.dockRect().Empty() {

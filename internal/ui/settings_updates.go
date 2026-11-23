@@ -54,6 +54,8 @@ func updatesAct(win *window, id string, arg int) {
 	}
 }
 
+type updHeroGeom struct{ text, buttons image.Rectangle }
+
 // updHero is the status card's content for the updater's state.
 type updHero struct {
 	icon, title, sub string
@@ -143,35 +145,82 @@ func drawUpdates(p *page, r image.Rectangle, win *window) int {
 	is := gtx.Dp(26)
 	p.c.icon(gtx, h.icon, image.Rect(tb.Min.X+(tile-is)/2, tb.Min.Y+(tile-is)/2, tb.Min.X+(tile-is)/2+is, tb.Min.Y+(tile-is)/2+is), col.title)
 
-	// The buttons, right-aligned and centered on the tile.
-	bx := r.Max.X - pad
-	for i := len(h.buttons) - 1; i >= 0; i-- {
-		call, sz, from := p.ctrl(h.buttons[i], 0)
-		bx -= sz.X
-		at := image.Pt(bx, y+(tile-sz.Y)/2)
-		p.st.shift(from, len(p.st.controls), at)
-		place(ops, call, at)
-		bx -= gtx.Dp(8)
+	// Measure controls before deciding whether they share the status line.
+	type button struct {
+		call     op.CallOp
+		size     image.Point
+		from, to int
 	}
+	var buttons []button
+	bw := 0
+	for _, k := range h.buttons {
+		call, sz, from := p.ctrl(k, 0)
+		buttons = append(buttons, button{call, sz, from, len(p.st.controls)})
+		if bw > 0 {
+			bw += gtx.Dp(8)
+		}
+		bw += sz.X
+	}
+	win.set.updateHero = updHeroGeom{}
 	tx := tb.Max.X + gtx.Dp(20)
-	tc, ts := p.textW(h.title, 18, col.title, font.SemiBold)
-	sc, ss := p.text(h.sub, 13, col.muted)
-	ty := y + (tile-ts.Y-ss.Y)/2
-	if h.progress >= 0 {
-		ty = y + (tile-ts.Y-ss.Y-gtx.Dp(18))/2
+	room := r.Max.X - pad - tx
+	if bw > 0 {
+		room -= bw + gtx.Dp(12)
+	}
+	stacked := room < gtx.Dp(220)
+	ty := y
+	if stacked {
+		tx = r.Min.X + pad
+		room = max(r.Dx()-2*pad, 1)
+		ty = tb.Max.Y + gtx.Dp(16)
+	}
+	tc, ts := p.textBlock(h.title, 18, col.title, font.SemiBold, room)
+	sc, ss := p.textBlock(h.sub, 13, col.muted, font.Normal, room)
+	textH := ts.Y + gtx.Dp(2) + ss.Y
+	if !stacked {
+		ty = y + max((tile-textH)/2, 0)
 	}
 	place(ops, tc, image.Pt(tx, ty))
 	place(ops, sc, image.Pt(tx, ty+ts.Y+gtx.Dp(2)))
+	win.set.updateHero.text = image.Rect(tx, ty, tx+max(ts.X, ss.X), ty+textH)
+	bottom := max(tb.Max.Y, ty+textH)
 	if h.progress >= 0 {
-		bar := image.Rect(tx, ty+ts.Y+ss.Y+gtx.Dp(12), bx, ty+ts.Y+ss.Y+gtx.Dp(18))
+		bar := image.Rect(tx, ty+textH+gtx.Dp(10), tx+room, ty+textH+gtx.Dp(16))
 		paint.FillShape(ops, col.line, clip.UniformRRect(bar, bar.Dy()/2).Op(ops))
 		done := bar
-		done.Max.X = bar.Min.X + bar.Dx()*min(h.progress, 100)/100
+		done.Max.X = bar.Min.X + bar.Dx()*max(0, min(h.progress, 100))/100
 		if done.Dx() > 0 {
 			paint.FillShape(ops, col.accent, clip.UniformRRect(done, bar.Dy()/2).Op(ops))
 		}
+		bottom = max(bottom, bar.Max.Y)
 	}
-	y += tile + pad
+	bx := r.Max.X - pad - bw
+	by := y
+	vertical := bw > r.Dx()-2*pad
+	if stacked {
+		by = bottom + gtx.Dp(16)
+	}
+	for _, btn := range buttons {
+		at := image.Pt(bx, by+(tile-btn.size.Y)/2)
+		if stacked {
+			at.Y = by
+		}
+		if vertical {
+			at.X = r.Min.X + pad
+			at.Y = by
+		}
+		p.st.shift(btn.from, btn.to, at)
+		place(ops, btn.call, at)
+		box := image.Rectangle{Min: at, Max: at.Add(btn.size)}
+		win.set.updateHero.buttons = win.set.updateHero.buttons.Union(box)
+		bottom = max(bottom, box.Max.Y)
+		if vertical {
+			by = box.Max.Y + gtx.Dp(8)
+		} else {
+			bx += btn.size.X + gtx.Dp(8)
+		}
+	}
+	y = bottom + pad
 	if h.reason != "" {
 		for _, line := range p.wrap(h.reason, 12, r.Dx()-2*pad) {
 			call, size := p.text(line, 12, col.muted)

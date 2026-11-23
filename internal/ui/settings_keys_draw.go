@@ -152,6 +152,10 @@ func (p *page) shortcutCard(r image.Rectangle, y int, rows []shortcutRow) int {
 		p.st.texts = p.st.texts[:n0]
 		lx := r.Min.X + padL
 		room := max(right-rs-gap-ks.X-gap-lx, 1) // the label's room left of the keys
+		stacked := r.Dx() < gtx.Dp(420)
+		if stacked {
+			room = max(right-lx, 1)
+		}
 		tagW := 0
 		var tagC op.CallOp
 		var tagS image.Point
@@ -174,6 +178,9 @@ func (p *page) shortcutCard(r image.Rectangle, y int, rows []shortcutRow) int {
 			nc, ns = p.mono(row.config, 11.5, actionInk)
 		}
 		h := max(labelH+ns.Y+gtx.Dp(12), gtx.Dp(44), ks.Y+gtx.Dp(8))
+		if stacked {
+			h = gtx.Dp(24) + labelH + ns.Y + gtx.Dp(8) + ks.Y
+		}
 		g := keyRowGeom{action: row.config}
 		if recording {
 			// Under the separator line; the card's round corners clip the first and last rows.
@@ -191,6 +198,9 @@ func (p *page) shortcutCard(r image.Rectangle, y int, rows []shortcutRow) int {
 			paint.FillShape(ops, ink.recRow, clip.RRect{Rect: g.tint, NW: top, NE: top, SW: bottom, SE: bottom}.Op(ops))
 		}
 		ly := y + (h-labelH-ns.Y)/2
+		if stacked {
+			ly = y + gtx.Dp(12)
+		}
 		g.label, g.name = image.Pt(lx, ly), image.Pt(lx, ly+labelH)
 		for i, c := range lcs {
 			place(ops, c, image.Pt(lx, ly))
@@ -203,6 +213,10 @@ func (p *page) shortcutCard(r image.Rectangle, y int, rows []shortcutRow) int {
 
 		g.reset = image.Rect(right-rs, y+(h-rs)/2, right, y+(h+rs)/2)
 		at := image.Pt(right-rs-gap-ks.X, y+(h-ks.Y)/2)
+		if stacked {
+			at = image.Pt(lx, y+h-gtx.Dp(12)-ks.Y)
+			g.reset = image.Rect(right-rs, at.Y+(ks.Y-rs)/2, right, at.Y+(ks.Y+rs)/2)
+		}
 		place(ops, kc, at)
 		p.st.shift(from, to, at)
 		g.keys = image.Rectangle{Min: at, Max: at.Add(ks)}

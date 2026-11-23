@@ -27,7 +27,11 @@ func filterWindow(t *testing.T) (*window, *recStarter, *input.Router, [3]*tabs.T
 
 func focusFilter(t *testing.T, win *window, r *input.Router) {
 	t.Helper()
-	sideClick(win, r, win.side.hits.filter, pointer.ButtonPrimary)
+	target := win.side.hits.filter
+	if target.Empty() {
+		target = win.side.hits.search // the field opens from the SPACES header's search icon
+	}
+	sideClick(win, r, target, pointer.ButtonPrimary)
 	sideFrame(t, win, r)
 	sideFrame(t, win, r)
 	if !win.side.filtering || !r.Source().Focused(&win.side.ed) {
@@ -54,9 +58,10 @@ func TestFilterNarrowsRows(t *testing.T) {
 	win, _, r, tb := filterWindow(t)
 	focusFilter(t, win, r)
 	typeFilter(t, win, r, "33")
-	if !hasRow(win, tb[0].ID) || hasRow(win, tb[1].ID) || hasRow(win, tb[2].ID) {
-		t.Fatalf("rows after typing 33: %+v", win.side.hits.rows)
+	if !hasSpace(win, "key-alpha") || hasSpace(win, "key-beta") {
+		t.Fatalf("spaces after typing 33: %+v, want only alpha (ticket33 lives there)", win.side.hits.spaces)
 	}
+	_ = tb
 }
 
 func TestFilterEscClearsAndReturnsKeys(t *testing.T) {
@@ -67,9 +72,10 @@ func TestFilterEscClearsAndReturnsKeys(t *testing.T) {
 	if win.side.ed.Text() != "" || win.side.filtering {
 		t.Fatalf("after Esc: text %q, filtering %v", win.side.ed.Text(), win.side.filtering)
 	}
-	if !hasRow(win, tb[1].ID) {
-		t.Fatal("rows did not come back after Esc")
+	if !hasSpace(win, "key-alpha") || !hasSpace(win, "key-beta") {
+		t.Fatalf("spaces did not come back after Esc: %+v", win.side.hits.spaces)
 	}
+	_ = tb
 	if !r.Source().Focused(win.termTag) {
 		t.Fatal("the terminal does not have the keyboard after Esc")
 	}
@@ -99,16 +105,16 @@ func TestFilterEnterShowsFirstMatch(t *testing.T) {
 func TestFilterKeepsTheShownSession(t *testing.T) {
 	win, _, r, tb := filterWindow(t)
 	focusFilter(t, win, r)
-	typeFilter(t, win, r, "misc") // hides the shown session's row
-	if hasRow(win, tb[0].ID) {
-		t.Fatal("the shown session's row is not hidden")
+	typeFilter(t, win, r, "misc") // hides the shown session's space
+	if hasSpace(win, "key-alpha") {
+		t.Fatal("the shown session's space is not hidden")
 	}
 	if got := win.mgr.Active().ID; got != tb[0].ID {
 		t.Fatalf("filtering moved the shown session to %d", got)
 	}
 	pressKey(t, win, r, key.NameEscape, 0)
-	if !hasRow(win, tb[0].ID) || win.side.st.shown != tb[0].ID {
-		t.Fatalf("shown row is not back and highlighted: shown %d", win.side.st.shown)
+	if !hasSpace(win, "key-alpha") || win.side.st.space != "key-alpha" {
+		t.Fatalf("shown space is not back and highlighted: space %q", win.side.st.space)
 	}
 }
 
@@ -237,7 +243,7 @@ func TestOpeningSettingsWhileFilteringFocusesThePage(t *testing.T) {
 func TestRowClickWhileFilteringGivesTheTerminalTheKeyboard(t *testing.T) {
 	win, st, r, tb := filterWindow(t)
 	focusFilter(t, win, r)
-	sideClick(win, r, rowHit(t, win, tb[2].ID).rect, pointer.ButtonPrimary)
+	sideClick(win, r, spaceRect(t, win, "key-beta").rect, pointer.ButtonPrimary)
 	sideFrame(t, win, r)
 	sideFrame(t, win, r)
 	if win.mgr.Active().ID != tb[2].ID || win.focusTarget() != win.termTag || !r.Source().Focused(win.termTag) {

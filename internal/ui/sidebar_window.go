@@ -17,7 +17,6 @@ import (
 	"gioui.org/widget"
 
 	kinput "github.com/beefysalad/kaze-terminal/internal/input"
-	"github.com/beefysalad/kaze-terminal/internal/subagents"
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
@@ -39,39 +38,22 @@ type sideUI struct {
 	cache         sideCache
 	tabs          []*tabs.Tab
 	st            sideState
-	folded        map[string]bool     // repo groups the owner folded, by key
-	trayFolded    map[tabs.TabID]bool // sessions whose agent tray is folded away
-	hidden        bool                // this frame's mode is hidden (saved so, or the window is too narrow)
-	w             int                 // this frame's sidebar width in px, set once at the frame's start
-	hits          sideHits            // sidebar-local, like the pointer events on tag
-	at            image.Point         // the sidebar's top-left in the window
-	tag           int                 // pointer events on the sidebar
-	reveal        bool                // scroll the shown row into view next frame
-	redraws       int                 // frames the sidebar's pointer input asked for; tests count them
-	ed            widget.Editor       // the filter field
-	filtering     bool                // the filter field has the keyboard
-	mode          sideMode            // this frame's effective mode, set by sideWidth
-	filters       []event.Filter      // the filter's own keys, built once
-	ren           widget.Editor       // the title of the row being renamed
-	renaming      tabs.TabID          // 0 when no row is being renamed
-	renFrom       string              // the text the rename started with
-	renKeys       []event.Filter      // the rename editor's own keys, built once
-	lastClick     titleClick          // the last press on a row's title, for a double click
-}
-
-// titleClick is a press on a session row's title.
-type titleClick struct {
-	id tabs.TabID
-	at time.Duration
-}
-
-// pruneTray forgets the tray state of closed sessions, so a reused id starts open and collapsed.
-func (win *window) pruneTray(list []*tabs.Tab) {
-	for id := range win.side.trayFolded {
-		if !slices.ContainsFunc(list, func(t *tabs.Tab) bool { return t.ID == id }) {
-			delete(win.side.trayFolded, id)
-		}
-	}
+	folded        map[string]bool // repo groups the owner folded, by key
+	hidden        bool            // this frame's mode is hidden (saved so, or the window is too narrow)
+	w             int             // this frame's sidebar width in px, set once at the frame's start
+	hits          sideHits        // sidebar-local, like the pointer events on tag
+	at            image.Point     // the sidebar's top-left in the window
+	tag           int             // pointer events on the sidebar
+	reveal        bool            // scroll the shown row into view next frame
+	redraws       int             // frames the sidebar's pointer input asked for; tests count them
+	ed            widget.Editor   // the filter field
+	filtering     bool            // the filter field has the keyboard
+	mode          sideMode        // this frame's effective mode, set by sideWidth
+	filters       []event.Filter  // the filter's own keys, built once
+	ren           widget.Editor   // the title of the row being renamed
+	renaming      tabs.TabID      // 0 when no row is being renamed
+	renFrom       string          // the text the rename started with
+	renKeys       []event.Filter  // the rename editor's own keys, built once
 }
 
 // isMember reports whether t belongs to an open workspace run; members are not sessions.
@@ -134,7 +116,25 @@ func (win *window) closeTab(id tabs.TabID) {
 	win.w.Invalidate()
 }
 
+// afterClose is the tab to show once id closes: its space mate (the next, else
+// the one before), else the neighbouring space's last used tab.
 func (win *window) afterClose(id tabs.TabID) tabs.TabID {
+	win.cachedSide(time.Now())
+	if sp := win.side.cache.spaces.Spaces; spaceIndex(sp, id) >= 0 {
+		i := spaceIndex(sp, id)
+		mates := sp[i].Tabs
+		switch j := slices.Index(mates, id); {
+		case j+1 < len(mates):
+			return mates[j+1]
+		case j > 0:
+			return mates[j-1]
+		}
+		for _, k := range [2]int{i + 1, i - 1} {
+			if k >= 0 && k < len(sp) {
+				return win.spaceTarget(sp[k])
+			}
+		}
+	}
 	order := win.sessionIDs()
 	switch i := slices.Index(order, id); {
 	case i >= 0 && i+1 < len(order):
@@ -165,13 +165,13 @@ func (win *window) sideWidth(gtx layout.Context, width int) int {
 	if m != win.side.mode {
 		// The rows and tiles move: what was under the pointer is not now, and the
 		// other mode's scroll need not show the shown session.
-		win.side.st.hover, win.side.st.hoverAgent = 0, subagents.Key{}
+		win.side.st.hover, win.side.st.hoverSpace, win.side.st.hoverBtn = 0, "", btnNone
 		win.side.reveal = true
 	}
 	win.side.mode = m
 	win.side.hidden = m == sideHidden
 	if m != sideFull {
-		win.dropSideEdit() // only the full sidebar has editors; an invisible field must not keep the keyboard
+		win.dropFilter() // only the full sidebar has the filter; an invisible field must not keep the keyboard
 	}
 	switch m {
 	case sideFull:
@@ -188,7 +188,7 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 	s := &win.side
 	s.at = r.Min
 	if r.Empty() {
-		s.hits, s.st.hover, s.st.hoverAgent, s.reveal = sideHits{}, 0, subagents.Key{}, false
+		s.hits, s.st.hover, s.st.hoverSpace, s.st.hoverBtn, s.reveal = sideHits{}, 0, "", btnNone, false
 		s.cache.drawValid = false // the cached ops still match the full list; its hits are gone
 		return
 	}
@@ -198,30 +198,24 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 	sg := gtx
 	sg.Constraints = layout.Exact(r.Size())
 	{ // r is this frame's sidebar, decided before any toggle in it: draw it, never leave it bare
-		if s.renaming != 0 && win.mgr.Lookup(s.renaming) == nil {
-			win.endRename(false) // its tab closed
-		}
 		m := win.cachedSide(gtx.Now)
 		s.st.filter, s.st.ed = s.filterText(), nil
 		if s.filtering {
 			s.st.ed = &s.ed
 		}
-		s.st.renaming, s.st.ren = s.renaming, &s.ren
-		s.st.shown, s.st.activeRepo = 0, ""
+		s.st.filterOpen = s.filtering || s.st.filter != ""
+		s.st.shown, s.st.activeRepo, s.st.space = 0, "", ""
 		if a := win.mgr.Active(); a != nil {
 			s.st.shown = a.ID
 			s.st.activeRepo = win.locOf(a).repo
 		}
-		s.st.openAgent = subagents.Key{}
-		if d := win.dockOf(win.dockOwner()); d != nil {
-			s.st.openAgent = d.agent
-		}
+		s.st.space = win.selectedSpaceKey(s.st.shown)
 		s.st.doc = win.docs.shown
 		s.st.settings, s.st.settingsOn = win.set.open, win.set.shown
 		s.st.docked = win.shownMember()
 		s.st.right = win.sideRight()
 		s.st.tipRoom = max(gtx.Constraints.Max.X-r.Dx(), 1) // the tooltip stays inside the window
-		key := sideDrawKey{activeRepo: s.st.activeRepo, openAgent: s.st.openAgent, hoverAgent: s.st.hoverAgent, size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, right: s.st.right, tipRoom: s.st.tipRoom, mode: s.mode, docked: s.st.docked, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds, renaming: s.renaming}
+		key := sideDrawKey{activeRepo: s.st.activeRepo, space: s.st.space, hoverSpace: s.st.hoverSpace, hoverBtn: s.st.hoverBtn, filterOpen: s.st.filterOpen, ages: agentAges(gtx.Now, m.Agents), size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, right: s.st.right, tipRoom: s.st.tipRoom, mode: s.mode, docked: s.st.docked, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds}
 		if !s.cache.drawValid || s.cache.drawKey != key || s.reveal {
 			s.cache.ops.Reset()
 			cg := sg
@@ -229,7 +223,6 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 			rec := op.Record(cg.Ops)
 			static := s.st
 			static.ed = nil
-			static.ren = nil
 			static.static = true
 			h := win.layoutSide(cg, m, static, r.Size())
 			call := rec.Stop()
@@ -256,10 +249,6 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 		if s.filtering && h.filter.Empty() {
 			win.leaveFilter() // no field is drawn (the rail): the keyboard must not stay in it
 		}
-		if s.renaming != 0 && h.rename.Empty() {
-			// Gio drops focus from an editor it no longer lays out; give the keyboard back.
-			win.endRename(true)
-		}
 		s.st.scroll = min(max(s.st.scroll, 0), h.scrollMax)
 	}
 	area := clip.Rect{Max: r.Size()}.Push(ops)
@@ -281,40 +270,6 @@ func (win *window) sideReveal(gtx layout.Context, m sideModel, st sideState, h s
 		return railReveal(gtx, m, st, h)
 	}
 	return revealScroll(gtx, m, st, h)
-}
-
-// revealScroll is the scroll that shows the shown row whole, if it is in an open group.
-func revealScroll(gtx layout.Context, m sideModel, st sideState, h sideHits) (int, bool) {
-	gH, rH := gtx.Dp(sideGroupH), gtx.Dp(sideRowH)
-	y, top, found := 0, 0, false
-	rows := func(rs []sideRow) {
-		for _, r := range rs {
-			if r.ID == st.shown && !found {
-				top, found = y, true
-				for i, d := range r.Docs {
-					if d.ID == st.doc {
-						top = y + gtx.Dp(sideRowH) + i*gtx.Dp(sideDocH)
-						rH = gtx.Dp(sideDocH)
-						break
-					}
-				}
-			}
-			y += rowSpan(gtx, r)
-		}
-	}
-	for _, g := range m.Groups {
-		y += gH
-		if !g.Folded {
-			rows(g.Rows)
-		}
-	}
-	rows(m.Loose)
-	if !found {
-		return 0, false
-	}
-	sc := min(max(st.scroll, 0), h.scrollMax)
-	sc = max(min(sc, top), top+rH-h.list.Dy())
-	return min(max(sc, 0), h.scrollMax), true
 }
 
 func (win *window) sideEvents(gtx layout.Context) {
@@ -484,16 +439,6 @@ func (win *window) endRename(save bool) {
 	}
 }
 
-// dropSideEdit gives the keyboard back from the sidebar's editors when the main view
-// changes or the sidebar goes away: the filter keeps its text, a rename is saved.
-func (win *window) dropSideEdit() {
-	if win.side.filtering {
-		win.side.filtering = false
-		win.wantFocus = true
-	}
-	win.endRename(true)
-}
-
 // leaveFilter gives the keyboard back to the shown session or the settings page.
 func (win *window) leaveFilter() {
 	win.side.filtering = false
@@ -519,156 +464,6 @@ func (win *window) filterEnter() {
 func (win *window) sideRedraw() {
 	win.side.redraws++
 	win.w.Invalidate()
-}
-
-// sidePointer handles one pointer event on the sidebar. Hover redraws only when
-// the hovered row changes, so moving the mouse over the sidebar stays cheap.
-func (win *window) sidePointer(e pointer.Event) {
-	s := &win.side
-	p := e.Position.Round()
-	switch e.Kind {
-	case pointer.Move, pointer.Enter, pointer.Leave:
-		var hoverDoc docID
-		for _, d := range s.hits.docs {
-			if p.In(d.rect) && e.Kind != pointer.Leave {
-				hoverDoc = d.id
-				break
-			}
-		}
-		var hover tabs.TabID
-		if r, ok := s.hits.lineAt(p); ok && e.Kind != pointer.Leave {
-			hover = r.id
-		}
-		var hoverAgent subagents.Key // the tray line under the pointer
-		for _, a := range s.hits.agents {
-			if a.kind == hitAgentLine && p.In(a.rect) && e.Kind != pointer.Leave {
-				hoverAgent = a.key
-				break
-			}
-		}
-		if hover != s.st.hover || hoverDoc != s.st.hoverDoc || hoverAgent != s.st.hoverAgent {
-			s.st.hoverDoc = hoverDoc
-			s.st.hover = hover
-			s.st.hoverAgent = hoverAgent
-			win.sideRedraw()
-		}
-	case pointer.Scroll:
-		if !p.In(s.hits.list) {
-			return
-		}
-		if sc := min(max(s.st.scroll+int(e.Scroll.Y), 0), s.hits.scrollMax); sc != s.st.scroll {
-			s.st.scroll = sc
-			if s.mode == sideRail {
-				// Tiles moved under the pointer. Drop the old title until the
-				// next pointer move identifies the tile now under it.
-				s.st.hover = 0
-			}
-			win.sideRedraw()
-		}
-	case pointer.Press:
-		win.sidePress(p, e.Buttons, e.Time)
-	}
-}
-
-// sidePress handles a click: a row or member line shows its tab, its × or a middle
-// click closes it, a double click on a row's title renames it; an agent line opens
-// or closes its panel; headers fold; + opens a session. A click off the rename
-// editor saves the rename.
-func (win *window) sidePress(p image.Point, b pointer.Buttons, at time.Duration) {
-	primary, middle := b.Contain(pointer.ButtonPrimary), b.Contain(pointer.ButtonTertiary)
-	if !primary && !middle {
-		return
-	}
-	h := &win.side.hits
-	if win.side.renaming != 0 && p.In(h.rename) {
-		return // a click inside the editor keeps renaming
-	}
-	win.endRename(true)
-	win.stopRecording() // a click outside Settings' pane cancels a shortcut row's recording
-	last := win.side.lastClick
-	win.side.lastClick = titleClick{}
-	win.wantFocus = true
-	win.side.filtering = primary && p.In(h.filter) // any other click leaves the field
-	defer win.sideRedraw()
-	switch {
-	case p.In(h.settings):
-		switch {
-		case middle, primary && p.In(h.settingsClose):
-			win.closeSettings()
-		case primary:
-			win.openSettings()
-		}
-		return
-	case p.In(h.filter):
-		return // the frame gives the field the keyboard
-	}
-	for _, d := range h.docs {
-		if p.In(d.rect) {
-			if middle || p.In(d.close) {
-				win.closeDoc(d.id)
-			} else {
-				win.showDoc(d.id)
-			}
-			return
-		}
-	}
-	for _, a := range h.agents {
-		if primary && p.In(a.rect) {
-			switch a.kind {
-			case hitAgentChip:
-				win.openBoard(a.tab) // "+N more": the board, showing this session
-			case hitAgentLine:
-				win.showAgent(a.tab, a.key, true) // a click opens its panel, a second one closes it
-			}
-			return
-		}
-	}
-	if r, ok := h.lineAt(p); ok {
-		switch {
-		case middle, p.In(r.close):
-			win.closeTab(r.id)
-		case primary && p.In(r.fold):
-			// The tray's fold control folds or opens it without selecting the session.
-			if win.side.trayFolded == nil {
-				win.side.trayFolded = map[tabs.TabID]bool{}
-			}
-			flip(win.side.trayFolded, r.id)
-		default:
-			if !win.clickRow(r.id) {
-				return
-			}
-			if !primary || !p.In(r.title) {
-				break
-			}
-			if last.id == r.id && at >= last.at && at-last.at < doubleClick {
-				win.startRename(r.id)
-			} else {
-				win.side.lastClick = titleClick{r.id, at}
-			}
-		}
-		return
-	}
-	if !primary {
-		return
-	}
-	for _, g := range h.groups {
-		if p.In(g.rect) {
-			if win.side.folded == nil {
-				win.side.folded = map[string]bool{}
-			}
-			flip(win.side.folded, g.key)
-			return
-		}
-	}
-	for _, r := range h.runs {
-		if p.In(r.rect) {
-			if win.side.st.runFolded == nil {
-				win.side.st.runFolded = map[uint64]bool{}
-			}
-			flip(win.side.st.runFolded, r.run)
-			return
-		}
-	}
 }
 
 // clickRow is a click on a session row or a workspace member line: a member
@@ -736,27 +531,6 @@ func (win *window) nextWaiting() {
 	win.w.Invalidate()
 }
 
-// Editors keep their input registrations, selections and caret timers live;
-// the surrounding rows replay without shaping while an editor has the focus.
-func (win *window) drawSideEditors(gtx layout.Context) {
-	s, c := &win.side, win.ui
-	editor := func(ed *widget.Editor, r image.Rectangle, placeholder string, pad int) {
-		if r.Empty() {
-			return
-		}
-		cl := clip.Rect(r.Inset(1)).Push(gtx.Ops)
-		paint.FillShape(gtx.Ops, c.th.Chrome, clip.Rect(r).Op())
-		c.lineEditor(gtx, ed, r, placeholder, c.th.Muted, pad)
-		cl.Pop()
-	}
-	if s.filtering {
-		editor(&s.ed, s.hits.filter, "Filter sessions…", gtx.Dp(8))
-	}
-	if s.renaming != 0 {
-		editor(&s.ren, s.hits.rename, "", gtx.Dp(4))
-	}
-}
-
 // Read the bounded field into retained storage: Editor.Text copies its buffer
 // into a new string, even when the filter has not changed.
 func (s *sideUI) filterText() string {
@@ -771,4 +545,199 @@ func (s *sideUI) filterText() string {
 		s.filterCache = string(s.filterScratch[:n])
 	}
 	return s.filterCache
+}
+
+// selectedSpaceKey is the key of the space holding tab id; while a workspace member
+// (in no space) is shown it keeps the space the strip last showed.
+func (win *window) selectedSpaceKey(id tabs.TabID) string {
+	if k := win.spaceKeyOf(id); k != "" {
+		return k
+	}
+	return win.strip.spaceKey
+}
+
+// revealScroll is the scroll that shows the selected space line (or the shown
+// document under it) whole.
+func revealScroll(gtx layout.Context, m sideModel, st sideState, h sideHits) (int, bool) {
+	y, top, rH, found := 0, 0, gtx.Dp(sideSpaceH), false
+	for _, s := range m.Spaces {
+		if !found {
+			docAt := -1
+			for i, d := range s.Docs {
+				if st.doc != 0 && d.ID == st.doc {
+					docAt = i
+				}
+			}
+			switch {
+			case docAt >= 0:
+				top, rH, found = y+gtx.Dp(sideSpaceH)+gtx.Dp(sideSpaceGap)+docAt*gtx.Dp(sideDocH), gtx.Dp(sideDocH), true
+			case s.Key == st.space:
+				top, found = y, true
+			}
+		}
+		y += spaceSpan(gtx, s)
+	}
+	if !found {
+		return 0, false
+	}
+	sc := min(max(st.scroll, 0), h.scrollMax)
+	sc = max(min(sc, top), top+rH-h.list.Dy())
+	return min(max(sc, 0), h.scrollMax), true
+}
+
+// dropFilter gives the keyboard back from the filter field; it keeps its text.
+func (win *window) dropFilter() {
+	if win.side.filtering {
+		win.side.filtering = false
+		win.wantFocus = true
+	}
+}
+
+// dropSideEdit gives the keyboard back from the sidebar's filter and the tab
+// rename field when the main view changes or the sidebar goes away: the filter
+// keeps its text, a rename is saved.
+func (win *window) dropSideEdit() {
+	win.dropFilter()
+	win.endRename(true)
+}
+
+// sidePointer handles one pointer event on the sidebar. Hover redraws only when
+// the hovered line or button changes, so moving the mouse over the sidebar stays cheap.
+func (win *window) sidePointer(e pointer.Event) {
+	s := &win.side
+	p := e.Position.Round()
+	switch e.Kind {
+	case pointer.Move, pointer.Enter, pointer.Leave:
+		in := e.Kind != pointer.Leave
+		var hoverDoc docID
+		for _, d := range s.hits.docs {
+			if p.In(d.rect) && in {
+				hoverDoc = d.id
+				break
+			}
+		}
+		var hover tabs.TabID
+		if r, ok := s.hits.lineAt(p); ok && in {
+			hover = r.id
+		}
+		var hoverSpace string
+		for _, sp := range s.hits.spaces {
+			if p.In(sp.rect) && in {
+				hoverSpace = sp.key
+				break
+			}
+		}
+		hoverBtn := btnNone
+		switch {
+		case !in:
+		case p.In(s.hits.search):
+			hoverBtn = btnSearch
+		case p.In(s.hits.plus):
+			hoverBtn = btnPlus
+		}
+		if hover != s.st.hover || hoverDoc != s.st.hoverDoc || hoverSpace != s.st.hoverSpace || hoverBtn != s.st.hoverBtn {
+			s.st.hoverDoc, s.st.hover, s.st.hoverSpace, s.st.hoverBtn = hoverDoc, hover, hoverSpace, hoverBtn
+			win.sideRedraw()
+		}
+	case pointer.Scroll:
+		if !p.In(s.hits.list) {
+			return
+		}
+		if sc := min(max(s.st.scroll+int(e.Scroll.Y), 0), s.hits.scrollMax); sc != s.st.scroll {
+			s.st.scroll = sc
+			if s.mode == sideRail {
+				// Tiles moved under the pointer. Drop the old title until the
+				// next pointer move identifies the tile now under it.
+				s.st.hover = 0
+			}
+			win.sideRedraw()
+		}
+	case pointer.Press:
+		win.sidePress(p, e.Buttons)
+	}
+}
+
+// sidePress handles a click: a space line shows that space's last used tab, an
+// agent row or member line shows its tab, a middle click on one closes it; a
+// document line shows or closes the document; the header icons open the filter
+// or a new session; Settings and run headers as before. A click off the rename
+// editor saves the rename.
+func (win *window) sidePress(p image.Point, b pointer.Buttons) {
+	primary, middle := b.Contain(pointer.ButtonPrimary), b.Contain(pointer.ButtonTertiary)
+	if !primary && !middle {
+		return
+	}
+	h := &win.side.hits
+	win.endRename(true)
+	win.stopRecording() // a click outside Settings' pane cancels a shortcut row's recording
+	win.wantFocus = true
+	win.side.filtering = primary && (p.In(h.filter) || p.In(h.search)) // any other click leaves the field
+	defer win.sideRedraw()
+	switch {
+	case p.In(h.settings):
+		switch {
+		case middle, primary && p.In(h.settingsClose):
+			win.closeSettings()
+		case primary:
+			win.openSettings()
+		}
+		return
+	case p.In(h.filter), p.In(h.search):
+		return // the frame gives the field the keyboard
+	case p.In(h.plus):
+		if primary {
+			win.newTab()
+		}
+		return
+	}
+	for _, d := range h.docs {
+		if p.In(d.rect) {
+			if middle || p.In(d.close) {
+				win.closeDoc(d.id)
+			} else {
+				win.showDoc(d.id)
+			}
+			return
+		}
+	}
+	if r, ok := h.lineAt(p); ok {
+		switch {
+		case middle, p.In(r.close):
+			win.closeTab(r.id)
+		default:
+			win.clickRow(r.id)
+		}
+		return
+	}
+	if !primary {
+		return
+	}
+	for _, sp := range h.spaces {
+		if p.In(sp.rect) {
+			win.selectSpace(sp.key)
+			return
+		}
+	}
+	for _, r := range h.runs {
+		if p.In(r.rect) {
+			if win.side.st.runFolded == nil {
+				win.side.st.runFolded = map[uint64]bool{}
+			}
+			flip(win.side.st.runFolded, r.run)
+			return
+		}
+	}
+}
+
+// Editors keep their input registrations, selections and caret timers live;
+// the surrounding lines replay without shaping while an editor has the focus.
+func (win *window) drawSideEditors(gtx layout.Context) {
+	s, c := &win.side, win.ui
+	if s.filtering && !s.hits.filter.Empty() {
+		r := s.hits.filter
+		cl := clip.Rect(r.Inset(1)).Push(gtx.Ops)
+		paint.FillShape(gtx.Ops, c.th.Chrome, clip.Rect(r).Op())
+		c.lineEditor(gtx, &s.ed, r, "Filter spaces and agents…", c.th.Muted, gtx.Dp(8))
+		cl.Pop()
+	}
 }

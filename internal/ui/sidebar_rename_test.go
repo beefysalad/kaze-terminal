@@ -49,12 +49,32 @@ func rowTitle(t *testing.T, win *window, id tabs.TabID) string {
 	return ""
 }
 
-// startRename double-clicks tab id's title and checks the editor took the keyboard.
 func startRename(t *testing.T, win *window, r *input.Router, id tabs.TabID) {
 	t.Helper()
-	dblClick(t, win, r, rowHit(t, win, id).title)
-	if win.side.renaming != id || win.focusTarget() != &win.side.ren || !r.Source().Focused(&win.side.ren) {
-		t.Fatalf("double click: renaming %d, want %d (target ren %v, focused %v, rename rect %v)", win.side.renaming, id, win.focusTarget() == &win.side.ren, r.Source().Focused(&win.side.ren), win.side.hits.rename)
+	if win.spaceKeyOf(id) != win.strip.spaceKey {
+		win.selectTab(id) // the tab must be in the strip
+		sideFrame(t, win, r)
+	}
+	var rect image.Rectangle
+	for _, tb := range win.strip.lay.Tabs {
+		if tb.ID == id {
+			rect = tb.Rect
+		}
+	}
+	if rect.Empty() {
+		t.Fatalf("tab %d is not in the strip %+v", id, win.strip.lay.Tabs)
+	}
+	at := f32.Pt(float32(win.strip.rect.Min.X+centre(rect).X), float32(win.strip.rect.Min.Y+centre(rect).Y))
+	for _, ms := range []time.Duration{0, 100} {
+		r.Queue(
+			pointer.Event{Kind: pointer.Press, Source: pointer.Mouse, Buttons: pointer.ButtonPrimary, Position: at, Time: ms * time.Millisecond},
+			pointer.Event{Kind: pointer.Release, Source: pointer.Mouse, Position: at, Time: ms*time.Millisecond + 10},
+		)
+	}
+	sideFrame(t, win, r)
+	sideFrame(t, win, r)
+	if win.side.renaming != id || win.focusTarget() != &win.side.ren || !r.Source().Focused(&win.side.ren) || win.strip.rename.Empty() {
+		t.Fatalf("double click on the tab: renaming %d, want %d (target ren %v, focused %v, editor rect %v)", win.side.renaming, id, win.focusTarget() == &win.side.ren, r.Source().Focused(&win.side.ren), win.strip.rename)
 	}
 }
 
@@ -118,14 +138,14 @@ func TestRenameClickElsewhereSaves(t *testing.T) {
 	win, _, r, tb := filterWindow(t)
 	startRename(t, win, r, tb[0].ID)
 	retype(t, win, r, "api work")
-	sideClick(win, r, rowHit(t, win, tb[2].ID).rect, pointer.ButtonPrimary)
+	sideClick(win, r, spaceRect(t, win, "key-beta").rect, pointer.ButtonPrimary)
 	sideFrame(t, win, r)
 	sideFrame(t, win, r)
 	if got := rowTitle(t, win, tb[0].ID); got != "api work" || win.side.renaming != 0 {
 		t.Fatalf("title %q renaming %d after a click elsewhere", got, win.side.renaming)
 	}
 	if win.mgr.Active().ID != tb[2].ID || !r.Source().Focused(win.termTag) {
-		t.Fatal("the click did not show its row with the keyboard")
+		t.Fatal("the click did not show its space with the keyboard")
 	}
 }
 
@@ -188,47 +208,30 @@ func TestShortcutWhileRenamingEndsIt(t *testing.T) {
 	typedReaches(t, win, r, st.ptys[3], "x")
 }
 
-// A renamed row scrolled out of the list ends the rename, so keys reach the terminal.
-func TestRenameEndsWhenItsRowScrollsAway(t *testing.T) {
-	win, st := sideWindow(t, true)
-	var first *tabs.Tab
-	for i := range 20 {
-		tab := openIn(t, win, "")
-		if i == 0 {
-			first = tab
-		}
-	}
-	win.mgr.SetActive(first.ID)
-	r := new(input.Router)
-	sideFrame(t, win, r)
-	startRename(t, win, r, first.ID)
-	retype(t, win, r, "api work")
-	at := sidePt(win, centre(win.side.hits.list))
-	r.Queue(pointer.Event{Kind: pointer.Scroll, Source: pointer.Mouse, Position: at, Scroll: f32.Pt(0, 1<<16)})
-	sideFrame(t, win, r)
-	sideFrame(t, win, r)
-	if win.side.renaming != 0 || win.names[first.ID] != "api work" {
-		t.Fatalf("after scrolling the row away: renaming %d, names %v", win.side.renaming, win.names)
-	}
-	typedReaches(t, win, r, st.ptys[0], "x")
-}
-
-// A renamed row the filter stops matching ends the rename, so keys reach the terminal.
-func TestRenameEndsWhenItsRowIsFilteredOut(t *testing.T) {
+// A rename whose tab leaves the strip ends and saves, so keys reach the terminal.
+func TestRenameEndsWhenItsTabLeavesTheStrip(t *testing.T) {
 	win, st, r, tb := filterWindow(t)
-	deliverNow(win, promptMsg(int(tb[0].ID), "/ship-ticket", ""), t0)
-	focusFilter(t, win, r)
-	typeFilter(t, win, r, "ship") // matches only the command
-	if !hasRow(win, tb[0].ID) || hasRow(win, tb[1].ID) {
-		t.Fatalf("setup: rows %+v", win.side.hits.rows)
-	}
 	startRename(t, win, r, tb[0].ID)
 	retype(t, win, r, "api work")
-	report(t, tb[0], `C:\code\alpha\ticket33`) // Claude left: the command and the match go
+	win.selectTab(tb[2].ID) // another space: alpha's tabs leave the strip
 	sideFrame(t, win, r)
 	sideFrame(t, win, r)
-	if win.side.renaming != 0 || hasRow(win, tb[0].ID) {
-		t.Fatalf("after the row was filtered out: renaming %d", win.side.renaming)
+	if win.side.renaming != 0 || win.names[tb[0].ID] != "api work" {
+		t.Fatalf("after its tab left the strip: renaming %d, names %v", win.side.renaming, win.names)
 	}
-	typedReaches(t, win, r, st.ptys[0], "x")
+	typedReaches(t, win, r, st.ptys[2], "x")
+}
+
+// A tab rename lives in the strip: the filter and the model changing under it do not end it.
+func TestRenameSurvivesTheModelChangingUnderIt(t *testing.T) {
+	win, _, r, tb := filterWindow(t)
+	deliverNow(win, promptMsg(int(tb[0].ID), "/ship-ticket", ""), t0)
+	startRename(t, win, r, tb[0].ID)
+	retype(t, win, r, "api work")
+	report(t, tb[0], `C:\code\alpha\ticket33`) // Claude left: the command goes
+	sideFrame(t, win, r)
+	sideFrame(t, win, r)
+	if win.side.renaming != tb[0].ID || win.side.ren.Text() != "api work" {
+		t.Fatalf("a model change ended the rename: renaming %d, text %q", win.side.renaming, win.side.ren.Text())
+	}
 }

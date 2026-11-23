@@ -92,7 +92,7 @@ func (win *window) drawBar(gtx layout.Context, barH int) {
 	wordFace, wordSize := font.Font{Typeface: chromeFace, Weight: font.Bold}, unit.Sp(13)
 	right := win.sideRight()
 	b := win.titleCache.layout(titleIn{Size: size, Mac: !win.custom, LightsW: lights, SideW: side,
-		Right: right, NoPlus: win.side.mode != sideFull, Crumb: win.crumb(),
+		Right: right, SideFull: win.side.mode == sideFull, Crumb: win.crumb(),
 		Key: key, WordW: c.textWidth(gtx, titleWord, wordSize, wordFace), Dims: d, Measure: measure}, gtx.Metric, c.shaper)
 	win.titleCache.font = c.shaper
 	win.bar = b
@@ -142,7 +142,6 @@ func (win *window) drawBar(gtx layout.Context, barH int) {
 		toggle = "panelRight"
 	}
 	icon(capToggle, b.Toggle, toggle)
-	icon(capPlus, b.Plus, "plus")
 	icon(capAgents, b.Agents, "agents")
 	icon(capGear, b.Gear, "cog")
 	win.drawAgentsBadge(gtx, b.Agents)

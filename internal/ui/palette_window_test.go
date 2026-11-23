@@ -261,8 +261,7 @@ func TestShiftEnterOpensANewSession(t *testing.T) {
 func TestClickOutsideCloses(t *testing.T) {
 	win, _, r, tb := palWindow(t)
 	openPal(t, win, r)
-	row := rowHit(t, win, tb[2].ID)
-	sideClick(win, r, row.rect, pointer.ButtonPrimary)
+	sideClick(win, r, win.side.hits.spaces[len(win.side.hits.spaces)-1].rect, pointer.ButtonPrimary)
 	sideFrame(t, win, r)
 	sideFrame(t, win, r)
 	if win.palette.open {

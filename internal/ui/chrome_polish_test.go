@@ -19,7 +19,7 @@ func TestSidebarToggleMidFrameStillDrawsIt(t *testing.T) {
 	win.toggleSidebar() // as a click in this frame's events would
 	win.drawBar(barContext(1000), 42)
 	win.drawSide(pageContext(1000, 600), rect)
-	if len(win.side.hits.rows) == 0 {
+	if len(win.side.hits.spaces) == 0 {
 		t.Fatal("the sidebar's rectangle was left unpainted this frame")
 	}
 }

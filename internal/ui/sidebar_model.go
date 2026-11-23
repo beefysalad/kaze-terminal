@@ -3,6 +3,7 @@ package ui
 import (
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/beefysalad/kaze-terminal/internal/subagents"
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
@@ -20,12 +21,12 @@ type sideRow struct {
 	Claude                bool // Claude Code has reported from this tab
 	Add, Del              int  // lines added and removed in the folder's repo
 	Mark                  mark
+	Since                 time.Time            // when the agent's current turn began; zero when idle
 	Agents                []sideAgent          // its tray's lines; empty while folded
 	Hidden                subagents.TrayCounts // tray agents past the lines, by state
 	AgentCount            int                  // running and waiting, for the group chip
 	TrayTotal             int                  // every agent in its tray, finished ones included
 	TrayWaiting           int                  // tray agents waiting for the owner
-	TrayFolded            bool                 // the fold control hid the tray
 }
 
 // sideGroup is one repo's sessions. Rows is filtered; Count is not.
@@ -62,6 +63,8 @@ type sideModel struct {
 	Groups []sideGroup
 	Loose  []sideRow
 	Runs   []sideRun
+	Spaces []spaceEntry // the spaces as drawn: one per group, then Shell; filtered like the groups
+	Agents []agentRow   // the Agents section's rows, filtered like the groups
 }
 
 type sideInput struct {
@@ -143,6 +146,7 @@ func buildSide(in sideInput) sideModel {
 			Running: a.running,
 			Claude:  a.claude,
 			Mark:    in.Mark(t.ID),
+			Since:   a.since,
 		}
 		row.Detail = row.Branch
 		if loc.repo == "" {
@@ -159,7 +163,7 @@ func buildSide(in sideInput) sideModel {
 		if in.Agents != nil {
 			tr := in.Agents(t.ID)
 			row.Agents, row.Hidden, row.AgentCount = tr.Shown, tr.Hidden, tr.Active
-			row.TrayTotal, row.TrayWaiting, row.TrayFolded = tr.Total, tr.Waiting, tr.Folded
+			row.TrayTotal, row.TrayWaiting = tr.Total, tr.Waiting
 		}
 		if loc.cwd == "" || loc.repo == "" {
 			loose = append(loose, row)
@@ -175,13 +179,14 @@ func buildSide(in sideInput) sideModel {
 		members[i] = append(members[i], row)
 	}
 	for i, g := range all {
+		nameHit := filter != "" && strings.Contains(strings.ToLower(g.Name), filter) // a space's name shows all its sessions
 		g.Count = len(members[i])
 		for _, r := range members[i] {
 			if r.Mark == markNeeds {
 				g.Waiting++
 			}
 			g.AgentCount += r.AgentCount
-			if r.matches(filter) {
+			if nameHit || r.matches(filter) {
 				g.Rows = append(g.Rows, r)
 			}
 		}
@@ -191,11 +196,14 @@ func buildSide(in sideInput) sideModel {
 		g.Folded = in.Folded[g.Key] && filter == ""
 		m.Groups = append(m.Groups, g)
 	}
+	shellHit := filter != "" && strings.Contains("shell", filter)
 	for _, r := range loose {
-		if r.matches(filter) {
+		if shellHit || r.matches(filter) {
 			m.Loose = append(m.Loose, r)
 		}
 	}
+	m.Spaces = buildSpaces(m, 0).Spaces
+	m.Agents = buildAgents(m).Rows
 	return m
 }
 
@@ -376,24 +384,6 @@ func folderName(dir string) string {
 		return "" // a drive root
 	}
 	return dir
-}
-
-// stateWord is the first-line status; alerts take priority over subagent counts.
-// A row with a tray shows the tray's fold control instead; its dot keeps the mark.
-func (r sideRow) stateWord() string {
-	switch {
-	case r.TrayTotal > 0:
-		return trayFold(r.TrayTotal, r.TrayFolded)
-	case r.Mark == markNeeds:
-		return "needs you"
-	case r.Mark == markDone:
-		return "done"
-	case r.AgentCount > 0:
-		return agentChip(r.AgentCount)
-	case r.Running:
-		return "running"
-	}
-	return ""
 }
 
 // branchSlug is branch as a folder name: anything but letters, digits, - and _

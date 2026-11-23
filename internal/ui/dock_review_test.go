@@ -123,15 +123,16 @@ func TestDockReadsLongFinishedTranscript(t *testing.T) {
 	}
 }
 
-// Review I3: clicking an agent whose panel is open in another session shows it.
+// Review I3: clicking the agent row of a session whose panel is open shows it.
 func TestSidebarAgentFromOtherTabShowsPanel(t *testing.T) {
 	win, _, r, a, b, _, _ := memberWindow(t)
+	markAgent(win, a.ID)
 	k := startAgent(win, a.ID, "s", "x")
 	twoFrames(t, win, r)
 	win.openDock(a.ID, k)
 	win.selectTab(b.ID)
 	twoFrames(t, win, r)
-	sideClick(win, r, agentHit(t, win, k).rect, pointer.ButtonPrimary)
+	sideClick(win, r, agentRowFor(t, win, a.ID).rect, pointer.ButtonPrimary)
 	twoFrames(t, win, r)
 	if win.mgr.Active().ID != a.ID || win.dockOf(a.ID) == nil {
 		t.Fatal("the click closed the panel it should have shown")

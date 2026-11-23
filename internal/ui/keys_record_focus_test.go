@@ -19,17 +19,17 @@ func TestSidebarClickStopsRecording(t *testing.T) {
 	}
 }
 
-// A click on the sidebar's filter field ends recording too: the field has the
-// keyboard now.
+// The backdrop intercepts the sidebar search click, dismissing Settings without
+// opening the underlying search field.
 func TestSidebarFilterClickStopsRecording(t *testing.T) {
 	win, r, _, _ := shortcutsWindow(t, "")
 	clickKeys(t, win, r, "find")
 	if win.set.keyRec != "find" {
 		t.Fatalf("clicking find's keys did not start recording (keyRec %q)", win.set.keyRec)
 	}
-	clickRect(t, win, r, win.side.hits.filter.Add(win.side.at))
-	if !win.side.filtering {
-		t.Fatal("the click missed the sidebar filter field")
+	clickRect(t, win, r, win.side.hits.search.Add(win.side.at))
+	if win.side.filtering || win.set.shown {
+		t.Fatal("backdrop click opened search or left Settings shown")
 	}
 	if win.set.keyRec != "" {
 		t.Fatalf("still recording %q after a click on the sidebar filter", win.set.keyRec)

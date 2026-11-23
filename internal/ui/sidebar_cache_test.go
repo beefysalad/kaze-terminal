@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"fmt"
 	"image"
 	"testing"
 	"time"
@@ -158,24 +157,20 @@ func TestSidebarCacheChangesWithDocsRunsSizeThemeAndTitles(t *testing.T) {
 	changed("tab close", func() { win.mgr.Close(a.ID) })
 }
 
-func TestSidebarCacheTrayAllocatesNothing(t *testing.T) {
+func TestSidebarCacheSpacesAndAgentsAllocateNothing(t *testing.T) {
 	win, _ := sideWindow(t, true)
 	a := openIn(t, win, osPath("/code/repo/api"))
 	b := openIn(t, win, osPath("/code/repo/web"))
 	c := openIn(t, win, osPath("/code/other/cli"))
 	var router input.Router
 	sideFrame(t, win, &router)
-	startAgents(win, a.ID, 12)
-	for i := range 12 {
-		startAgent(win, b.ID, "sb", fmt.Sprintf("b%02d", i))
-	}
-	for i := range 4 {
-		startAgent(win, c.ID, "sc", fmt.Sprintf("c%02d", i))
-	}
-	win.side.trayFolded = map[tabs.TabID]bool{c.ID: true}
+	setAgent(win, a.ID, agentState{claude: true, running: true, since: time.Now()})
+	setAgent(win, b.ID, agentState{claude: true})
+	setAgent(win, c.ID, agentState{agent: "codex"})
+	win.alerts.marks = map[tabs.TabID]mark{c.ID: markNeeds}
 	sizedFrame(t, win, &router, 1000, 900)
-	if n := len(win.side.hits.agents); n < trayCap+1+trayCap+1 {
-		t.Fatalf("tray hits %d: fixture did not draw the trays", n)
+	if n := len(win.side.hits.rows); n != 3 || len(win.side.hits.spaces) != 2 {
+		t.Fatalf("%d agent rows and %d spaces: the fixture did not draw both sections", n, len(win.side.hits.spaces))
 	}
 	var ops op.Ops
 	g := pageContext(1000, 900)
@@ -186,20 +181,43 @@ func TestSidebarCacheTrayAllocatesNothing(t *testing.T) {
 	}
 	builds, draws := win.side.cache.builds, win.side.cache.draws
 	if n := testing.AllocsPerRun(100, draw); n != 0 {
-		t.Fatalf("unchanged sidebar with trays allocates %g times", n)
+		t.Fatalf("unchanged sidebar with agents allocates %g times", n)
 	}
 	if win.side.cache.builds != builds || win.side.cache.draws != draws {
-		t.Fatal("unchanged sidebar with trays rebuilt or reshaped")
+		t.Fatal("unchanged sidebar with agents rebuilt or reshaped")
 	}
 }
 
-func TestSidebarCacheTooltipAllocatesNothing(t *testing.T) {
+func TestSidebarCacheAgeRebuildsOnlyWhenAMinuteTurns(t *testing.T) {
 	win, _ := sideWindow(t, true)
 	a := openIn(t, win, osPath("/code/repo/api"))
-	k := stepAgent(win, a.ID, "x")
+	setAgent(win, a.ID, agentState{claude: true, running: true, since: time.Unix(1000, 0).Add(-30 * time.Second)})
+	var ops op.Ops
+	g := pageContext(1000, 600)
+	g.Ops = &ops
+	draw := func(now time.Time) { ops.Reset(); g.Now = now; win.drawSide(g, image.Rect(0, 42, 260, 568)) }
+	now := time.Unix(1000, 0)
+	for range 3 {
+		draw(now)
+	}
+	draws := win.side.cache.draws
+	draw(now.Add(20 * time.Second))
+	if win.side.cache.draws != draws {
+		t.Fatal("seconds passing rebuilt the sidebar though the age text is the same")
+	}
+	draw(now.Add(45 * time.Second)) // 75 seconds old: "1m"
+	if win.side.cache.draws != draws+1 {
+		t.Fatalf("a minute turning gave %d rebuilds, want 1", win.side.cache.draws-draws)
+	}
+}
+
+func TestSidebarCacheHoverSettlesAndAllocatesNothing(t *testing.T) {
+	win, _ := sideWindow(t, true)
+	openIn(t, win, osPath("/code/repo/api"))
 	var router input.Router
 	sideFrame(t, win, &router)
-	win.side.st.hoverAgent = k
+	win.side.st.hoverSpace = "key-repo"
+	win.side.st.hoverBtn = btnPlus
 	var ops op.Ops
 	g := pageContext(1000, 600)
 	g.Ops = &ops
@@ -207,14 +225,11 @@ func TestSidebarCacheTooltipAllocatesNothing(t *testing.T) {
 	for range 10 {
 		draw()
 	}
-	if win.side.hits.tip.Empty() {
-		t.Fatal("fixture drew no tooltip")
-	}
 	builds, draws := win.side.cache.builds, win.side.cache.draws
 	if n := testing.AllocsPerRun(100, draw); n != 0 {
-		t.Fatalf("unchanged sidebar with a tooltip allocates %g times", n)
+		t.Fatalf("unchanged sidebar with a hovered space allocates %g times", n)
 	}
 	if win.side.cache.builds != builds || win.side.cache.draws != draws {
-		t.Fatal("unchanged sidebar with a tooltip rebuilt or reshaped")
+		t.Fatal("unchanged sidebar with a hovered space rebuilt or reshaped")
 	}
 }

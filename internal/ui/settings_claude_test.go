@@ -116,8 +116,9 @@ func pressAny(t *testing.T, win *window, id string, arg int) {
 	t.Fatalf("no %s control with arg %d", id, arg)
 }
 
+// pageHas matches reading order across wrapped lines.
 func pageHas(win *window, s string) bool {
-	return slices.ContainsFunc(win.set.texts, func(x string) bool { return strings.Contains(x, s) })
+	return strings.Contains(strings.Join(win.set.texts, " "), s)
 }
 
 func TestDoneToastSetting(t *testing.T) {
@@ -385,7 +386,7 @@ func unreadableWindow(t *testing.T, write func(path string)) (*window, string) {
 
 func TestMissingSettingsFileCannotBeRead(t *testing.T) {
 	win, path := unreadableWindow(t, nil)
-	if !pageHas(win, "Can't read ") || !pageHas(win, "settings.json (not found)") {
+	if !pageHas(win, "Can't read") || !pageHas(win, "(not found)") || !strings.Contains(strings.Join(win.set.texts, ""), "settings.json") {
 		t.Fatalf("texts %q", win.set.texts)
 	}
 	if len(controlsOf(win, "claude_fix"))+len(controlsOf(win, "claude_replace")) != 0 {

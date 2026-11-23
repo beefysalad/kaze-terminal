@@ -25,11 +25,9 @@ func TestFinalSessionCloseKeepsWindowUsable(t *testing.T) {
 			sideFrame(t, win, &r)
 			sideFrame(t, win, &r)
 			if sidebar {
-				r.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, Position: sidePt(win, centre(rowHit(t, win, tab.ID).rect))})
-				sideFrame(t, win, &r)
-				for _, row := range win.side.hits.rows {
-					if row.id == tab.ID {
-						sideClick(win, &r, row.close, pointer.ButtonPrimary)
+				for _, tb := range win.strip.lay.Tabs {
+					if tb.ID == tab.ID { // the tab's x in the strip
+						clickAt(t, win, &r, stripPoint(win, tb.Close))
 						sideFrame(t, win, &r)
 						break
 					}
@@ -161,9 +159,10 @@ func TestEmptyWindowTitleBarActions(t *testing.T) {
 	var r input.Router
 	sideFrame(t, win, &r)
 	sideFrame(t, win, &r)
-	clickAt(t, win, &r, centre(win.bar.Plus))
+	sideClick(win, &r, win.side.hits.plus, pointer.ButtonPrimary) // the sidebar header's +
+	sideFrame(t, win, &r)
 	if win.mgr.Active() == nil {
-		t.Fatal("title-bar New session did not work")
+		t.Fatal("sidebar New session did not work")
 	}
 	win.closeTab(win.mgr.Active().ID)
 	sideFrame(t, win, &r)

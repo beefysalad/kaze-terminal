@@ -227,7 +227,7 @@ func TestFontChangeResizesAllTabs(t *testing.T) {
 	frameWith(t, win, &r, at)
 	grid := func() [2]int {
 		cw, ch := win.rend.CellSize()
-		cols, rows := gridSize(784, 518, cw, ch) // the grid inside an 800x600 window: 600 - 42 bar - 32 status - 8 padding
+		cols, rows := gridSize(784, 518-stripHeightDp, cw, ch) // the grid inside an 800x600 window: 600 - 42 bar - 36 tab strip - 32 status - 8 padding
 		return [2]int{cols, rows}
 	}
 	check := func(what string, before [2]int) [2]int {
