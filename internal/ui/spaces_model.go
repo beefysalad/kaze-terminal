@@ -28,6 +28,7 @@ type spaceEntry struct {
 	Count     int          // sessions
 	Waiting   int          // sessions with markNeeds
 	Selected  bool         // holds the active tab
+	Docs      []sideDoc    // documents opened from its sessions, listed under its line
 }
 
 // spaceTabs is the tab strip's contents for s, as a copy.
@@ -63,6 +64,7 @@ func newSpace(key, name string, rows []sideRow, active tabs.TabID) spaceEntry {
 	s := spaceEntry{Key: key, Name: name, Badge: spaceBadge(name), Color: spaceColor(name), Count: len(rows)}
 	for _, r := range rows {
 		s.Tabs = append(s.Tabs, r.ID)
+		s.Docs = append(s.Docs, r.Docs...)
 		if r.Mark == markNeeds {
 			s.Waiting++
 		}

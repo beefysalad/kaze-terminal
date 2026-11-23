@@ -254,7 +254,7 @@ func TestBoardPressElsewhereLeavesSearch(t *testing.T) {
 // A "+N more" chip clicked while the board's search has the keyboard gives the
 // keyboard back to the board: the field still reports focus in that frame, but
 // only a newly focused field counts as a click into it.
-func TestBoardChipLeavesSearch(t *testing.T) {
+func TestSidebarAgentRowLeavesBoardSearch(t *testing.T) {
 	win, _, r, a, _, _, _ := memberWindow(t)
 	startAgents(win, a.ID, 12)
 	twoFrames(t, win, r)
@@ -265,11 +265,7 @@ func TestBoardChipLeavesSearch(t *testing.T) {
 	if !win.board.searching || !r.Source().Focused(&win.board.ed) {
 		t.Fatalf("fixture: searching %v", win.board.searching)
 	}
-	chips := trayHits(win, a.ID, hitAgentChip)
-	if len(chips) != 1 {
-		t.Fatalf("chips %v", chips)
-	}
-	sideClickAt(win, r, centre(chips[0].rect), pointer.ButtonPrimary, 0)
+	win.openBoard(a.ID) // what the board's own entry points call while its search has the keyboard
 	twoFrames(t, win, r)
 	if win.board.searching || win.focusTarget() != &win.board.tag || r.Source().Focused(&win.board.ed) {
 		t.Fatalf("after the chip: searching %v, field focused %v", win.board.searching, r.Source().Focused(&win.board.ed))

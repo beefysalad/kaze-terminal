@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -134,17 +135,28 @@ func hasRow(win *window, id tabs.TabID) bool {
 	return false
 }
 
-func TestClickingARowShowsIt(t *testing.T) {
+func hasSpace(win *window, key string) bool {
+	for _, h := range win.side.hits.spaces {
+		if h.key == key {
+			return true
+		}
+	}
+	return false
+}
+
+func TestClickingAnAgentRowShowsItsTab(t *testing.T) {
 	win, _ := sideWindow(t, true)
 	a := openIn(t, win, "")
 	b := openIn(t, win, "")
+	markAgent(win, a.ID)
+	markAgent(win, b.ID)
 	win.mgr.SetActive(a.ID)
 	var r input.Router
 	sideFrame(t, win, &r)
 	sideClick(win, &r, rowHit(t, win, b.ID).rect, pointer.ButtonPrimary)
 	sideFrame(t, win, &r)
 	if got := win.mgr.Active().ID; got != b.ID {
-		t.Fatalf("active %d after clicking b's row, want %d", got, b.ID)
+		t.Fatalf("active %d after clicking b's agent row, want %d", got, b.ID)
 	}
 }
 
@@ -162,8 +174,11 @@ func TestClosingTheShownSessionSkipsMembers(t *testing.T) {
 		t.Fatalf("shown %d after closing a, want the next session b (%d), not the member", got, b.ID)
 	}
 
-	// The row's × and a middle click close through the same path.
+	// A middle click on an agent row closes through the same path.
 	c := openIn(t, win, "")
+	for _, id := range []tabs.TabID{b.ID, c.ID} {
+		markAgent(win, id)
+	}
 	win.mgr.SetActive(b.ID)
 	var r input.Router
 	sideFrame(t, win, &r)
@@ -171,21 +186,6 @@ func TestClosingTheShownSessionSkipsMembers(t *testing.T) {
 	sideFrame(t, win, &r)
 	if win.mgr.Has(b.ID) || win.mgr.Active().ID != c.ID {
 		t.Fatalf("middle click: b open %v, active %d, want c (%d)", win.mgr.Has(b.ID), win.mgr.Active().ID, c.ID)
-	}
-	d := openIn(t, win, "")
-	win.mgr.SetActive(c.ID)
-	sideFrame(t, win, &r)
-	r.Queue(pointer.Event{Kind: pointer.Move, Source: pointer.Mouse, Position: sidePt(win, centre(rowHit(t, win, c.ID).rect))})
-	sideFrame(t, win, &r)
-	sideFrame(t, win, &r) // draws the × the hover asked for
-	x := rowHit(t, win, c.ID).close
-	if x.Empty() {
-		t.Fatal("a hovered row shows no ×")
-	}
-	sideClick(win, &r, x, pointer.ButtonPrimary)
-	sideFrame(t, win, &r)
-	if win.mgr.Has(c.ID) || win.mgr.Active().ID != d.ID {
-		t.Fatalf("× click: c open %v, active %d, want d (%d)", win.mgr.Has(c.ID), win.mgr.Active().ID, d.ID)
 	}
 }
 
@@ -255,28 +255,23 @@ func TestNextFromAMemberGoesToTheFirstSession(t *testing.T) {
 	}
 }
 
-func TestGroupHeaderFolds(t *testing.T) {
+func TestSpaceLineIsNotAFoldHeader(t *testing.T) {
 	win, _ := sideWindow(t, true)
 	a := openIn(t, win, osPath("/code/X/a"))
 	c := openIn(t, win, osPath("/code/X/c"))
 	win.mgr.SetActive(a.ID)
 	var r input.Router
 	sideFrame(t, win, &r)
-	if len(win.side.hits.groups) != 1 {
-		t.Fatalf("%d group headers, want 1", len(win.side.hits.groups))
+	if len(win.side.hits.spaces) != 1 {
+		t.Fatalf("%d space lines, want 1", len(win.side.hits.spaces))
 	}
-	sideClick(win, &r, win.side.hits.groups[0].rect, pointer.ButtonPrimary)
+	sideClick(win, &r, win.side.hits.spaces[0].rect, pointer.ButtonPrimary)
 	sideFrame(t, win, &r)
 	sideFrame(t, win, &r)
-	if !win.side.folded["key-X"] || hasRow(win, a.ID) || hasRow(win, c.ID) {
-		t.Fatalf("after one click: folded %v, rows %+v", win.side.folded, win.side.hits.rows)
+	if len(win.side.folded) != 0 || len(win.side.hits.spaces) != 1 || win.mgr.Active() == nil {
+		t.Fatalf("a click on a space line folded something: folded %v", win.side.folded)
 	}
-	sideClick(win, &r, win.side.hits.groups[0].rect, pointer.ButtonPrimary)
-	sideFrame(t, win, &r)
-	sideFrame(t, win, &r)
-	if win.side.folded["key-X"] || !hasRow(win, a.ID) || !hasRow(win, c.ID) {
-		t.Fatalf("after two clicks: folded %v, rows %+v", win.side.folded, win.side.hits.rows)
-	}
+	_ = c
 }
 
 func TestToggleSidebarCyclesAndSaves(t *testing.T) {
@@ -285,8 +280,8 @@ func TestToggleSidebarCyclesAndSaves(t *testing.T) {
 	win.cfgPath = filepath.Join(t.TempDir(), "config.toml")
 	var r input.Router
 	sideFrame(t, win, &r)
-	if win.side.hidden || len(win.side.hits.rows) != 1 {
-		t.Fatalf("sidebar hidden %v with %d rows at start", win.side.hidden, len(win.side.hits.rows))
+	if win.side.hidden || len(win.side.hits.spaces) != 1 {
+		t.Fatalf("sidebar hidden %v with %d spaces at start", win.side.hidden, len(win.side.hits.spaces))
 	}
 	ctrlShiftB := key.Event{Name: "B", Modifiers: key.ModCtrl | key.ModShift, State: key.Press}
 	win.route(layout.Context{}, []event.Event{ctrlShiftB}, 8, 16)
@@ -308,7 +303,7 @@ func TestToggleSidebarCyclesAndSaves(t *testing.T) {
 	}
 	win.route(layout.Context{}, []event.Event{ctrlShiftB}, 8, 16)
 	sideFrame(t, win, &r)
-	if win.side.hidden || win.side.mode != sideFull || len(win.side.hits.rows) != 1 {
+	if win.side.hidden || win.side.mode != sideFull || len(win.side.hits.spaces) != 1 {
 		t.Fatal("a third Ctrl+Shift+B did not bring the full sidebar back")
 	}
 	if b, _ := os.ReadFile(win.cfgPath); !strings.Contains(string(b), `sidebar_mode = "full"`) {
@@ -332,7 +327,7 @@ func TestNarrowWindowShowsTheRailWithoutSaving(t *testing.T) {
 		t.Fatalf("a narrow window wrote the config (%v)", err)
 	}
 	sizedFrame(t, win, &r, 1000, 600)
-	if win.side.hidden || win.side.mode != sideFull || len(win.side.hits.rows) != 1 {
+	if win.side.hidden || win.side.mode != sideFull || len(win.side.hits.spaces) != 1 {
 		t.Fatal("widening the window did not bring the full sidebar back")
 	}
 }
@@ -341,6 +336,8 @@ func TestHoverInvalidatesOnlyOnChange(t *testing.T) {
 	win, _ := sideWindow(t, true)
 	a := openIn(t, win, "")
 	b := openIn(t, win, "")
+	markAgent(win, a.ID)
+	markAgent(win, b.ID)
 	var r input.Router
 	sideFrame(t, win, &r)
 	ra, rb := rowHit(t, win, a.ID).rect, rowHit(t, win, b.ID).rect
@@ -359,31 +356,31 @@ func TestHoverInvalidatesOnlyOnChange(t *testing.T) {
 	}
 }
 
-func TestKeyboardSelectionScrollsIntoView(t *testing.T) {
+func TestKeyboardSelectionScrollsTheSpaceIntoView(t *testing.T) {
 	win, _ := sideWindow(t, true)
 	var ids []tabs.TabID
-	for range 40 {
-		ids = append(ids, openIn(t, win, "").ID)
+	for i := range 40 { // one tab in each of 40 spaces
+		ids = append(ids, openIn(t, win, osPath("/code/r"+strconv.Itoa(i)+"/x")).ID)
 	}
 	win.mgr.SetActive(ids[0])
 	var r input.Router
 	sideFrame(t, win, &r)
-	if hasRow(win, ids[39]) {
-		t.Fatal("the last of 40 rows is visible unscrolled; the test needs more rows")
+	if len(win.side.hits.spaces) >= 40 {
+		t.Fatal("all 40 spaces are visible unscrolled; the test needs more")
 	}
 	win.runShortcut(layout.Context{}, actPrevTab)
 	sideFrame(t, win, &r)
 	if win.mgr.Active().ID != ids[39] {
 		t.Fatalf("prev from the first went to %d, want the last", win.mgr.Active().ID)
 	}
-	h := rowHit(t, win, ids[39])
-	if !h.rect.In(win.side.hits.list) || h.rect.Dy() != sideRowH {
-		t.Fatalf("row %v is not wholly inside the list %v", h.rect, win.side.hits.list)
+	h := spaceRect(t, win, "key-r39")
+	if !h.rect.In(win.side.hits.list) || h.rect.Dy() != sideSpaceH {
+		t.Fatalf("space %v is not wholly inside the list %v", h.rect, win.side.hits.list)
 	}
 	win.runShortcut(layout.Context{}, actNextTab)
 	sideFrame(t, win, &r)
-	if h := rowHit(t, win, ids[0]); h.rect.Dy() != sideRowH {
-		t.Fatalf("wrapping to the first row left it cut: %v", h.rect)
+	if h := spaceRect(t, win, "key-r0"); h.rect.Dy() != sideSpaceH {
+		t.Fatalf("wrapping to the first space left it cut: %v", h.rect)
 	}
 }
 
@@ -444,6 +441,8 @@ func TestSettingsRowShowsAndCloses(t *testing.T) {
 	win, _ := sideWindow(t, true)
 	a := openIn(t, win, "")
 	b := openIn(t, win, "")
+	markAgent(win, a.ID)
+	markAgent(win, b.ID)
 	win.mgr.SetActive(a.ID)
 	var r input.Router
 	sideFrame(t, win, &r)
@@ -509,8 +508,8 @@ func TestPlusOpensASessionAndMemberClickShowsIt(t *testing.T) {
 
 func TestWheelScrollsTheList(t *testing.T) {
 	win, _ := sideWindow(t, true)
-	for range 30 {
-		openIn(t, win, "")
+	for i := range 30 {
+		openIn(t, win, osPath("/code/r"+strconv.Itoa(i)+"/x"))
 	}
 	var r input.Router
 	sideFrame(t, win, &r)

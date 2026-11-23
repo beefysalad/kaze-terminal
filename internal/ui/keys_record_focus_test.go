@@ -27,9 +27,9 @@ func TestSidebarFilterClickStopsRecording(t *testing.T) {
 	if win.set.keyRec != "find" {
 		t.Fatalf("clicking find's keys did not start recording (keyRec %q)", win.set.keyRec)
 	}
-	clickRect(t, win, r, win.side.hits.filter.Add(win.side.at))
+	clickRect(t, win, r, win.side.hits.search.Add(win.side.at))
 	if !win.side.filtering {
-		t.Fatal("the click missed the sidebar filter field")
+		t.Fatal("the click missed the sidebar search icon")
 	}
 	if win.set.keyRec != "" {
 		t.Fatalf("still recording %q after a click on the sidebar filter", win.set.keyRec)

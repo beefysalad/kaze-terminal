@@ -24,11 +24,11 @@ func TestDocRowClickShowsTheDoc(t *testing.T) {
 	}
 	hit := win.side.hits.docs[0]
 	p := hit.rect.Min.Add(image.Pt(5, 5))
-	win.sidePress(p, pointer.ButtonPrimary, 0)
+	win.sidePress(p, pointer.ButtonPrimary)
 	if win.shownDoc() != d {
 		t.Fatal("not shown")
 	}
-	win.sidePress(p, pointer.ButtonTertiary, 0)
+	win.sidePress(p, pointer.ButtonTertiary)
 	if len(win.docs.list) != 0 || win.mgr.Lookup(a.ID) == nil {
 		t.Fatal("closed session")
 	}

@@ -388,20 +388,17 @@ func TestRowShowsCommandAndRunning(t *testing.T) {
 	if r.Command != "/ship-ticket" || !r.Running {
 		t.Fatalf("row %+v", r)
 	}
-	if w := r.stateWord(); w != "running" {
-		t.Fatalf("state word %q, want running", w)
-	}
 }
 
-func TestNeedsBeatsRunningWord(t *testing.T) {
-	for mk, want := range map[mark]string{markNeeds: "needs you", markDone: "done", markNone: "running"} {
-		r := sideRow{Running: true, Mark: mk}
-		if w := r.stateWord(); w != want {
-			t.Errorf("mark %v: word %q, want %q", mk, w, want)
+func TestNeedsBeatsRunningInAgentRows(t *testing.T) {
+	for mk, want := range map[mark]agentGroup{markNeeds: agentNeeds, markDone: agentWorking, markNone: agentWorking} {
+		m := sideModel{Loose: []sideRow{{ID: 1, Agent: "claude", Running: true, Mark: mk}}}
+		if got := buildAgents(m).Rows[0]; got.State != want || got.Mark != mk {
+			t.Errorf("mark %v: state %v mark %v, want state %v", mk, got.State, got.Mark, want)
 		}
 	}
-	if w := (sideRow{}).stateWord(); w != "" {
-		t.Fatalf("idle word %q", w)
+	if got := buildAgents(sideModel{Loose: []sideRow{{ID: 1, Agent: "claude"}}}).Rows[0].State; got != agentIdle {
+		t.Fatalf("idle agent in group %v", got)
 	}
 }
 

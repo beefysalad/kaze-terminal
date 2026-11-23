@@ -27,7 +27,6 @@ type sideRow struct {
 	AgentCount            int                  // running and waiting, for the group chip
 	TrayTotal             int                  // every agent in its tray, finished ones included
 	TrayWaiting           int                  // tray agents waiting for the owner
-	TrayFolded            bool                 // the fold control hid the tray
 }
 
 // sideGroup is one repo's sessions. Rows is filtered; Count is not.
@@ -164,7 +163,7 @@ func buildSide(in sideInput) sideModel {
 		if in.Agents != nil {
 			tr := in.Agents(t.ID)
 			row.Agents, row.Hidden, row.AgentCount = tr.Shown, tr.Hidden, tr.Active
-			row.TrayTotal, row.TrayWaiting, row.TrayFolded = tr.Total, tr.Waiting, tr.Folded
+			row.TrayTotal, row.TrayWaiting = tr.Total, tr.Waiting
 		}
 		if loc.cwd == "" || loc.repo == "" {
 			loose = append(loose, row)
@@ -385,24 +384,6 @@ func folderName(dir string) string {
 		return "" // a drive root
 	}
 	return dir
-}
-
-// stateWord is the first-line status; alerts take priority over subagent counts.
-// A row with a tray shows the tray's fold control instead; its dot keeps the mark.
-func (r sideRow) stateWord() string {
-	switch {
-	case r.TrayTotal > 0:
-		return trayFold(r.TrayTotal, r.TrayFolded)
-	case r.Mark == markNeeds:
-		return "needs you"
-	case r.Mark == markDone:
-		return "done"
-	case r.AgentCount > 0:
-		return agentChip(r.AgentCount)
-	case r.Running:
-		return "running"
-	}
-	return ""
 }
 
 // branchSlug is branch as a folder name: anything but letters, digits, - and _

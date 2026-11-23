@@ -36,6 +36,7 @@ type stripLayKey struct {
 // stripDrawKey is everything the strip's ops depend on.
 type stripDrawKey struct {
 	lay       stripLayKey
+	renaming  tabs.TabID // the tab whose title is an editor: its title is left out
 	hover     stripHitKind
 	hoverID   tabs.TabID
 	theme     theme.Chrome
@@ -57,7 +58,9 @@ type stripState struct {
 	scroll   int
 	hover    stripHitKind
 	hoverID  tabs.TabID
-	spaceKey string // the space the strip shows; kept while a workspace member is shown
+	click    titleClick      // the last press on a tab, for a double click that renames it
+	rename   image.Rectangle // the rename editor in strip-local pixels; empty when none
+	spaceKey string          // the space the strip shows; kept while a workspace member is shown
 	last     map[string]tabs.TabID
 	ops      op.Ops
 	call     op.CallOp
@@ -164,6 +167,12 @@ func (win *window) stripEvents(gtx layout.Context) {
 	}
 }
 
+// titleClick is a press on a tab.
+type titleClick struct {
+	id tabs.TabID
+	at time.Duration
+}
+
 func (win *window) stripPointer(e pointer.Event) {
 	s := &win.strip
 	p := e.Position.Round()
@@ -195,6 +204,12 @@ func (win *window) stripPointer(e pointer.Event) {
 		if !primary && !middle {
 			return
 		}
+		if win.side.renaming != 0 && p.In(s.rename) {
+			return // a click inside the editor keeps renaming
+		}
+		win.endRename(true)
+		last := s.click
+		s.click = titleClick{}
 		h := s.lay.Hit(p)
 		switch {
 		case h.Kind == hitPlus && primary:
@@ -202,7 +217,13 @@ func (win *window) stripPointer(e pointer.Event) {
 		case h.Kind == hitClose && primary, h.Kind == hitTab && middle:
 			win.closeTab(s.lay.Tabs[h.Index].ID)
 		case h.Kind == hitTab && primary:
-			win.selectTab(s.lay.Tabs[h.Index].ID)
+			id := s.lay.Tabs[h.Index].ID
+			win.selectTab(id)
+			if last.id == id && e.Time >= last.at && e.Time-last.at < doubleClick {
+				win.startRename(id) // a double click renames the tab
+			} else {
+				s.click = titleClick{id, e.Time}
+			}
 		}
 		win.w.Invalidate()
 	}
@@ -268,12 +289,24 @@ func (win *window) drawStrip(gtx layout.Context, r image.Rectangle) {
 		lk.scroll = s.scroll
 		s.layKey, s.layOK = lk, true
 	}
+	s.rename = image.Rectangle{}
+	if id := win.side.renaming; id != 0 {
+		i := slices.IndexFunc(s.lay.Tabs, func(t stripTab) bool { return t.ID == id })
+		switch {
+		case win.mgr.Lookup(id) == nil:
+			win.endRename(false) // its tab closed
+		case i < 0:
+			win.endRename(true) // its tab left the strip: another space, or scrolled away
+		default:
+			s.rename = renameRect(gtx, r.Size(), s.lay.Tabs[i])
+		}
+	}
 	if s.hover == hitTab || s.hover == hitClose {
 		if !slices.ContainsFunc(s.lay.Tabs, func(t stripTab) bool { return t.ID == s.hoverID }) {
 			s.hover, s.hoverID = hitNone, 0 // the hovered tab is gone
 		}
 	}
-	key := stripDrawKey{lay: s.layKey, hover: s.hover, hoverID: s.hoverID, theme: win.ui.th, termBG: win.pal.BG,
+	key := stripDrawKey{lay: s.layKey, renaming: win.side.renaming, hover: s.hover, hoverID: s.hoverID, theme: win.ui.th, termBG: win.pal.BG,
 		shaper: win.ui.shaper, metric: gtx.Metric, locale: gtx.Locale.Language, generated: true}
 	if !s.keyOK || key != s.key {
 		s.ops.Reset()
@@ -281,7 +314,7 @@ func (win *window) drawStrip(gtx layout.Context, r image.Rectangle) {
 		cg.Ops = &s.ops
 		cg.Constraints = layout.Exact(r.Size())
 		rec := op.Record(cg.Ops)
-		win.ui.layoutStrip(cg, c.base, s.lay, active, s.hover, s.hoverID, win.pal.BG)
+		win.ui.layoutStrip(cg, c.base, s.lay, active, s.hover, s.hoverID, win.pal.BG, win.side.renaming)
 		s.call = rec.Stop()
 		s.key, s.keyOK = key, true
 		s.draws++
@@ -289,14 +322,32 @@ func (win *window) drawStrip(gtx layout.Context, r image.Rectangle) {
 	ops := gtx.Ops
 	off := op.Offset(r.Min).Push(ops)
 	s.call.Add(ops)
+	if win.side.renaming != 0 && !s.rename.Empty() {
+		// The editor is live over the retained strip, like the sidebar's filter field.
+		cl := clip.Rect(s.rename.Intersect(image.Rect(0, 0, s.lay.ViewW, r.Dy())).Inset(1)).Push(ops)
+		paint.FillShape(ops, win.ui.th.Chrome, clip.Rect(s.rename).Op())
+		win.ui.lineEditor(gtx, &win.side.ren, s.rename, "", win.ui.th.Muted, gtx.Dp(4))
+		cl.Pop()
+	}
 	area := clip.Rect{Max: r.Size()}.Push(ops)
 	event.Op(ops, &s.tag)
 	area.Pop()
 	off.Pop()
 }
 
+// renameRect is the rename editor's place in tab t, in strip-local pixels: where
+// the title is, a little wider so the field frame clears the text.
+func renameRect(gtx layout.Context, size image.Point, t stripTab) image.Rectangle {
+	top, gap := gtx.Dp(4), gtx.Dp(8)
+	mid := (top + size.Y) / 2
+	x := t.Rect.Min.X + gtx.Dp(1) + gtx.Dp(12) + gtx.Dp(14) + gap - gtx.Dp(4)
+	right := t.Close.Min.X - gap/2
+	h := gtx.Dp(22)
+	return image.Rect(x, mid-h/2, max(right, x), mid-h/2+h)
+}
+
 // layoutStrip draws the strip's tabs and + in strip-local coordinates.
-func (c *chrome) layoutStrip(gtx layout.Context, m sideModel, lay tabStripLayout, active tabs.TabID, hover stripHitKind, hoverID tabs.TabID, termBG color.NRGBA) {
+func (c *chrome) layoutStrip(gtx layout.Context, m sideModel, lay tabStripLayout, active tabs.TabID, hover stripHitKind, hoverID tabs.TabID, termBG color.NRGBA, renaming tabs.TabID) {
 	ops, th := gtx.Ops, c.sideTheme()
 	size := gtx.Constraints.Max
 	paint.FillShape(ops, th.Chrome, clip.Rect(image.Rectangle{Max: size}).Op())
@@ -340,7 +391,12 @@ func (c *chrome) layoutStrip(gtx layout.Context, m sideModel, lay tabStripLayout
 			x += logoPx + gap
 		}
 		right := t.Close.Min.X - gap/2
-		if row.Mark != markNone || row.Running {
+		if t.ID == renaming {
+			// The editor is drawn live over this frame, which only holds its field.
+			rr := clip.UniformRRect(renameRect(gtx, size, t), gtx.Dp(4))
+			paint.FillShape(ops, th.Accent, clip.Stroke{Path: rr.Path(ops), Width: float32(max(gtx.Dp(1), 1))}.Op())
+			right = x
+		} else if row.Mark != markNone || row.Running {
 			d := image.Rect(right-dot, mid-dot/2, right, mid-dot/2+dot)
 			c.sideDot(gtx, d, row.Mark, row.Running)
 			right = d.Min.X - gap

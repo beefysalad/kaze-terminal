@@ -28,23 +28,9 @@ func TestSidebarRedesignNamePriority(t *testing.T) {
 	}
 }
 
-func TestSidebarRedesignStatusPriority(t *testing.T) {
-	for _, tc := range []struct {
-		r    sideRow
-		want string
-	}{
-		{sideRow{Mark: markNeeds, Running: true, AgentCount: 3}, "needs you"},
-		{sideRow{Mark: markDone, Running: true, AgentCount: 3}, "done"},
-		{sideRow{Running: true, AgentCount: 3}, "3 agents"},
-		{sideRow{AgentCount: 1}, "1 agent"},
-		{sideRow{Running: true}, "running"},
-	} {
-		if got := tc.r.stateWord(); got != tc.want {
-			t.Errorf("%+v: %q, want %q", tc.r, got, tc.want)
-		}
-	}
-	if sideRowH > 48 {
-		t.Fatalf("two-line row is %ddp tall", sideRowH)
+func TestSidebarLinesStayCalm(t *testing.T) {
+	if sideSpaceH != 34 || sideAgentRowH > 32 {
+		t.Fatalf("a space line is %ddp and an agent row %ddp tall, want 34 and at most 32", sideSpaceH, sideAgentRowH)
 	}
 }
 

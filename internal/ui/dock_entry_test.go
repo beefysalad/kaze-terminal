@@ -17,45 +17,43 @@ func startAgent(win *window, tab tabs.TabID, session, id string) subagents.Key {
 	return subagents.Key{Session: session, ID: id}
 }
 
-func agentHit(t *testing.T, win *window, k subagents.Key) sideAgentHit {
+// agentRowFor is the sidebar's agent row for session id after a frame.
+func agentRowFor(t *testing.T, win *window, id tabs.TabID) sideRowHit {
 	t.Helper()
-	for _, h := range win.side.hits.agents {
-		if h.key == k && h.kind == hitAgentLine {
-			return h
-		}
-	}
-	t.Fatalf("no sidebar line for %v", k)
-	return sideAgentHit{}
+	return rowHit(t, win, id)
 }
 
-func TestSidebarAgentHighlight(t *testing.T) {
-	win, _, r, a, _, _, _ := memberWindow(t)
-	k := startAgent(win, a.ID, "s", "x")
-	j := startAgent(win, a.ID, "s", "y")
-	twoFrames(t, win, r)
-	win.openDock(a.ID, k)
-	twoFrames(t, win, r)
-	if !agentHit(t, win, k).open || agentHit(t, win, j).open {
-		t.Fatal("the open agent's line is not the highlighted one")
+// markAgent makes session id run an agent, so the Agents section lists it.
+func markAgent(win *window, id tabs.TabID) { setAgent(win, id, agentState{claude: true}) }
+
+// setAgent gives session id agent state a, stamped with the shell's current prompt
+// count so it reads as live, not as an agent that has left.
+func setAgent(win *window, id tabs.TabID, a agentState) {
+	if win.agents == nil {
+		win.agents = map[tabs.TabID]agentState{}
 	}
+	if t := win.mgr.Lookup(id); t != nil {
+		a.shellAt = shellSeq(t)
+	}
+	win.agents[id] = a
 }
 
-func TestSidebarAgentOtherSession(t *testing.T) {
+func TestSidebarAgentRowOfOtherSessionKeepsItsPanel(t *testing.T) {
 	win, _, r, a, b, _, _ := memberWindow(t)
+	markAgent(win, a.ID)
+	markAgent(win, b.ID)
 	x := startAgent(win, a.ID, "s", "x")
-	y := startAgent(win, b.ID, "t", "y")
 	twoFrames(t, win, r)
 	win.showAgent(a.ID, x, false)
+	win.selectTab(b.ID)
 	twoFrames(t, win, r)
-	sideClick(win, r, agentHit(t, win, y).rect, pointer.ButtonPrimary)
+	sideClick(win, r, agentRowFor(t, win, a.ID).rect, pointer.ButtonPrimary)
 	twoFrames(t, win, r)
-	if win.mgr.Active().ID != b.ID || win.dockOf(b.ID).agent != y {
-		t.Fatal("other session's agent did not open there")
+	if win.mgr.Active().ID != a.ID {
+		t.Fatalf("the agent row showed %d, want session a (%d)", win.mgr.Active().ID, a.ID)
 	}
-	win.selectTab(a.ID)
-	twoFrames(t, win, r)
 	if s := win.dockOf(a.ID); s == nil || s.agent != x || win.dockRect().Empty() {
-		t.Fatal("session a forgot its panel")
+		t.Fatal("session a forgot its panel after its agent row was clicked")
 	}
 }
 
@@ -105,11 +103,11 @@ func TestDockForgetsGoneAgent(t *testing.T) {
 	}
 }
 
-func TestAgentLineOpensAnAgentTab(t *testing.T) {
+func TestShowAgentOpensAnAgentTab(t *testing.T) {
 	win, _, r, a, _, _, _ := memberWindow(t)
 	k := startAgent(win, a.ID, "s", "x")
 	twoFrames(t, win, r)
-	sideClick(win, r, agentHit(t, win, k).rect, pointer.ButtonPrimary)
+	win.showAgent(a.ID, k, true)
 	twoFrames(t, win, r)
 	d := win.deckOf(a.ID)
 	if d == nil || len(d.entries) != 1 || d.entries[0].view == nil || d.entries[0].view.agent != k {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -22,11 +23,19 @@ func sideRows(first, n int, prefix string) []sideRow {
 }
 
 // sideDraw lays the sidebar out in a 260 x h box with default theme.
+// withSpaces fills the derived Spaces and Agents of a model built by hand.
+func withSpaces(m sideModel) sideModel {
+	if m.Spaces == nil {
+		m.Spaces, m.Agents = buildSpaces(m, 0).Spaces, buildAgents(m).Rows
+	}
+	return m
+}
+
 func sideDraw(t *testing.T, m sideModel, st sideState, h int) (sideHits, image.Point) {
 	t.Helper()
 	size := image.Pt(sidebarW, h)
 	gtx := pageContext(size.X, size.Y)
-	return newChrome().layoutSidebar(gtx, m, st, size), size
+	return newChrome().layoutSidebar(gtx, withSpaces(m), st, size), size
 }
 
 func twoGroupsOneLoose() sideModel {
@@ -39,90 +48,95 @@ func twoGroupsOneLoose() sideModel {
 	}
 }
 
-func TestSidebarHitsMatchRows(t *testing.T) {
+func TestSidebarHitsMatchSpaces(t *testing.T) {
 	h, size := sideDraw(t, twoGroupsOneLoose(), sideState{}, 600)
-	if len(h.rows) != 4 || len(h.groups) != 2 {
-		t.Fatalf("rows %d groups %d, want 4 and 2", len(h.rows), len(h.groups))
+	if len(h.rows) != 0 || len(h.spaces) != 3 {
+		t.Fatalf("rows %d spaces %d, want 0 (no agents) and 3 (alpha, beta, Shell)", len(h.rows), len(h.spaces))
 	}
 	box := image.Rectangle{Max: size}
-	for _, r := range h.rows {
-		if !r.rect.In(box) || r.rect.Empty() {
-			t.Fatalf("row %d rect %v outside %v", r.id, r.rect, box)
-		}
-	}
-	for _, g := range h.groups {
+	for _, g := range h.spaces {
 		if !g.rect.In(box) || g.rect.Empty() {
-			t.Fatalf("group %q rect %v outside %v", g.key, g.rect, box)
+			t.Fatalf("space %q rect %v outside %v", g.key, g.rect, box)
 		}
 	}
-	if h.filter.Empty() {
-		t.Fatalf("filter %v", h.filter)
+	if !h.filter.Empty() {
+		t.Fatalf("filter field %v drawn while closed", h.filter)
+	}
+	for _, r := range []image.Rectangle{h.search, h.plus} {
+		if r.Empty() || !r.In(box) {
+			t.Fatalf("header icon %v outside %v", r, box)
+		}
+	}
+	open, _ := sideDraw(t, twoGroupsOneLoose(), sideState{filterOpen: true}, 600)
+	if open.filter.Empty() || open.spaces[0].rect.Min.Y < open.filter.Max.Y {
+		t.Fatalf("open filter %v, first space %v", open.filter, open.spaces[0].rect)
 	}
 }
 
-func TestSidebarFoldedGroupHasNoRows(t *testing.T) {
+func TestSidebarSpacesIgnoreFold(t *testing.T) {
 	m := twoGroupsOneLoose()
-	m.Groups[0].Folded = true
+	m.Groups[0].Folded = true // a space has no fold: its tabs live in the strip
 	h, _ := sideDraw(t, m, sideState{}, 600)
-	if len(h.rows) != 2 { // beta's one and the loose one
-		t.Fatalf("%d rows, want 2", len(h.rows))
-	}
-	for _, r := range h.rows {
-		if r.id == 1 || r.id == 2 {
-			t.Fatalf("folded group's row %d is drawn", r.id)
-		}
-	}
-	if len(h.groups) != 2 || h.groups[0].key != "a" {
-		t.Fatalf("groups %+v, want the folded header kept", h.groups)
+	if len(h.spaces) != 3 || h.spaces[0].key != "a" {
+		t.Fatalf("spaces %+v, want all three with alpha first", h.spaces)
 	}
 }
 
-func TestSidebarCloseOnlyWhenHovered(t *testing.T) {
-	h, _ := sideDraw(t, twoGroupsOneLoose(), sideState{hover: 1}, 600)
+func TestSidebarAgentRowsHaveNoClose(t *testing.T) {
+	m := twoGroupsOneLoose()
+	for i := range m.Groups[0].Rows {
+		m.Groups[0].Rows[i].Agent = "claude"
+	}
+	h, _ := sideDraw(t, m, sideState{hover: 1}, 600)
+	if len(h.rows) != 2 {
+		t.Fatalf("%d agent rows, want 2", len(h.rows))
+	}
 	for _, r := range h.rows {
-		if (r.id == 1) == r.close.Empty() {
-			t.Fatalf("row %d close %v with hover on 1", r.id, r.close)
-		}
-		if !r.close.Empty() && !r.close.In(r.rect) {
-			t.Fatalf("close %v outside its row %v", r.close, r.rect)
+		if !r.close.Empty() {
+			t.Fatalf("agent row %d has a close %v: tabs close in the strip", r.id, r.close)
 		}
 	}
+}
+
+// manyGroups is n one-session spaces named g1, g2, ...
+func manyGroups(n int) sideModel {
+	var m sideModel
+	for i := 1; i <= n; i++ {
+		key := "g" + strconv.Itoa(i)
+		m.Groups = append(m.Groups, sideGroup{Key: key, Name: key, Rows: sideRows(i, 1, key), Count: 1})
+	}
+	return m
 }
 
 func TestSidebarScrollsAndClampsAt(t *testing.T) {
-	m := sideModel{Loose: sideRows(1, 40, "r")}
+	m := manyGroups(40)
 	h, _ := sideDraw(t, m, sideState{}, 600)
 	if h.scrollMax <= 0 {
-		t.Fatalf("scrollMax %d with 40 rows in 600px", h.scrollMax)
+		t.Fatalf("scrollMax %d with 40 spaces in 600px", h.scrollMax)
 	}
-	first := h.rows[0]
-	if first.id != 1 {
-		t.Fatalf("first visible row %d at scroll 0", first.id)
+	if first := h.spaces[0]; first.key != "g1" {
+		t.Fatalf("first visible space %q at scroll 0", first.key)
 	}
-	for _, r := range h.rows {
+	for _, r := range h.spaces {
 		if !r.rect.In(h.list) {
-			t.Fatalf("row %d rect %v leaks out of list %v", r.id, r.rect, h.list)
+			t.Fatalf("space %q rect %v leaks out of list %v", r.key, r.rect, h.list)
 		}
 	}
 	far, _ := sideDraw(t, m, sideState{scroll: 1 << 20}, 600)
-	last := m.Loose[len(m.Loose)-1].ID
-	if far.rows[len(far.rows)-1].id != last {
-		t.Fatalf("clamped scroll ends at %d, want the last row %d", far.rows[len(far.rows)-1].id, last)
+	last := far.spaces[len(far.spaces)-1]
+	if last.key != "g40" {
+		t.Fatalf("clamped scroll ends at %q, want the last space g40", last.key)
 	}
-	if far.rows[len(far.rows)-1].rect.Max.Y != far.list.Max.Y {
-		t.Fatalf("last row ends at %d, list at %d: not clamped to the content", far.rows[len(far.rows)-1].rect.Max.Y, far.list.Max.Y)
+	if want := far.list.Max.Y - gtx0Dp(sideSpaceGap); last.rect.Max.Y != want {
+		t.Fatalf("last space ends at %d, want %d: not clamped to the content", last.rect.Max.Y, want)
 	}
-	for _, r := range far.rows {
-		if r.id == 1 {
-			t.Fatal("a row scrolled above the list is still hit")
+	for _, r := range far.spaces {
+		if r.key == "g1" {
+			t.Fatal("a space scrolled above the list is still hit")
 		}
 		if !r.rect.In(far.list) {
-			t.Fatalf("row %d rect %v leaks out of list %v", r.id, r.rect, far.list)
+			t.Fatalf("space %q rect %v leaks out of list %v", r.key, r.rect, far.list)
 		}
-	}
-	neg, _ := sideDraw(t, m, sideState{scroll: -50}, 600)
-	if neg.rows[0].id != 1 {
-		t.Fatal("a negative scroll moved the list")
 	}
 }
 
@@ -160,8 +174,8 @@ func TestSidebarSettingsRowFirst(t *testing.T) {
 	if h.settings.Empty() || h.settingsClose.Empty() {
 		t.Fatalf("settings %v close %v", h.settings, h.settingsClose)
 	}
-	if h.settings.Max.Y > h.groups[0].rect.Min.Y {
-		t.Fatalf("settings %v not above the first group %v", h.settings, h.groups[0].rect)
+	if h.settings.Max.Y > h.spaces[0].rect.Min.Y {
+		t.Fatalf("settings %v not above the first space %v", h.settings, h.spaces[0].rect)
 	}
 	none, _ := sideDraw(t, twoGroupsOneLoose(), sideState{}, 600)
 	if !none.settings.Empty() {
@@ -170,19 +184,28 @@ func TestSidebarSettingsRowFirst(t *testing.T) {
 }
 
 func TestSidebarLongTitleStaysInside(t *testing.T) {
-	m := sideModel{Loose: []sideRow{
-		{ID: 1, Title: strings.Repeat("w", 200), Folder: strings.Repeat("~/dir", 40), Branch: strings.Repeat("b", 200)},
-		{ID: 2, Title: strings.Repeat("日本語のタイトル", 30), Folder: "~/日本", Branch: "main"},
-	}}
+	m := sideModel{
+		Groups: []sideGroup{{Key: "g", Name: strings.Repeat("space", 60), Count: 1, Rows: []sideRow{
+			{ID: 3, Agent: "claude", Title: strings.Repeat("w", 200), Command: strings.Repeat("c", 200)}}}},
+		Loose: []sideRow{
+			{ID: 1, Agent: "codex", Title: strings.Repeat("w", 200), Folder: strings.Repeat("~/dir", 40), Branch: strings.Repeat("b", 200)},
+			{ID: 2, Agent: "claude", Title: strings.Repeat("日本語のタイトル", 30), Folder: "~/日本", Branch: "main", Mark: markNeeds},
+		},
+	}
 	m.Runs = []sideRun{{Run: 1, Name: strings.Repeat("n", 120), Members: []sideMember{{ID: 5, Title: strings.Repeat("長", 100), Status: "Running"}}}}
-	h, size := sideDraw(t, m, sideState{hover: 1, filter: strings.Repeat("f", 200)}, 400)
+	h, size := sideDraw(t, m, sideState{hover: 1, filterOpen: true, filter: strings.Repeat("f", 200)}, 400)
 	box := image.Rectangle{Max: size}
-	if len(h.rows) != 2 {
-		t.Fatalf("%d rows", len(h.rows))
+	if len(h.rows) != 3 || len(h.spaces) != 2 {
+		t.Fatalf("%d agent rows and %d spaces, want 3 and 2", len(h.rows), len(h.spaces))
 	}
 	for _, r := range h.rows {
 		if !r.rect.In(box) {
-			t.Fatalf("row %d rect %v outside %v", r.id, r.rect, box)
+			t.Fatalf("agent row %d rect %v outside %v", r.id, r.rect, box)
+		}
+	}
+	for _, r := range h.spaces {
+		if !r.rect.In(box) {
+			t.Fatalf("space %q rect %v outside %v", r.key, r.rect, box)
 		}
 	}
 }
@@ -195,8 +218,8 @@ func TestSidebarDrawsInEveryTheme(t *testing.T) {
 			m := twoGroupsOneLoose()
 			m.Runs = []sideRun{fourMemberRun()}
 			size := image.Pt(sidebarW, 600)
-			h := c.layoutSidebar(pageContext(size.X, size.Y), m, sideState{shown: 2, settings: true}, size)
-			if len(h.rows) == 0 {
+			h := c.layoutSidebar(pageContext(size.X, size.Y), withSpaces(m), sideState{space: "a", settings: true}, size)
+			if len(h.spaces) == 0 {
 				t.Fatal("nothing drawn")
 			}
 			if th.UI.Active == th.UI.Chrome {

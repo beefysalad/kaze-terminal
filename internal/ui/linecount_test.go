@@ -99,9 +99,9 @@ func TestCountShowsOnTheRow(t *testing.T) {
 	}
 }
 
-func TestRowWithCountsDraws(t *testing.T) {
+func TestSpaceWithCountsAndMarksDraws(t *testing.T) {
 	m := sideModel{Loose: []sideRow{{ID: 1, Title: "t", Folder: "~/x", Branch: "main", Add: 212, Del: 14, Mark: markDone}}}
-	if h, _ := sideDraw(t, m, sideState{}, 200); len(h.rows) != 1 {
-		t.Fatalf("%d rows drawn", len(h.rows))
+	if h, _ := sideDraw(t, m, sideState{}, 200); len(h.spaces) != 1 {
+		t.Fatalf("%d space lines drawn", len(h.spaces))
 	}
 }

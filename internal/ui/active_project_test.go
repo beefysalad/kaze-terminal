@@ -97,20 +97,10 @@ func TestSidebarTextContrast(t *testing.T) {
 	}
 }
 
-func TestActiveProjectNameStyle(t *testing.T) {
-	for _, th := range theme.All() {
-		c := newChrome()
-		c.setTheme(th)
-		if col, w := c.groupNameStyle(true); col != th.UI.ActiveFG || w != font.Bold {
-			t.Errorf("%s active name %v %v, want ActiveFG bold", th.Key, col, w)
-		}
-		if _, w := c.groupNameStyle(false); w != font.Normal {
-			t.Errorf("%s other names weight %v", th.Key, w)
-		}
-	}
+func TestSpaceNameBoldHasGlyphs(t *testing.T) {
 	c := newChrome()
 	if shapedNotdef(c, c.fit("日本 alpha"), font.Font{Typeface: chromeFace, Weight: font.Bold}) {
-		t.Fatal("a bold project name draws a missing-glyph box")
+		t.Fatal("a bold space name draws a missing-glyph box")
 	}
 }
 

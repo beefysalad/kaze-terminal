@@ -766,7 +766,6 @@ func (win *window) frame(gtx layout.Context) error {
 	list := win.mgr.Tabs()
 	win.pruneDocs(list)
 	win.pruneDock(list)
-	win.pruneTray(list)
 	win.pruneSels(list)
 	win.pruneLocs(list)
 	win.drainLocations()
@@ -1087,7 +1086,7 @@ func (win *window) focusTarget() event.Tag {
 	if win.palette.open {
 		return &win.palette.ed
 	}
-	if win.side.renaming != 0 && !win.side.hidden {
+	if win.side.renaming != 0 {
 		return &win.side.ren
 	}
 	if win.side.filtering && !win.side.hidden {

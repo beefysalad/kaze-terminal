@@ -17,7 +17,6 @@ import (
 	"gioui.org/widget"
 
 	"github.com/beefysalad/kaze-terminal/internal/render"
-	"github.com/beefysalad/kaze-terminal/internal/subagents"
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
 	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
@@ -25,8 +24,15 @@ import (
 // sidebarW is the sidebar's width in dp at 100% scale.
 const sidebarW = 260
 
-// sideGroupH and sideRowH are a group header's and a session row's height in dp.
-const sideGroupH, sideRowH = 28, 46
+// The sidebar's line heights in dp: a space, the SPACES and AGENTS headers, an agent
+// group's label and an agent row.
+const sideSpaceH, sideHeadH, sideAgentLabelH, sideAgentRowH = 34, 36, 22, 30
+
+// sideSpaceGap is the gap in dp between space lines.
+const sideSpaceGap = 2
+
+// sideIconBtn is a header icon button's side in dp.
+const sideIconBtn = 28
 
 // maxSideText bounds how much of one title is shaped; the rest never fits 260dp anyway.
 const maxSideText = 160
@@ -36,16 +42,16 @@ type sideState struct {
 	activeRepo    string // common repository of the selected main session
 	doc, hoverDoc docID
 	shown         tabs.TabID      // highlighted row or member
-	openAgent     subagents.Key   // the subagent whose docked panel is shown
-	hoverAgent    subagents.Key   // the tray line under the pointer, whose step shows as a tooltip
+	space         string          // the key of the selected space ("" for none)
+	hoverSpace    string          // the space line under the pointer
+	hoverBtn      sideBtn         // the header icon under the pointer
 	settings      bool            // the pinned "Settings" row is open
 	settingsOn    bool            // and shown
-	hover         tabs.TabID      // row showing its ×
-	scroll        int             // px the session list is scrolled
+	hover         tabs.TabID      // agent row or rail tile under the pointer
+	scroll        int             // px the list is scrolled
 	filter        string          // as typed, for the placeholder/clear state
+	filterOpen    bool            // the filter field is drawn: it has the keyboard or text
 	ed            *widget.Editor  // the filter's editor; nil draws the text without a caret
-	renaming      tabs.TabID      // the row whose title is ren, 0 for none
-	ren           *widget.Editor  // the rename editor
 	static        bool            // editors are drawn live over the retained chrome
 	runFolded     map[uint64]bool // workspace runs whose header is folded
 	docked        tabs.TabID      // the member tab the shown panel draws, highlighted like shown
@@ -53,13 +59,20 @@ type sideState struct {
 	tipRoom       int             // px of window beside the rail on the terminal's side, for its tooltip; 0 for no limit
 }
 
+// sideBtn is one of the SPACES header's icon buttons.
+type sideBtn uint8
+
+const (
+	btnNone sideBtn = iota
+	btnSearch
+	btnPlus
+)
+
 type sideRowHit struct {
 	id          tabs.TabID
 	rect, close image.Rectangle
-	title       image.Rectangle // a session row's title line, where a double click renames
-	fold        image.Rectangle // its agent tray's fold control, empty when it has no tray
-	mark        mark            // the alert dot a member line drew
-	on          bool            // a rail tile drawn highlighted
+	mark        mark // the alert dot a member line drew
+	on          bool // a rail tile drawn highlighted
 }
 
 type sideKeyHit struct {
@@ -76,21 +89,18 @@ type sideRunHit struct {
 // sideHits is where the last sidebar frame drew things, for clicks and the wheel.
 type sideHits struct {
 	docs                    []sideDocHit
-	rows                    []sideRowHit
-	groups                  []sideKeyHit
+	rows                    []sideRowHit // agent rows, or the rail's tiles
+	spaces                  []sideKeyHit // space lines, by space key
 	members                 []sideRowHit
-	agents                  []sideAgentHit // subagent lines and "+N more" lines
 	runs                    []sideRunHit
 	settings, settingsClose image.Rectangle
-	filter                  image.Rectangle
-	next                    image.Rectangle // the "Next waiting" button
+	filter                  image.Rectangle // the filter field; empty while it is not drawn
+	search, plus            image.Rectangle // the SPACES header's icon buttons
 	list                    image.Rectangle // the scrollable area, for wheel events
-	tip                     image.Rectangle // the hovered agent's step tooltip, empty when none shows
+	tip                     image.Rectangle // the rail's tile tooltip, empty when none shows
 	tipCall                 op.CallOp       // the rail's tooltip, drawn over the terminal by drawSideTip
-	rename                  image.Rectangle // the rename editor, empty while none is drawn
 	scrollMax               int
-	noMatches               bool      // the filter hides every session
-	chip                    [3]string // the tray chip parts as drawn, for tests
+	noMatches               bool // the filter hides every session
 }
 
 // fitSide draws s at size within room px, cut with a trailing "…" when it is longer.
@@ -192,118 +202,6 @@ func (c *chrome) runningMark(gtx layout.Context, slot image.Rectangle) {
 	paint.FillShape(ops, core, clip.Outline{Path: circle(size * 2.6 / 14)}.Op())
 }
 
-// layoutSidebar paints the sidebar into size and returns where its parts are. The
-// session list scrolls inside hits.list; the workspaces section is pinned to the bottom.
-func (c *chrome) layoutSidebar(gtx layout.Context, m sideModel, st sideState, size image.Point) sideHits {
-	ops, th := gtx.Ops, c.sideTheme()
-	var h sideHits
-	paint.FillShape(ops, th.Chrome, clip.Rect{Max: size}.Op())
-	// The 1 px divider sits on the edge that faces the terminal; the list stays off it.
-	edge, listL, listR := size.X-1, 0, size.X-1
-	if st.right {
-		edge, listL, listR = 0, 1, size.X
-	}
-	paint.FillShape(ops, th.Border, clip.Rect(image.Rect(edge, 0, edge+1, size.Y)).Op())
-	root := clip.Rect{Max: size}.Push(ops)
-	defer root.Pop()
-
-	pad, gap := gtx.Dp(8), gtx.Dp(8)
-	hitPad := gtx.Dp(4)
-	y := 0
-
-	// The filter field; new sessions start from the title bar's +.
-	fieldH := gtx.Dp(30)
-	h.filter = image.Rect(pad, y+pad, size.X-pad, y+pad+fieldH)
-	frr := clip.UniformRRect(h.filter, gtx.Dp(7))
-	paint.FillShape(ops, th.Border, clip.Stroke{Path: frr.Path(ops), Width: float32(max(gtx.Dp(1), 1))}.Op())
-	ftxt, fcol := "Filter sessions…", th.Muted
-	if st.filter != "" {
-		ftxt, fcol = st.filter, th.ActiveFG
-	}
-	if st.ed == nil {
-		fCall, fSize := c.fitSide(gtx, ftxt, 12, h.filter.Dx()-2*gap, fcol)
-		place(ops, fCall, image.Pt(h.filter.Min.X+gap, h.filter.Min.Y+(fieldH-fSize.Y)/2))
-	} else {
-		c.lineEditor(gtx, st.ed, h.filter, ftxt, fcol, gap)
-	}
-	y += pad + fieldH + pad
-
-	// The pinned Settings row.
-	closeCall, closeSize := c.label(gtx, "×", 12, th.Muted)
-	if st.settings {
-		rowH := gtx.Dp(28)
-		r := image.Rect(pad, y, size.X-pad, y+rowH)
-		fg := th.Muted
-		if st.settingsOn {
-			fg = th.ActiveFG
-			paint.FillShape(ops, th.Active, clip.UniformRRect(r, gtx.Dp(7)).Op(ops))
-		}
-		call, sz := c.label(gtx, "Settings", 12, fg)
-		place(ops, call, image.Pt(r.Min.X+gap, r.Min.Y+(rowH-sz.Y)/2))
-		cx := r.Max.X - gap - closeSize.X
-		place(ops, closeCall, image.Pt(cx, r.Min.Y+(rowH-closeSize.Y)/2))
-		h.settings = r
-		h.settingsClose = image.Rect(cx-hitPad, r.Min.Y, r.Max.X, r.Max.Y)
-		y += rowH + gtx.Dp(4)
-	}
-
-	// The workspaces section takes at most half the sidebar, from the bottom.
-	secTop := size.Y
-	if len(m.Runs) > 0 {
-		secH := gtx.Dp(26)
-		for _, run := range m.Runs {
-			secH += gtx.Dp(26)
-			if !st.runFolded[run.Run] {
-				secH += len(run.Members) * gtx.Dp(24)
-			}
-		}
-		secH = min(secH+gtx.Dp(6), max(size.Y/2, 0))
-		secTop = size.Y - secH
-	}
-	h.list = image.Rect(listL, min(y, secTop), listR, secTop)
-
-	c.sideList(gtx, &h, m, st, closeCall, closeSize)
-	if len(m.Runs) > 0 {
-		c.sideRuns(gtx, &h, m, st, secTop, size, closeCall, closeSize)
-	}
-	c.trayTip(gtx, &h, st.hoverAgent)
-	return h
-}
-
-// trayTip draws the hovered tray line's current step as a one-line tooltip under the
-// line, or above it when the list has no room below. It is part of the retained
-// sidebar, keyed by the hovered agent, so it needs no timer and no extra frames.
-func (c *chrome) trayTip(gtx layout.Context, h *sideHits, k subagents.Key) {
-	if k == (subagents.Key{}) {
-		return
-	}
-	for _, a := range h.agents {
-		if a.kind != hitAgentLine || a.key != k || a.tip == "" {
-			continue
-		}
-		ops, ink := gtx.Ops, c.sideInk()
-		pad, rad := gtx.Dp(6), gtx.Dp(6)
-		box := image.Rect(a.rect.Min.X, 0, h.list.Max.X-gtx.Dp(8), 0)
-		call, sz := c.fitSide(gtx, a.tip, 11, max(box.Dx()-2*pad, 0), ink.tipFG)
-		ht := sz.Y + 2*pad
-		box.Min.Y, box.Max.Y = a.rect.Max.Y, a.rect.Max.Y+ht
-		if box.Max.Y > h.list.Max.Y {
-			box.Min.Y, box.Max.Y = a.rect.Min.Y-ht, a.rect.Min.Y
-		}
-		if box.Empty() || sz.X == 0 {
-			return
-		}
-		cl := clip.Rect(h.list).Push(ops)
-		defer cl.Pop()
-		rr := clip.UniformRRect(box, rad)
-		paint.FillShape(ops, ink.tipBG, rr.Op(ops))
-		stroke(ops, box, rad, c.th.ToastLine)
-		place(ops, call, image.Pt(box.Min.X+pad, box.Min.Y+pad))
-		h.tip = box.Intersect(h.list)
-		return
-	}
-}
-
 // lineEditor draws a sidebar text field's editor in r, gap in from its left, and ph
 // while it is empty.
 func (c *chrome) lineEditor(gtx layout.Context, ed *widget.Editor, r image.Rectangle, ph string, phCol color.NRGBA, gap int) {
@@ -331,242 +229,6 @@ func fillGlyph(ops *op.Ops, col color.NRGBA, r image.Rectangle, glyph clip.Op) {
 	cl := clip.Rect(r).Push(ops)
 	paint.FillShape(ops, col, glyph)
 	cl.Pop()
-}
-
-// sideList draws the scrolled groups and loose rows, clipped to h.list, and records hits
-// for the visible parts only.
-func (c *chrome) sideList(gtx layout.Context, h *sideHits, m sideModel, st sideState, closeCall op.CallOp, closeSize image.Point) {
-	ops, th, ink := gtx.Ops, c.sideTheme(), c.sideInk()
-	pad, gap, hitPad := gtx.Dp(8), gtx.Dp(8), gtx.Dp(4)
-	groupH, rowH := gtx.Dp(sideGroupH), gtx.Dp(sideRowH)
-	dot := gtx.Dp(7)
-
-	total := 0
-	for _, g := range m.Groups {
-		total += groupH
-		if !g.Folded {
-			for _, r := range g.Rows {
-				total += rowSpan(gtx, r)
-			}
-		}
-	}
-	for _, r := range m.Loose {
-		total += rowSpan(gtx, r)
-	}
-	h.scrollMax = max(0, total-h.list.Dy())
-	if total == 0 && st.filter != "" && !h.list.Empty() {
-		h.noMatches = true
-		call, sz := c.label(gtx, "No matches", 12, th.Muted)
-		place(ops, call, image.Pt(h.list.Min.X+pad+gap, h.list.Min.Y+gtx.Dp(12)-sz.Y/2))
-	}
-	scroll := min(max(st.scroll, 0), h.scrollMax)
-
-	if h.list.Empty() {
-		return
-	}
-	cl := clip.Rect(h.list).Push(ops)
-	defer cl.Pop()
-	y := h.list.Min.Y - scroll
-
-	row := func(r sideRow) {
-		rect := image.Rect(pad, y, h.list.Max.X-pad, y+rowH)
-		y += rowSpan(gtx, r)
-		c.docLines(gtx, h, r, st, rect.Min.X+gap+dot+gap, rect.Max.X-gap, rect.Max.Y, closeCall, closeSize)
-		c.trayLines(gtx, h, r, rect, rect.Max.Y+len(r.Docs)*gtx.Dp(sideDocH), st.openAgent, ink)
-		if !rect.Overlaps(h.list) {
-			return
-		}
-		on := r.ID == st.shown && !st.settingsOn && st.doc == 0
-		fg := th.Folder
-		if on {
-			paint.FillShape(ops, th.Active, clip.UniformRRect(rect, gtx.Dp(7)).Op(ops))
-			ax := rect.Min.X // the accent sits on the row's outer side, mirrored with the sidebar
-			if st.right {
-				ax = rect.Max.X - gtx.Dp(2)
-			}
-			paint.FillShape(ops, th.Accent, clip.UniformRRect(image.Rect(ax, rect.Min.Y+gtx.Dp(8), ax+gtx.Dp(2), rect.Max.Y-gtx.Dp(8)), gtx.Dp(1)).Op(ops))
-			fg = th.ActiveFG
-		}
-		tx := rect.Min.X + gap + dot + gap
-		c.sideDot(gtx, image.Rect(rect.Min.X+gap, rect.Min.Y+gtx.Dp(14)-dot/2, rect.Min.X+gap+dot, rect.Min.Y+gtx.Dp(14)-dot/2+dot), r.Mark, r.Running)
-		room := rect.Max.X - gap - closeSize.X - gap - tx
-		titleBand := image.Rect(tx, rect.Min.Y+gtx.Dp(4), tx+max(room, 0), rect.Min.Y+gtx.Dp(24))
-		word := r.stateWord()
-		wcol := th.Accent
-		switch {
-		case r.TrayTotal > 0:
-			// The tray's fold control: amber when the session or a folded agent waits.
-			if r.Mark == markNeeds || r.TrayFolded && r.TrayWaiting > 0 {
-				wcol = ink.needs
-			}
-		case r.Mark == markNeeds:
-			wcol = th.Needs
-		case r.Mark == markDone:
-			wcol = th.Done
-		}
-		var wCall op.CallOp
-		var wSize image.Point
-		wordW := 0
-		if word != "" {
-			wCall, wSize = c.label(gtx, word, 11, wcol)
-			wordW = wSize.X
-		}
-		var addCall, delCall op.CallOp
-		var addSize, delSize image.Point
-		countsW := 0 // the +N -M block, drawn left of the state word
-		if r.Add > 0 {
-			addCall, addSize = c.label(gtx, "+"+strconv.Itoa(r.Add), 11, th.Done)
-			countsW += addSize.X
-		}
-		if r.Del > 0 {
-			delCall, delSize = c.label(gtx, "−"+strconv.Itoa(r.Del), 11, th.UsageHigh)
-			if countsW > 0 {
-				countsW += gap
-			}
-			countsW += delSize.X
-		}
-		right := rect.Max.X - gap
-		if st.hover == r.ID {
-			right -= closeSize.X + gap
-		}
-		if word != "" {
-			place(ops, wCall, image.Pt(right-wordW, rect.Min.Y+gtx.Dp(14)-wSize.Y/2))
-			titleBand.Max.X = max(titleBand.Min.X, right-wordW-gap)
-		} else {
-			titleBand.Max.X = right
-		}
-		c.rowTitle(gtx, r, st, h, titleBand, fg)
-		detail := r.Detail
-		if detail == "" {
-			detail = r.Branch
-			if detail == "" {
-				detail = r.Folder
-			}
-		}
-		detailCol := th.Branch
-		if r.Branch == "" {
-			detailCol = th.Muted
-		}
-		room = rect.Max.X - gap - tx
-		if countsW > 0 {
-			room -= countsW + gap
-		}
-		call, sz := c.fitSide(gtx, detail, 11, max(room, 0), detailCol)
-		mid := rect.Min.Y + gtx.Dp(33)
-		place(ops, call, image.Pt(tx, mid-sz.Y/2))
-		if countsW > 0 {
-			x := rect.Max.X - gap - countsW
-			if r.Add > 0 {
-				place(ops, addCall, image.Pt(x, mid-addSize.Y/2))
-				x += addSize.X + gap
-			}
-			if r.Del > 0 {
-				place(ops, delCall, image.Pt(x, mid-delSize.Y/2))
-			}
-		}
-		hit := sideRowHit{id: r.ID, rect: rect.Intersect(h.list), title: titleBand.Intersect(h.list)}
-		if r.TrayTotal > 0 && word != "" {
-			wmid := rect.Min.Y + gtx.Dp(14)
-			// It ends at right, a gap clear of the × on a hovered row, so a near-miss never closes.
-			hit.fold = image.Rect(right-wordW-hitPad, wmid-wSize.Y/2-hitPad, right, wmid+wSize.Y/2+hitPad).Intersect(h.list)
-		}
-		if st.hover == r.ID && r.ID != 0 {
-			cx := rect.Max.X - gap - closeSize.X
-			cmid := rect.Min.Y + gtx.Dp(14)
-			place(ops, closeCall, image.Pt(cx, cmid-closeSize.Y/2))
-			left := cx - hitPad
-			if !hit.fold.Empty() {
-				left = cx // no left pad: the gap to the fold control stays a dead zone
-			}
-			hit.close = image.Rect(left, cmid-closeSize.Y/2-hitPad, rect.Max.X, cmid+closeSize.Y/2+hitPad).Intersect(h.list)
-		}
-		h.rows = append(h.rows, hit)
-	}
-
-	for _, g := range m.Groups {
-		hd := image.Rect(pad, y, h.list.Max.X-pad, y+groupH)
-		y += groupH
-		if hd.Overlaps(h.list) {
-			c.sideGroupHeader(gtx, g, st, hd)
-			h.groups = append(h.groups, sideKeyHit{key: g.Key, rect: hd.Intersect(h.list)})
-		}
-		if !g.Folded {
-			for _, r := range g.Rows {
-				row(r)
-			}
-		}
-	}
-	for _, r := range m.Loose {
-		row(r)
-	}
-}
-
-// rowTitle draws the agent logo and name, or the rename field.
-func (c *chrome) rowTitle(gtx layout.Context, r sideRow, st sideState, h *sideHits, band image.Rectangle, fg color.NRGBA) {
-	ops, th := gtx.Ops, c.sideTheme()
-	if r.ID == st.renaming {
-		field := image.Rect(band.Min.X-gtx.Dp(4), band.Min.Y, band.Max.X, band.Max.Y)
-		rr := clip.UniformRRect(field, gtx.Dp(4))
-		paint.FillShape(ops, th.Chrome, rr.Op(ops))
-		paint.FillShape(ops, th.Accent, clip.Stroke{Path: rr.Path(ops), Width: float32(max(gtx.Dp(1), 1))}.Op())
-		if st.ren != nil {
-			c.lineEditor(gtx, st.ren, field, "", th.Muted, gtx.Dp(4))
-		}
-		h.rename = field.Intersect(h.list)
-		return
-	}
-	mid := band.Min.Y + band.Dy()/2
-	x := band.Min.X
-	logoPx, gap := gtx.Dp(12), gtx.Dp(5)
-	logo, img := agentLogo(r.Agent, logoPx, agentLogoColor(r.Agent, fg))
-	if img != nil && band.Dx() >= logoPx+gap {
-		off := op.Offset(image.Pt(x, mid-logoPx/2)).Push(ops)
-		logo.Add(ops)
-		paint.PaintOp{}.Add(ops)
-		off.Pop()
-		x += logoPx + gap
-	}
-	call, sz := c.fitSide(gtx, r.Title, 12, max(band.Max.X-x, 0), fg)
-	place(ops, call, image.Pt(x, mid-sz.Y/2))
-}
-
-// sideGroupHeader draws one repo header: the name and the count, or the
-// amber "N waiting"; a folded group also names the shown session inside it.
-func (c *chrome) sideGroupHeader(gtx layout.Context, g sideGroup, st sideState, hd image.Rectangle) {
-	ops, th := gtx.Ops, c.sideTheme()
-	gap := gtx.Dp(8)
-	mid := hd.Min.Y + hd.Dy()/2
-	nameColor, weight := c.groupNameStyle(g.Key != "" && g.Key == st.activeRepo)
-	arrowColor := th.Muted
-
-	cx := hd.Min.X + gap
-	chev := "▾"
-	if g.Folded {
-		chev = "›"
-	}
-	cCall, cSize := c.label(gtx, chev, 10, arrowColor)
-	place(ops, cCall, image.Pt(cx, mid-cSize.Y/2))
-	cx += cSize.X + gap
-
-	right, rcol := strconv.Itoa(g.Count), th.Muted
-	if g.Waiting > 0 {
-		right, rcol = strconv.Itoa(g.Waiting)+" waiting", th.Needs
-	}
-	rCall, rSize := c.label(gtx, right, 11, rcol)
-	rx := hd.Max.X - gap - rSize.X
-	place(ops, rCall, image.Pt(rx, mid-rSize.Y/2))
-
-	name := g.Name
-	if g.Folded {
-		for _, r := range g.Rows {
-			if r.ID == st.shown && !st.settingsOn && st.doc == 0 {
-				name += " › " + cutRunes(r.Title, maxMemberLabel)
-				break
-			}
-		}
-	}
-	nCall, nSize := c.fitSideWeight(gtx, name, 12, rx-gap-cx, nameColor, weight)
-	place(ops, nCall, image.Pt(cx, mid-nSize.Y/2))
 }
 
 // sideRuns draws the workspaces section from secTop to the bottom: a header, then per
@@ -786,15 +448,6 @@ func (c *chrome) sideTheme() theme.Chrome {
 	th, k := c.th, c.sideInk()
 	th.Muted, th.Needs = k.muted, k.needs
 	return th
-}
-
-// groupNameStyle is a project header's name color and weight: the project you are
-// in is bold.
-func (c *chrome) groupNameStyle(active bool) (color.NRGBA, font.Weight) {
-	if active {
-		return c.th.ActiveFG, font.Bold
-	}
-	return c.th.ActiveFG, font.Normal
 }
 
 // runHeaderState is a workspace header's state text and color: "N down" in red
