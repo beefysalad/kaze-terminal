@@ -1,8 +1,12 @@
 ## What's changed
 
-- The sidebar can sit on the right: Settings, Appearance, Sidebar, Side. The title bar's buttons above it move with it. Left stays the default.
-- Cmd+B (Ctrl+Shift+B on Windows) now steps through full, rail and hidden. The rail shows each session as a small tile with its agent and its state; hover for the name, click to open it.
-- A narrow window shows the rail instead of hiding the sidebar.
+- Spaces in the sidebar: one per project, plus a Shell space, with search and + in the header.
+- Agents have their own section, grouped as Needs you, Working and Idle. Click an agent to jump to its tab.
+- A tab strip above the terminal shows only the selected space's tabs.
+- With the sidebar open, the title bar drops its + and search field. Open search with the magnifier in the sidebar header; Cmd/Ctrl+K stays unchanged.
+- Settings opens as a floating sheet over the live terminal. Press Esc or click outside to close it.
+- The Claude agent logo is now the Claude Code pixel mascot.
+- The subagent tray under sidebar rows and line counts in sidebar rows are removed. Subagents remain in the dock panel and agents board.
 
 ## Download
 
