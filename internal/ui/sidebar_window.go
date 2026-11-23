@@ -134,7 +134,25 @@ func (win *window) closeTab(id tabs.TabID) {
 	win.w.Invalidate()
 }
 
+// afterClose is the tab to show once id closes: its space mate (the next, else
+// the one before), else the neighbouring space's last used tab.
 func (win *window) afterClose(id tabs.TabID) tabs.TabID {
+	win.cachedSide(time.Now())
+	if sp := win.side.cache.spaces.Spaces; spaceIndex(sp, id) >= 0 {
+		i := spaceIndex(sp, id)
+		mates := sp[i].Tabs
+		switch j := slices.Index(mates, id); {
+		case j+1 < len(mates):
+			return mates[j+1]
+		case j > 0:
+			return mates[j-1]
+		}
+		for _, k := range [2]int{i + 1, i - 1} {
+			if k >= 0 && k < len(sp) {
+				return win.spaceTarget(sp[k])
+			}
+		}
+	}
 	order := win.sessionIDs()
 	switch i := slices.Index(order, id); {
 	case i >= 0 && i+1 < len(order):

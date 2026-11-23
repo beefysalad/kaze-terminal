@@ -59,6 +59,7 @@ type sideCache struct {
 	revision          uint64
 	until             time.Time
 	base, model       sideModel
+	spaces            spaceModel // derived from base, for the tab strip and space navigation
 	order             []tabs.TabID
 	builds, draws     uint64
 	ops               op.Ops
@@ -128,6 +129,7 @@ func (win *window) cachedSide(now time.Time) sideModel {
 		c.base = buildSide(in)
 		c.base.Runs = cloneSideRuns(runs)
 		c.order = sessionOrder(c.base)
+		c.spaces = buildSpaces(c.base, 0)
 		c.folded = maps.Clone(s.folded)
 		c.runFolded = maps.Clone(s.st.runFolded)
 		c.trayFolded = maps.Clone(s.trayFolded)

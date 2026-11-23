@@ -8,6 +8,7 @@ import (
 	"runtime/debug"
 	"slices"
 	"strings"
+	"time"
 
 	"gioui.org/io/event"
 	"gioui.org/io/key"
@@ -232,6 +233,22 @@ func (win *window) cycleTab(d int) {
 	order := win.sessionIDs()
 	if len(order) == 0 {
 		return
+	}
+	// The tab strip's tabs are the selected space's: cycle among them. A space
+	// of one tab would trap the keyboard, so there the key goes to the
+	// neighbouring space's last used tab.
+	if a := win.mgr.Active(); a != nil {
+		win.cachedSide(time.Now())
+		if sp := win.side.cache.spaces.Spaces; spaceIndex(sp, a.ID) >= 0 {
+			i := spaceIndex(sp, a.ID)
+			switch {
+			case len(sp[i].Tabs) > 1:
+				order = sp[i].Tabs
+			case len(sp) > 1 && !win.set.open:
+				win.selectSession(win.spaceTarget(sp[(i+d+len(sp))%len(sp)]))
+				return
+			}
+		}
 	}
 	edge := func() tabs.TabID {
 		if d < 0 {

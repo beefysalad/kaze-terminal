@@ -228,6 +228,7 @@ type window struct {
 	dock       dockState                           // the docked agent panel; UI goroutine only
 	find       findState                           // the find bar; UI goroutine only
 	side       sideUI                              // the sidebar; UI goroutine only
+	strip      stripState                          // the tab strip over the terminal; UI goroutine only
 	wsp        wsPage                              // the Workspaces section: its list and the open draft; UI goroutine only
 	actEvery   bool                                // agent Activity shows every step, not the readable view (dock and board); UI goroutine only
 }
@@ -559,13 +560,16 @@ func (win *window) start(env []string, dir string) (ptyx.Session, error) {
 	return ptyx.Start(win.opt.Shell, cols, rows, env, dir)
 }
 
-func (win *window) newTab() {
+func (win *window) newTab() { win.newTabIn(win.plainStartDir()) }
+
+// newTabIn opens a tab whose shell starts in dir.
+func (win *window) newTabIn(dir string) {
 	win.hideDoc()
 	win.dropSideEdit()
 	win.hideSettings() // the new tab is shown
 	win.closeBoard()
 	win.wantFocus = true
-	if _, err := win.mgr.NewOpts(tabs.StartOpts{Dir: win.plainStartDir()}); err != nil {
+	if _, err := win.mgr.NewOpts(tabs.StartOpts{Dir: dir}); err != nil {
 		log.Printf("kaze: new tab: %v", err)
 		// A windowsgui build has no console, so the status bar is where this can be seen.
 		win.notice = "new tab failed: " + err.Error()
@@ -679,6 +683,15 @@ func (win *window) frame(gtx layout.Context) error {
 		termRect = image.Rect(0, barH, size.X-sw, bottom)
 	}
 	win.side.w = sideRect.Dx() // the title bar's lead strip follows this, even if a toggle lands mid-frame
+	// The tab strip takes the top of the terminal area, before the grid and the dock panel are fitted.
+	stripRect := image.Rectangle{}
+	if win.mgr == nil || !win.mgr.Empty() {
+		if h := min(newStripMetrics(gtx.Metric.PxPerDp).Height, termRect.Dy()); h > 0 {
+			stripRect = image.Rect(termRect.Min.X, termRect.Min.Y, termRect.Max.X, termRect.Min.Y+h)
+			termRect.Min.Y += h
+		}
+	}
+	win.strip.rect = stripRect
 	grid := image.Rect(termRect.Min.X+pad, termRect.Min.Y+pad/2, termRect.Max.X-pad, termRect.Max.Y-pad/2)
 	win.gridMin, win.gridRect = grid.Min, grid
 	cols, rows := gridSize(grid.Dx(), grid.Dy(), cw, ch)
@@ -725,6 +738,7 @@ func (win *window) frame(gtx layout.Context) error {
 		win.barEvents(gtx)
 		win.statusEvents(gtx)
 		win.sideEvents(gtx)
+		win.stripEvents(gtx)
 		win.filterEvents(gtx)
 		win.renameEvents(gtx)
 		win.toastEvents(gtx)
@@ -831,6 +845,7 @@ func (win *window) frame(gtx layout.Context) error {
 	runs := win.reuseSideRuns()
 	win.frameRuns = &runs
 	win.drawSide(gtx, sideRect)
+	win.drawStrip(gtx, stripRect)
 
 	if at, ok := win.docTick(gtx.Now); ok {
 		gtx.Execute(op.InvalidateCmd{At: at})
