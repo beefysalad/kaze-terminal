@@ -456,14 +456,18 @@ func TestSettingsRowShowsAndCloses(t *testing.T) {
 	}
 	sideClick(win, &r, rowHit(t, win, b.ID).rect, pointer.ButtonPrimary)
 	sideFrame(t, win, &r)
-	if !win.set.open || win.set.shown || win.mgr.Active().ID != b.ID {
+	if !win.set.open || !win.set.shown || win.mgr.Active().ID != a.ID {
 		t.Fatalf("row click over settings: open %v shown %v active %d", win.set.open, win.set.shown, win.mgr.Active().ID)
 	}
+	win.hideSettings()
+	sideFrame(t, win, &r)
 	sideClick(win, &r, win.side.hits.settings, pointer.ButtonPrimary)
 	sideFrame(t, win, &r)
 	if !win.set.shown {
 		t.Fatal("clicking the Settings row did not show settings")
 	}
+	win.hideSettings()
+	sideFrame(t, win, &r)
 	sideClick(win, &r, win.side.hits.settingsClose, pointer.ButtonPrimary)
 	sideFrame(t, win, &r)
 	sideFrame(t, win, &r)

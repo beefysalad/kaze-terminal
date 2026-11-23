@@ -24,8 +24,8 @@ import (
 	"github.com/beefysalad/kaze-terminal/internal/version"
 )
 
-// settingsState is the Settings page: a special tab with no shell behind it.
-// open means its row is in the sidebar; shown means it is in front instead of the terminal.
+// settingsState is the modal Settings sheet.
+// open keeps its sidebar entry; shown places the sheet over the terminal.
 type settingsState struct {
 	aboutCopy   string     // pending clipboard content, consumed by the About layout
 	cmdCopy     string     // the same for the Shortcuts section
@@ -44,6 +44,7 @@ type settingsState struct {
 	scroll, scrollMax int             // vertical pane position, clamped after each layout
 	scrollFocus       int             // last control revealed by keyboard focus
 	pane              image.Rectangle // visible content area for pointer hits
+	sheet             image.Rectangle // modal bounds; empty for direct page layouts
 	tag               int             // its address is the page's event tag
 
 	// Laid out each frame.
@@ -342,6 +343,15 @@ func (win *window) settingsEvents(gtx layout.Context) {
 		}
 	}
 	win.fieldEvents(gtx)
+	if !win.set.shown {
+		// Register the returning keyboard target before the focus command.
+		// Gio otherwise drops it because the sheet owned this frame's filters.
+		for {
+			if _, ok := gtx.Event(key.FocusFilter{Target: win.focusTarget()}); !ok {
+				break
+			}
+		}
+	}
 	if edited {
 		// Typed text has nowhere to go here; drop Gio's copy so it cannot pile up.
 		gtx.Execute(key.SnippetCmd{Tag: tag})
@@ -352,7 +362,7 @@ func (win *window) settingsEvents(gtx layout.Context) {
 // settingsPointer handles a press on the page: a menu entry or a control.
 func (win *window) settingsPointer(e pointer.Event) {
 	if e.Kind == pointer.Scroll {
-		if !win.dialogShown() {
+		if !win.dialogShown() && (win.set.sheet.Empty() || e.Position.Round().In(win.set.pane)) {
 			win.set.scroll = min(max(win.set.scroll+int(e.Scroll.Y), 0), win.set.scrollMax)
 			win.w.Invalidate()
 		}
@@ -366,6 +376,10 @@ func (win *window) settingsPointer(e pointer.Event) {
 	win.stopRecording()  // a click anywhere cancels; one on a shortcut starts it again
 	win.set.editing = "" // a press the page gets is off every field's editor
 	p := e.Position.Round()
+	if !win.set.sheet.Empty() && !p.In(win.set.sheet) {
+		win.closeSettings()
+		return
+	}
 	for i, n := range win.set.nav {
 		if p.In(n.rect) {
 			win.set.navFocus, win.set.navIndex = true, i
@@ -399,6 +413,10 @@ func (win *window) settingsKey(gtx layout.Context, e key.Event) {
 		return
 	}
 	if e.State != key.Press {
+		return
+	}
+	if e.Name == key.NameEscape && e.Modifiers == 0 {
+		win.closeSettings()
 		return
 	}
 	if a, ok := win.km[input.Shortcut{Name: e.Name, Mods: e.Modifiers}]; ok {

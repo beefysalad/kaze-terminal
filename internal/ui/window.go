@@ -852,10 +852,7 @@ func (win *window) frame(gtx layout.Context) error {
 	if win.set.shown || win.board.open || win.docs.shown != 0 || active != nil {
 		win.empty.shown = false
 	}
-	if win.set.shown {
-		win.drawSettings(gtx, termRect) // the renderer is not laid out
-		win.wsr.hits = win.wsr.hits[:0]
-	} else if win.board.open {
+	if win.board.open {
 		win.drawBoard(gtx, termRect)
 		win.wsr.hits = win.wsr.hits[:0]
 	} else if d := win.shownDoc(); d != nil {
@@ -865,7 +862,7 @@ func (win *window) frame(gtx layout.Context) error {
 		win.drawEmpty(gtx, termRect)
 		win.wsr.hits = win.wsr.hits[:0]
 	} else {
-		win.rend.SetFocused(win.focused && !win.dockMemberKeys())
+		win.rend.SetFocused(win.focused && !win.set.shown && !win.dockMemberKeys())
 		win.drawTerminal(gtx, active, termRect, grid, &sel)
 		win.drawWsBanner(gtx, active, termRect) // after the terminal, so it takes the clicks it covers
 		win.drawShownDock(gtx)
@@ -902,6 +899,10 @@ func (win *window) frame(gtx layout.Context) error {
 	}
 	win.drawUsageCard(gtx) // over the terminal and toasts; takes no input
 	win.drawResourceCard(gtx)
+	if win.set.shown {
+		win.drawSettingsSheet(gtx, image.Rectangle{Max: size})
+		win.wsr.hits = win.wsr.hits[:0]
+	}
 	win.drawPalette(gtx, termRect) // last: it sits over everything, toasts included
 
 	if win.wantFocus {

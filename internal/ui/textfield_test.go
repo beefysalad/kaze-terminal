@@ -186,14 +186,18 @@ func TestTextFieldTabMovesThroughFields(t *testing.T) {
 	f.wantEditing("name")
 }
 
-func TestTextFieldEscAndEnterReturnToPage(t *testing.T) {
+func TestTextFieldEscClosesSheetAndEnterReturnsToPage(t *testing.T) {
 	f, d := fieldWin(t)
 	f.clickField("name")
 	f.send(modPress(key.NameEscape, 0))
-	f.wantEditing("")
-	if c := f.win.set.controls[f.win.set.focus]; c.id != "name" {
-		t.Fatalf("Esc moved the page focus to %q", c.id)
+	if f.win.set.shown {
+		t.Fatal("Esc left the sheet open")
 	}
+	f.win.openSettings()
+	f.frame()
+	f.frame()
+	f.win.set.focus = 1
+	f.wantEditing("")
 	f.send(key.EditEvent{Text: "z"})
 	if d.name != "" {
 		t.Fatalf("typing after Esc changed the field to %q", d.name)

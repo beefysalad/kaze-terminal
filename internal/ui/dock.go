@@ -152,6 +152,9 @@ func (win *window) dockOwner() tabs.TabID {
 		return 0
 	}
 	t := win.shownTab()
+	if win.set.shown {
+		t = win.mgr.Active() // the modal preserves the terminal and its dock underneath
+	}
 	if t == nil {
 		return 0
 	}

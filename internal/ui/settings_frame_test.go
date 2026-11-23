@@ -60,7 +60,7 @@ func TestSettingChangeThenTabSwitchInOneBatch(t *testing.T) {
 	}
 }
 
-func TestSettingsPageSkipsTheRendererButResizesTabs(t *testing.T) {
+func TestSettingsSheetDrawsTheRendererAndResizesTabs(t *testing.T) {
 	st := &recStarter{}
 	win := testWindow(t, st)
 	win.ui = newChrome()
@@ -80,7 +80,7 @@ func TestSettingsPageSkipsTheRendererButResizesTabs(t *testing.T) {
 	drawn := win.rend.Stats().FramesDrawn
 	before := st.ptys[0].lastSize()
 	sizedFrame(t, win, &r, 1000, 700)
-	if got := win.rend.Stats().FramesDrawn; got != drawn {
+	if got := win.rend.Stats().FramesDrawn; got <= drawn {
 		t.Fatalf("the renderer drew %d frames under settings", got-drawn)
 	}
 	after := st.ptys[0].lastSize()

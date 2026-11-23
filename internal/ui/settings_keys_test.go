@@ -304,6 +304,8 @@ func TestEscCancels(t *testing.T) {
 func TestClickElsewhereCancels(t *testing.T) {
 	win, r, _, _ := shortcutsWindow(t, "")
 	clickKeys(t, win, r, "find")
+	win.set.scroll = 0 // the search field must be visible inside the sheet
+	keysFrames(t, win, r)
 	clickRect(t, win, r, controlsOf(win, "cmd_filter")[0].rect)
 	if win.set.keyRec != "" {
 		t.Fatalf("a click on the search field left %q recording", win.set.keyRec)

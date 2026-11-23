@@ -113,8 +113,8 @@ func TestRailSettingsTile(t *testing.T) {
 	}
 	sideClick(win, &r, rowHit(t, win, a.ID).rect, pointer.ButtonPrimary)
 	sideFrame(t, win, &r)
-	if win.set.shown {
-		t.Fatal("a session tile click left Settings shown")
+	if !win.set.shown {
+		t.Fatal("a covered session tile answered through Settings")
 	}
 }
 
