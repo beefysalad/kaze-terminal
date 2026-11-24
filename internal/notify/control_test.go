@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"io"
 	"net"
+	"os"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -305,5 +307,65 @@ func TestControlBudgetsPreserveHooks(t *testing.T) {
 	case <-entered:
 		t.Fatal("excess request dispatched")
 	default:
+	}
+}
+
+type panicControlReply struct{}
+
+func (panicControlReply) MarshalJSON() ([]byte, error) { panic("reply boom") }
+
+func TestControlPanicBoundary(t *testing.T) {
+	if mode := os.Getenv("KAZE_TEST_CONTROL_PANIC"); mode != "" {
+		contexts := make(chan context.Context, 1)
+		s := controlServer(t, nil)
+		s.SetControlContext(func(ctx context.Context, _ json.RawMessage) any {
+			contexts <- ctx
+			if mode == "handler" {
+				panic("handler boom")
+			}
+			return panicControlReply{}
+		})
+		hooks := make(chan Msg, 1)
+		s.onMsg = func(m Msg) { hooks <- m }
+		reply := controlExchange(t, s, `{"op":"read","token":"test-control-token"}`)
+		e, _ := reply["error"].(map[string]any)
+		if reply["ok"] != false || e["code"] != "internal_error" {
+			t.Fatalf("reply: %v", reply)
+		}
+		select {
+		case ctx := <-contexts:
+			select {
+			case <-ctx.Done():
+			case <-time.After(time.Second):
+				t.Fatal("request context not cancelled")
+			}
+		case <-time.After(time.Second):
+			t.Fatal("handler not called")
+		}
+		c := controlConn(t, s)
+		if err := json.NewEncoder(c).Encode(Msg{Kind: KindDone, Tab: 3, Token: s.Token()}); err != nil {
+			t.Fatal(err)
+		}
+		select {
+		case <-hooks:
+		case <-time.After(time.Second):
+			t.Fatal("legacy hook not delivered after panic")
+		}
+		// Completion includes watcher join and releasing both admission budgets.
+		if len(s.controlSem) != 0 || len(s.waitSem) != 0 {
+			t.Fatal("request budget leaked")
+		}
+		return
+	}
+	for _, mode := range []string{"handler", "marshal"} {
+		t.Run(mode, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestControlPanicBoundary$", "-test.timeout=8s")
+			cmd.Env = append(os.Environ(), "KAZE_TEST_CONTROL_PANIC="+mode)
+			if out, err := cmd.CombinedOutput(); err != nil {
+				t.Fatalf("panic containment subprocess: %v\n%s", err, out)
+			}
+		})
 	}
 }

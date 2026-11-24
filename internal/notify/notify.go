@@ -248,6 +248,13 @@ func (s *Server) handle(c net.Conn) {
 		return
 	}
 	if _, control := envelope["op"]; control {
+		// Recover on this serving goroutine, including reply serialization.
+		// Later resource defers cancel and join the watcher before this runs.
+		defer func() {
+			if recover() != nil {
+				s.writeControl(c, controlError("internal_error", "control request failed internally"))
+			}
+		}()
 		if dec.InputOffset() > maxControlRequest {
 			s.writeControl(c, controlError("request_too_large", "control request exceeds 64 KiB"))
 			return
@@ -298,11 +305,10 @@ func (s *Server) handle(c net.Conn) {
 			duration = time.Duration(seconds)*time.Second + time.Second
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), duration)
-		defer cancel()
 		_ = c.SetReadDeadline(time.Time{})
 		watcherDone := make(chan struct{})
 		go func() { defer close(watcherDone); _, _ = io.Copy(io.Discard, c); cancel() }()
-		defer func() { _ = c.SetReadDeadline(time.Now()); <-watcherDone }()
+		defer func() { cancel(); _ = c.SetReadDeadline(time.Now()); <-watcherDone }()
 		s.writeControl(c, handler(ctx, raw))
 		return
 	}
