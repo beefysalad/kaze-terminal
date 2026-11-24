@@ -131,6 +131,18 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 			}
 		case "read":
 			_, err = io.WriteString(stdout, reply.Text)
+		case "send":
+			// Say where the text went: silence made agents think it was lost.
+			if len(reply.Tabs) == 1 {
+				tab := reply.Tabs[0]
+				var parts []string
+				for _, p := range []string{tab.Agent, tab.Name, tab.Status} {
+					if p != "" {
+						parts = append(parts, p)
+					}
+				}
+				_, err = fmt.Fprintf(stdout, "sent to %s (%s)\n", tab.ID, strings.Join(parts, ", "))
+			}
 		}
 	}
 	if err != nil {

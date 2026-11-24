@@ -117,7 +117,7 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		if tab.Status == "working" {
 			warning = "busy"
 		}
-		return Reply{OK: true, Status: tab.Status, Warning: warning}
+		return Reply{OK: true, Status: tab.Status, Warning: warning, Tabs: []TabInfo{tab}}
 	}
 	return Reply{Error: &Error{CodeUnknownOp, "unknown control operation"}}
 }

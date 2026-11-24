@@ -46,3 +46,11 @@ func TestResolveUnknownTabListsWhatExists(t *testing.T) {
 		t.Fatalf("no tabs: %+v", err)
 	}
 }
+
+func TestSendReplyNamesTheTarget(t *testing.T) {
+	host := &fakeHost{tabs: []TabInfo{{ID: "t2", Agent: "codex", Status: "idle"}}}
+	reply := Handle(host, Request{Op: "send", Tab: "codex", Text: "hi"})
+	if !reply.OK || len(reply.Tabs) != 1 || reply.Tabs[0].ID != "t2" {
+		t.Fatalf("%+v", reply)
+	}
+}

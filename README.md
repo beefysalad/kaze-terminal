@@ -688,6 +688,9 @@ successful send, keys, interrupt, wait, name and label commands print nothing.
 | 3 | Refused, including `--if-idle` against a working target, disabled control, or `busy_server` when the server budget is full. |
 | 124 | Wait or network timeout. |
 
+A successful `send` prints one line, for example `sent to t2 (codex, idle)`, so the sender knows
+where the text went.
+
 Sends from a known tab normally arrive as `<kaze from="t1 name">text</kaze>`.
 The name is omitted when unset. This is a peer hint, and token holders can forge
 it. Literal `</kaze>` inside tagged text is stripped. `--raw`, a caller without a
