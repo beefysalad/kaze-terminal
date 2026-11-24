@@ -2,6 +2,7 @@ package tabs_test
 
 import (
 	"io"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -386,11 +387,17 @@ func TestNewTabSetsKazeTerminalIdentity(t *testing.T) {
 
 func TestNewTabEnvHasNotifyVars(t *testing.T) {
 	t.Setenv("KAZE_NOTIFY", "stale")
+	t.Setenv("KAZE_SOCKET", "stale")
+	t.Setenv("kaze_bin", "stale")
 	t.Setenv("kaze_notify_token", "stale") // inherited copies must go, in any case
 	m, st := newManager(t)
 	m.SetNotify("127.0.0.1:5555", "abc123")
 	mustNew(t, m)
-	for _, want := range []string{"KAZE_NOTIFY=127.0.0.1:5555", "KAZE_NOTIFY_TOKEN=abc123"} {
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"KAZE_NOTIFY=127.0.0.1:5555", "KAZE_NOTIFY_TOKEN=abc123", "KAZE_SOCKET=127.0.0.1:5555", "KAZE_BIN=" + exe} {
 		name := want[:strings.Index(want, "=")+1]
 		n, got := countPrefix(st.envs[0], name)
 		if n != 1 || got != want {
