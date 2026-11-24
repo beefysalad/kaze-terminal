@@ -28,10 +28,34 @@ Owner hand-check, still pending (run locally, leave the installed app alone):
    the prompt, and repeat in the opposite direction. PowerShell uses `$env:KAZE_BIN`
    through `&` and its native multi-line string syntax for these commands.
 
-`wait`, `keys`, `interrupt`, the message tag, names and labels are not built yet.
-No release or version bump is done. Stop at this gate for the owner's check;
-Task 6 and later remain outside this work. Evidence and concerns are in
-`.superpowers/sdd/control/task-5-report.md`.
+Task 5 stopped at this gate for the owner's check. Task 6 was subsequently
+explicitly authorized and is built below. `wait`, the message tag, names and labels
+remain later work. No release or version bump is done. Task 5 evidence and concerns
+are in `.superpowers/sdd/control/task-5-report.md`.
+
+## Agent control Task 6: keys and interrupt
+
+Built on `feat/agent-control`: `kaze keys <t> <key...>` accepts 1 to 64
+case-insensitive names: enter, esc, tab, up, down, left, right, backspace,
+ctrl+c, ctrl+d and ctrl+l. The protocol carries them in `args`. Unknown names
+are rejected before submission and return `unknown_key`; the CLI exits 2 and
+lists allowed names. `kaze interrupt <t> [--ctrl-c]` sends Esc for a snapshot
+agent of claude or codex, otherwise Ctrl+C. The flag forces Ctrl+C.
+
+The host encodes with the existing terminal encoder and the target session's
+cursor-key mode. Explicit control input bypasses local shortcut filtering.
+Each key is a separate Session.Submit, in order, and the first failure stops
+the sequence with `host_error`. A per-session mutex keeps control sequences
+and send's paste/Enter pairs together. Socket handlers use only the immutable
+snapshot and synchronized Session APIs, with no Gio calls or idle work.
+
+The required package tests and vet pass, including existing allocation and idle
+tests. Focused race tests pass. The bounded idle probe still measures 20 frame
+allocations before and after registration, nine workers and zero wake-ups or
+frames in 100 ms. Fake PTYs verify exact bytes, application cursor mode,
+interrupt selection, rejection and closed-tab errors through the real listener.
+Real-agent behavior and the Task 5 owner hand-check remain unverified.
+Report: `.superpowers/sdd/control/task-6-report.md`. No push or version bump.
 
 ## Where things stand
 
