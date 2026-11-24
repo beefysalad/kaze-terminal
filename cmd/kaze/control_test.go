@@ -60,6 +60,17 @@ func controlServer(t *testing.T, reply control.Reply) (func(string) string, <-ch
 	}, requests
 }
 
+func receiveControlRequest(t *testing.T, requests <-chan control.Request) control.Request {
+	t.Helper()
+	select {
+	case req := <-requests:
+		return req
+	case <-time.After(time.Second):
+		t.Fatal("missing request")
+		return control.Request{}
+	}
+}
+
 func TestControlList(t *testing.T) {
 	reply := control.Reply{OK: true, Tabs: []control.TabInfo{
 		{ID: "t1", Name: "review", Space: "project", Agent: "codex", Status: "working", Folder: "/tmp/my project"},
@@ -107,7 +118,7 @@ func TestControlRead(t *testing.T) {
 		if code := runControl(args, env, nil, &out, &errs); code != 0 || errs.Len() != 0 || out.String() != "first  \nsecond\n\n" {
 			t.Fatalf("code=%d out=%q stderr=%q", code, out.String(), errs.String())
 		}
-		req := <-requests
+		req := receiveControlRequest(t, requests)
 		want := 0
 		if lines != "" {
 			want = 12
@@ -125,7 +136,7 @@ func TestControlSend(t *testing.T) {
 		if code := runControl([]string{"send", "review", arg}, env, strings.NewReader("hello\nworld"), &out, &errs); code != 0 || out.Len() != 0 || errs.Len() != 0 {
 			t.Fatalf("code=%d out=%q err=%q", code, out.String(), errs.String())
 		}
-		req := <-requests
+		req := receiveControlRequest(t, requests)
 		if req.Op != "send" || req.Tab != "review" || req.Text != "hello\nworld" {
 			t.Fatalf("request=%+v", req)
 		}
@@ -186,5 +197,158 @@ func TestControlErrorReply(t *testing.T) {
 				t.Fatalf("code=%d out=%q err=%q", code, out.String(), errs.String())
 			}
 		})
+	}
+}
+
+func TestControlUsage(t *testing.T) {
+	for _, args := range [][]string{
+		nil, {"wait", "t1"}, {"ls", "extra"}, {"ls", "--json", "--json"},
+		{"read"}, {"read", ""}, {"read", "--json"}, {"read", "t1", "--lines"},
+		{"read", "t1", "--lines", "-1"}, {"read", "t1", "--lines", "2001"},
+		{"read", "t1", "--lines", "bad"}, {"read", "t1", "--bogus", "1"},
+		{"send"}, {"send", "t1"}, {"send", "", "hello"}, {"send", "--json", "hello"},
+		{"send", "t1", "hello", "extra"}, {"send", "t1", "-"},
+	} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			var out, errs bytes.Buffer
+			called := false
+			code := runControl(args, func(string) string { called = true; return "" }, nil, &out, &errs)
+			if code != 2 || called || out.Len() != 0 || errs.Len() == 0 {
+				t.Fatalf("code=%d envCalled=%v out=%q err=%q", code, called, out.String(), errs.String())
+			}
+		})
+	}
+}
+
+func TestControlReplyTimeout(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = ln.(*net.TCPListener).SetDeadline(time.Now().Add(8 * time.Second))
+	stop, done := make(chan struct{}), make(chan struct{})
+	go func() {
+		defer close(done)
+		conn, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		_ = conn.SetDeadline(time.Now().Add(8 * time.Second))
+		var req control.Request
+		if err := json.NewDecoder(conn).Decode(&req); err != nil {
+			t.Error(err)
+			return
+		}
+		select {
+		case <-stop:
+		case <-time.After(8 * time.Second):
+		}
+	}()
+	t.Cleanup(func() {
+		close(stop)
+		ln.Close()
+		select {
+		case <-done:
+		case <-time.After(time.Second):
+			t.Error("server cleanup timed out")
+		}
+	})
+	env := func(key string) string {
+		if key == "KAZE_SOCKET" {
+			return ln.Addr().String()
+		}
+		if key == "KAZE_NOTIFY_TOKEN" {
+			return "test-token"
+		}
+		return ""
+	}
+	var out, errs bytes.Buffer
+	start := time.Now()
+	code := runControl([]string{"ls"}, env, nil, &out, &errs)
+	elapsed := time.Since(start)
+	if code != 124 || out.Len() != 0 || !strings.Contains(errs.String(), "timeout") || elapsed < 4500*time.Millisecond || elapsed > 7*time.Second {
+		t.Fatalf("code=%d elapsed=%s out=%q err=%q", code, elapsed, out.String(), errs.String())
+	}
+}
+
+func TestControlUnreachable(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := ln.Addr().String()
+	ln.Close()
+	env := func(key string) string {
+		if key == "KAZE_SOCKET" {
+			return addr
+		}
+		if key == "KAZE_NOTIFY_TOKEN" {
+			return "test-token"
+		}
+		return ""
+	}
+	var out, errs bytes.Buffer
+	start := time.Now()
+	code := runControl([]string{"ls"}, env, nil, &out, &errs)
+	if code != 1 || time.Since(start) > 6*time.Second || out.Len() != 0 || errs.Len() == 0 {
+		t.Fatalf("code=%d elapsed=%s out=%q err=%q", code, time.Since(start), out.String(), errs.String())
+	}
+}
+
+func TestControlDispatch(t *testing.T) {
+	for _, op := range []string{"ls", "read", "send"} {
+		t.Run(op, func(t *testing.T) {
+			var out, errs bytes.Buffer
+			// Only a leading subcommand is handled. A workspace may have the same name.
+			for _, args := range [][]string{nil, {"--workspace", op}, {"--workspace=" + op}, {"notify", op}, {"statusline", op}, {"--version", op}} {
+				called := false
+				handled, code := dispatchControl(args, func(string) string { called = true; return "" }, nil, &out, &errs)
+				if handled || code != 0 || called || out.Len() != 0 || errs.Len() != 0 {
+					t.Fatalf("args=%q handled=%v code=%d envCalled=%v", args, handled, code, called)
+				}
+				if len(args) > 0 && strings.HasPrefix(args[0], "--workspace") {
+					name, code := workspaceArg(args, &errs)
+					if name != op || code != 0 {
+						t.Fatalf("workspace=%q code=%d", name, code)
+					}
+				}
+			}
+			handled, _ := dispatchControl([]string{op}, func(string) string { return "" }, nil, &out, &errs)
+			if !handled {
+				t.Fatalf("%s was not dispatched", op)
+			}
+		})
+	}
+}
+
+func TestControlEnvironmentAndLimits(t *testing.T) {
+	for _, fallback := range []bool{false, true} {
+		base, requests := controlServer(t, control.Reply{OK: true})
+		env := func(key string) string {
+			if key == "KAZE_SOCKET" && fallback {
+				return ""
+			}
+			if key == "KAZE_NOTIFY" {
+				if fallback {
+					return base("KAZE_SOCKET")
+				}
+				return "127.0.0.1:1"
+			}
+			return base(key)
+		}
+		text := strings.Repeat("x", control.MaxTextBytes)
+		var out, errs bytes.Buffer
+		if code := runControl([]string{"send", "t1", "-"}, env, strings.NewReader(text), &out, &errs); code != 0 || out.Len() != 0 || errs.Len() != 0 {
+			t.Fatalf("fallback=%v code=%d out=%q err=%q", fallback, code, out.String(), errs.String())
+		}
+		select {
+		case req := <-requests:
+			if req.Text != text {
+				t.Fatal("boundary text changed")
+			}
+		case <-time.After(time.Second):
+			t.Fatal("missing request")
+		}
 	}
 }

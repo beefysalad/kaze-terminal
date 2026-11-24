@@ -2,10 +2,12 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/beefysalad/kaze-terminal/internal/control"
@@ -51,22 +53,18 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 	}
 	conn, err := net.DialTimeout("tcp", addr, controlTimeout)
 	if err != nil {
-		fmt.Fprintln(stderr, "kaze:", err)
-		return 1
+		return controlNetworkError(err, stderr)
 	}
 	defer conn.Close()
 	if err = conn.SetDeadline(time.Now().Add(controlTimeout)); err != nil {
-		fmt.Fprintln(stderr, "kaze:", err)
-		return 1
+		return controlNetworkError(err, stderr)
 	}
 	if err = json.NewEncoder(conn).Encode(req); err != nil {
-		fmt.Fprintln(stderr, "kaze:", err)
-		return 1
+		return controlNetworkError(err, stderr)
 	}
 	var reply control.Reply
 	if err = json.NewDecoder(io.LimitReader(conn, 1<<20)).Decode(&reply); err != nil {
-		fmt.Fprintln(stderr, "kaze:", err)
-		return 1
+		return controlNetworkError(err, stderr)
 	}
 	if reply.Error != nil {
 		fmt.Fprintf(stderr, "kaze: %s: %s\n", reply.Error.Code, reply.Error.Message)
@@ -134,13 +132,34 @@ func controlArgs(args []string) (req control.Request, asJSON, ok bool) {
 			}
 			req.Lines = n
 		}
-		ok = req.Tab != ""
+		ok = req.Tab != "" && !strings.HasPrefix(req.Tab, "-")
 	case "send":
 		if len(args) != 3 {
 			return
 		}
 		req.Tab, req.Text = args[1], args[2]
-		ok = req.Tab != ""
+		ok = req.Tab != "" && !strings.HasPrefix(req.Tab, "-")
 	}
 	return
+}
+
+// Transport timeouts are distinct from immediate failures such as connection refusal.
+func controlNetworkError(err error, stderr io.Writer) int {
+	fmt.Fprintln(stderr, "kaze:", err)
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return 124
+	}
+	return 1
+}
+
+// dispatchControl leaves flags and arguments to the existing application paths.
+func dispatchControl(args []string, env func(string) string, stdin io.Reader, stdout, stderr io.Writer) (bool, int) {
+	if len(args) > 0 {
+		switch args[0] {
+		case "ls", "read", "send":
+			return true, runControl(args, env, stdin, stdout, stderr)
+		}
+	}
+	return false, 0
 }
