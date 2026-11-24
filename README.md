@@ -733,6 +733,8 @@ As a manual alternative, add the same block to your `CLAUDE.md` or `AGENTS.md`:
 
 This applies only when the environment variable KAZE_BIN is set (you are inside a Kaze tab).
 
+When the owner asks you to talk to, ask, message or hand work to another agent (Codex, Claude or any other), use "$KAZE_BIN" send. Do not start a separate copy of that agent (for example codex exec or claude -p): the other agent is already open in another Kaze tab and the owner wants to watch the conversation there. If no tab runs that agent, tell the owner instead of starting one.
+
 - "$KAZE_BIN" ls lists the open tabs and the agent in each.
 - "$KAZE_BIN" send <tab> "<text>" sends a prompt to another agent, where <tab> is a tab id such as t2, a name, or an agent name (codex, claude) when only one tab runs it, and it prints a 'sent to' line on success.
 - "$KAZE_BIN" wait <tab> --timeout 120 waits until that agent finishes and then "$KAZE_BIN" read <tab> returns its screen.

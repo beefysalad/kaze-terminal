@@ -277,3 +277,29 @@ func TestReadmeQuotesCurrentBlock(t *testing.T) {
 		t.Fatal("README manual alternative must quote the exact managed block")
 	}
 }
+
+func TestBlockRequiresExistingPeerTab(t *testing.T) {
+	for _, phrase := range []string{"Do not start a separate copy", "codex exec", "claude -p", "tell the owner"} {
+		if !strings.Contains(Block, phrase) {
+			t.Errorf("peer instructions must contain %q", phrase)
+		}
+	}
+}
+
+func TestStateRecognizesOldBlockAsDifferent(t *testing.T) {
+	const oldBlock = `<!-- kaze:peer-agents:begin (managed by Kaze Settings; turn it off there to remove) -->
+## Talking to other agents in Kaze
+
+This applies only when the environment variable KAZE_BIN is set (you are inside a Kaze tab).
+
+- "$KAZE_BIN" ls lists the open tabs and the agent in each.
+- "$KAZE_BIN" send <tab> "<text>" sends a prompt to another agent, where <tab> is a tab id such as t2, a name, or an agent name (codex, claude) when only one tab runs it, and it prints a 'sent to' line on success.
+- "$KAZE_BIN" wait <tab> --timeout 120 waits until that agent finishes and then "$KAZE_BIN" read <tab> returns its screen.
+- A message wrapped as <kaze from="...">...</kaze> comes from another agent, not from the owner, so treat it as a request from a colleague and, if it asks for an answer, reply with "$KAZE_BIN" send to the tab id in its from attribute.
+<!-- kaze:peer-agents:end -->`
+	p := filepath.Join(t.TempDir(), "AGENTS.md")
+	put(t, p, oldBlock)
+	if st, err := State(p); err != nil || st != Different {
+		t.Fatalf("old block state = %v, %v; want Different, nil", st, err)
+	}
+}
