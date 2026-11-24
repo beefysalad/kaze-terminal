@@ -20,7 +20,7 @@ func Text(s *Screen, history int) string {
 		}
 		wrapped := len(cells) > 0 && cells[len(cells)-1].Attrs&AttrWrapped != 0
 		for _, c := range cells {
-			if c.Width == 0 {
+			if c.Width == 0 || c.Attrs&AttrWrapPadding != 0 {
 				continue
 			}
 			r := c.Rune
