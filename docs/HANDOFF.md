@@ -57,6 +57,28 @@ interrupt selection, rejection and closed-tab errors through the real listener.
 Real-agent behavior and the Task 5 owner hand-check remain unverified.
 Report: `.superpowers/sdd/control/task-6-report.md`. No push or version bump.
 
+## Agent control Task 7: wait
+
+Built on `feat/agent-control`: `kaze wait <t> [--for TEXT] [--timeout S]
+[--quiet MS]`. Idle and needs return immediately; working waits for a snapshot
+broadcast. Shells use a quiet period (default 1500 ms). Text matching checks the
+live screen plus at most 200 scrollback rows now and on applied output. The
+default timeout is 120 seconds, capped at 600; timeout replies exit 124.
+
+The host pairs each immutable snapshot with its next broadcast channel under
+a short mutex. Session observers use nonblocking buffered wakes, exist only
+while needed by a waiter and are removed on every exit. Quiet waits reset one
+timer on output. The listener keeps its short request-read deadline, then passes
+a cancellable context to the handler and joins its EOF watcher on exit. Socket
+workers still use only snapshot and synchronized session APIs.
+
+Required package tests, vet and the control/notify/term race tests pass. The idle
+probe remains 20 frame allocations before and after registration, nine workers,
+zero wake-ups and zero frames in 100 ms. Disconnect cleanup measured observers
+0/1/0, control goroutines 0/2/0 and total goroutines 11/11 before/after.
+Report: `.superpowers/sdd/control/task-7-report.md`. Real-agent and Windows
+runtime checks remain open. No push, release or version bump.
+
 ## Where things stand
 
 **Release 0.44 prepared on `release/0.44` (2026-11-23), based on main after PR #210.**
