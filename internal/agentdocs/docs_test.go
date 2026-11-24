@@ -257,9 +257,15 @@ func TestErrorsAndNoOpDoNotWrite(t *testing.T) {
 	}
 
 	// A regular file used as a parent is an I/O error, not a missing document.
-	for _, f := range []func(string) error{Install, Remove} {
-		if e := f(filepath.Join(p, "doc")); e == nil {
-			t.Fatal("bad parent accepted")
+	if e := Install(filepath.Join(p, "doc")); e == nil {
+		t.Fatal("bad parent accepted by Install")
+	}
+	// Removing from a document under a plain file: Unix reports ENOTDIR (an
+	// error), Windows reports path-not-found, which is the same as a missing
+	// document and so a no-op. Both are fine; nothing must be written.
+	if runtime.GOOS != "windows" {
+		if e := Remove(filepath.Join(p, "doc")); e == nil {
+			t.Fatal("bad parent accepted by Remove")
 		}
 	}
 	leftovers, _ := filepath.Glob(filepath.Join(root, "*.tmp-*"))
@@ -273,7 +279,9 @@ func TestReadmeQuotesCurrentBlock(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if !strings.Contains(string(b), "```markdown\n"+Block+"\n```") {
+	// Windows checkouts may convert the README to CRLF; the block itself is LF.
+	readme := strings.ReplaceAll(string(b), "\r\n", "\n")
+	if !strings.Contains(readme, "```markdown\n"+Block+"\n```") {
 		t.Fatal("README manual alternative must quote the exact managed block")
 	}
 }
