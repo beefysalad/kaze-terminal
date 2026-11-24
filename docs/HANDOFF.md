@@ -2,6 +2,37 @@
 
 Last updated: 2026-11-23, release 0.44 prepared on `release/0.44` after PR #210, covering spaces, tabs on top and the floating Settings sheet (see the first paragraph of "Where things stand"). Previously, 2026-11-16, release 0.43 prepared on `release/0.43` (the sidebar on either side and the rail, PR #208; see the first paragraph of "Where things stand"). Previously, release 0.42 prepared on `release/0.42` (purple folded terminal K branding, PR #206). Previously, release 0.41.1 prepared on `release/0.41.1` (fixes the Mac launch freeze, PR #203: native notification callbacks ran on the AppKit main thread and deadlocked Gio's `Window.Invalidate`; the rule is now in CLAUDE.md). Before that, release 0.41 (prepared on `release/0.41` (Kaze on your Discord profile, #55 / PR #201; see the first paragraph of "Where things stand"). Before that, release 0.40.1 (subagent pane follow-ups from #188, PR #198: plain tool_use_error messages, raw strings ending in a backslash, visible diffs kept cached, edit results decoded once; item 5, block comments, left as is on purpose). Diffs appear only for Edit, Write and MultiEdit steps: an agent that edits through Bash scripts shows plain Ran rows. Before that, release 0.40 (Devbox removal, PR #197). Before that, release 0.39.1 (RAM label in the status bar, PR #195). Release 0.39 included the experimental Devbox page (PR #190); the current change removes it. Before that, release 0.38 (subagent edits inline with line numbers and code colours, PR #187; not yet seen in the real app, lander captures need retaking; follow-ups in #188). Before that, release 0.37 (the session model in the status bar and each subagent model in its panel, PR #185; not yet seen in the real app, and status bar captures need retaking). Before that, release 0.36 (native notifications #172, Codex tab isolation #180 and restored workspaces #182, PR #181; follow-ups in #183; real-machine checks of notifications and two Codex tabs are still open, and Codex 0.153.4 has no `--no-daemon`, so it starts unchanged without isolation). Before that, release 0.35 (the approved wind K as the app icon, website and README logo, PR #174; `docs/site-assets/kaze-about.png` still shows the old About page and needs retaking). Before that, release 0.34 (the branch launcher, its `new_branch_session` shortcut, the Kaze-made worktree cleanup and `internal/branchsession` removed, PR #171; old `sidebar_launcher*` keys load quietly, an old `[keys] new_branch_session` warns; next ideas filed as #167 smooth scrolling and #172 system notifications). Before that, release 0.33 (the Kaze mark and name in the title bar, after the traffic lights on macOS: **check the Mac bar by hand**, layout is unit-tested and Windows captures were inspected; the Windows exe details carry the real version, name and publisher, PR #168; `TestWinresMatchesVersion` keeps them in step, so the old "rerun go-winres" to-dos below are done). Before that, release 0.32 (five more themes and one UI font, PR #165). Before that, release 0.31 (the palette redesign, PR #163, and editable shortcuts, PR #162). Before that, release 0.30 (find in the terminal and docked tabs, #155 / PR #156). Before that, release 0.29 (battery on macOS, #139 / PR #158; the About page redesign, PR #160; the lander's `kaze-about.png` still shows the old page and needs retaking). Before that, release 0.28.2 (.md links open the file the agent touched, #143 / PR #153; uninstall page #112 designed and planned on `feat/uninstall`). Read this first when you pick up kaze on another machine.
 
+## Agent control Task 5: spike gate and owner hand-check
+
+Tasks 1-5 are built on `feat/agent-control`, pending the owner's real-agent check.
+Headless tests use two real sessions with fake PTYs behind the window's real notify
+listener. A raw JSON client uses tab A's shell discovery environment and the CLI's
+wire format because `cmd/kaze` is a main package with an unexported client function.
+They cover list, exact single and multi-line paste bytes then Enter, screen reads,
+unknown addresses and closed targets. The bounded idle probe measured nine blocked
+workers, zero wake-ups and zero frame requests over 100 ms. Still frames allocated
+20 times both before and after registering control in the same headless fixture.
+
+Owner hand-check, still pending (run locally, leave the installed app alone):
+
+1. Build a local binary: `go build -o /tmp/kaze-control-spike ./cmd/kaze` on macOS
+   (on Windows use `go build -o kaze-control-spike.exe ./cmd/kaze`). Open that binary
+   yourself, then open two tabs. Run Claude Code in one and Codex in the other.
+2. From one tab run `"$KAZE_BIN" ls`. Note the other tab's address, for example `t2`.
+   Run `"$KAZE_BIN" send t2 'hello'` and confirm one submitted prompt in the target.
+3. Send multiple lines: `printf 'first line\nsecond line' | "$KAZE_BIN" send t2 -`.
+   Confirm the target receives one paste followed by Enter. Run `"$KAZE_BIN" read t2`
+   and compare the returned text with the target's visible screen.
+4. While the target is working, try another send. The spike sends anyway. Busy
+   warnings and `--if-idle` refusal are not built yet. Check how each agent handles
+   the prompt, and repeat in the opposite direction. PowerShell uses `$env:KAZE_BIN`
+   through `&` and its native multi-line string syntax for these commands.
+
+`wait`, `keys`, `interrupt`, the message tag, names and labels are not built yet.
+No release or version bump is done. Stop at this gate for the owner's check;
+Task 6 and later remain outside this work. Evidence and concerns are in
+`.superpowers/sdd/control/task-5-report.md`.
+
 ## Where things stand
 
 **Release 0.44 prepared on `release/0.44` (2026-11-23), based on main after PR #210.**
