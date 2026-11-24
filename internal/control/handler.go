@@ -24,7 +24,17 @@ func Handle(host Host, req Request) Reply {
 }
 
 // HandleContext cancels pending waits when the transport disconnects.
-func HandleContext(ctx context.Context, host Host, req Request) Reply {
+func HandleContext(ctx context.Context, host Host, req Request, options ...Options) Reply {
+	opt := Options{Enabled: true, AgentTag: true}
+	if len(options) > 0 {
+		opt = options[0]
+	}
+	if !opt.Enabled {
+		return Reply{Error: &Error{CodeDisabled, "control is disabled"}}
+	}
+	if req.Op == "name" || req.Op == "label" {
+		return metadata(ctx, host, req)
+	}
 	if req.Op == "wait" {
 		return wait(ctx, host, req)
 	}
@@ -79,10 +89,33 @@ func HandleContext(ctx context.Context, host Host, req Request) Reply {
 		if err != nil {
 			return Reply{Error: err}
 		}
-		if err := host.Submit(tab.ID, []byte(req.Text)); err != nil {
+		if tab.Status == "working" && req.IfIdle {
+			return Reply{Error: &Error{CodeBusy, "target is working"}}
+		}
+		text := req.Text
+		if opt.AgentTag && req.From != "" {
+			for _, sender := range host.Tabs() {
+				if sender.ID == req.From {
+					from := sender.ID
+					if sender.Name != "" {
+						from += " " + sender.Name
+					}
+					text = "<kaze from=\"" + escapeAttribute(from) + "\">" + strings.ReplaceAll(text, "</kaze>", "") + "</kaze>"
+					break
+				}
+			}
+		}
+		if len(text) > MaxTextBytes {
+			return Reply{Error: &Error{CodeTextTooLarge, "text exceeds 32 KiB"}}
+		}
+		if err := host.Submit(tab.ID, []byte(text)); err != nil {
 			return Reply{Error: &Error{CodeHostError, "could not submit to tab"}}
 		}
-		return Reply{OK: true}
+		warning := ""
+		if tab.Status == "working" {
+			warning = "busy"
+		}
+		return Reply{OK: true, Status: tab.Status, Warning: warning}
 	}
 	return Reply{Error: &Error{CodeUnknownOp, "unknown control operation"}}
 }

@@ -11,6 +11,11 @@ const (
 // Request is one control operation. The transport authenticates Token before
 // calling Handle; handlers do not authenticate callers themselves.
 type Request struct {
+	From    string   `json:"from,omitempty"`
+	IfIdle  bool     `json:"if_idle,omitempty"`
+	Name    string   `json:"name,omitempty"`
+	Key     string   `json:"key,omitempty"`
+	Value   string   `json:"value,omitempty"`
 	For     string   `json:"for,omitempty"`
 	Timeout int      `json:"timeout,omitempty"` // seconds, zero selects 120
 	Quiet   int      `json:"quiet,omitempty"`   // milliseconds, zero selects 1500
@@ -25,18 +30,21 @@ type Request struct {
 
 // TabInfo is a value in the Host's immutable tab snapshot.
 type TabInfo struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Space     string    `json:"space"`
-	Folder    string    `json:"folder"`
-	Agent     string    `json:"agent"`
-	Status    string    `json:"status"`
-	Since     time.Time `json:"since"`
-	Workspace bool      `json:"workspace"` // a workspace-run member
+	Labels    map[string]string `json:"labels"`
+	ID        string            `json:"id"`
+	Name      string            `json:"name"`
+	Space     string            `json:"space"`
+	Folder    string            `json:"folder"`
+	Agent     string            `json:"agent"`
+	Status    string            `json:"status"`
+	Since     time.Time         `json:"since"`
+	Workspace bool              `json:"workspace"` // a workspace-run member
 }
 
 // Reply is the result of one operation. Error is present only on failure.
 type Reply struct {
+	Status    string    `json:"status,omitempty"`
+	Warning   string    `json:"warning,omitempty"`
 	OK        bool      `json:"ok"`
 	Truncated bool      `json:"truncated,omitempty"` // transport shortened the result to its wire cap
 	Tabs      []TabInfo `json:"tabs,omitempty"`
@@ -53,6 +61,8 @@ type Error struct {
 func (e *Error) Error() string { return e.Message }
 
 const (
+	CodeBusy           = "busy"
+	CodeDisabled       = "disabled"
 	CodeUnknownKey     = "unknown_key"
 	CodeUnknownTab     = "unknown_tab"
 	CodeAmbiguousTab   = "ambiguous_tab"

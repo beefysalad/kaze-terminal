@@ -23,7 +23,13 @@ const (
 	maxScrollback     = 100000
 )
 
+type Control struct {
+	Enabled bool `toml:"enabled"`
+}
+
 type Config struct {
+	AgentTag        bool    `toml:"agent_tag"`
+	Control         Control `toml:"control"`
 	StartDir        string  `toml:"start_dir"`        // cwd for new plain tabs; empty means home
 	RestoreSessions bool    `toml:"restore_sessions"` // restore folders and exact agent conversations; default true
 	FontSize        float32 `toml:"font_size"`        // default 14
@@ -76,6 +82,8 @@ var (
 
 func Default() Config {
 	return Config{
+		AgentTag:            true,
+		Control:             Control{Enabled: true},
 		RestoreSessions:     true,
 		FontSize:            defaultFontSize,
 		ScrollbackLines:     defaultScrollback,
@@ -239,6 +247,21 @@ func Load(path string) (Config, []string, error) {
 			loadBool(v, k, &cfg.SystemNotifications, warn)
 		case "show_usage":
 			loadBool(v, k, &cfg.ShowUsage, warn)
+		case "agent_tag":
+			loadBool(v, k, &cfg.AgentTag, warn)
+		case "control":
+			table, ok := v.(map[string]any)
+			if !ok {
+				warn("control must be a table; using defaults")
+				continue
+			}
+			for _, key := range sortedKeys(table) {
+				if key == "enabled" {
+					loadBool(table[key], "control.enabled", &cfg.Control.Enabled, warn)
+				} else {
+					warn("unknown setting %q ignored", "control."+key)
+				}
+			}
 		case "discord_presence":
 			loadBool(v, k, &cfg.DiscordPresence, warn)
 		case "discord_show_project":
