@@ -418,12 +418,18 @@ func TestFilterMatchesCommand(t *testing.T) {
 	}
 }
 
-func TestMembersAreNotRenamed(t *testing.T) {
+func TestMembersKeepFixedTitleUntilExplicitRename(t *testing.T) {
 	tab := &tabs.Tab{ID: 1, Title: "api", FixedTitle: "api"}
 	in := sideIn([]*tabs.Tab{tab}, map[tabs.TabID]locEntry{1: {cwd: `C:\code\alpha`}})
 	in.Agent = func(tabs.TabID) agentState { return agentState{claude: true, arg: "V3-1"} }
-	in.Name = func(tabs.TabID) string { return "renamed" }
 	if got := buildSide(in).Loose[0].Title; got != "api" {
 		t.Fatalf("a workspace tab's title %q, want its fixed api", got)
+	}
+	in.Name = func(tabs.TabID) string { return "renamed" }
+	if got := buildSide(in).Loose[0].Title; got != "renamed" {
+		t.Fatalf("explicit workspace rename %q, want renamed", got)
+	}
+	if tab.FixedTitle != "api" {
+		t.Fatal("immutable fixed title changed")
 	}
 }

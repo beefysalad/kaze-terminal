@@ -342,15 +342,15 @@ func (in sideInput) clean(s string) string {
 }
 
 // ruled picks a name, command argument, active agent summary, distinct folder,
-// then program name. Workspace members keep their fixed title.
+// then program name. Workspace members keep their fixed title unless renamed.
 func (in sideInput) ruled(t *tabs.Tab, loc locEntry, a agentState) string {
-	if t.FixedTitle != "" {
-		return ""
-	}
 	if in.Name != nil {
 		if n := in.Name(t.ID); n != "" {
 			return n
 		}
+	}
+	if t.FixedTitle != "" {
+		return ""
 	}
 	if a.arg != "" {
 		return a.arg

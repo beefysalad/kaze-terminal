@@ -80,14 +80,11 @@ func (win *window) drainControl() {
 			if tab == nil {
 				e = &ctl.Error{Code: ctl.CodeUnknownTab, Message: "unknown tab"}
 			} else {
-				if tab.FixedTitle != "" {
-					tab.FixedTitle = name
-				} else {
-					if win.names == nil {
-						win.names = map[tabs.TabID]string{}
-					}
-					win.names[tab.ID] = name
+				// FixedTitle is immutable after creation and read by hook workers.
+				if win.names == nil {
+					win.names = map[tabs.TabID]string{}
 				}
+				win.names[tab.ID] = name
 				if win.restore != nil {
 					win.restore.Rename(int(tab.ID), name)
 				}

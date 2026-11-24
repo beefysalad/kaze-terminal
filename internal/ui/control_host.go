@@ -121,9 +121,9 @@ func (win *window) publishControl() {
 		if win.alerts.markOf(t.ID) == markNeeds {
 			status = "needs"
 		}
-		name := t.FixedTitle
+		name := win.names[t.ID]
 		if name == "" {
-			name = win.names[t.ID]
+			name = t.FixedTitle
 		}
 		folder := loc.cwd
 		if folder == "" {

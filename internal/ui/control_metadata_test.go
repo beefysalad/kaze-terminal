@@ -66,6 +66,9 @@ func TestControlNameFrame(t *testing.T) {
 		t.Fatal("no reply")
 	}
 	row, _ = rowByID(win.side.cache.base, tb.ID)
+	if tb.FixedTitle != "member" {
+		t.Fatal("creation-time FixedTitle was mutated; hook workers read it without the UI lock")
+	}
 	if row.Title != "renamed member" {
 		t.Fatalf("fixed title model %+v", row)
 	}
