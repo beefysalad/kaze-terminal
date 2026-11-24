@@ -49,7 +49,7 @@ func newControlSpike(t *testing.T) *controlSpike {
 	}
 	f.srv = srv
 	win.srv = srv
-	srv.SetControl(controlAdapter(&win.control))
+	srv.SetControlContext(controlContextAdapter(&win.control))
 	t.Cleanup(func() { srv.Close() })
 	win.mgr.SetNotify(srv.Addr(), srv.Token())
 	f.a = openIn(t, win, "")
@@ -75,7 +75,11 @@ func (f *controlSpike) request(t *testing.T, req ctl.Request) ctl.Reply {
 		t.Fatal(err)
 	}
 	req.Token = env["KAZE_NOTIFY_TOKEN"]
-	if err := json.NewEncoder(conn).Encode(req); err != nil {
+	wire, err := json.Marshal(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Write(wire); err != nil {
 		t.Fatal(err)
 	}
 	dec := json.NewDecoder(io.LimitReader(conn, (1<<20)+1))

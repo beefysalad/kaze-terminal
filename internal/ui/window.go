@@ -290,7 +290,7 @@ func Run(w *app.Window, opt Options) error {
 		win.opt.Warnings = append(win.opt.Warnings, "alerts are off: "+err.Error())
 	} else {
 		win.srv = srv
-		srv.SetControl(controlAdapter(&win.control))
+		srv.SetControlContext(controlContextAdapter(&win.control))
 	}
 	return win.loop()
 }

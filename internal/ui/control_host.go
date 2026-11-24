@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -29,7 +30,9 @@ type controlSnapshot struct {
 // controlHost has no window reference. Socket goroutines use only this snapshot
 // and the sessions' synchronized APIs, never UI state or Gio.
 type controlHost struct {
-	snapshot atomic.Pointer[controlSnapshot]
+	snapshot  atomic.Pointer[controlSnapshot]
+	changesMu sync.Mutex
+	changes   chan struct{}
 }
 
 var _ ctl.Host = (*controlHost)(nil)
@@ -130,15 +133,53 @@ func (win *window) publishControl() {
 		}
 		next.sessions[id] = target
 	}
-	win.control.snapshot.Store(next)
+	win.control.publish(next)
 }
 
 func controlAdapter(host ctl.Host) func(json.RawMessage) any {
-	return func(raw json.RawMessage) any {
+	return func(raw json.RawMessage) any { return controlContextAdapter(host)(context.Background(), raw) }
+}
+
+func controlContextAdapter(host ctl.Host) func(context.Context, json.RawMessage) any {
+	return func(ctx context.Context, raw json.RawMessage) any {
 		var req ctl.Request
 		if err := json.Unmarshal(raw, &req); err != nil {
 			return ctl.Reply{Error: &ctl.Error{Code: ctl.CodeInvalidRequest, Message: "invalid control request"}}
 		}
-		return ctl.Handle(host, req)
+		return ctl.HandleContext(ctx, host, req)
 	}
+}
+
+// publish stores the snapshot and broadcasts under the subscription lock, so a
+// waiter cannot pair a stale snapshot with a newer notification channel.
+func (h *controlHost) publish(next *controlSnapshot) {
+	h.changesMu.Lock()
+	h.snapshot.Store(next)
+	if h.changes != nil {
+		close(h.changes)
+		h.changes = nil
+	}
+	h.changesMu.Unlock()
+}
+func (h *controlHost) StatusChanges() ([]ctl.TabInfo, <-chan struct{}) {
+	h.changesMu.Lock()
+	defer h.changesMu.Unlock()
+	if h.changes == nil {
+		h.changes = make(chan struct{})
+	}
+	return h.Tabs(), h.changes
+}
+func (h *controlHost) OutputChanges(id string) (<-chan struct{}, func(), time.Time, error) {
+	target, err := h.session(id)
+	if err != nil {
+		return nil, nil, time.Time{}, err
+	}
+	wake := make(chan struct{}, 1)
+	remove := target.session.AddOutputObserver(func() {
+		select {
+		case wake <- struct{}{}:
+		default:
+		}
+	})
+	return wake, remove, target.session.LastOutputTime(), nil
 }

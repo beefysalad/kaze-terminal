@@ -3,6 +3,7 @@
 package notify
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
@@ -110,7 +111,7 @@ type Server struct {
 
 	mu      sync.Mutex
 	closed  bool
-	control func(json.RawMessage) any
+	control func(context.Context, json.RawMessage) any
 	conns   map[net.Conn]struct{}
 	wg      sync.WaitGroup
 }
@@ -149,6 +150,16 @@ func (s *Server) Token() string { return s.token }
 // authenticates the envelope, keeping notify independent of control and the UI.
 // Registration and replacement are safe while the server is accepting requests.
 func (s *Server) SetControl(handler func(json.RawMessage) any) {
+	if handler == nil {
+		s.SetControlContext(nil)
+		return
+	}
+	s.SetControlContext(func(_ context.Context, raw json.RawMessage) any { return handler(raw) })
+}
+
+// SetControlContext registers a handler whose pending work must stop when ctx
+// is cancelled. EOF, server Close and the request deadline cancel the context.
+func (s *Server) SetControlContext(handler func(context.Context, json.RawMessage) any) {
 	s.mu.Lock()
 	s.control = handler
 	s.mu.Unlock()
@@ -252,7 +263,26 @@ func (s *Server) handle(c net.Conn) {
 			s.writeControl(c, controlError("control_unavailable", "control handler is not registered"))
 			return
 		}
-		s.writeControl(c, handler(raw))
+		// Keep the short deadline for decoding only. The disconnect watcher owns
+		// reads after dispatch and is joined before this handler exits.
+		duration := s.deadline
+		var op string
+		_ = json.Unmarshal(envelope["op"], &op)
+		if op == "wait" {
+			seconds := 120
+			var requested int
+			if json.Unmarshal(envelope["timeout"], &requested) == nil && requested > 0 && requested <= 600 {
+				seconds = requested
+			}
+			duration = time.Duration(seconds)*time.Second + time.Second
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), duration)
+		defer cancel()
+		_ = c.SetReadDeadline(time.Time{})
+		watcherDone := make(chan struct{})
+		go func() { defer close(watcherDone); _, _ = io.Copy(io.Discard, c); cancel() }()
+		defer func() { _ = c.SetReadDeadline(time.Now()); <-watcherDone }()
+		s.writeControl(c, handler(ctx, raw))
 		return
 	}
 	var m Msg
