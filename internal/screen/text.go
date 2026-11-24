@@ -30,7 +30,11 @@ func Text(s *Screen, history int) string {
 			}
 			line.WriteRune(r)
 		}
-		out.WriteString(strings.TrimRight(line.String(), " "))
+		if wrapped {
+			out.WriteString(line.String())
+		} else {
+			out.WriteString(strings.TrimRight(line.String(), " "))
+		}
 		if !wrapped && row < s.ScrollbackLen()+rows-1 {
 			out.WriteByte('\n')
 		}

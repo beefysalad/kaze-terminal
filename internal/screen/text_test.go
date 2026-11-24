@@ -10,6 +10,7 @@ func TestText(t *testing.T) {
 		want          string
 	}{
 		{"wrapped", "abcdef", 0, false, "abcdef"},
+		{"wrapped spaces", "ab   cd", 0, false, "ab   cd"},
 		{"trim", "ab  ", 0, false, "ab\n"},
 		{"wide", "界界xy", 0, false, "界界xy"},
 		{"visible", "one\r\ntwo\r\nthree", 0, false, "two\nthree"},
