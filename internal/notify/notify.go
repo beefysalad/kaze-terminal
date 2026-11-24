@@ -108,10 +108,11 @@ type Server struct {
 	deadline time.Duration
 	sem      chan struct{}
 
-	mu     sync.Mutex
-	closed bool
-	conns  map[net.Conn]struct{}
-	wg     sync.WaitGroup
+	mu      sync.Mutex
+	closed  bool
+	control func(json.RawMessage) any
+	conns   map[net.Conn]struct{}
+	wg      sync.WaitGroup
 }
 
 // Listen binds 127.0.0.1 on an OS-chosen port. onMsg is called from a
@@ -141,6 +142,17 @@ func serve(ln net.Listener, onMsg func(Msg), deadline time.Duration) *Server {
 
 func (s *Server) Addr() string  { return s.ln.Addr().String() }
 func (s *Server) Token() string { return s.token }
+
+// SetControl registers an optional authenticated control handler. Calls may run
+// concurrently on socket goroutines; the handler must not call UI code. Task 3's
+// window adapter decodes control.Request and calls control.Handle after notify
+// authenticates the envelope, keeping notify independent of control and the UI.
+// Registration and replacement are safe while the server is accepting requests.
+func (s *Server) SetControl(handler func(json.RawMessage) any) {
+	s.mu.Lock()
+	s.control = handler
+	s.mu.Unlock()
+}
 
 // Close stops accepting, drops live connections and waits for handlers.
 func (s *Server) Close() error {
@@ -210,13 +222,44 @@ func (s *Server) isClosed() bool {
 func (s *Server) handle(c net.Conn) {
 	defer c.Close()
 	c.SetReadDeadline(time.Now().Add(s.deadline))
-	// One byte past the cap lets us tell "exactly the cap" from "over it".
-	dec := json.NewDecoder(io.LimitReader(c, maxBody+1))
-	var m Msg
-	if dec.Decode(&m) != nil || dec.InputOffset() > maxBody {
+	// Decode once without waiting for EOF: hook senders keep the socket open.
+	dec := json.NewDecoder(io.LimitReader(c, (64<<10)+1))
+	var raw json.RawMessage
+	if dec.Decode(&raw) != nil {
 		return
 	}
-	if subtle.ConstantTimeCompare([]byte(m.Token), []byte(s.token)) != 1 {
+	var envelope map[string]json.RawMessage
+	if json.Unmarshal(raw, &envelope) != nil {
+		return
+	}
+	if _, control := envelope["op"]; control {
+		if dec.InputOffset() > 64<<10 {
+			s.writeControl(c, controlError("request_too_large", "control request exceeds 64 KiB"))
+			return
+		}
+		var token string
+		if json.Unmarshal(envelope["token"], &token) != nil || !s.validToken(token) {
+			s.writeControl(c, controlError("unauthorized", "invalid control token"))
+			return
+		}
+		s.mu.Lock()
+		handler := s.control
+		s.mu.Unlock()
+		if s.isClosed() {
+			return
+		}
+		if handler == nil {
+			s.writeControl(c, controlError("control_unavailable", "control handler is not registered"))
+			return
+		}
+		s.writeControl(c, handler(raw))
+		return
+	}
+	var m Msg
+	if dec.InputOffset() > maxBody || json.Unmarshal(raw, &m) != nil {
+		return
+	}
+	if !s.validToken(m.Token) {
 		return
 	}
 	if m.Agent != "" && m.Agent != "claude" && m.Agent != "codex" {
@@ -406,4 +449,8 @@ func FitReport(s string, max int) string {
 		}
 	}
 	return cutBytes(s, lo)
+}
+
+func (s *Server) validToken(token string) bool {
+	return subtle.ConstantTimeCompare([]byte(token), []byte(s.token)) == 1
 }
