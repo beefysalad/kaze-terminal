@@ -92,6 +92,7 @@ func (win *window) noteAgent(m notify.Msg, id tabs.TabID, seq uint64) {
 		win.agents = map[tabs.TabID]agentState{}
 	}
 	win.agents[id] = a
+	win.publishControl()
 }
 
 // firstWord is the first whitespace-separated word of s, cut to n runes.
@@ -116,6 +117,7 @@ func (win *window) leaveAgents(list []*tabs.Tab) {
 		}
 		a.claude, a.running, a.command, a.agent = false, false, "", ""
 		win.agents[t.ID] = a
+		win.publishControl()
 		win.subs.EndTab(int(t.ID), time.Now()) // Claude left: no SubagentStop will come
 	}
 }

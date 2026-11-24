@@ -149,3 +149,12 @@ func buildAgents(side sideModel) agentsModel {
 	}
 	return m
 }
+
+// controlSpaceName uses the same repo membership rule as buildSide/buildSpaces.
+// Workspace members also get a space name, although the tab strip excludes them.
+func controlSpaceName(loc locEntry) string {
+	if loc.cwd == "" || loc.repo == "" {
+		return "Shell"
+	}
+	return loc.repoName
+}

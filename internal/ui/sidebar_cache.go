@@ -129,6 +129,7 @@ func (win *window) cachedSide(now time.Time) sideModel {
 		c.base.Runs = cloneSideRuns(runs)
 		c.order = sessionOrder(c.base)
 		c.spaces = buildSpaces(c.base, 0)
+		win.publishControl()
 		c.folded = maps.Clone(s.folded)
 		c.runFolded = maps.Clone(s.st.runFolded)
 		c.docs = c.docs[:0]

@@ -77,10 +77,11 @@ const (
 )
 
 type window struct {
-	w   *app.Window
-	opt Options
-	pal render.Palette
-	km  keymap
+	control controlHost
+	w       *app.Window
+	opt     Options
+	pal     render.Palette
+	km      keymap
 	// binds is each [keys] action's shortcut, overrides included, for display.
 	binds map[string]input.Shortcut
 
@@ -289,6 +290,7 @@ func Run(w *app.Window, opt Options) error {
 		win.opt.Warnings = append(win.opt.Warnings, "alerts are off: "+err.Error())
 	} else {
 		win.srv = srv
+		srv.SetControl(controlAdapter(&win.control))
 	}
 	return win.loop()
 }
@@ -564,6 +566,7 @@ func (win *window) newTab() { win.newTabIn(win.plainStartDir()) }
 
 // newTabIn opens a tab whose shell starts in dir.
 func (win *window) newTabIn(dir string) {
+	defer win.publishControl()
 	win.hideDoc()
 	win.dropSideEdit()
 	win.hideSettings() // the new tab is shown
@@ -967,6 +970,7 @@ func (win *window) switchedTo(t *tabs.Tab) {
 		win.updateTitle(t)
 		return
 	}
+	defer win.publishControl()
 	// A panel's keyboard never follows a tab switch. A docked member that had
 	// it gets the focus-out; the old session already had one then.
 	memberKeys := win.dock.keysMember != 0
