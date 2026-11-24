@@ -19,7 +19,10 @@ const controlTimeout = 5 * time.Second
 func runControl(args []string, env func(string) string, stdin io.Reader, stdout, stderr io.Writer) int {
 	req, asJSON, ok := controlArgs(args)
 	if !ok {
-		fmt.Fprintln(stderr, "usage: kaze ls [--json] | read <t> [--lines N] | send <t> <text|->")
+		fmt.Fprintln(stderr, "usage: kaze ls [--json] | read <t> [--lines N] | send <t> <text|-> | keys <t> <key...> | interrupt <t> [--ctrl-c]")
+		if len(args) > 0 && args[0] == "keys" {
+			fmt.Fprintln(stderr, "allowed keys:", control.AllowedKeys)
+		}
 		return 2
 	}
 	if req.Op == "send" && req.Text == "-" {
@@ -69,6 +72,9 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 	if reply.Error != nil {
 		fmt.Fprintf(stderr, "kaze: %s: %s\n", reply.Error.Code, reply.Error.Message)
 		switch reply.Error.Code {
+		case control.CodeUnknownKey:
+			fmt.Fprintln(stderr, "allowed keys:", control.AllowedKeys)
+			return 2
 		case "refused":
 			return 3
 		case "timeout":
@@ -133,6 +139,29 @@ func controlArgs(args []string) (req control.Request, asJSON, ok bool) {
 			req.Lines = n
 		}
 		ok = req.Tab != "" && !strings.HasPrefix(req.Tab, "-")
+	case "keys":
+		if len(args) < 3 || len(args)-2 > control.MaxKeys {
+			return
+		}
+		req.Tab, req.Args = args[1], args[2:]
+		for _, name := range req.Args {
+			if !control.ValidKey(name) {
+				return
+			}
+		}
+		ok = req.Tab != "" && !strings.HasPrefix(req.Tab, "-")
+	case "interrupt":
+		if len(args) != 2 && len(args) != 3 {
+			return
+		}
+		if len(args) == 3 {
+			if args[2] != "--ctrl-c" {
+				return
+			}
+			req.CtrlC = true
+		}
+		req.Tab = args[1]
+		ok = req.Tab != "" && !strings.HasPrefix(req.Tab, "-")
 	case "send":
 		if len(args) != 3 {
 			return
@@ -157,7 +186,7 @@ func controlNetworkError(err error, stderr io.Writer) int {
 func dispatchControl(args []string, env func(string) string, stdin io.Reader, stdout, stderr io.Writer) (bool, int) {
 	if len(args) > 0 {
 		switch args[0] {
-		case "ls", "read", "send":
+		case "ls", "read", "send", "keys", "interrupt":
 			return true, runControl(args, env, stdin, stdout, stderr)
 		}
 	}
