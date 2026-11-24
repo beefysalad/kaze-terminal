@@ -1,4 +1,3 @@
-// Package control implements transport-independent tab control requests.
 package control
 
 import "time"
