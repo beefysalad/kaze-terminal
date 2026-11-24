@@ -68,3 +68,19 @@ func TestLabelValidation(t *testing.T) {
 		}
 	}
 }
+
+func TestTagFinalCapAfterStripping(t *testing.T) {
+	prefix := `<kaze from="t1">`
+	body := strings.Repeat("x", MaxTextBytes-len(prefix)-len("</kaze>"))
+	// The authenticated request is still bounded by the transport's 64 KiB cap.
+	text := strings.Repeat("</kaze>", 10) + body
+	h := &fakeHost{tabs: []TabInfo{{ID: "t1"}, {ID: "t2"}}}
+	r := Handle(h, Request{Op: "send", Tab: "t2", From: "t1", Text: text})
+	if !r.OK || len(h.input) != MaxTextBytes || string(h.input) != prefix+body+"</kaze>" {
+		t.Fatalf("final cap reply %+v bytes %d", r, len(h.input))
+	}
+	r = Handle(h, Request{Op: "send", Tab: "t2", From: "t1", Text: body + "x"})
+	if r.Error == nil || r.Error.Code != CodeTextTooLarge || h.submitCalls != 1 {
+		t.Fatalf("over final cap %+v", r)
+	}
+}

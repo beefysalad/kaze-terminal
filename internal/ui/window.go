@@ -30,6 +30,7 @@ import (
 
 	"github.com/beefysalad/kaze-terminal/internal/bench"
 	"github.com/beefysalad/kaze-terminal/internal/config"
+	ctl "github.com/beefysalad/kaze-terminal/internal/control"
 	"github.com/beefysalad/kaze-terminal/internal/discord"
 	"github.com/beefysalad/kaze-terminal/internal/input"
 	"github.com/beefysalad/kaze-terminal/internal/notify"
@@ -285,12 +286,13 @@ func Run(w *app.Window, opt Options) error {
 			win.opt.Warnings = append(win.opt.Warnings, warn)
 		}
 	}
+	win.initControl()
 	// Last: onNotify may run as soon as this returns.
 	if srv, err := notify.Listen(win.onNotify); err != nil {
 		win.opt.Warnings = append(win.opt.Warnings, "alerts are off: "+err.Error())
 	} else {
 		win.srv = srv
-		srv.SetControlContext(controlContextAdapter(&win.control))
+		srv.SetControlContext(controlContextAdapter(&win.control, ctl.Options{Enabled: opt.Config.Control.Enabled, AgentTag: opt.Config.AgentTag}))
 	}
 	return win.loop()
 }
@@ -780,6 +782,7 @@ func (win *window) frame(gtx layout.Context) error {
 		return slices.ContainsFunc(list, func(t *tabs.Tab) bool { return t.ID == id })
 	})
 	win.publish(win.shownTab(), win.focused)
+	win.drainControl()
 	win.drainAlerts(gtx.Now)
 	win.drainSubs(gtx.Now)
 	win.dropGoneAgents() // after the drain, so a panel never closes on an agent not applied yet

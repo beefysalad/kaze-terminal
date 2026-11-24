@@ -82,10 +82,11 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		return Reply{OK: true, Text: text}
 	}
 	if req.Op == "send" {
-		if len(req.Text) > MaxTextBytes {
+		if len(req.Text) > MaxTextBytes && (!opt.AgentTag || req.From == "") {
 			return Reply{Error: &Error{CodeTextTooLarge, "text exceeds 32 KiB"}}
 		}
-		tab, err := Resolve(host.Tabs(), req.Tab)
+		tabs := host.Tabs()
+		tab, err := Resolve(tabs, req.Tab)
 		if err != nil {
 			return Reply{Error: err}
 		}
@@ -94,7 +95,7 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		}
 		text := req.Text
 		if opt.AgentTag && req.From != "" {
-			for _, sender := range host.Tabs() {
+			for _, sender := range tabs {
 				if sender.ID == req.From {
 					from := sender.ID
 					if sender.Name != "" {

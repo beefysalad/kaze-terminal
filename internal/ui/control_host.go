@@ -27,12 +27,17 @@ type controlSnapshot struct {
 	sessions map[string]*controlSession
 }
 
-// controlHost has no window reference. Socket goroutines use only this snapshot
-// and the sessions' synchronized APIs, never UI state or Gio.
+// controlHost keeps socket access on immutable snapshots and synchronized sessions.
+// Renames cross a bounded inbox; its wake callback only invalidates the window.
 type controlHost struct {
 	snapshot  atomic.Pointer[controlSnapshot]
 	changesMu sync.Mutex
 	changes   chan struct{}
+	renameMu  sync.Mutex
+	renames   []*controlRename
+	wake      func() // immutable after initialization; only invalidates like onNotify
+	labelsMu  sync.Mutex
+	labels    map[string]map[string]string
 }
 
 var _ ctl.Host = (*controlHost)(nil)
@@ -89,6 +94,8 @@ func (win *window) publishControl() {
 	if win.mgr == nil {
 		return
 	}
+	win.control.labelsMu.Lock()
+	defer win.control.labelsMu.Unlock()
 	old := win.control.snapshot.Load()
 	list := win.mgr.Tabs()
 	next := &controlSnapshot{tabs: make([]ctl.TabInfo, 0, len(list)), sessions: make(map[string]*controlSession, len(list))}
@@ -123,7 +130,7 @@ func (win *window) publishControl() {
 			folder = t.Dir
 		}
 		next.tabs = append(next.tabs, ctl.TabInfo{ID: id, Name: name, Space: controlSpaceName(loc), Folder: folder,
-			Agent: a.agentName(), Status: status, Since: a.since, Workspace: t.Group != nil})
+			Labels: cloneLabels(win.control.labels[id]), Agent: a.agentName(), Status: status, Since: a.since, Workspace: t.Group != nil})
 		var target *controlSession
 		if old != nil {
 			target = old.sessions[id]
@@ -133,6 +140,11 @@ func (win *window) publishControl() {
 		}
 		next.sessions[id] = target
 	}
+	for id := range win.control.labels {
+		if next.sessions[id] == nil {
+			delete(win.control.labels, id)
+		}
+	}
 	win.control.publish(next)
 }
 
@@ -140,13 +152,13 @@ func controlAdapter(host ctl.Host) func(json.RawMessage) any {
 	return func(raw json.RawMessage) any { return controlContextAdapter(host)(context.Background(), raw) }
 }
 
-func controlContextAdapter(host ctl.Host) func(context.Context, json.RawMessage) any {
+func controlContextAdapter(host ctl.Host, options ...ctl.Options) func(context.Context, json.RawMessage) any {
 	return func(ctx context.Context, raw json.RawMessage) any {
 		var req ctl.Request
 		if err := json.Unmarshal(raw, &req); err != nil {
 			return ctl.Reply{Error: &ctl.Error{Code: ctl.CodeInvalidRequest, Message: "invalid control request"}}
 		}
-		return ctl.HandleContext(ctx, host, req)
+		return ctl.HandleContext(ctx, host, req, options...)
 	}
 }
 
