@@ -31,10 +31,11 @@ type TabInfo struct {
 
 // Reply is the result of one operation. Error is present only on failure.
 type Reply struct {
-	OK    bool      `json:"ok"`
-	Tabs  []TabInfo `json:"tabs,omitempty"`
-	Text  string    `json:"text,omitempty"`
-	Error *Error    `json:"error,omitempty"`
+	OK        bool      `json:"ok"`
+	Truncated bool      `json:"truncated,omitempty"` // transport shortened the result to its wire cap
+	Tabs      []TabInfo `json:"tabs,omitempty"`
+	Text      string    `json:"text,omitempty"`
+	Error     *Error    `json:"error,omitempty"`
 }
 
 // Error carries a stable wire code and a human-readable explanation.

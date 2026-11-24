@@ -223,7 +223,7 @@ func (s *Server) handle(c net.Conn) {
 	defer c.Close()
 	c.SetReadDeadline(time.Now().Add(s.deadline))
 	// Decode once without waiting for EOF: hook senders keep the socket open.
-	dec := json.NewDecoder(io.LimitReader(c, (64<<10)+1))
+	dec := json.NewDecoder(io.LimitReader(c, maxControlRequest+1))
 	var raw json.RawMessage
 	if dec.Decode(&raw) != nil {
 		return
@@ -233,7 +233,7 @@ func (s *Server) handle(c net.Conn) {
 		return
 	}
 	if _, control := envelope["op"]; control {
-		if dec.InputOffset() > 64<<10 {
+		if dec.InputOffset() > maxControlRequest {
 			s.writeControl(c, controlError("request_too_large", "control request exceeds 64 KiB"))
 			return
 		}
