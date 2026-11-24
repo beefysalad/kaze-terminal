@@ -10,7 +10,7 @@ func Text(s *Screen, history int) string {
 	}
 	history = min(max(history, 0), s.ScrollbackLen())
 	_, rows := s.Size()
-	var out strings.Builder
+	var out, line strings.Builder
 	for row := s.ScrollbackLen() - history; row < s.ScrollbackLen()+rows; row++ {
 		var cells []Cell
 		if row < s.ScrollbackLen() {
@@ -19,7 +19,6 @@ func Text(s *Screen, history int) string {
 			cells = s.row(row - s.ScrollbackLen())
 		}
 		wrapped := len(cells) > 0 && cells[len(cells)-1].Attrs&AttrWrapped != 0
-		var line strings.Builder
 		for _, c := range cells {
 			if c.Width == 0 {
 				continue
@@ -30,13 +29,12 @@ func Text(s *Screen, history int) string {
 			}
 			line.WriteRune(r)
 		}
-		if wrapped {
-			out.WriteString(line.String())
-		} else {
+		if !wrapped || row == s.ScrollbackLen()+rows-1 {
 			out.WriteString(strings.TrimRight(line.String(), " "))
-		}
-		if !wrapped && row < s.ScrollbackLen()+rows-1 {
-			out.WriteByte('\n')
+			line.Reset()
+			if row < s.ScrollbackLen()+rows-1 {
+				out.WriteByte('\n')
+			}
 		}
 	}
 	return out.String()

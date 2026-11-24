@@ -12,6 +12,7 @@ func TestText(t *testing.T) {
 		{"wrapped", "abcdef", 0, false, "abcdef"},
 		{"wrapped spaces", "ab   cd", 0, false, "ab   cd"},
 		{"trim", "ab  ", 0, false, "ab\n"},
+		{"trim wrapped tail", "ab    ", 0, false, "ab"},
 		{"wide", "界界xy", 0, false, "界界xy"},
 		{"visible", "one\r\ntwo\r\nthree", 0, false, "two\nthree"},
 		{"history", "one\r\ntwo\r\nthree", 1, false, "one\ntwo\nthree"},
