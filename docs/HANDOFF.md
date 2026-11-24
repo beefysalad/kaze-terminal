@@ -4,6 +4,10 @@ Last updated: 2026-11-25, agent control Tasks 1-9 on `feat/agent-control` (unrel
 
 ## Agent control: Tasks 1-9
 
+Review fix I1: server-wide limits of 8 concurrent waits and 16 controls refuse
+excess requests immediately with `busy_server` (CLI exit 3). Hook admission keeps
+capacity under control saturation; the 32-connection cap and deadlines remain.
+
 All nine tasks are built on `feat/agent-control`, unreleased, with no version bump.
 Commands: `ls`, `read`, `send`, `keys`, `interrupt`, `wait`, `name` and `label`.
 The tag, `--raw`, `--if-idle`, `agent_tag` and `[control] enabled` are implemented.

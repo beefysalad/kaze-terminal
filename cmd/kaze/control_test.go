@@ -188,7 +188,7 @@ func TestControlErrorReply(t *testing.T) {
 		wire string
 		exit int
 	}{
-		{"unknown_tab", 1}, {"unauthorized", 1}, {"control_unavailable", 1}, {"refused", 3}, {"timeout", 124},
+		{"unknown_tab", 1}, {"unauthorized", 1}, {"control_unavailable", 1}, {"refused", 3}, {"busy_server", 3}, {"timeout", 124},
 	} {
 		t.Run(tc.wire, func(t *testing.T) {
 			env, _ := controlServer(t, control.Reply{Error: &control.Error{Code: tc.wire, Message: "test explanation"}})

@@ -57,6 +57,8 @@ const (
 	maxBody      = 32 << 10 // room for a subagent's report
 	readDeadline = 2 * time.Second
 	maxConns     = 32
+	maxControls  = 16
+	maxWaits     = 8
 	maxBackoff   = time.Second
 )
 
@@ -103,11 +105,13 @@ type Usage struct {
 }
 
 type Server struct {
-	ln       net.Listener
-	token    string
-	onMsg    func(Msg)
-	deadline time.Duration
-	sem      chan struct{}
+	ln         net.Listener
+	token      string
+	onMsg      func(Msg)
+	deadline   time.Duration
+	sem        chan struct{}
+	controlSem chan struct{}
+	waitSem    chan struct{}
 
 	mu      sync.Mutex
 	closed  bool
@@ -134,7 +138,7 @@ func serve(ln net.Listener, onMsg func(Msg), deadline time.Duration) *Server {
 	}
 	s := &Server{
 		ln: ln, token: hex.EncodeToString(raw[:]), onMsg: onMsg, deadline: deadline,
-		sem: make(chan struct{}, maxConns), conns: map[net.Conn]struct{}{},
+		sem: make(chan struct{}, maxConns), controlSem: make(chan struct{}, maxControls), waitSem: make(chan struct{}, maxWaits), conns: map[net.Conn]struct{}{},
 	}
 	s.wg.Add(1)
 	go s.accept()
@@ -268,7 +272,24 @@ func (s *Server) handle(c net.Conn) {
 		duration := s.deadline
 		var op string
 		_ = json.Unmarshal(envelope["op"], &op)
+		// Control budgets are acquired only after authentication and never wait.
+		// The remaining connection slots stay available to legacy hooks and
+		// bounded decoding clients under sustained control load.
+		select {
+		case s.controlSem <- struct{}{}:
+			defer func() { <-s.controlSem }()
+		default:
+			s.writeControl(c, controlError("busy_server", "control request budget exhausted; retry later"))
+			return
+		}
 		if op == "wait" {
+			select {
+			case s.waitSem <- struct{}{}:
+				defer func() { <-s.waitSem }()
+			default:
+				s.writeControl(c, controlError("busy_server", "wait request budget exhausted; retry later"))
+				return
+			}
 			seconds := 120
 			var requested int
 			if json.Unmarshal(envelope["timeout"], &requested) == nil && requested > 0 && requested <= 600 {

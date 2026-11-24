@@ -670,6 +670,10 @@ hook and process detection, so it can lag activity:
 | `needs` | The tab is waiting on you. `wait` treats it as stopped. |
 | `shell` | No agent is known. `wait` uses output quietness. |
 
+The server admits at most 8 concurrent waits and 16 concurrent control requests in total.
+Excess requests immediately return `busy_server`; retry later. Control load leaves
+connection capacity for old-format hooks. The overall 32-connection cap and deadlines still apply.
+
 Commands return these exit codes. Errors and busy warnings go to stderr;
 successful send, keys, interrupt, wait, name and label commands print nothing.
 
@@ -678,7 +682,7 @@ successful send, keys, interrupt, wait, name and label commands print nothing.
 | 0 | Success. |
 | 1 | Request, connection or I/O error, including unknown or ambiguous tabs. |
 | 2 | Usage error, invalid key or client text limit exceeded. |
-| 3 | Refused, including `--if-idle` against a working target or disabled control. |
+| 3 | Refused, including `--if-idle` against a working target, disabled control, or `busy_server` when the server budget is full. |
 | 124 | Wait or network timeout. |
 
 Sends from a known tab normally arrive as `<kaze from="t1 name">text</kaze>`.

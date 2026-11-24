@@ -1,6 +1,7 @@
 package notify
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net"
@@ -230,6 +231,79 @@ func TestControlHookMessagesUnaffected(t *testing.T) {
 	select {
 	case <-hooks:
 		t.Fatal("oversized hook delivered")
+	default:
+	}
+}
+
+func TestControlBudgetsPreserveHooks(t *testing.T) {
+	entered := make(chan struct{}, 32)
+	release := make(chan struct{})
+	s := controlServer(t, nil)
+	s.deadline = 5 * time.Second
+	s.SetControlContext(func(ctx context.Context, _ json.RawMessage) any {
+		entered <- struct{}{}
+		select {
+		case <-release:
+		case <-ctx.Done():
+		}
+		return map[string]any{"ok": true}
+	})
+	defer close(release)
+	hooks := make(chan Msg, 1)
+	s.onMsg = func(m Msg) { hooks <- m }
+	hold := func(op string) {
+		c := controlConn(t, s)
+		if err := json.NewEncoder(c).Encode(map[string]any{"op": op, "token": s.Token(), "timeout": 10}); err != nil {
+			t.Fatal(err)
+		}
+		select {
+		case <-entered:
+		case <-time.After(time.Second):
+			t.Fatal("request not admitted")
+		}
+	}
+	refuse := func(op string) {
+		c := controlConn(t, s)
+		_ = c.SetDeadline(time.Now().Add(400 * time.Millisecond))
+		if err := json.NewEncoder(c).Encode(map[string]any{"op": op, "token": s.Token()}); err != nil {
+			t.Fatal(err)
+		}
+		var reply struct {
+			OK    bool
+			Error struct{ Code string }
+		}
+		if err := json.NewDecoder(c).Decode(&reply); err != nil {
+			t.Fatalf("excess %s did not get immediate refusal: %v", op, err)
+		}
+		if reply.OK || reply.Error.Code != "busy_server" {
+			t.Fatalf("excess %s: %+v", op, reply)
+		}
+	}
+	for i := 0; i < 8; i++ {
+		hold("wait")
+	}
+	refuse("wait")
+	for i := 0; i < 8; i++ {
+		hold("read")
+	}
+	refuse("read")
+	refuse("wait")
+	c := controlConn(t, s)
+	_ = c.SetDeadline(time.Now().Add(400 * time.Millisecond))
+	if err := json.NewEncoder(c).Encode(Msg{Kind: KindDone, Tab: 3, Token: s.Token()}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case m := <-hooks:
+		if m.Tab != 3 {
+			t.Fatal(m)
+		}
+	case <-time.After(400 * time.Millisecond):
+		t.Fatal("control saturation starved legacy hook")
+	}
+	select {
+	case <-entered:
+		t.Fatal("excess request dispatched")
 	default:
 	}
 }

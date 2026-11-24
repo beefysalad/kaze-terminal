@@ -87,7 +87,7 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 		case control.CodeUnknownKey:
 			fmt.Fprintln(stderr, "allowed keys:", control.AllowedKeys)
 			return 2
-		case "refused", control.CodeBusy, control.CodeDisabled:
+		case "refused", "busy_server", control.CodeBusy, control.CodeDisabled:
 			return 3
 		case "timeout":
 			return 124
