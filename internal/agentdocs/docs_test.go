@@ -3,6 +3,7 @@ package agentdocs
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -37,7 +38,7 @@ func TestRoundTrip(t *testing.T) {
 				t.Fatalf("installed %v %v", st, e)
 			}
 			fi, _ := os.Stat(p)
-			if fi.Mode().Perm() != 0640 {
+			if runtime.GOOS != "windows" && fi.Mode().Perm() != 0640 {
 				t.Fatal(fi.Mode())
 			}
 			if e := Install(p); e != nil {
@@ -114,7 +115,7 @@ func TestMissingSymlinksBackupsAndErrors(t *testing.T) {
 	put(t, real, "owner")
 	link := filepath.Join(root, "link")
 	if e := os.Symlink(real, link); e != nil {
-		t.Fatal(e)
+		t.Skipf("symlinks not permitted: %v", e)
 	}
 	if e := Install(link); e != nil {
 		t.Fatal(e)
@@ -169,5 +170,110 @@ func TestPaths(t *testing.T) {
 	t.Setenv("CODEX_HOME", custom)
 	if p, e := CodexPath(); e != nil || p != filepath.Join(custom, "AGENTS.md") {
 		t.Fatal(p, e)
+	}
+}
+
+func TestDeepPathsAndSymlinkTargets(t *testing.T) {
+	root := t.TempDir()
+	deep := root
+	for i := 0; i < 45; i++ {
+		deep = filepath.Join(deep, "d")
+	}
+	p := filepath.Join(deep, "doc")
+	if e := Install(p); e != nil {
+		t.Fatal(e)
+	}
+	if e := Remove(p); e != nil {
+		t.Fatal(e)
+	}
+	real := filepath.Join(root, "real")
+	if e := os.Mkdir(real, 0700); e != nil {
+		t.Fatal(e)
+	}
+	parent := filepath.Join(root, "parent")
+	if e := os.Symlink(real, parent); e != nil {
+		t.Skipf("symlinks not permitted: %v", e)
+	}
+	p = filepath.Join(parent, "new", "doc")
+	if e := Install(p); e != nil {
+		t.Fatal(e)
+	}
+	if get(t, filepath.Join(real, "new", "doc")) != Block {
+		t.Fatal("symlinked parent ignored")
+	}
+	dangling := filepath.Join(root, "dangling")
+	if e := os.Symlink("target/doc", dangling); e != nil {
+		t.Fatal(e)
+	}
+	if e := Install(dangling); e != nil {
+		t.Fatal(e)
+	}
+	if get(t, filepath.Join(root, "target", "doc")) != Block {
+		t.Fatal("dangling target ignored")
+	}
+	if fi, e := os.Lstat(dangling); e != nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Fatal("dangling link replaced")
+	}
+	loop := filepath.Join(root, "loop")
+	if e := os.Symlink("loop", loop); e != nil {
+		t.Fatal(e)
+	}
+	if e := Install(loop); e == nil {
+		t.Fatal("symlink loop accepted")
+	}
+}
+
+func TestErrorsAndNoOpDoNotWrite(t *testing.T) {
+	root := t.TempDir()
+	p := filepath.Join(root, "doc")
+	put(t, p, "owner")
+	if e := Install(p); e != nil {
+		t.Fatal(e)
+	}
+	before, _ := os.Stat(p)
+	backups, _ := filepath.Glob(p + ".bak-*")
+	if e := Install(p); e != nil {
+		t.Fatal(e)
+	}
+	after, _ := os.Stat(p)
+	afterBackups, _ := filepath.Glob(p + ".bak-*")
+	if !os.SameFile(before, after) || !before.ModTime().Equal(after.ModTime()) || len(backups) != len(afterBackups) {
+		t.Fatal("no-op wrote file")
+	}
+	put(t, p, "private")
+	if runtime.GOOS != "windows" {
+		if e := os.Chmod(p, 0000); e != nil {
+			t.Fatal(e)
+		}
+		defer os.Chmod(p, 0600)
+		if _, e := State(p); e == nil {
+			t.Fatal("unreadable state accepted")
+		}
+		for _, f := range []func(string) error{Install, Remove} {
+			if e := f(p); e == nil {
+				t.Fatal("unreadable accepted")
+			}
+		}
+	}
+
+	// A regular file used as a parent is an I/O error, not a missing document.
+	for _, f := range []func(string) error{Install, Remove} {
+		if e := f(filepath.Join(p, "doc")); e == nil {
+			t.Fatal("bad parent accepted")
+		}
+	}
+	leftovers, _ := filepath.Glob(filepath.Join(root, "*.tmp-*"))
+	if len(leftovers) > 0 {
+		t.Fatal(leftovers)
+	}
+}
+
+func TestReadmeQuotesCurrentBlock(t *testing.T) {
+	b, e := os.ReadFile("../../README.md")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if !strings.Contains(string(b), "```markdown\n"+Block+"\n```") {
+		t.Fatal("README manual alternative must quote the exact managed block")
 	}
 }

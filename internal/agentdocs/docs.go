@@ -221,7 +221,7 @@ func resolve(path string, depth int) (string, error) {
 	if parent == path {
 		return path, nil
 	}
-	real, e := resolve(parent, depth+1)
+	real, e := resolve(parent, depth)
 	if e != nil {
 		return "", e
 	}

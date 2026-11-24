@@ -28,6 +28,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 
+	"github.com/beefysalad/kaze-terminal/internal/agentdocs"
 	"github.com/beefysalad/kaze-terminal/internal/bench"
 	"github.com/beefysalad/kaze-terminal/internal/config"
 	ctl "github.com/beefysalad/kaze-terminal/internal/control"
@@ -209,11 +210,13 @@ type window struct {
 	set                settingsState // the Settings page; UI goroutine only
 	cfgPath            string        // where the page saves; "" applies changes without saving
 
-	claudePath string // Claude Code's settings.json; "" checks nothing
-	exePath    string // this kaze, which a Claude setup fix points the entries at
-	codexDir   string // Codex user settings directory
-	codex      codexState
-	claude     claudeState // the Claude section's setup check and dialog
+	claudeDocs, codexDocs peerDocsState
+	codexDocsDir          string // CODEX_HOME override for the global instructions
+	claudePath            string // Claude Code's settings.json; "" checks nothing
+	exePath               string // this kaze, which a Claude setup fix points the entries at
+	codexDir              string // Codex user settings directory
+	codex                 codexState
+	claude                claudeState // the Claude section's setup check and dialog
 
 	runs map[uint64]*wsRun // workspace runs with a tab still open; UI goroutine only
 	// frameRuns is sideRuns built once for the frame being drawn, so the sidebar
@@ -260,6 +263,10 @@ func Run(w *app.Window, opt Options) error {
 	if home := win.home; home != "" {
 		win.claudePath = filepath.Join(home, ".claude", "settings.json")
 		win.codexDir = filepath.Join(home, ".codex")
+
+	}
+	if docsPath, err := agentdocs.CodexPath(); err == nil {
+		win.codexDocsDir = filepath.Dir(docsPath)
 	}
 	if exe, err := os.Executable(); err == nil {
 		win.exePath = exe
