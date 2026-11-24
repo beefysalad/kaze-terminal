@@ -2,6 +2,7 @@ package control
 
 import (
 	"context"
+	"fmt"
 	"strings"
 )
 
@@ -143,8 +144,51 @@ func Resolve(tabs []TabInfo, address string) (TabInfo, *Error) {
 		}
 		found, matched = tab, true
 	}
-	if !matched {
-		return TabInfo{}, &Error{CodeUnknownTab, "unknown tab"}
+	if matched {
+		return found, nil
 	}
-	return found, nil
+	// No tab has that id or name: an agent name (claude, codex) addresses the
+	// one tab running it, so an agent that only knows "codex" can still reach it.
+	var byAgent []TabInfo
+	for _, tab := range tabs {
+		if tab.Agent != "" && strings.EqualFold(tab.Agent, address) {
+			byAgent = append(byAgent, tab)
+		}
+	}
+	switch len(byAgent) {
+	case 1:
+		return byAgent[0], nil
+	case 0:
+		return TabInfo{}, &Error{CodeUnknownTab, fmt.Sprintf("unknown tab %q%s", address, describeTabs(tabs))}
+	}
+	return TabInfo{}, &Error{CodeAmbiguousTab, fmt.Sprintf("%d tabs run %q, use an id%s", len(byAgent), address, describeTabs(byAgent))}
+}
+
+// describeTabs lists tabs as "; tabs: t1 (claude, main), t2 (codex)" so a caller
+// that guessed wrong can correct itself without another command.
+func describeTabs(tabs []TabInfo) string {
+	if len(tabs) == 0 {
+		return "; no tabs are open"
+	}
+	const maxListed = 12
+	parts := make([]string, 0, len(tabs))
+	for i, tab := range tabs {
+		if i == maxListed {
+			parts = append(parts, fmt.Sprintf("and %d more", len(tabs)-maxListed))
+			break
+		}
+		var detail []string
+		if tab.Agent != "" {
+			detail = append(detail, tab.Agent)
+		}
+		if tab.Name != "" {
+			detail = append(detail, tab.Name)
+		}
+		if len(detail) == 0 {
+			parts = append(parts, tab.ID)
+			continue
+		}
+		parts = append(parts, tab.ID+" ("+strings.Join(detail, ", ")+")")
+	}
+	return "; tabs: " + strings.Join(parts, ", ")
 }

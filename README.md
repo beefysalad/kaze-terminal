@@ -620,7 +620,10 @@ in PowerShell, use `& $env:KAZE_BIN` in place of `"$KAZE_BIN"`.
 | `name <t> <name>` | `"$KAZE_BIN" name t2 reviewer` | Renames the tab. Names must be unique, 1 to 64 characters, with no control characters, cannot start with a hyphen, and cannot look like a tab id. |
 | `label <t> k=v` | `"$KAZE_BIN" label reviewer role=review` | Sets an in-memory label, shown by `ls`. Up to eight keys per tab; labels disappear when the tab closes or Kaze restarts. |
 
-Use a tab id such as `t2` or an exact, unique name wherever `<t>` appears. Ids restart
+Use a tab id such as `t2`, an exact, unique name, or, when only one tab runs that agent, the
+agent name (`codex`, `claude`) wherever `<t>` appears. A wrong address lists the open tabs in the
+error. An unknown `kaze` command prints usage and exits 2; `"$KAZE_BIN" --help` prints the same
+usage and never starts a second Kaze. Ids restart
 with Kaze and are not reused during a run. Names are case-sensitive. Label keys use
 1 to 32 ASCII letters, digits, `_`, `-` or `.`; values allow up to 128 characters
 without control characters. Use JSON output when label values contain commas or `=`.
