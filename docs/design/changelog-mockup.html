@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <base href="../">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Kaze | Changelog</title>
+  <meta name="description" content="Kaze release notes: features, improvements and fixes for every recorded release.">
+  <link rel="icon" href="site-assets/kaze-icon.svg">
+  <link rel="stylesheet" href="site-assets/site.css">
+<style>
+/* Concept only: inherits Kaze's existing typography, assets and colors. */
+:root{--hero-paper:#efedf5;--hero-muted:#b2abbf;--hero-accent:#b4a2f5}
+.hero-preview .wrap{width:min(1328px,calc(100% - 96px))}
+.preview-bar{background:#18151f;border-bottom:1px solid #2d263a;font-size:11px;color:#c6b9de}
+.preview-bar>div{width:min(1328px,calc(100% - 96px));min-height:32px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.preview-bar a{color:#c6b9de;text-decoration:underline;text-underline-offset:3px}
+.hero-preview .header-inner{height:82px}
+.hero-preview nav{font-size:12px;gap:28px}
+.hero-preview .source-link{padding:8px 12px;border-color:#36303e}
+.hero-concept{display:grid;grid-template-columns:minmax(0,.88fr) minmax(0,1.62fr);gap:54px;align-items:center;text-align:left;padding:86px 0 68px;position:relative}
+.hero-intro{min-width:0;padding-bottom:24px}
+.hero-concept h1{margin:0;font-size:clamp(43px,4.5vw,65px);line-height:1.06;letter-spacing:-.035em;font-weight:600;text-wrap:balance;color:var(--hero-paper)}
+.hero-concept h1 .agents-line{display:block;white-space:nowrap;color:var(--hero-paper)}
+.hero-concept h1 .quiet-line{display:block;color:var(--hero-accent);margin-top:7px}
+.hero-concept .hero-copy{margin:27px 0 0;max-width:400px;font-size:15px;line-height:1.85;color:var(--hero-muted)}
+.hero-concept .hero-actions{justify-content:flex-start;margin-top:30px;gap:10px;flex-wrap:wrap}
+.hero-concept .button{min-height:46px;padding:12px 15px;font-size:12px;gap:8px;justify-content:center;border-radius:7px;font-weight:600}
+.hero-concept .button.primary{background:#ded4f5;color:#20172c;border-color:#ded4f5}
+.hero-concept .button.primary:hover{background:#eee6ff}
+.hero-concept .button.secondary{background:#151219;color:#e2dbea;border-color:#403747}
+.hero-concept .button.secondary:hover{background:#221c2b;border-color:#70617e}
+.hero-meta{margin-top:16px;font-size:11px;color:#b2a7c0;line-height:1.6}
+.hero-install-link{display:inline-flex;align-items:center;gap:5px;margin-top:17px;font-size:12px;color:#b2a7c0;line-height:1.7}
+.hero-install-link span{color:#ded4f0;text-decoration:underline;text-underline-offset:4px}
+.hero-install-link svg,.hero-transition svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.5;flex:none}
+.hero-proof{min-width:0;margin:0;scroll-margin-top:24px}
+.hero-screenshot{display:block;border:1px solid #3a3347;border-radius:10px;overflow:hidden;background:#101117;box-shadow:none;cursor:zoom-in}
+.hero-screenshot img{display:block;width:100%;height:auto;max-width:100%}
+.gallery-footer{padding-top:16px}
+.hero-proof .capture-switcher{display:flex;flex-wrap:wrap;gap:5px}
+.hero-proof .capture-switcher button{min-height:34px;padding:6px 8px;font-size:11px;color:#b7aec5;border-radius:5px}
+.hero-proof .capture-switcher button[aria-pressed=true]{color:#f0e8fb;background:#211a2d;border-color:#52416d}
+.hero-proof .capture-switcher button:hover{color:#fff;background:#211a2d}
+.hero-proof figcaption{margin:11px 0 0;text-align:left;font-size:11px;line-height:1.6;color:#c1b6cf}
+.capture-honesty{display:block;margin-top:5px;font-size:11px;color:#a59ab4}
+.capture-honesty a{color:#c4b4da;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+.hero-transition{display:flex;align-items:end;justify-content:space-between;gap:24px;border-top:1px solid #292331;padding:32px 0 40px}
+.hero-transition p{font-size:25px;font-weight:500;letter-spacing:-.025em;line-height:1.4;color:#ede6f6}
+.hero-transition p span{color:#a69aae}
+.hero-transition>a{display:flex;gap:12px;align-items:center;color:#d4c5e7;font-size:12px;padding-bottom:7px}
+.hero-preview .feature-section{padding-top:65px}
+.hero-preview a:focus-visible,.hero-preview button:focus-visible{outline:2px solid #c5adff;outline-offset:4px}
+.hero-preview ::selection{background:#b4a2f5;color:#160f21}
+@media(min-width:1600px){.hero-concept{gap:72px;padding-top:100px;padding-bottom:80px}}
+@media(max-width:1150px) and (min-width:901px){.hero-concept{gap:30px;grid-template-columns:minmax(0,.95fr) minmax(0,1.2fr)}.hero-concept h1{font-size:45px}.hero-concept .hero-actions{flex-direction:column;align-items:stretch;max-width:260px}.hero-concept .hero-copy{font-size:14px}}
+@media(max-width:900px){.hero-preview .wrap{width:calc(100% - 48px)}.preview-bar>div{width:calc(100% - 48px)}.hero-concept{display:block;padding:44px 0 32px}.hero-intro{padding:0;max-width:640px}.hero-concept h1{font-size:56px;max-width:640px}.hero-break{display:none}.hero-concept .hero-copy{margin-top:20px;max-width:510px}.hero-concept .hero-actions{margin-top:23px}.hero-proof{margin-top:34px}.hero-transition{padding:26px 0 30px}.hero-preview .feature-section{padding-top:40px}}
+@media(max-width:680px){.hero-preview .wrap{width:calc(100% - 36px)}.preview-bar>div{width:calc(100% - 36px);min-height:30px;font-size:11px}.hero-preview .header-inner{height:auto;padding-top:12px;padding-bottom:8px}.hero-preview .site-header nav{font-size:12px}.hero-preview .site-header nav>.source-link{padding:6px 10px}.hero-concept{padding-top:32px}.hero-concept h1{font-size:clamp(34px,10vw,46px);line-height:1.1;letter-spacing:-.035em;text-wrap:initial}.hero-concept h1 .quiet-line{margin-top:4px}.hero-concept .hero-copy{font-size:14px;line-height:1.8;margin-top:20px}.hero-concept .hero-copy .desktop-break{display:none}.hero-concept .hero-actions{flex-direction:column;gap:8px;align-items:stretch;margin-top:22px}.hero-concept .hero-actions .button{min-height:46px;flex:initial;font-size:13px}.hero-meta{font-size:11px;margin-top:13px}.hero-install-link{margin-top:12px;font-size:12px}.hero-proof{margin-top:28px}.hero-proof .capture-switcher{display:flex;flex-wrap:wrap;gap:5px}.hero-proof .capture-switcher button{min-height:40px;padding-inline:9px;font-size:11px}.hero-proof figcaption{font-size:11px}.capture-honesty{font-size:11px}.hero-transition{align-items:center;padding-block:24px}.hero-transition p{font-size:21px}.hero-transition>a{font-size:11px;gap:6px}.hero-screenshot{border-radius:6px}}
+@media(prefers-reduced-motion:no-preference){.hero-intro,.hero-proof{animation:hero-arrive .5s cubic-bezier(.16,1,.3,1) both}.hero-proof{animation-delay:.06s}@keyframes hero-arrive{from{opacity:.75;transform:translateY(8px)}to{opacity:1;transform:none}}}
+.hero-screenshot{aspect-ratio:2200/1440}
+.hero-screenshot img{height:100%;object-fit:contain}
+
+.changelog-archive .changelog{padding:56px 0 80px}
+.changelog-archive .section-intro{text-align:left;max-width:860px;margin:auto}
+.changelog-archive h1{font-size:clamp(40px,6vw,64px);line-height:1.1;letter-spacing:-.035em;color:#efedf5}
+.changelog-archive .section-intro p{font-size:14px;color:#b2abbf;max-width:62ch}
+.archive-back{display:inline-block;font-size:12px;color:#c4bad5;margin-bottom:28px;padding-block:8px;text-decoration:underline;text-underline-offset:4px}
+.changelog-archive .release-meta time{color:#aaa0b7}
+.changelog-archive .release-meta .badge{font-size:11px}
+.changelog-archive .release-body ul{color:#b2abbf}
+@media(max-width:680px){.changelog-archive .changelog{padding-top:28px}.changelog-archive .section-intro p{font-size:13px}}
+</style>
+</head>
+<body class="hero-preview changelog-archive">
+<div class="preview-bar"><div><span>Changelog · Local preview</span><a href="index.html" target="_blank" rel="noopener">Compare current site <span aria-hidden="true">↗</span></a></div></div>
+<a class="skip-link" href="design/changelog-mockup.html#main">Skip to content</a>
+<header class="site-header">
+  <div class="header-inner wrap">
+    <a class="brand" href="design/lander-hero-mockup.html#main" aria-label="Kaze by Patrick home"><img src="site-assets/kaze-icon.svg" alt="" width="32" height="32"><span class="brand-lockup"><span>kaze</span><span class="brand-byline">by Patrick</span></span></a>
+    <nav aria-label="Main navigation"><a href="design/lander-hero-mockup.html#sessions">Features</a><a href="design/lander-hero-mockup.html#workspaces">Workspaces</a><a href="design/changelog-mockup.html" aria-current="page">Changelog</a><a href="design/lander-hero-mockup.html#install">Download</a><a class="source-link" href="https://github.com/patrick-gogo/kaze-terminal"><svg class="github-icon" viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg> GitHub</a></nav>
+  </div>
+</header>
+<main id="main">
+  <section class="changelog wrap" id="changelog" aria-labelledby="changelog-title">
+    <div class="section-intro"><a class="archive-back" href="design/lander-hero-mockup.html#changelog">Back to Kaze</a><h1 id="changelog-title">Changelog.</h1><p>Features, improvements and fixes, release by release. Kaze checks for updates in Settings, Updates.</p></div>
+    <ol class="releases">
+      <li class="release">
+        <div class="release-meta"><span class="version">0.15.1</span><span class="badge">Latest</span><time datetime="2026-11-01">Nov 1, 2026</time></div>
+        <div class="release-body">
+          <h3>Smoother sessions, less overhead</h3>
+          <ul>
+            <li><b>Sidebar fixes:</b> toggling the sidebar no longer flashes, and finished subagents leave its tree once none remain running. Their reports stay on the agents board.</li>
+            <li><b>Shorter title-bar commands:</b> long plugin commands show a compact name, while the sidebar and palette keep the full name.</li>
+            <li><b>Faster busy terminals:</b> scrolling reuses rows, and unchanged title-bar and status-bar layouts are reused instead of measured again each frame.</li>
+            <li><b>Less memory churn:</b> subagent history and rendering buffers reuse storage, and forgotten subagent pane IDs are cleaned up.</li>
+            <li><b>More efficient agent updates:</b> bursts of tool activity are compacted in batches, protecting completion reports and the newest actions.</li>
+          </ul>
+        </div>
+      </li>
+      <li class="release">
+        <div class="release-meta"><span class="version">0.15</span><time datetime="2026-11-01">Nov 1, 2026</time></div>
+        <div class="release-body">
+          <h3>A new title bar and status bar</h3>
+          <ul>
+            <li><b>One title bar on Mac and Windows:</b> the sidebar toggle, a new-session button, the session you're in with its command and state, a search field that opens the palette, and the scratch shell, Agents and Settings buttons, laid out the same on both.</li>
+            <li><b>Real Mac window buttons:</b> the native traffic lights sit inside Kaze's own bar. Drag the bar to move the window; double-click it to zoom, as your Mac is set.</li>
+            <li><b>A clearer status bar:</b> folder and branch with icons, pills for updates and subagents, server dots, and Claude usage as small meters with a card that shows when each limit resets.</li>
+            <li><b>Fits narrow windows:</b> the least important parts give way first, so nothing overlaps.</li>
+            <li><b>Fixed:</b> the agents board now names sessions the same way as the sidebar.</li>
+          </ul>
+        </div>
+      </li>
+      <li class="release">
+        <div class="release-meta"><span class="version">0.14</span><time datetime="2026-10-31">Oct 31, 2026</time></div>
+        <div class="release-body">
+          <h3>See what your subagents are doing</h3>
+          <ul>
+            <li><b>Subagents in the sidebar:</b> each session lists its subagents with their task, how long they’ve run and the step they’re on.</li>
+            <li><b>A live pane per subagent:</b> click one to follow its steps as they happen and read its report when it finishes, with a Copy report button.</li>
+            <li><b>The agents board:</b> every subagent in every session, in running, waiting on you and done. Open it with the Agents button, the status bar, the palette or <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>A</kbd> (<kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>A</kbd> on Windows).</li>
+            <li><b>Setup in one click:</b> Settings, Agents checks the three new Claude Code hooks and Fix adds them, showing the change first.</li>
+            <li><b>Fixed:</b> pressing Command on its own no longer types a <code>⌘</code> into the terminal.</li>
+          </ul>
+        </div>
+      </li>
+      <li class="release">
+        <div class="release-meta"><span class="version">0.13</span><time datetime="2026-10-31">Oct 31, 2026</time></div>
+        <div class="release-body">
+          <h3>Claude Code and Codex, side by side</h3>
+          <ul>
+            <li><b>Agents settings:</b> shared alert controls, with separate setup checks for Claude Code and Codex.</li>
+            <li><b>Codex hooks:</b> see when Codex needs you, is running or is done. Interrupting Codex clears its running state without a done alert.</li>
+            <li><b>Know which agent:</b> session rows and the palette show Claude or Codex beside the command, including Codex’s <code>$skill</code> names.</li>
+            <li><b>Setup with a preview:</b> Codex Fix asks before writing, backs up existing hooks, and leaves your other hooks and config alone. Then review and trust Kaze’s hooks with <code>/hooks</code> in Codex.</li>
+            <li><b>A refreshed lander:</b> native Kaze 0.12 screenshots, an Appearance view in the gallery, and a mobile layout with roomier navigation and buttons.</li>
+          </ul>
+        </div>
+      </li>
+      <li class="release">
+        <div class="release-meta"><span class="version">0.12</span><time datetime="2026-10-31">Oct 31, 2026</time></div>
+        <div class="release-body">
+          <h3>A redesigned settings page</h3>
+          <ul>
+            <li><b>A new look:</b> settings sit in cards, with a clean UI font and new controls. Monospace is kept for keys, paths and commands.</li>
+            <li><b>Appearance:</b> theme cards that preview each theme, a live preview of your theme, font size and cursor, and cursor shapes you can see.</li>
+            <li><b>Workspaces:</b> one card per workspace with its state, and each tab’s folder, commands and start condition at a glance.</li>
+            <li><b>Claude:</b> your Claude Code setup first, with a Connected or Missing mark per hook and a one-click Fix.</li>
+            <li><b>Shortcuts:</b> grouped, drawn as key caps, and searchable.</li>
+            <li><b>Updates:</b> its own page, with the update status, progress while it downloads, and the automatic-check switch.</li>
+            <li><b>About:</b> roomier, with your version, platform and a Report an issue button.</li>
+            <li><b>New icons</b> for the sidebar, search, scratch shell and settings buttons, drawn as one matched set.</li>
+          </ul>
+        </div>
+      </li>
+      <li class="release">
+        <div class="release-meta"><span class="version">0.11</span><time datetime="2026-10-31">Oct 31, 2026</time></div>
+        <div class="release-body">
+          <h3>Downloads and updates</h3>
+          <ul>
+            <li><b>Download Kaze</b> for macOS (Apple Silicon and Intel) and Windows, no Go needed.</li>
+            <li><b>Updates in place:</b> Kaze checks GitHub once a day, shows “Update” in the status bar, and installs a new version with one click after asking. Each download is checked against the release’s checksums.</li>
+          </ul>
+        </div>
+      </li>
+      <li class="release">
+        <div class="release-meta"><span class="version">0.10</span></div>
+        <div class="release-body">
+          <h3>Floating panes and the scratch shell</h3>
+          <ul>
+            <li><b>Floating panes:</b> a workspace’s servers float over your Claude session. Drag, resize, type into them, or expand one to the main view.</li>
+            <li><b>Scratch shell:</b> <kbd>Ctrl</kbd> <kbd>`</kbd> opens a quick shell in the session’s folder; press it again to hide it.</li>
+          </ul>
+        </div>
+      </li>
+      <li class="release">
+        <div class="release-meta"><span class="version">0.9</span></div>
+        <div class="release-body">
+          <h3>The palette</h3>
+          <ul>
+            <li><b>One key finds everything:</b> <kbd>⌘</kbd> <kbd>K</kbd> lists waiting sessions, every session and server, your Claude Code skills and Kaze’s own actions.</li>
+          </ul>
+        </div>
+      </li>
+    </ol>
+    <a class="all-releases" href="https://github.com/patrick-gogo/kaze-terminal/releases">Every release on GitHub <span aria-hidden="true">↗</span></a>
+  </section>
+</main>
+<footer class="wrap"><a class="brand" href="design/lander-hero-mockup.html#main"><img src="site-assets/kaze-icon.svg" alt="" width="28" height="28"><span>kaze</span></a><p>Made for the long session.</p><div><a href="https://github.com/patrick-gogo/kaze-terminal">GitHub</a><a href="https://github.com/patrick-gogo/kaze-terminal/blob/main/LICENSE">MIT License</a></div></footer>
+</body>
+</html>

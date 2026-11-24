@@ -102,3 +102,13 @@ cross-builds. Record frame and allocation numbers and the idle wake-up result in
 
 Controller review of the whole branch with a fresh read-only reviewer, fixes test first, push, PR, wait for CI, owner merges, then the
 release PR (0.45) per CLAUDE.md.
+
+## Task 10 (added 2026-11-25): Settings switch that teaches the agents
+
+New package `internal/agentdocs`: the block text constant, `State(path)`, `Install(path)`, `Remove(path)`, path helpers for Claude
+Code (`~/.claude/CLAUDE.md`) and Codex (`$CODEX_HOME/AGENTS.md`, default `~/.codex/AGENTS.md`). Idempotent, byte-exact outside the
+block, CRLF and no-trailing-newline files handled, a hand-edited block is replaced on Install, Remove leaves surrounding text
+intact, symlinks written through, mode kept, missing directory created for Install only, errors returned (never panics). Settings
+rows on the Claude Code and Codex Agents pages (`internal/ui/settings_claude.go`, `settings_codex.go`; follow their hook-install
+rows): state read when the page opens and after a click, never per frame, errors shown on the row. Tests use `t.TempDir()` and
+injected paths only. README and HANDOFF updated. Off by default; the files are the state.

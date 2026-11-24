@@ -142,3 +142,19 @@ real-agent test decides the delay), file layout inside `internal/control`, test 
 
 1. Is "any process in a tab can type into any other tab" acceptable for now (it is today's hook trust model)?
 2. Ship the spike (`ls`, `read`, `send`) as its own release, or hold until phase 2 is done?
+
+## Addendum 2026-11-25: teach the agents from Settings
+
+Owner request: instead of pasting a paragraph into each agent, a Settings switch writes the instructions into the
+global Claude Code and Codex files, so every agent in every tab knows how to use `"$KAZE_BIN"`.
+
+- Settings > Agents gets a "Peer messaging instructions" switch on the Claude Code page and on the Codex page. **Off
+  by default**; the files themselves are the state (no new config key). Turning it on writes a marked block into
+  `~/.claude/CLAUDE.md` or `$CODEX_HOME/AGENTS.md` (default `~/.codex/AGENTS.md`); turning it off removes exactly that
+  block. Markers `<!-- kaze:peer-agents:begin ... -->` / `<!-- kaze:peer-agents:end -->` make it idempotent, and
+  everything outside the block is left byte for byte as it was. **(call)**
+- The text uses `"$KAZE_BIN"` (no path), applies only when `KAZE_BIN` is set, and tells the agent that `<kaze from=...>`
+  messages come from a peer, not the owner. One constant in the new package is the single source; the README quotes it.
+- Safety: atomic write (temp file and rename) through symlinks to the real file, keep the file mode, one-time `.kaze-bak`
+  copy if the existing files do it elsewhere in this repo (follow `internal/claudesetup`), refuse and show an error
+  when the file is unreadable or unwritable, never touch the real home in tests.
