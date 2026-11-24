@@ -84,3 +84,11 @@ func TestTagFinalCapAfterStripping(t *testing.T) {
 		t.Fatalf("over final cap %+v", r)
 	}
 }
+
+func TestNameRejectsLeadingHyphen(t *testing.T) {
+	for _, name := range []string{"-review", " -review ", "-"} {
+		if _, e := ValidateName(nil, "t1", name); e == nil || e.Code != CodeInvalidRequest || !strings.Contains(e.Message, "hyphen") {
+			t.Fatalf("name %q: %v", name, e)
+		}
+	}
+}

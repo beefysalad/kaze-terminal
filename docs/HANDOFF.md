@@ -14,6 +14,15 @@ reads retain the newest complete UTF-8 lines within the unchanged 1 MiB wire cap
 set `truncated`, and warn on CLI stderr (exit 0). An oversized single line can be
 omitted entirely; structured replies and other ops keep their prior behavior.
 
+Review fixes M1/M2: read text omits the terminal-inserted wide-rune wrap padding
+while preserving printed spaces, including across scrollback. Control names now
+reject a leading hyphen after trimming, with a clear CLI error, so every accepted
+name can be addressed. Five findings were fixed test first in separate commits.
+Fix-round verification: `go test ./...`, `go vet ./...`, the exact macOS CI race
+command (UI 173.543 s), and focused notify panic/admission race checks pass.
+No slow-test retries were needed; native owner checks below remain open.
+Report: `.superpowers/sdd/control/fix-report.md`.
+
 All nine tasks are built on `feat/agent-control`, unreleased, with no version bump.
 Commands: `ls`, `read`, `send`, `keys`, `interrupt`, `wait`, `name` and `label`.
 The tag, `--raw`, `--if-idle`, `agent_tag` and `[control] enabled` are implemented.

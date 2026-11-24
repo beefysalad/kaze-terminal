@@ -20,6 +20,12 @@ const controlTimeout = 5 * time.Second
 func runControl(args []string, env func(string) string, stdin io.Reader, stdout, stderr io.Writer) int {
 	req, asJSON, raw, ok := controlArgsWithRaw(args)
 	if !ok {
+		if len(args) == 3 && args[0] == "name" {
+			if _, e := control.ValidateName(nil, "", args[2]); e != nil {
+				fmt.Fprintln(stderr, "kaze: name:", e.Message)
+				return 2
+			}
+		}
 		fmt.Fprintln(stderr, "usage: kaze ls [--json] | read <t> [--lines N] | send <t> <text|-> [--raw] [--if-idle] | name <t> <name> | label <t> k=v | keys <t> <key...> | interrupt <t> [--ctrl-c] | wait <t> [--for TEXT] [--timeout S] [--quiet MS]")
 		if len(args) > 0 && args[0] == "keys" {
 			fmt.Fprintln(stderr, "allowed keys:", control.AllowedKeys)

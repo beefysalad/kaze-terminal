@@ -81,3 +81,26 @@ func TestControlListLabels(t *testing.T) {
 		}
 	}
 }
+
+func TestControlNameAddressability(t *testing.T) {
+	for _, name := range []string{"-review", " -review "} {
+		called := false
+		var out, errs bytes.Buffer
+		code := runControl([]string{"name", "t2", name}, func(string) string { called = true; return "" }, nil, &out, &errs)
+		if code != 2 || called || !strings.Contains(errs.String(), "hyphen") {
+			t.Fatalf("name %q: code %d env %v stderr %q", name, code, called, errs.String())
+		}
+	}
+	// A permitted internal hyphen remains usable in both creation and addressing.
+	for _, args := range [][]string{{"name", "t2", "peer-review"}, {"read", "peer-review"}} {
+		env, requests := controlServer(t, ctl.Reply{OK: true})
+		var out, errs bytes.Buffer
+		if code := runControl(args, env, nil, &out, &errs); code != 0 {
+			t.Fatalf("%v: %d %s", args, code, errs.String())
+		}
+		req := receiveControlRequest(t, requests)
+		if args[0] == "name" && req.Name != "peer-review" || args[0] == "read" && req.Tab != "peer-review" {
+			t.Fatal(req)
+		}
+	}
+}

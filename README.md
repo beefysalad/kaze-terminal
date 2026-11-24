@@ -617,7 +617,7 @@ in PowerShell, use `& $env:KAZE_BIN` in place of `"$KAZE_BIN"`.
 | `keys <t> <key...>` | `"$KAZE_BIN" keys t2 down enter` | Sends 1 to 64 named keys in order. |
 | `interrupt <t> [--ctrl-c]` | `"$KAZE_BIN" interrupt t2` | Sends Esc to a known Claude Code or Codex tab, otherwise Ctrl+C. `--ctrl-c` always sends Ctrl+C. |
 | `wait <t> [--for TEXT] [--timeout S] [--quiet MS]` | `"$KAZE_BIN" wait t2 --timeout 120` | Waits for idle or needs status. A shell uses an output quiet period instead. |
-| `name <t> <name>` | `"$KAZE_BIN" name t2 reviewer` | Renames the tab. Names must be unique, 1 to 64 characters, with no control characters, and cannot look like a tab id. |
+| `name <t> <name>` | `"$KAZE_BIN" name t2 reviewer` | Renames the tab. Names must be unique, 1 to 64 characters, with no control characters, cannot start with a hyphen, and cannot look like a tab id. |
 | `label <t> k=v` | `"$KAZE_BIN" label reviewer role=review` | Sets an in-memory label, shown by `ls`. Up to eight keys per tab; labels disappear when the tab closes or Kaze restarts. |
 
 Use a tab id such as `t2` or an exact, unique name wherever `<t>` appears. Ids restart

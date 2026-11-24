@@ -29,6 +29,9 @@ func ValidateName(tabs []TabInfo, id, name string) (string, *Error) {
 		return "", &Error{CodeInvalidRequest, "name must not contain control characters"}
 	}
 	name = strings.TrimSpace(name)
+	if strings.HasPrefix(name, "-") {
+		return "", &Error{CodeInvalidRequest, "name must not start with a hyphen"}
+	}
 	if name == "" || utf8.RuneCountInString(name) > 64 || tabID.MatchString(name) {
 		return "", &Error{CodeInvalidRequest, "name must be 1 to 64 runes and must not look like a tab id"}
 	}
