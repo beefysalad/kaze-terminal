@@ -93,7 +93,7 @@ func TestControlList(t *testing.T) {
 				if out.String() != string(want)+"\n" {
 					t.Fatalf("json=%q", out.String())
 				}
-			} else if out.String() != "t1\treview\tproject\tcodex\tworking\t/tmp/my project\nt2\t-\tShell\t-\tshell\t/tmp\n" {
+			} else if out.String() != "t1\treview\tproject\tcodex\tworking\t/tmp/my project\t-\nt2\t-\tShell\t-\tshell\t/tmp\t-\n" {
 				t.Fatalf("plain=%q", out.String())
 			}
 			select {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -17,9 +18,9 @@ const controlTimeout = 5 * time.Second
 
 // runControl performs one request without starting any window code.
 func runControl(args []string, env func(string) string, stdin io.Reader, stdout, stderr io.Writer) int {
-	req, asJSON, ok := controlArgs(args)
+	req, asJSON, raw, ok := controlArgsWithRaw(args)
 	if !ok {
-		fmt.Fprintln(stderr, "usage: kaze ls [--json] | read <t> [--lines N] | send <t> <text|-> | keys <t> <key...> | interrupt <t> [--ctrl-c] | wait <t> [--for TEXT] [--timeout S] [--quiet MS]")
+		fmt.Fprintln(stderr, "usage: kaze ls [--json] | read <t> [--lines N] | send <t> <text|-> [--raw] [--if-idle] | name <t> <name> | label <t> k=v | keys <t> <key...> | interrupt <t> [--ctrl-c] | wait <t> [--for TEXT] [--timeout S] [--quiet MS]")
 		if len(args) > 0 && args[0] == "keys" {
 			fmt.Fprintln(stderr, "allowed keys:", control.AllowedKeys)
 		}
@@ -40,6 +41,12 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 	if len(req.Text) > control.MaxTextBytes {
 		fmt.Fprintln(stderr, "kaze: send text exceeds 32 KiB")
 		return 2
+	}
+	if req.Op == "send" && !raw {
+		req.From = env("KAZE_TAB_ID")
+		if req.From != "" && !strings.HasPrefix(req.From, "t") {
+			req.From = "t" + req.From
+		}
 	}
 	addr := env("KAZE_SOCKET")
 	if addr == "" {
@@ -80,7 +87,7 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 		case control.CodeUnknownKey:
 			fmt.Fprintln(stderr, "allowed keys:", control.AllowedKeys)
 			return 2
-		case "refused":
+		case "refused", control.CodeBusy, control.CodeDisabled:
 			return 3
 		case "timeout":
 			return 124
@@ -90,6 +97,9 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 	if !reply.OK {
 		fmt.Fprintln(stderr, "kaze: invalid_reply: reply is missing ok or error")
 		return 1
+	}
+	if reply.Warning != "" {
+		fmt.Fprintln(stderr, "kaze: warning:", reply.Warning)
 	}
 	if asJSON {
 		err = json.NewEncoder(stdout).Encode(reply)
@@ -104,7 +114,7 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 				if agent == "" {
 					agent = "-"
 				}
-				if _, err = fmt.Fprintf(stdout, "%s\t%s\t%s\t%s\t%s\t%s\n", tab.ID, name, tab.Space, agent, tab.Status, tab.Folder); err != nil {
+				if _, err = fmt.Fprintf(stdout, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", tab.ID, name, tab.Space, agent, tab.Status, tab.Folder, controlLabels(tab.Labels)); err != nil {
 					break
 				}
 			}
@@ -119,7 +129,11 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 	return 0
 }
 
-func controlArgs(args []string) (req control.Request, asJSON, ok bool) {
+func controlArgs(args []string) (control.Request, bool, bool) {
+	req, asJSON, _, ok := controlArgsWithRaw(args)
+	return req, asJSON, ok
+}
+func controlArgsWithRaw(args []string) (req control.Request, asJSON, raw, ok bool) {
 	if len(args) == 0 {
 		return
 	}
@@ -208,11 +222,56 @@ func controlArgs(args []string) (req control.Request, asJSON, ok bool) {
 		}
 		req.Tab = args[1]
 		ok = req.Tab != "" && !strings.HasPrefix(req.Tab, "-")
-	case "send":
+	case "name", "label":
 		if len(args) != 3 {
 			return
 		}
-		req.Tab, req.Text = args[1], args[2]
+		req.Tab = args[1]
+		if req.Op == "name" {
+			name, e := control.ValidateName(nil, "", args[2])
+			if e != nil {
+				return
+			}
+			req.Name = name
+		} else {
+			key, value, found := strings.Cut(args[2], "=")
+			if !found || control.ValidateLabel(key, value) != nil {
+				return
+			}
+			req.Key, req.Value = key, value
+		}
+		ok = req.Tab != "" && !strings.HasPrefix(req.Tab, "-")
+	case "send":
+		positional := make([]string, 0, 2)
+		flags := true
+		for _, arg := range args[1:] {
+			if flags && arg == "--" {
+				flags = false
+				continue
+			}
+			if flags && strings.HasPrefix(arg, "--") {
+				switch arg {
+				case "--raw":
+					if raw {
+						return
+					}
+					raw = true
+				case "--if-idle":
+					if req.IfIdle {
+						return
+					}
+					req.IfIdle = true
+				default:
+					return
+				}
+			} else {
+				positional = append(positional, arg)
+			}
+		}
+		if len(positional) != 2 {
+			return
+		}
+		req.Tab, req.Text = positional[0], positional[1]
 		ok = req.Tab != "" && !strings.HasPrefix(req.Tab, "-")
 	}
 	return
@@ -232,9 +291,26 @@ func controlNetworkError(err error, stderr io.Writer) int {
 func dispatchControl(args []string, env func(string) string, stdin io.Reader, stdout, stderr io.Writer) (bool, int) {
 	if len(args) > 0 {
 		switch args[0] {
-		case "ls", "read", "send", "keys", "interrupt", "wait":
+		case "ls", "read", "send", "keys", "interrupt", "wait", "name", "label":
 			return true, runControl(args, env, stdin, stdout, stderr)
 		}
 	}
 	return false, 0
+}
+
+// controlLabels sorts keys so plain listings remain stable for agents.
+func controlLabels(labels map[string]string) string {
+	if len(labels) == 0 {
+		return "-"
+	}
+	keys := make([]string, 0, len(labels))
+	for k := range labels {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	pairs := make([]string, 0, len(keys))
+	for _, k := range keys {
+		pairs = append(pairs, k+"="+labels[k])
+	}
+	return strings.Join(pairs, ",")
 }
