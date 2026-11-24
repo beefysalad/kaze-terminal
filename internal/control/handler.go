@@ -20,6 +20,19 @@ func Handle(host Host, req Request) Reply {
 		}
 		return Reply{OK: true, Text: text}
 	}
+	if req.Op == "send" {
+		if len(req.Text) > MaxTextBytes {
+			return Reply{Error: &Error{CodeTextTooLarge, "text exceeds 32 KiB"}}
+		}
+		tab, err := Resolve(host.Tabs(), req.Tab)
+		if err != nil {
+			return Reply{Error: err}
+		}
+		if err := host.Submit(tab.ID, []byte(req.Text)); err != nil {
+			return Reply{Error: &Error{CodeHostError, "could not submit to tab"}}
+		}
+		return Reply{OK: true}
+	}
 	return Reply{Error: &Error{CodeUnknownOp, "unknown control operation"}}
 }
 

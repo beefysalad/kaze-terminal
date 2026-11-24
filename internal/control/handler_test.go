@@ -3,6 +3,7 @@ package control
 import (
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -111,6 +112,55 @@ func TestHandleReadErrors(t *testing.T) {
 		if h.screenCalls != wantCalls || h.submitCalls != 0 {
 			t.Fatalf("%q: unexpected Host calls: %#v", tc.address, h)
 		}
+	}
+}
+
+func TestHandleSend(t *testing.T) {
+	for _, text := range []string{"", "hello\n  world", "\u65e5\u672c\u8a9e", strings.Repeat("x", 32<<10)} {
+		h := &fakeHost{tabs: []TabInfo{{ID: "t3", Name: "review"}}}
+		reply := Handle(h, Request{Op: "send", Tab: "review", Text: text})
+		if !reply.OK || reply.Error != nil {
+			t.Fatalf("%d bytes: reply = %#v", len(text), reply)
+		}
+		if h.tabCalls != 1 || h.submitCalls != 1 || h.screenCalls != 0 || h.id != "t3" || string(h.input) != text {
+			t.Fatalf("%d bytes: submission count %d, id %q, bytes %d", len(text), h.submitCalls, h.id, len(h.input))
+		}
+	}
+}
+
+func TestHandleSendCap(t *testing.T) {
+	// Both allocations are capped at 32 KiB plus at most 3 bytes. The second
+	// case is under the cap in runes but over it in UTF-8 bytes.
+	for _, text := range []string{strings.Repeat("x", (32<<10)+1), strings.Repeat("\u754c", (32<<10)/3+1)} {
+		h := &fakeHost{tabs: []TabInfo{{ID: "t3"}}}
+		reply := Handle(h, Request{Op: "send", Tab: "t3", Text: text})
+		if reply.OK || reply.Error == nil || reply.Error.Code != CodeTextTooLarge {
+			t.Fatalf("%d bytes: reply = %#v", len(text), reply)
+		}
+		if h.tabCalls+h.screenCalls+h.submitCalls != 0 {
+			t.Fatal("oversize text reached Host")
+		}
+	}
+}
+
+func TestHandleSendErrors(t *testing.T) {
+	for _, tc := range []struct{ address, code string }{
+		{"", CodeInvalidRequest}, {"missing", CodeUnknownTab}, {"review", CodeAmbiguousTab}, {"t1", CodeHostError},
+	} {
+		t.Run(tc.code, func(t *testing.T) {
+			h := &fakeHost{tabs: []TabInfo{{ID: "t1", Name: "review"}, {ID: "t2", Name: "review"}}, err: errors.New("host failure")}
+			reply := Handle(h, Request{Op: "send", Tab: tc.address, Text: "hello"})
+			if reply.OK || reply.Error == nil || reply.Error.Code != tc.code {
+				t.Fatalf("reply = %#v", reply)
+			}
+			wantCalls := 0
+			if tc.address == "t1" {
+				wantCalls = 1
+			}
+			if h.submitCalls != wantCalls || h.screenCalls != 0 {
+				t.Fatalf("unexpected Host calls: %#v", h)
+			}
+		})
 	}
 }
 
