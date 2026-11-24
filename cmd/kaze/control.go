@@ -16,6 +16,8 @@ import (
 
 const controlTimeout = 5 * time.Second
 
+const controlUsage = "usage: kaze ls [--json] | read <t> [--lines N] | send <t> <text|-> [--raw] [--if-idle] | name <t> <name> | label <t> k=v | keys <t> <key...> | interrupt <t> [--ctrl-c] | wait <t> [--for TEXT] [--timeout S] [--quiet MS]"
+
 // runControl performs one request without starting any window code.
 func runControl(args []string, env func(string) string, stdin io.Reader, stdout, stderr io.Writer) int {
 	req, asJSON, raw, ok := controlArgsWithRaw(args)
@@ -26,7 +28,7 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 				return 2
 			}
 		}
-		fmt.Fprintln(stderr, "usage: kaze ls [--json] | read <t> [--lines N] | send <t> <text|-> [--raw] [--if-idle] | name <t> <name> | label <t> k=v | keys <t> <key...> | interrupt <t> [--ctrl-c] | wait <t> [--for TEXT] [--timeout S] [--quiet MS]")
+		fmt.Fprintln(stderr, controlUsage)
 		if len(args) > 0 && args[0] == "keys" {
 			fmt.Fprintln(stderr, "allowed keys:", control.AllowedKeys)
 		}
@@ -302,6 +304,16 @@ func dispatchControl(args []string, env func(string) string, stdin io.Reader, st
 		switch args[0] {
 		case "ls", "read", "send", "keys", "interrupt", "wait", "name", "label":
 			return true, runControl(args, env, stdin, stdout, stderr)
+		case "help", "--help", "-h":
+			fmt.Fprintln(stdout, controlUsage)
+			return true, 0
+		}
+		// A bare word is a command nobody implemented (an agent guessing, "list"
+		// or "status"): say so, instead of starting a second Kaze window.
+		// notify and statusline are Kaze's own commands, handled before this point.
+		if !strings.HasPrefix(args[0], "-") && args[0] != "notify" && args[0] != "statusline" {
+			fmt.Fprintf(stderr, "kaze: unknown command %q\n%s\n", args[0], controlUsage)
+			return true, 2
 		}
 	}
 	return false, 0
