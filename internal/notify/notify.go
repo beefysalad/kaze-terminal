@@ -3,6 +3,7 @@
 package notify
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
@@ -56,6 +57,8 @@ const (
 	maxBody      = 32 << 10 // room for a subagent's report
 	readDeadline = 2 * time.Second
 	maxConns     = 32
+	maxControls  = 16
+	maxWaits     = 8
 	maxBackoff   = time.Second
 )
 
@@ -102,16 +105,19 @@ type Usage struct {
 }
 
 type Server struct {
-	ln       net.Listener
-	token    string
-	onMsg    func(Msg)
-	deadline time.Duration
-	sem      chan struct{}
+	ln         net.Listener
+	token      string
+	onMsg      func(Msg)
+	deadline   time.Duration
+	sem        chan struct{}
+	controlSem chan struct{}
+	waitSem    chan struct{}
 
-	mu     sync.Mutex
-	closed bool
-	conns  map[net.Conn]struct{}
-	wg     sync.WaitGroup
+	mu      sync.Mutex
+	closed  bool
+	control func(context.Context, json.RawMessage) any
+	conns   map[net.Conn]struct{}
+	wg      sync.WaitGroup
 }
 
 // Listen binds 127.0.0.1 on an OS-chosen port. onMsg is called from a
@@ -132,7 +138,7 @@ func serve(ln net.Listener, onMsg func(Msg), deadline time.Duration) *Server {
 	}
 	s := &Server{
 		ln: ln, token: hex.EncodeToString(raw[:]), onMsg: onMsg, deadline: deadline,
-		sem: make(chan struct{}, maxConns), conns: map[net.Conn]struct{}{},
+		sem: make(chan struct{}, maxConns), controlSem: make(chan struct{}, maxControls), waitSem: make(chan struct{}, maxWaits), conns: map[net.Conn]struct{}{},
 	}
 	s.wg.Add(1)
 	go s.accept()
@@ -141,6 +147,27 @@ func serve(ln net.Listener, onMsg func(Msg), deadline time.Duration) *Server {
 
 func (s *Server) Addr() string  { return s.ln.Addr().String() }
 func (s *Server) Token() string { return s.token }
+
+// SetControl registers an optional authenticated control handler. Calls may run
+// concurrently on socket goroutines; the handler must not call UI code. Task 3's
+// window adapter decodes control.Request and calls control.Handle after notify
+// authenticates the envelope, keeping notify independent of control and the UI.
+// Registration and replacement are safe while the server is accepting requests.
+func (s *Server) SetControl(handler func(json.RawMessage) any) {
+	if handler == nil {
+		s.SetControlContext(nil)
+		return
+	}
+	s.SetControlContext(func(_ context.Context, raw json.RawMessage) any { return handler(raw) })
+}
+
+// SetControlContext registers a handler whose pending work must stop when ctx
+// is cancelled. EOF, server Close and the request deadline cancel the context.
+func (s *Server) SetControlContext(handler func(context.Context, json.RawMessage) any) {
+	s.mu.Lock()
+	s.control = handler
+	s.mu.Unlock()
+}
 
 // Close stops accepting, drops live connections and waits for handlers.
 func (s *Server) Close() error {
@@ -210,13 +237,86 @@ func (s *Server) isClosed() bool {
 func (s *Server) handle(c net.Conn) {
 	defer c.Close()
 	c.SetReadDeadline(time.Now().Add(s.deadline))
-	// One byte past the cap lets us tell "exactly the cap" from "over it".
-	dec := json.NewDecoder(io.LimitReader(c, maxBody+1))
-	var m Msg
-	if dec.Decode(&m) != nil || dec.InputOffset() > maxBody {
+	// Decode once without waiting for EOF: hook senders keep the socket open.
+	dec := json.NewDecoder(io.LimitReader(c, maxControlRequest+1))
+	var raw json.RawMessage
+	if dec.Decode(&raw) != nil {
 		return
 	}
-	if subtle.ConstantTimeCompare([]byte(m.Token), []byte(s.token)) != 1 {
+	var envelope map[string]json.RawMessage
+	if json.Unmarshal(raw, &envelope) != nil {
+		return
+	}
+	if _, control := envelope["op"]; control {
+		// Recover on this serving goroutine, including reply serialization.
+		// Later resource defers cancel and join the watcher before this runs.
+		defer func() {
+			if recover() != nil {
+				s.writeControl(c, controlError("internal_error", "control request failed internally"))
+			}
+		}()
+		if dec.InputOffset() > maxControlRequest {
+			s.writeControl(c, controlError("request_too_large", "control request exceeds 64 KiB"))
+			return
+		}
+		var token string
+		if json.Unmarshal(envelope["token"], &token) != nil || !s.validToken(token) {
+			s.writeControl(c, controlError("unauthorized", "invalid control token"))
+			return
+		}
+		s.mu.Lock()
+		handler := s.control
+		s.mu.Unlock()
+		if s.isClosed() {
+			return
+		}
+		if handler == nil {
+			s.writeControl(c, controlError("control_unavailable", "control handler is not registered"))
+			return
+		}
+		// Keep the short deadline for decoding only. The disconnect watcher owns
+		// reads after dispatch and is joined before this handler exits.
+		duration := s.deadline
+		var op string
+		_ = json.Unmarshal(envelope["op"], &op)
+		// Control budgets are acquired only after authentication and never wait.
+		// The remaining connection slots stay available to legacy hooks and
+		// bounded decoding clients under sustained control load.
+		select {
+		case s.controlSem <- struct{}{}:
+			defer func() { <-s.controlSem }()
+		default:
+			s.writeControl(c, controlError("busy_server", "control request budget exhausted; retry later"))
+			return
+		}
+		if op == "wait" {
+			select {
+			case s.waitSem <- struct{}{}:
+				defer func() { <-s.waitSem }()
+			default:
+				s.writeControl(c, controlError("busy_server", "wait request budget exhausted; retry later"))
+				return
+			}
+			seconds := 120
+			var requested int
+			if json.Unmarshal(envelope["timeout"], &requested) == nil && requested > 0 && requested <= 600 {
+				seconds = requested
+			}
+			duration = time.Duration(seconds)*time.Second + time.Second
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), duration)
+		_ = c.SetReadDeadline(time.Time{})
+		watcherDone := make(chan struct{})
+		go func() { defer close(watcherDone); _, _ = io.Copy(io.Discard, c); cancel() }()
+		defer func() { cancel(); _ = c.SetReadDeadline(time.Now()); <-watcherDone }()
+		s.writeControlReply(c, handler(ctx, raw), op == "read")
+		return
+	}
+	var m Msg
+	if dec.InputOffset() > maxBody || json.Unmarshal(raw, &m) != nil {
+		return
+	}
+	if !s.validToken(m.Token) {
 		return
 	}
 	if m.Agent != "" && m.Agent != "claude" && m.Agent != "codex" {
@@ -406,4 +506,8 @@ func FitReport(s string, max int) string {
 		}
 	}
 	return cutBytes(s, lo)
+}
+
+func (s *Server) validToken(token string) bool {
+	return subtle.ConstantTimeCompare([]byte(token), []byte(s.token)) == 1
 }

@@ -216,6 +216,7 @@ func (win *window) drainAlerts(now time.Time) {
 // deliver updates the agent state, marks and toasts for one alert; the chime
 // already happened in onNotify.
 func (win *window) deliver(q queued, now time.Time) {
+	defer win.publishControl()
 	m := q.m
 	var active tabs.TabID // none while settings hides the terminal
 	if t := win.shownTab(); t != nil {
@@ -258,6 +259,7 @@ func (win *window) noteTurn(id tabs.TabID, k notify.Kind, at time.Time) (ran tim
 
 // selectTab is the one tab switch for a tab click and an alert card's "Open session".
 func (win *window) selectTab(id tabs.TabID) {
+	defer win.publishControl()
 	win.hideDoc()
 	win.dropSideEdit()
 	win.hideSettings()
@@ -269,7 +271,11 @@ func (win *window) selectTab(id tabs.TabID) {
 // visit clears the shown tab's alert, but only when the owner can see it.
 func (win *window) visit(t *tabs.Tab) {
 	if t != nil && win.focused {
+		changed := win.alerts.markOf(t.ID) != markNone
 		win.alerts.visited(t.ID)
+		if changed {
+			win.publishControl()
+		}
 		win.system.remove(t.ID)
 	}
 }

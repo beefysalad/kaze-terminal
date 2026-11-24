@@ -39,10 +39,13 @@ func clampSize(cols, rows int) (int, int) {
 
 // Session is one tab: a shell in a PTY whose output a reader goroutine applies to a screen.
 type Session struct {
-	mu     sync.Mutex // guards scr, app and parser
-	scr    *screen.Screen
-	app    *Applier
-	parser *vt.Parser
+	observerMu sync.Mutex
+	observers  atomic.Pointer[outputObservers]
+	lastOutput atomic.Int64
+	mu         sync.Mutex // guards scr, app and parser
+	scr        *screen.Screen
+	app        *Applier
+	parser     *vt.Parser
 
 	pty      ptyx.Session
 	onChange func()
@@ -305,7 +308,7 @@ func (s *Session) readLoop(readDone chan struct{}) {
 			case s.outSig <- struct{}{}:
 			default:
 			}
-			s.notify()
+			s.notifyOutput()
 		}
 		if err != nil {
 			return
@@ -348,7 +351,7 @@ func (s *Session) waitLoop(readDone chan struct{}) {
 	s.parser.Feed([]byte(fmt.Sprintf("\x1b[0m\r\n[process exited %d]", code))) // default pen, whatever the shell left set
 	s.mu.Unlock()
 	s.discardWrites()
-	s.notify()
+	s.notifyOutput()
 }
 
 // notify asks the notifier to call onChange; a pending request already covers this one.

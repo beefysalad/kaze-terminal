@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -44,12 +45,16 @@ func TestPrivateCodexVersionDispatchesBeforeKazeVersion(t *testing.T) {
 			dir = e[len("KAZE_CODEX_SHIM="):]
 		}
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, filepath.Join(dir, "codex"), "--version")
-	cmd.Env = env
-	b, err := cmd.CombinedOutput()
-	if err != nil || string(b) != "fake Codex version" {
-		t.Fatalf("dispatch output=%s err=%v", b, err)
+	for _, arg := range []string{"--version", "ls", "read", "send"} {
+		t.Run(strings.TrimPrefix(arg, "--"), func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			cmd := exec.CommandContext(ctx, filepath.Join(dir, "codex"), arg)
+			cmd.Env = env
+			b, err := cmd.CombinedOutput()
+			if err != nil || string(b) != "fake Codex version" {
+				t.Fatalf("dispatch output=%s err=%v", b, err)
+			}
+		})
 	}
 }

@@ -28,6 +28,7 @@ type codexDialog struct {
 func (win *window) loadAgents() {
 	win.loadClaude()
 	win.loadCodex()
+	win.loadPeerDocs()
 	if win.system != nil && win.opt.Config.SystemNotifications {
 		win.system.backend.CheckPermission()
 	}
@@ -138,6 +139,12 @@ func (win *window) codexRows() []settingRow {
 }
 func agentsAct(win *window, id string, arg int) {
 	switch id {
+	case "claude_peer_docs":
+		win.claudeDocs.set(arg == 1)
+		return
+	case "codex_peer_docs":
+		win.codexDocs.set(arg == 1)
+		return
 	case "codex_fix":
 		win.openCodexFix()
 		return
@@ -215,7 +222,9 @@ func (win *window) writeCodex() {
 func agentsRows(win *window) []settingRow {
 	rows := sharedAgentRows(win)
 	rows = append(rows, settingRow{heading: "Claude Code setup"})
+	rows = append(rows, win.claudeDocs.row("claude_peer_docs", tildeHome(win.claudeDocs.path, win.home)))
 	rows = append(rows, win.setupRows()...)
 	rows = append(rows, settingRow{heading: "Codex setup"})
+	rows = append(rows, win.codexDocs.row("codex_peer_docs", tildeHome(win.codexDocs.path, win.home)))
 	return append(rows, win.codexRows()...)
 }

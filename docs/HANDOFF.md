@@ -1,6 +1,95 @@
 # kaze handoff
 
-Last updated: 2026-11-23, release 0.44 prepared on `release/0.44` after PR #210, covering spaces, tabs on top and the floating Settings sheet (see the first paragraph of "Where things stand"). Previously, 2026-11-16, release 0.43 prepared on `release/0.43` (the sidebar on either side and the rail, PR #208; see the first paragraph of "Where things stand"). Previously, release 0.42 prepared on `release/0.42` (purple folded terminal K branding, PR #206). Previously, release 0.41.1 prepared on `release/0.41.1` (fixes the Mac launch freeze, PR #203: native notification callbacks ran on the AppKit main thread and deadlocked Gio's `Window.Invalidate`; the rule is now in CLAUDE.md). Before that, release 0.41 (prepared on `release/0.41` (Kaze on your Discord profile, #55 / PR #201; see the first paragraph of "Where things stand"). Before that, release 0.40.1 (subagent pane follow-ups from #188, PR #198: plain tool_use_error messages, raw strings ending in a backslash, visible diffs kept cached, edit results decoded once; item 5, block comments, left as is on purpose). Diffs appear only for Edit, Write and MultiEdit steps: an agent that edits through Bash scripts shows plain Ran rows. Before that, release 0.40 (Devbox removal, PR #197). Before that, release 0.39.1 (RAM label in the status bar, PR #195). Release 0.39 included the experimental Devbox page (PR #190); the current change removes it. Before that, release 0.38 (subagent edits inline with line numbers and code colours, PR #187; not yet seen in the real app, lander captures need retaking; follow-ups in #188). Before that, release 0.37 (the session model in the status bar and each subagent model in its panel, PR #185; not yet seen in the real app, and status bar captures need retaking). Before that, release 0.36 (native notifications #172, Codex tab isolation #180 and restored workspaces #182, PR #181; follow-ups in #183; real-machine checks of notifications and two Codex tabs are still open, and Codex 0.153.4 has no `--no-daemon`, so it starts unchanged without isolation). Before that, release 0.35 (the approved wind K as the app icon, website and README logo, PR #174; `docs/site-assets/kaze-about.png` still shows the old About page and needs retaking). Before that, release 0.34 (the branch launcher, its `new_branch_session` shortcut, the Kaze-made worktree cleanup and `internal/branchsession` removed, PR #171; old `sidebar_launcher*` keys load quietly, an old `[keys] new_branch_session` warns; next ideas filed as #167 smooth scrolling and #172 system notifications). Before that, release 0.33 (the Kaze mark and name in the title bar, after the traffic lights on macOS: **check the Mac bar by hand**, layout is unit-tested and Windows captures were inspected; the Windows exe details carry the real version, name and publisher, PR #168; `TestWinresMatchesVersion` keeps them in step, so the old "rerun go-winres" to-dos below are done). Before that, release 0.32 (five more themes and one UI font, PR #165). Before that, release 0.31 (the palette redesign, PR #163, and editable shortcuts, PR #162). Before that, release 0.30 (find in the terminal and docked tabs, #155 / PR #156). Before that, release 0.29 (battery on macOS, #139 / PR #158; the About page redesign, PR #160; the lander's `kaze-about.png` still shows the old page and needs retaking). Before that, release 0.28.2 (.md links open the file the agent touched, #143 / PR #153; uninstall page #112 designed and planned on `feat/uninstall`). Read this first when you pick up kaze on another machine.
+Last updated: 2026-11-25, agent control Tasks 1-10 on `feat/agent-control` (unreleased, no version bump; verification and owner checks below). Previously, 2026-11-23, release 0.44 prepared on `release/0.44` after PR #210, covering spaces, tabs on top and the floating Settings sheet (see the first paragraph of "Where things stand"). Previously, 2026-11-16, release 0.43 prepared on `release/0.43` (the sidebar on either side and the rail, PR #208; see the first paragraph of "Where things stand"). Previously, release 0.42 prepared on `release/0.42` (purple folded terminal K branding, PR #206). Previously, release 0.41.1 prepared on `release/0.41.1` (fixes the Mac launch freeze, PR #203: native notification callbacks ran on the AppKit main thread and deadlocked Gio's `Window.Invalidate`; the rule is now in CLAUDE.md). Before that, release 0.41 (prepared on `release/0.41` (Kaze on your Discord profile, #55 / PR #201; see the first paragraph of "Where things stand"). Before that, release 0.40.1 (subagent pane follow-ups from #188, PR #198: plain tool_use_error messages, raw strings ending in a backslash, visible diffs kept cached, edit results decoded once; item 5, block comments, left as is on purpose). Diffs appear only for Edit, Write and MultiEdit steps: an agent that edits through Bash scripts shows plain Ran rows. Before that, release 0.40 (Devbox removal, PR #197). Before that, release 0.39.1 (RAM label in the status bar, PR #195). Release 0.39 included the experimental Devbox page (PR #190); the current change removes it. Before that, release 0.38 (subagent edits inline with line numbers and code colours, PR #187; not yet seen in the real app, lander captures need retaking; follow-ups in #188). Before that, release 0.37 (the session model in the status bar and each subagent model in its panel, PR #185; not yet seen in the real app, and status bar captures need retaking). Before that, release 0.36 (native notifications #172, Codex tab isolation #180 and restored workspaces #182, PR #181; follow-ups in #183; real-machine checks of notifications and two Codex tabs are still open, and Codex 0.153.4 has no `--no-daemon`, so it starts unchanged without isolation). Before that, release 0.35 (the approved wind K as the app icon, website and README logo, PR #174; `docs/site-assets/kaze-about.png` still shows the old About page and needs retaking). Before that, release 0.34 (the branch launcher, its `new_branch_session` shortcut, the Kaze-made worktree cleanup and `internal/branchsession` removed, PR #171; old `sidebar_launcher*` keys load quietly, an old `[keys] new_branch_session` warns; next ideas filed as #167 smooth scrolling and #172 system notifications). Before that, release 0.33 (the Kaze mark and name in the title bar, after the traffic lights on macOS: **check the Mac bar by hand**, layout is unit-tested and Windows captures were inspected; the Windows exe details carry the real version, name and publisher, PR #168; `TestWinresMatchesVersion` keeps them in step, so the old "rerun go-winres" to-dos below are done). Before that, release 0.32 (five more themes and one UI font, PR #165). Before that, release 0.31 (the palette redesign, PR #163, and editable shortcuts, PR #162). Before that, release 0.30 (find in the terminal and docked tabs, #155 / PR #156). Before that, release 0.29 (battery on macOS, #139 / PR #158; the About page redesign, PR #160; the lander's `kaze-about.png` still shows the old page and needs retaking). Before that, release 0.28.2 (.md links open the file the agent touched, #143 / PR #153; uninstall page #112 designed and planned on `feat/uninstall`). Read this first when you pick up kaze on another machine.
+
+## Agent control: Task 10
+
+Settings > Agents now has an off-by-default "Peer messaging instructions" switch
+in each of the Claude Code and Codex setup groups. The files are the state:
+`~/.claude/CLAUDE.md` and `$CODEX_HOME/AGENTS.md` (default `~/.codex/AGENTS.md`).
+Page entry and clicks refresh the state; frames do no file I/O. Errors stay on
+the row. Existing hook setup paths and navigation are unchanged.
+
+`internal/agentdocs` owns the one block constant, whole-line marker checks,
+idempotent installs and removal. Writes follow symlinks, preserve modes and use
+same-directory temp files and rename, with setup-style timestamped backups.
+Tests use temporary paths only, including the headless clicks and eight inspected
+Midnight/Washi captures at 1200 x 800 and 560 x 640. README describes the switches
+and quotes the identical block as the manual alternative.
+
+Task 10 verification: requested package tests, `go vet ./...`, the exact macOS CI
+race command and a separate agentdocs race check pass. Existing idle and frame
+allocation checks remain green. Native Settings and agent reload behavior remain
+owner checks; an agent may need a fresh session to load changed instructions.
+Report: `.superpowers/sdd/control/task-10-report.md`.
+No version bump, push or release. The orchestrator remains t4.
+
+## Agent control: Tasks 1-9
+
+Review fix I1: server-wide limits of 8 concurrent waits and 16 controls refuse
+excess requests immediately with `busy_server` (CLI exit 3). Hook admission keeps
+capacity under control saturation; the 32-connection cap and deadlines remain.
+
+Review fixes I2/I3: control handler and reply serialization panics are contained
+on the serving goroutine after request cancellation and watcher join. Oversized
+reads retain the newest complete UTF-8 lines within the unchanged 1 MiB wire cap,
+set `truncated`, and warn on CLI stderr (exit 0). An oversized single line can be
+omitted entirely; structured replies and other ops keep their prior behavior.
+
+Review fixes M1/M2: read text omits the terminal-inserted wide-rune wrap padding
+while preserving printed spaces, including across scrollback. Control names now
+reject a leading hyphen after trimming, with a clear CLI error, so every accepted
+name can be addressed. Five findings were fixed test first in separate commits.
+Fix-round verification: `go test ./...`, `go vet ./...`, the exact macOS CI race
+command (UI 173.543 s), and focused notify panic/admission race checks pass.
+No slow-test retries were needed; native owner checks below remain open.
+Report: `.superpowers/sdd/control/fix-report.md`.
+
+All nine tasks are built on `feat/agent-control`, unreleased, with no version bump.
+Commands: `ls`, `read`, `send`, `keys`, `interrupt`, `wait`, `name` and `label`.
+The tag, `--raw`, `--if-idle`, `agent_tag` and `[control] enabled` are implemented.
+README documents the exact CLI, hook-dependent status, environment, peer-agent
+instructions and loopback token trust. CI now includes `internal/control` in the
+macOS race command, keeping `-timeout=10m`.
+
+Headless integration uses real Sessions with fake PTYs behind the real loopback
+listener. It verifies exact single and multi-line paste/Enter bytes, reads, keys,
+interrupt choice, tags, busy warnings/refusal, names/labels, config switches,
+wait status/text/quiet behavior and disconnect cleanup. Socket workers read
+immutable snapshots and synchronized Session APIs; names apply on the UI frame.
+No native app was launched or driven, and the installed copy was left alone.
+
+Task 9 final verification: full `go test ./...`, `go vet ./...`, native macOS build
+and Windows amd64/arm64 GUI cross-builds pass. The exact macOS CI race command
+also passes, including `internal/control`; `internal/ui` finished in 180.133 s.
+Fresh control probe: 20 still-frame allocations before registration and 20 after;
+nine workers, zero wake-ups, zero frames and zero requests over 100 ms. The larger
+1600 x 1000 unchanged-frame probe measured 103,354 ns/op, 1,615 B/op and 28 allocs/op.
+Palette still-frame allocations: empty 93, typed "re" 113, Skills 114. Disconnect
+cleanup: observers 0/1/0, control workers 0/2/0, total goroutines 11/11 before/after.
+These are bounded headless measurements, not native agent or whole-runtime proof.
+Reports: `.superpowers/sdd/control/task-1-report.md` through `task-9-report.md`.
+
+Owner checks still open (use a local build, never replace the installed app):
+
+1. Open `/tmp/kaze-control` yourself on macOS, or a separate local Windows build.
+   Run Claude Code and Codex in two tabs. Use `"$KAZE_BIN" ls`, send a prompt,
+   wait, then read the reply. Repeat Claude Code to Codex and Codex to Claude Code.
+2. Send multiple lines to a real agent:
+   `printf 'first line\nsecond line' | "$KAZE_BIN" send t2 -`.
+   Confirm one paste and one submitted prompt, then compare `read t2` with the screen.
+3. Run `wait t2` while the real target is working, then confirm it returns when
+   stopped. Check `--for`, shell `--quiet`, and timeout behavior. Check a busy send
+   warning and `--if-idle` refusal without losing an owner prompt.
+4. Check `name`, addressing by the new name and `label` in the real app. Verify
+   the peer tag and `--raw`; restart with `agent_tag = false`, then with
+   `[control] enabled = false`, and confirm hooks still work with control disabled.
+5. Repeat the runtime checks on Windows. Cross-build success does not verify
+   Windows prompt handling. PowerShell uses `& $env:KAZE_BIN` and its own
+   multi-line string syntax in place of the POSIX examples.
+
+No push, release, changelog or lander changes. Whole-branch controller review
+and owner checks remain separate from this Task 9 handoff; t4 is the orchestrator.
 
 ## Where things stand
 

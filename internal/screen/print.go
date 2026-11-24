@@ -50,7 +50,9 @@ func (s *Screen) Print(r rune) {
 			return
 		}
 		s.clearWideHalves(s.curCol, 1) // blanking a continuation half must not orphan its lead
-		s.SetCell(s.curCol, s.curRow, blankCell)
+		padding := blankCell
+		padding.Attrs |= AttrWrapPadding
+		s.SetCell(s.curCol, s.curRow, padding)
 		s.markWrapped()
 		s.CarriageReturn()
 		s.LineFeed()

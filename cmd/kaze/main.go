@@ -38,6 +38,9 @@ func main() {
 	if len(os.Args) > 1 && os.Args[1] == "statusline" {
 		os.Exit(runStatusline(stdinForNotify(), os.Stdout, os.Getenv, time.Now()))
 	}
+	if handled, code := dispatchControl(os.Args[1:], os.Getenv, os.Stdin, os.Stdout, os.Stderr); handled {
+		os.Exit(code) // before any window code
+	}
 	wsName, code := workspaceArg(os.Args[1:], os.Stderr)
 	if code != 0 {
 		os.Exit(code) // before any window

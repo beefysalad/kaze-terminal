@@ -99,7 +99,7 @@ func NewManager(start func(env []string, dir string) (ptyx.Session, error), cols
 // Inherited terminal identity is dropped (a kaze started from Windows Terminal or
 // VS Code must not claim to be them) and kaze's own is set. KAZE_TAB_ID is
 // dropped too so a kaze started inside a kaze tab gets clean IDs.
-var droppedEnv = []string{"KAZE_TAB_ID", "KAZE_NOTIFY", "KAZE_NOTIFY_TOKEN", "TERM", "COLORTERM", "TERM_PROGRAM", "TERM_PROGRAM_VERSION", "WT_SESSION", "WT_PROFILE_ID"}
+var droppedEnv = []string{"KAZE_TAB_ID", "KAZE_SOCKET", "KAZE_BIN", "KAZE_NOTIFY", "KAZE_NOTIFY_TOKEN", "TERM", "COLORTERM", "TERM_PROGRAM", "TERM_PROGRAM_VERSION", "WT_SESSION", "WT_PROFILE_ID"}
 
 var identityEnv = []string{"TERM=xterm-256color", "COLORTERM=truecolor", "TERM_PROGRAM=kaze"}
 
@@ -110,7 +110,11 @@ func baseEnv(env []string) []string {
 			out = append(out, e)
 		}
 	}
-	return append(out, identityEnv...)
+	out = append(out, identityEnv...)
+	if exe, err := os.Executable(); err == nil {
+		out = append(out, "KAZE_BIN="+exe)
+	}
+	return out
 }
 
 func isDropped(e string) bool {
@@ -127,7 +131,7 @@ func isDropped(e string) bool {
 // that `kaze notify` reads.
 func (m *Manager) SetNotify(addr, token string) {
 	m.mu.Lock()
-	m.notifyEnv = []string{"KAZE_NOTIFY=" + addr, "KAZE_NOTIFY_TOKEN=" + token}
+	m.notifyEnv = []string{"KAZE_NOTIFY=" + addr, "KAZE_NOTIFY_TOKEN=" + token, "KAZE_SOCKET=" + addr}
 	m.mu.Unlock()
 }
 

@@ -28,8 +28,10 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 
+	"github.com/beefysalad/kaze-terminal/internal/agentdocs"
 	"github.com/beefysalad/kaze-terminal/internal/bench"
 	"github.com/beefysalad/kaze-terminal/internal/config"
+	ctl "github.com/beefysalad/kaze-terminal/internal/control"
 	"github.com/beefysalad/kaze-terminal/internal/discord"
 	"github.com/beefysalad/kaze-terminal/internal/input"
 	"github.com/beefysalad/kaze-terminal/internal/notify"
@@ -77,10 +79,11 @@ const (
 )
 
 type window struct {
-	w   *app.Window
-	opt Options
-	pal render.Palette
-	km  keymap
+	control controlHost
+	w       *app.Window
+	opt     Options
+	pal     render.Palette
+	km      keymap
 	// binds is each [keys] action's shortcut, overrides included, for display.
 	binds map[string]input.Shortcut
 
@@ -207,11 +210,13 @@ type window struct {
 	set                settingsState // the Settings page; UI goroutine only
 	cfgPath            string        // where the page saves; "" applies changes without saving
 
-	claudePath string // Claude Code's settings.json; "" checks nothing
-	exePath    string // this kaze, which a Claude setup fix points the entries at
-	codexDir   string // Codex user settings directory
-	codex      codexState
-	claude     claudeState // the Claude section's setup check and dialog
+	claudeDocs, codexDocs peerDocsState
+	codexDocsDir          string // CODEX_HOME override for the global instructions
+	claudePath            string // Claude Code's settings.json; "" checks nothing
+	exePath               string // this kaze, which a Claude setup fix points the entries at
+	codexDir              string // Codex user settings directory
+	codex                 codexState
+	claude                claudeState // the Claude section's setup check and dialog
 
 	runs map[uint64]*wsRun // workspace runs with a tab still open; UI goroutine only
 	// frameRuns is sideRuns built once for the frame being drawn, so the sidebar
@@ -258,6 +263,10 @@ func Run(w *app.Window, opt Options) error {
 	if home := win.home; home != "" {
 		win.claudePath = filepath.Join(home, ".claude", "settings.json")
 		win.codexDir = filepath.Join(home, ".codex")
+
+	}
+	if docsPath, err := agentdocs.CodexPath(); err == nil {
+		win.codexDocsDir = filepath.Dir(docsPath)
 	}
 	if exe, err := os.Executable(); err == nil {
 		win.exePath = exe
@@ -284,11 +293,13 @@ func Run(w *app.Window, opt Options) error {
 			win.opt.Warnings = append(win.opt.Warnings, warn)
 		}
 	}
+	win.initControl()
 	// Last: onNotify may run as soon as this returns.
 	if srv, err := notify.Listen(win.onNotify); err != nil {
 		win.opt.Warnings = append(win.opt.Warnings, "alerts are off: "+err.Error())
 	} else {
 		win.srv = srv
+		srv.SetControlContext(controlContextAdapter(&win.control, ctl.Options{Enabled: opt.Config.Control.Enabled, AgentTag: opt.Config.AgentTag}))
 	}
 	return win.loop()
 }
@@ -564,6 +575,7 @@ func (win *window) newTab() { win.newTabIn(win.plainStartDir()) }
 
 // newTabIn opens a tab whose shell starts in dir.
 func (win *window) newTabIn(dir string) {
+	defer win.publishControl()
 	win.hideDoc()
 	win.dropSideEdit()
 	win.hideSettings() // the new tab is shown
@@ -777,6 +789,7 @@ func (win *window) frame(gtx layout.Context) error {
 		return slices.ContainsFunc(list, func(t *tabs.Tab) bool { return t.ID == id })
 	})
 	win.publish(win.shownTab(), win.focused)
+	win.drainControl()
 	win.drainAlerts(gtx.Now)
 	win.drainSubs(gtx.Now)
 	win.dropGoneAgents() // after the drain, so a panel never closes on an agent not applied yet
@@ -967,6 +980,7 @@ func (win *window) switchedTo(t *tabs.Tab) {
 		win.updateTitle(t)
 		return
 	}
+	defer win.publishControl()
 	// A panel's keyboard never follows a tab switch. A docked member that had
 	// it gets the focus-out; the old session already had one then.
 	memberKeys := win.dock.keysMember != 0
