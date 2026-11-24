@@ -1,8 +1,48 @@
 package control
 
+import "strings"
+
+// AllowedKeys lists the case-insensitive control key names.
+const AllowedKeys = "enter, esc, tab, up, down, left, right, backspace, ctrl+c, ctrl+d, ctrl+l"
+
+// ValidKey reports whether name is in the control allowlist.
+func ValidKey(name string) bool {
+	switch strings.ToLower(name) {
+	case "enter", "esc", "tab", "up", "down", "left", "right", "backspace", "ctrl+c", "ctrl+d", "ctrl+l":
+		return true
+	}
+	return false
+}
+
 // Handle executes one authenticated request synchronously. It starts no workers
 // or timers. Host implementations own terminal access and submit sequencing.
 func Handle(host Host, req Request) Reply {
+	if req.Op == "keys" || req.Op == "interrupt" {
+		if req.Op == "keys" {
+			if len(req.Args) == 0 || len(req.Args) > MaxKeys {
+				return Reply{Error: &Error{CodeInvalidRequest, "keys requires 1 to 64 key names"}}
+			}
+			for _, name := range req.Args {
+				if !ValidKey(name) {
+					return Reply{Error: &Error{CodeUnknownKey, "allowed keys: " + AllowedKeys}}
+				}
+			}
+		}
+		tab, err := Resolve(host.Tabs(), req.Tab)
+		if err != nil {
+			return Reply{Error: err}
+		}
+		var hostErr error
+		if req.Op == "keys" {
+			hostErr = host.Keys(tab.ID, req.Args)
+		} else {
+			hostErr = host.Interrupt(tab.ID, req.CtrlC)
+		}
+		if hostErr != nil {
+			return Reply{Error: &Error{CodeHostError, "could not submit to tab"}}
+		}
+		return Reply{OK: true}
+	}
 	if req.Op == "ls" {
 		return Reply{OK: true, Tabs: host.Tabs()}
 	}

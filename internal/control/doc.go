@@ -2,7 +2,7 @@
 //
 // A transport authenticates Request.Token and applies its own message size caps
 // and deadlines before calling Handle. Handle is synchronous and supports ls,
-// read and send. Unsupported operations return CodeUnknownOp.
+// read, send, keys and interrupt. Unsupported operations return CodeUnknownOp.
 //
 // Host implementations provide immutable tab snapshots and safe terminal access.
 // Screen owns conversion to plain text: read the live cells, include only the

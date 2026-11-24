@@ -3,6 +3,7 @@ package control
 import "time"
 
 const (
+	MaxKeys      = 64
 	MaxTextBytes = 32 << 10
 	MaxLines     = 2000 // additional scrollback rows, not visible rows
 )
@@ -10,11 +11,13 @@ const (
 // Request is one control operation. The transport authenticates Token before
 // calling Handle; handlers do not authenticate callers themselves.
 type Request struct {
-	Op    string `json:"op"`
-	Tab   string `json:"tab,omitempty"` // stable id (t3) or an exact, unique name
-	Text  string `json:"text,omitempty"`
-	Lines int    `json:"lines,omitempty"`
-	Token string `json:"token,omitempty"`
+	Args  []string `json:"args,omitempty"`
+	CtrlC bool     `json:"ctrl_c,omitempty"`
+	Op    string   `json:"op"`
+	Tab   string   `json:"tab,omitempty"` // stable id (t3) or an exact, unique name
+	Text  string   `json:"text,omitempty"`
+	Lines int      `json:"lines,omitempty"`
+	Token string   `json:"token,omitempty"`
 }
 
 // TabInfo is a value in the Host's immutable tab snapshot.
@@ -47,6 +50,7 @@ type Error struct {
 func (e *Error) Error() string { return e.Message }
 
 const (
+	CodeUnknownKey     = "unknown_key"
 	CodeUnknownTab     = "unknown_tab"
 	CodeAmbiguousTab   = "ambiguous_tab"
 	CodeInvalidRequest = "invalid_request"
@@ -59,6 +63,8 @@ const (
 // Tabs returns an immutable snapshot; control never modifies it.
 type Host interface {
 	Tabs() []TabInfo
+	Keys(id string, keys []string) error
+	Interrupt(id string, ctrlC bool) error
 	// Screen returns the live visible screen plus up to lines recent scrollback
 	// rows (0..MaxLines). On the alternate screen it returns only that screen.
 	// The Host joins wrapped rows and trims trailing spaces. A session-backed

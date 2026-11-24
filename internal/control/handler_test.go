@@ -30,7 +30,7 @@ func (h *fakeHost) Submit(id string, input []byte) error {
 }
 
 func TestHandleUnknownOp(t *testing.T) {
-	for _, op := range []string{"", "bogus", "keys", "wait"} {
+	for _, op := range []string{"", "bogus", "wait"} {
 		h := &fakeHost{}
 		reply := Handle(h, Request{Op: op})
 		if reply.OK || reply.Error == nil || reply.Error.Code != CodeUnknownOp {
@@ -197,5 +197,75 @@ func TestResolve(t *testing.T) {
 	}
 	if _, err := Resolve(nil, "t1"); err == nil || err.Code != CodeUnknownTab {
 		t.Fatalf("empty snapshot: %v", err)
+	}
+}
+
+func (h *fakeHost) Keys(id string, keys []string) error {
+	h.submitCalls++
+	h.id, h.input = id, []byte(strings.Join(keys, " "))
+	return h.err
+}
+func (h *fakeHost) Interrupt(id string, ctrlC bool) error {
+	h.submitCalls++
+	h.id = id
+	if ctrlC {
+		h.input = []byte("ctrl+c")
+	}
+	return h.err
+}
+
+func TestHandleKeysAndInterrupt(t *testing.T) {
+	for _, op := range []string{"keys", "interrupt"} {
+		for _, addr := range []string{"review", "missing", ""} {
+			for _, hostErr := range []error{nil, errors.New("closed")} {
+				h := &fakeHost{tabs: []TabInfo{{ID: "t1", Name: "review"}}, err: hostErr}
+				r := Handle(h, Request{Op: op, Tab: addr, Args: []string{"EnTeR", "CTRL+C"}, CtrlC: true})
+				code := ""
+				switch {
+				case addr == "":
+					code = CodeInvalidRequest
+				case addr == "missing":
+					code = CodeUnknownTab
+				case hostErr != nil:
+					code = CodeHostError
+				}
+				if code != "" {
+					if r.OK || r.Error == nil || r.Error.Code != code {
+						t.Fatalf("%s %q: %+v", op, addr, r)
+					}
+				} else if !r.OK || r.Error != nil {
+					t.Fatalf("%s: %+v", op, r)
+				}
+				want := 0
+				if addr == "review" {
+					want = 1
+				}
+				if h.submitCalls != want || h.screenCalls != 0 {
+					t.Fatalf("unexpected calls: %+v", h)
+				}
+				if want == 1 && (h.id != "t1" || (op == "keys" && string(h.input) != "EnTeR CTRL+C") || (op == "interrupt" && string(h.input) != "ctrl+c")) {
+					t.Fatalf("delegation: %+v", h)
+				}
+			}
+		}
+	}
+}
+
+func TestHandleKeysValidation(t *testing.T) {
+	for _, keys := range [][]string{nil, {}, {"enter", "bogus"}, {""}, {" enter"}, strings.Fields(strings.Repeat("enter ", 65))} {
+		h := &fakeHost{tabs: []TabInfo{{ID: "t1"}}}
+		r := Handle(h, Request{Op: "keys", Tab: "t1", Args: keys})
+		code := CodeInvalidRequest
+		if len(keys) > 0 && len(keys) <= 64 {
+			code = CodeUnknownKey
+		}
+		if r.OK || r.Error == nil || r.Error.Code != code || h.tabCalls+h.submitCalls != 0 {
+			t.Fatalf("keys %q: %+v host %+v", keys, r, h)
+		}
+	}
+	keys := strings.Fields(strings.Repeat("enter ", 64))
+	h := &fakeHost{tabs: []TabInfo{{ID: "t1"}}}
+	if r := Handle(h, Request{Op: "keys", Tab: "t1", Args: keys}); !r.OK {
+		t.Fatalf("64 keys: %+v", r)
 	}
 }
