@@ -8,6 +8,12 @@ Review fix I1: server-wide limits of 8 concurrent waits and 16 controls refuse
 excess requests immediately with `busy_server` (CLI exit 3). Hook admission keeps
 capacity under control saturation; the 32-connection cap and deadlines remain.
 
+Review fixes I2/I3: control handler and reply serialization panics are contained
+on the serving goroutine after request cancellation and watcher join. Oversized
+reads retain the newest complete UTF-8 lines within the unchanged 1 MiB wire cap,
+set `truncated`, and warn on CLI stderr (exit 0). An oversized single line can be
+omitted entirely; structured replies and other ops keep their prior behavior.
+
 All nine tasks are built on `feat/agent-control`, unreleased, with no version bump.
 Commands: `ls`, `read`, `send`, `keys`, `interrupt`, `wait`, `name` and `label`.
 The tag, `--raw`, `--if-idle`, `agent_tag` and `[control] enabled` are implemented.

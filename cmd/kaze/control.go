@@ -98,6 +98,9 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 		fmt.Fprintln(stderr, "kaze: invalid_reply: reply is missing ok or error")
 		return 1
 	}
+	if req.Op == "read" && reply.Truncated {
+		fmt.Fprintln(stderr, "kaze: warning: read truncated to the newest complete lines that fit the 1 MiB reply cap")
+	}
 	if reply.Warning != "" {
 		fmt.Fprintln(stderr, "kaze: warning:", reply.Warning)
 	}

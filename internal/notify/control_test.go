@@ -148,17 +148,22 @@ func TestControlRequestCap(t *testing.T) {
 }
 
 func TestControlReplyTruncated(t *testing.T) {
-	text := strings.Repeat("あ<\n\"", 200<<10)
-	s := controlServer(t, func(json.RawMessage) any {
-		return struct {
-			OK   bool   `json:"ok"`
-			Text string `json:"text"`
-		}{true, text}
-	})
+	text := "oldest\n" + strings.Repeat("あ<\"\\\n", 200<<10) + "newest answer\n"
+	s := controlServer(t, func(json.RawMessage) any { return map[string]any{"ok": true, "text": text} })
 	got := controlExchange(t, s, `{"op":"read","token":"test-control-token"}`)
+	suffix, _ := got["text"].(string)
+	if got["ok"] != true || got["truncated"] != true || suffix == "" || suffix == text || !strings.HasSuffix(text, suffix) || !strings.HasSuffix(suffix, "newest answer\n") || !utf8.ValidString(suffix) {
+		t.Fatalf("bad truncation: ok=%v truncated=%v suffix bytes=%d", got["ok"], got["truncated"], len(suffix))
+	}
+	start := len(text) - len(suffix)
+	if start == 0 || text[start-1] != '\n' {
+		t.Fatal("read cut in the middle of a line")
+	}
+	// Text replies from other operations keep their existing prefix behavior.
+	got = controlExchange(t, s, `{"op":"other","token":"test-control-token"}`)
 	prefix, _ := got["text"].(string)
-	if got["ok"] != true || got["truncated"] != true || prefix == "" || !strings.HasPrefix(text, prefix) || !utf8.ValidString(prefix) || prefix == text {
-		t.Fatalf("bad truncation: ok=%v truncated=%v prefix bytes=%d", got["ok"], got["truncated"], len(prefix))
+	if got["ok"] != true || got["truncated"] != true || prefix == "" || !strings.HasPrefix(text, prefix) || !utf8.ValidString(prefix) {
+		t.Fatal("other operation changed")
 	}
 }
 

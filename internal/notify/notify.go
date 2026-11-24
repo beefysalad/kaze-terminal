@@ -309,7 +309,7 @@ func (s *Server) handle(c net.Conn) {
 		watcherDone := make(chan struct{})
 		go func() { defer close(watcherDone); _, _ = io.Copy(io.Discard, c); cancel() }()
 		defer func() { cancel(); _ = c.SetReadDeadline(time.Now()); <-watcherDone }()
-		s.writeControl(c, handler(ctx, raw))
+		s.writeControlReply(c, handler(ctx, raw), op == "read")
 		return
 	}
 	var m Msg

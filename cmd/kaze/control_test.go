@@ -386,3 +386,12 @@ func TestControlWait(t *testing.T) {
 		t.Fatalf("defaults %+v %v", req, ok)
 	}
 }
+
+func TestControlReadTruncationWarning(t *testing.T) {
+	env, _ := controlServer(t, control.Reply{OK: true, Text: "newest answer\n", Truncated: true})
+	var out, errs bytes.Buffer
+	code := runControl([]string{"read", "t2"}, env, nil, &out, &errs)
+	if code != 0 || out.String() != "newest answer\n" || !strings.Contains(errs.String(), "truncated") || !strings.Contains(errs.String(), "newest") {
+		t.Fatalf("code=%d out=%q stderr=%q", code, out.String(), errs.String())
+	}
+}

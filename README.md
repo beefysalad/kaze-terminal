@@ -612,7 +612,7 @@ in PowerShell, use `& $env:KAZE_BIN` in place of `"$KAZE_BIN"`.
 | Command | Example | What it does |
 |---|---|---|
 | `ls [--json]` | `"$KAZE_BIN" ls --json` | Lists tabs. Plain output has id, name, space, agent, status, folder and labels; JSON returns the full reply object, including workspace membership. |
-| `read <t> [--lines N]` | `"$KAZE_BIN" read t2 --lines 100` | Reads the live screen plus the last N scrollback rows (0 to 2000). Without the flag, reads only the screen. Wrapped rows are joined and trailing spaces trimmed. Full-screen programs return their alternate screen. |
+| `read <t> [--lines N]` | `"$KAZE_BIN" read t2 --lines 100` | Reads the live screen plus the last N scrollback rows (0 to 2000). Without the flag, reads only the screen. Wrapped rows are joined and trailing spaces trimmed. Full-screen programs return their alternate screen. Above the 1 MiB encoded reply cap, keeps the newest complete lines, sets `truncated`, and warns on stderr while exiting 0. A single line larger than the cap is omitted. |
 | `send <t> <text\|-> [--if-idle] [--raw]` | `"$KAZE_BIN" send t2 'Review the diff' --if-idle` | Pastes text, then submits with Enter. `--if-idle` refuses a target marked working. Without it, a working target receives the text and stderr warns `busy`. |
 | `keys <t> <key...>` | `"$KAZE_BIN" keys t2 down enter` | Sends 1 to 64 named keys in order. |
 | `interrupt <t> [--ctrl-c]` | `"$KAZE_BIN" interrupt t2` | Sends Esc to a known Claude Code or Codex tab, otherwise Ctrl+C. `--ctrl-c` always sends Ctrl+C. |
