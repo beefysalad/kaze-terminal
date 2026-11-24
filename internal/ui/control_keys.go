@@ -78,7 +78,7 @@ func submitControlKeys(keys []string, modes term.Modes, submit func([]byte) term
 		default:
 			return fmt.Errorf("unknown key %q", name)
 		}
-		encoded := input.EncodeKey(k, mods, modes)
+		encoded := input.EncodeTerminalKey(k, mods, modes)
 		if len(encoded) == 0 {
 			return fmt.Errorf("key %q has no terminal encoding", name)
 		}

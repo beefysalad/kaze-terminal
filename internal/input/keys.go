@@ -101,7 +101,16 @@ var modifierKeys = map[key.Name]bool{
 }
 
 func encodeKey(goos string, name key.Name, mods key.Modifiers, m term.Modes) []byte {
-	if IsReserved(name, mods, goos) || modifierKeys[name] {
+	if IsReserved(name, mods, goos) {
+		return nil
+	}
+	return EncodeTerminalKey(name, mods, m)
+}
+
+// EncodeTerminalKey encodes explicit terminal input without checking window
+// shortcuts. Control requests already chose their target and bypass UI actions.
+func EncodeTerminalKey(name key.Name, mods key.Modifiers, m term.Modes) []byte {
+	if modifierKeys[name] {
 		return nil
 	}
 	mod := xtermMod(mods)

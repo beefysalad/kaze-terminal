@@ -19,7 +19,7 @@ const controlPasteEnterDelay = 100 * time.Millisecond
 
 type controlSession struct {
 	session *term.Session
-	send    sync.Mutex // keep concurrent prompts' paste and Enter pairs together
+	send    sync.Mutex // keep control sequences and paste/Enter pairs together
 }
 type controlSnapshot struct {
 	tabs     []ctl.TabInfo

@@ -63,7 +63,9 @@ const (
 // Tabs returns an immutable snapshot; control never modifies it.
 type Host interface {
 	Tabs() []TabInfo
+	// Keys encodes and submits each allowlisted key in order, stopping on failure.
 	Keys(id string, keys []string) error
+	// Interrupt sends Esc for a known agent, otherwise Ctrl+C; ctrlC forces Ctrl+C.
 	Interrupt(id string, ctrlC bool) error
 	// Screen returns the live visible screen plus up to lines recent scrollback
 	// rows (0..MaxLines). On the alternate screen it returns only that screen.
