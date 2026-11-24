@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -202,7 +203,7 @@ func TestControlErrorReply(t *testing.T) {
 
 func TestControlUsage(t *testing.T) {
 	for _, args := range [][]string{
-		nil, {"wait", "t1"}, {"ls", "extra"}, {"ls", "--json", "--json"},
+		nil, {"ls", "extra"}, {"ls", "--json", "--json"},
 		{"read"}, {"read", ""}, {"read", "--json"}, {"read", "t1", "--lines"},
 		{"read", "t1", "--lines", "-1"}, {"read", "t1", "--lines", "2001"},
 		{"read", "t1", "--lines", "bad"}, {"read", "t1", "--bogus", "1"},
@@ -350,5 +351,38 @@ func TestControlEnvironmentAndLimits(t *testing.T) {
 		case <-time.After(time.Second):
 			t.Fatal("missing request")
 		}
+	}
+}
+
+func TestControlWait(t *testing.T) {
+	for _, code := range []int{0, 124, 1} {
+		t.Run(strconv.Itoa(code), func(t *testing.T) {
+			reply := control.Reply{OK: true}
+			if code == 124 {
+				reply = control.Reply{Error: &control.Error{Code: "timeout", Message: "wait timeout"}}
+			}
+			if code == 1 {
+				reply = control.Reply{Error: &control.Error{Code: "unknown_tab", Message: "unknown tab"}}
+			}
+			env, requests := controlServer(t, reply)
+			var out, errs bytes.Buffer
+			handled, got := dispatchControl([]string{"wait", "t2", "--for", "ready", "--timeout", "600", "--quiet", "200"}, env, nil, &out, &errs)
+			if !handled || got != code {
+				t.Fatalf("handled %v code %d stderr %s", handled, got, errs.String())
+			}
+			req := receiveControlRequest(t, requests)
+			if req.Op != "wait" || req.Tab != "t2" || req.For != "ready" || req.Timeout != 600 || req.Quiet != 200 {
+				t.Fatalf("%+v", req)
+			}
+		})
+	}
+	for _, args := range [][]string{{"wait"}, {"wait", "t1", "--timeout", "601"}, {"wait", "t1", "--timeout", "0"}, {"wait", "t1", "--quiet", "-1"}, {"wait", "t1", "--for", ""}, {"wait", "t1", "--wat", "1"}, {"wait", "t1", "--quiet", "1", "--quiet", "2"}} {
+		if _, _, ok := controlArgs(args); ok {
+			t.Fatalf("accepted %v", args)
+		}
+	}
+	req, _, ok := controlArgs([]string{"wait", "t1"})
+	if !ok || req.Timeout != 120 || req.Quiet != 1500 {
+		t.Fatalf("defaults %+v %v", req, ok)
 	}
 }

@@ -19,7 +19,7 @@ const controlTimeout = 5 * time.Second
 func runControl(args []string, env func(string) string, stdin io.Reader, stdout, stderr io.Writer) int {
 	req, asJSON, ok := controlArgs(args)
 	if !ok {
-		fmt.Fprintln(stderr, "usage: kaze ls [--json] | read <t> [--lines N] | send <t> <text|-> | keys <t> <key...> | interrupt <t> [--ctrl-c]")
+		fmt.Fprintln(stderr, "usage: kaze ls [--json] | read <t> [--lines N] | send <t> <text|-> | keys <t> <key...> | interrupt <t> [--ctrl-c] | wait <t> [--for TEXT] [--timeout S] [--quiet MS]")
 		if len(args) > 0 && args[0] == "keys" {
 			fmt.Fprintln(stderr, "allowed keys:", control.AllowedKeys)
 		}
@@ -64,6 +64,11 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 	}
 	if err = json.NewEncoder(conn).Encode(req); err != nil {
 		return controlNetworkError(err, stderr)
+	}
+	if req.Op == "wait" {
+		if err = conn.SetReadDeadline(time.Now().Add(time.Duration(req.Timeout)*time.Second + controlTimeout)); err != nil {
+			return controlNetworkError(err, stderr)
+		}
 	}
 	var reply control.Reply
 	if err = json.NewDecoder(io.LimitReader(conn, 1<<20)).Decode(&reply); err != nil {
@@ -150,6 +155,47 @@ func controlArgs(args []string) (req control.Request, asJSON, ok bool) {
 			}
 		}
 		ok = req.Tab != "" && !strings.HasPrefix(req.Tab, "-")
+	case "wait":
+		if len(args) < 2 || len(args)%2 != 0 {
+			return
+		}
+		req.Tab = args[1]
+		req.Timeout = control.DefaultWaitTimeout
+		req.Quiet = control.DefaultQuiet
+		seen := map[string]bool{}
+		for i := 2; i < len(args); i += 2 {
+			flag, value := args[i], args[i+1]
+			if seen[flag] {
+				return
+			}
+			seen[flag] = true
+			if flag == "--for" {
+				if value == "" || len(value) > control.MaxTextBytes {
+					return
+				}
+				req.For = value
+				continue
+			}
+			n, err := strconv.Atoi(value)
+			if err != nil || n <= 0 {
+				return
+			}
+			switch flag {
+			case "--timeout":
+				if n > control.MaxWaitTimeout {
+					return
+				}
+				req.Timeout = n
+			case "--quiet":
+				if n > int((1<<63-1)/int64(time.Millisecond)) {
+					return
+				}
+				req.Quiet = n
+			default:
+				return
+			}
+		}
+		ok = req.Tab != "" && !strings.HasPrefix(req.Tab, "-")
 	case "interrupt":
 		if len(args) != 2 && len(args) != 3 {
 			return
@@ -186,7 +232,7 @@ func controlNetworkError(err error, stderr io.Writer) int {
 func dispatchControl(args []string, env func(string) string, stdin io.Reader, stdout, stderr io.Writer) (bool, int) {
 	if len(args) > 0 {
 		switch args[0] {
-		case "ls", "read", "send", "keys", "interrupt":
+		case "ls", "read", "send", "keys", "interrupt", "wait":
 			return true, runControl(args, env, stdin, stdout, stderr)
 		}
 	}
