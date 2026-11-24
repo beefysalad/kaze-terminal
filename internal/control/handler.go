@@ -1,6 +1,9 @@
 package control
 
-import "strings"
+import (
+	"context"
+	"strings"
+)
 
 // AllowedKeys lists the case-insensitive control key names.
 const AllowedKeys = "enter, esc, tab, up, down, left, right, backspace, ctrl+c, ctrl+d, ctrl+l"
@@ -15,8 +18,16 @@ func ValidKey(name string) bool {
 }
 
 // Handle executes one authenticated request synchronously. It starts no workers
-// or timers. Host implementations own terminal access and submit sequencing.
+// except for wait requests. Host implementations own terminal access and submit sequencing.
 func Handle(host Host, req Request) Reply {
+	return HandleContext(context.Background(), host, req)
+}
+
+// HandleContext cancels pending waits when the transport disconnects.
+func HandleContext(ctx context.Context, host Host, req Request) Reply {
+	if req.Op == "wait" {
+		return wait(ctx, host, req)
+	}
 	if req.Op == "keys" || req.Op == "interrupt" {
 		if req.Op == "keys" {
 			if len(req.Args) == 0 || len(req.Args) > MaxKeys {

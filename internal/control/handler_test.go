@@ -30,7 +30,7 @@ func (h *fakeHost) Submit(id string, input []byte) error {
 }
 
 func TestHandleUnknownOp(t *testing.T) {
-	for _, op := range []string{"", "bogus", "wait"} {
+	for _, op := range []string{"", "bogus"} {
 		h := &fakeHost{}
 		reply := Handle(h, Request{Op: op})
 		if reply.OK || reply.Error == nil || reply.Error.Code != CodeUnknownOp {
