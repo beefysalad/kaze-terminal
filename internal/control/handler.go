@@ -1,5 +1,28 @@
 package control
 
+// Handle executes one authenticated request synchronously. It starts no workers
+// or timers. Host implementations own terminal access and submit sequencing.
+func Handle(host Host, req Request) Reply {
+	if req.Op == "ls" {
+		return Reply{OK: true, Tabs: host.Tabs()}
+	}
+	if req.Op == "read" {
+		if req.Lines < 0 {
+			return Reply{Error: &Error{CodeInvalidRequest, "lines must not be negative"}}
+		}
+		tab, err := Resolve(host.Tabs(), req.Tab)
+		if err != nil {
+			return Reply{Error: err}
+		}
+		text, hostErr := host.Screen(tab.ID, min(req.Lines, MaxLines))
+		if hostErr != nil {
+			return Reply{Error: &Error{CodeHostError, "could not read tab"}}
+		}
+		return Reply{OK: true, Text: text}
+	}
+	return Reply{Error: &Error{CodeUnknownOp, "unknown control operation"}}
+}
+
 // Resolve finds an exact id first, otherwise an exact, unique nonempty name.
 // It does not normalize names or interpret a name as a numeric tab index.
 func Resolve(tabs []TabInfo, address string) (TabInfo, *Error) {

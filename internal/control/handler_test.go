@@ -1,6 +1,118 @@
 package control
 
-import "testing"
+import (
+	"errors"
+	"reflect"
+	"testing"
+)
+
+type fakeHost struct {
+	tabs                               []TabInfo
+	text                               string
+	err                                error
+	tabCalls, screenCalls, submitCalls int
+	id                                 string
+	lines                              int
+	input                              []byte
+}
+
+func (h *fakeHost) Tabs() []TabInfo { h.tabCalls++; return h.tabs }
+func (h *fakeHost) Screen(id string, lines int) (string, error) {
+	h.screenCalls++
+	h.id, h.lines = id, lines
+	return h.text, h.err
+}
+func (h *fakeHost) Submit(id string, input []byte) error {
+	h.submitCalls++
+	h.id, h.input = id, input
+	return h.err
+}
+
+func TestHandleUnknownOp(t *testing.T) {
+	for _, op := range []string{"", "bogus", "keys", "wait"} {
+		h := &fakeHost{}
+		reply := Handle(h, Request{Op: op})
+		if reply.OK || reply.Error == nil || reply.Error.Code != CodeUnknownOp {
+			t.Fatalf("%q: reply = %#v", op, reply)
+		}
+		if h.tabCalls+h.screenCalls+h.submitCalls != 0 {
+			t.Fatal("unsupported operation called Host")
+		}
+	}
+}
+
+func TestHandleList(t *testing.T) {
+	for _, tabs := range [][]TabInfo{nil, {{ID: "t3", Name: "review", Space: "kaze", Folder: "/repo", Agent: "codex", Status: "idle", Workspace: true}}} {
+		h := &fakeHost{tabs: tabs}
+		reply := Handle(h, Request{Op: "ls"})
+		if !reply.OK || reply.Error != nil || !reflect.DeepEqual(reply.Tabs, tabs) {
+			t.Fatalf("reply = %#v; want tabs %#v", reply, tabs)
+		}
+		if h.tabCalls != 1 || h.screenCalls+h.submitCalls != 0 {
+			t.Fatalf("unexpected Host calls: %#v", h)
+		}
+	}
+}
+
+func TestHandleRead(t *testing.T) {
+	// Screen conversion is the Host's job. These already-converted fixtures
+	// must survive the handler unchanged, including blank lines and indentation.
+	for _, tc := range []struct {
+		name, text string
+		lines      int
+	}{
+		{"visible", "prompt\n  answer\n", 0},
+		{"wrapped rows joined and tails trimmed", "one long wrapped line\nnext", 0},
+		{"scrollback plus screen", "history\n\nvisible", 2},
+		{"alternate screen only", "editor\n  buffer", 12},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h := &fakeHost{tabs: []TabInfo{{ID: "t3", Name: "review"}}, text: tc.text}
+			reply := Handle(h, Request{Op: "read", Tab: "review", Lines: tc.lines})
+			if !reply.OK || reply.Error != nil || reply.Text != tc.text {
+				t.Fatalf("reply = %#v", reply)
+			}
+			if h.tabCalls != 1 || h.screenCalls != 1 || h.submitCalls != 0 || h.id != "t3" || h.lines != tc.lines {
+				t.Fatalf("unexpected Host calls: %#v", h)
+			}
+		})
+	}
+}
+
+func TestHandleReadLimits(t *testing.T) {
+	// The fake never allocates in proportion to Lines, even before clamping.
+	for _, tc := range []struct{ requested, want int }{{0, 0}, {2000, 2000}, {2001, 2000}, {int(^uint(0) >> 1), 2000}} {
+		h := &fakeHost{tabs: []TabInfo{{ID: "t3"}}}
+		reply := Handle(h, Request{Op: "read", Tab: "t3", Lines: tc.requested})
+		if !reply.OK || h.screenCalls != 1 || h.lines != tc.want {
+			t.Fatalf("lines %d: reply %#v, screen calls %d, lines %d", tc.requested, reply, h.screenCalls, h.lines)
+		}
+	}
+	h := &fakeHost{tabs: []TabInfo{{ID: "t3"}}}
+	reply := Handle(h, Request{Op: "read", Tab: "t3", Lines: -1})
+	if reply.OK || reply.Error == nil || reply.Error.Code != CodeInvalidRequest || h.screenCalls+h.submitCalls != 0 {
+		t.Fatalf("negative lines: reply %#v, Host %#v", reply, h)
+	}
+}
+
+func TestHandleReadErrors(t *testing.T) {
+	for _, tc := range []struct{ address, code string }{
+		{"", CodeInvalidRequest}, {"missing", CodeUnknownTab}, {"review", CodeAmbiguousTab}, {"t1", CodeHostError},
+	} {
+		h := &fakeHost{tabs: []TabInfo{{ID: "t1", Name: "review"}, {ID: "t2", Name: "review"}}, text: "partial", err: errors.New("host failure")}
+		reply := Handle(h, Request{Op: "read", Tab: tc.address})
+		if reply.OK || reply.Error == nil || reply.Error.Code != tc.code || reply.Text != "" {
+			t.Fatalf("%q: reply = %#v", tc.address, reply)
+		}
+		wantCalls := 0
+		if tc.address == "t1" {
+			wantCalls = 1
+		}
+		if h.screenCalls != wantCalls || h.submitCalls != 0 {
+			t.Fatalf("%q: unexpected Host calls: %#v", tc.address, h)
+		}
+	}
+}
 
 func TestResolve(t *testing.T) {
 	tabs := []TabInfo{
