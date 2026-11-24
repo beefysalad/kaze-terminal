@@ -207,3 +207,29 @@ func TestControlPublishDoesNotDiscoverLocation(t *testing.T) {
 		t.Fatalf("folder %q", got)
 	}
 }
+
+// A tab whose agent is only found by looking at the program in front of it (a
+// Codex whose hooks never reached Kaze) shows the Codex logo in the strip, so
+// peers must see it as codex too.
+func TestControlSnapshotFollowsDetectedAgent(t *testing.T) {
+	win, _ := sideWindow(t, true)
+	tb := openIn(t, win, osPath("/code/repo/api"))
+	win.cachedSide(time.Now())
+	win.publishControl()
+	if got := win.control.Tabs()[0]; got.Agent != "" || got.Status != "shell" {
+		t.Fatalf("before detection: %+v", got)
+	}
+	win.probe = agentProbe{
+		fg:   func(*tabs.Tab) int { return 4242 },
+		out:  func(*tabs.Tab) uint64 { return 7 },
+		name: func(int) string { return "codex" },
+	}
+	win.detectAgents(time.Now())
+	if win.detected[tb.ID].agent != "codex" {
+		t.Fatalf("scene: detection %+v", win.detected[tb.ID])
+	}
+	win.cachedSide(time.Now()) // the frame refreshes the models after detection
+	if got := win.control.Tabs()[0]; got.Agent != "codex" {
+		t.Fatalf("peers still see %+v after the program was detected", got)
+	}
+}
