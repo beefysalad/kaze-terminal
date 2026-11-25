@@ -50,15 +50,17 @@ func TestControlSubmitHoldsWorkingUntilPromptHook(t *testing.T) {
 
 func TestControlSubmitPendingExpires(t *testing.T) {
 	old := controlPendingGrace
-	controlPendingGrace = 30 * time.Millisecond
+	controlPendingGrace = 400 * time.Millisecond
 	t.Cleanup(func() { controlPendingGrace = old })
 	win, tb := pendingWindow(t)
 	deliverKind(win, tb, notify.KindDone)
-	_, changed := win.control.StatusChanges()
 	if err := win.control.Submit("t1", []byte("hello")); err != nil {
 		t.Fatal(err)
 	}
-	_, changed = win.control.StatusChanges()
+	if got := win.control.Tabs()[0].Status; got != "working" {
+		t.Fatalf("during grace: %s", got)
+	}
+	_, changed := win.control.StatusChanges()
 	select {
 	case <-changed:
 	case <-time.After(2 * time.Second):
@@ -89,5 +91,18 @@ func TestControlDetectedOnlyAgentIsUnknown(t *testing.T) {
 	got := win.control.Tabs()[0]
 	if got.Agent != "codex" || got.Status != "unknown" {
 		t.Fatalf("%+v", got)
+	}
+}
+
+// A send that fails must not leave the tab held as working.
+func TestControlFailedSubmitReleasesPending(t *testing.T) {
+	win, tb := pendingWindow(t)
+	deliverKind(win, tb, notify.KindDone)
+	tb.Session.Close()
+	if err := win.control.Submit("t1", []byte("x")); err == nil {
+		t.Fatal("closed session accepted input")
+	}
+	if got := win.control.Tabs()[0].Status; got != "idle" {
+		t.Fatalf("failed send left %s", got)
 	}
 }

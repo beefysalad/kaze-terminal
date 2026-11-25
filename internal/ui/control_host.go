@@ -52,12 +52,23 @@ var _ ctl.Host = (*controlHost)(nil)
 // Tabs returns the published tabs. A hooked agent that was just sent input
 // reads as working until its prompt hook lands or the grace passes.
 func (h *controlHost) Tabs() []ctl.TabInfo {
-	s := h.snapshot.Load()
-	if s == nil {
-		return nil
+	for {
+		s := h.snapshot.Load()
+		if s == nil {
+			return nil
+		}
+		tabs := overlayPending(s, time.Now().UnixNano())
+		// A prompt hook publishes before it clears pending, so a cleared hold
+		// seen above means a newer snapshot exists: retry rather than report
+		// the old idle state.
+		if h.snapshot.Load() == s {
+			return tabs
+		}
 	}
-	var out []ctl.TabInfo
-	now := time.Now().UnixNano()
+}
+
+func overlayPending(s *controlSnapshot, now int64) []ctl.TabInfo {
+	out, cloned := s.tabs, false
 	for i, tab := range s.tabs {
 		if tab.Status != "idle" && tab.Status != "needs" {
 			continue
@@ -66,22 +77,21 @@ func (h *controlHost) Tabs() []ctl.TabInfo {
 		if at == 0 || now-at >= int64(controlPendingGrace) {
 			continue
 		}
-		if out == nil {
-			out = slices.Clone(s.tabs)
+		if !cloned {
+			out, cloned = slices.Clone(s.tabs), true
 		}
 		out[i].Status = "working"
 	}
-	if out != nil {
-		return out
-	}
-	return s.tabs
+	return out
 }
 
 // holdPending marks a send awaiting its prompt hook and wakes waiters when the
 // grace ends, so a hook that never comes cannot leave a wait stuck.
-func (h *controlHost) holdPending(target *controlSession) {
-	target.pending.Store(time.Now().UnixNano())
+func (h *controlHost) holdPending(target *controlSession) (release func()) {
+	at := time.Now().UnixNano()
+	target.pending.Store(at)
 	time.AfterFunc(controlPendingGrace, h.wakeWaiters)
+	return func() { target.pending.CompareAndSwap(at, 0) }
 }
 
 func (h *controlHost) clearPending(id string) {
@@ -128,15 +138,18 @@ func (h *controlHost) Submit(id string, text []byte) error {
 	s.Lock()
 	modes := s.Applier().Modes()
 	s.Unlock()
+	// Hold before Enter is observable, so the prompt hook cannot clear first.
+	release := h.holdPending(target)
 	mark := s.EchoMark()
 	if result := s.Submit(input.EncodePaste(string(text), modes)); result != term.Accepted {
+		release()
 		return fmt.Errorf("paste to %s: %s", id, result)
 	}
 	s.WaitEcho(mark, controlPasteEnterDelay)
 	if result := s.Submit([]byte{'\r'}); result != term.Accepted {
+		release()
 		return fmt.Errorf("enter to %s: %s", id, result)
 	}
-	h.holdPending(target)
 	return nil
 }
 

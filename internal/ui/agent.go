@@ -70,7 +70,6 @@ func (win *window) noteAgent(m notify.Msg, id tabs.TabID, seq uint64) {
 			a.arg = firstWord(m.Args, maxAgentArg)
 		}
 		win.alerts.visited(id) // a new prompt answers whatever the tab was waiting on
-		win.control.clearPending("t" + strconv.Itoa(int(id)))
 	case notify.KindDone, notify.KindNeeds, notify.KindInterrupt:
 		a.claude, a.running = agent == "claude", false
 	case notify.KindSession:
@@ -95,6 +94,10 @@ func (win *window) noteAgent(m notify.Msg, id tabs.TabID, seq uint64) {
 	}
 	win.agents[id] = a
 	win.publishControl()
+	if m.Kind == notify.KindPrompt {
+		// After the publish: a reader that sees the hold cleared sees working.
+		win.control.clearPending("t" + strconv.Itoa(int(id)))
+	}
 }
 
 // firstWord is the first whitespace-separated word of s, cut to n runes.
