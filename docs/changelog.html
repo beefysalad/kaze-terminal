@@ -22,7 +22,23 @@
     <div class="section-intro"><a class="archive-back" href="./#changelog">Back to Kaze</a><h1 id="changelog-title">Changelog.</h1><p>Features, improvements and fixes, release by release. Kaze checks for updates in Settings, Updates.</p></div>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.44</span><span class="badge">Latest</span><time datetime="2026-11-23">Nov 23, 2026</time></div>
+        <div class="release-meta"><span class="version">0.45</span><span class="badge">Latest</span><time datetime="2026-11-25">Nov 25, 2026</time></div>
+        <div class="release-body">
+          <h3>Agents that talk to each other</h3>
+          <ul>
+            <li>An agent in one tab can read and type into another through the kaze command: ls, read, send, keys, interrupt, wait, name and label. Claude Code can hand work to Codex and back.</li>
+            <li>A send arrives as one paste followed by Enter, tagged &lt;kaze from=...&gt; so the receiver can tell a peer from you.</li>
+            <li>Wait blocks until the other agent finishes, without polling.</li>
+            <li>Address a tab by id, by name, or by agent name when only one tab runs it.</li>
+            <li>Settings, Agents has an off-by-default Peer messaging instructions switch for Claude Code and for Codex. It adds instructions to ~/.claude/CLAUDE.md or ~/.codex/AGENTS.md (or $CODEX_HOME/AGENTS.md) so every agent in every tab knows the commands. Turning it off removes exactly that block.</li>
+            <li>Agent control uses the same local socket as the hooks and does no work when idle.</li>
+            <li>A wrong kaze command now prints usage instead of opening a second window.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.44</span><time datetime="2026-11-23">Nov 23, 2026</time></div>
         <div class="release-body">
           <h3>Spaces, tabs on top and a floating Settings</h3>
           <ul>

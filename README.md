@@ -603,7 +603,8 @@ with `--no-daemon` without changing the OS policy.
 
 An agent in one Kaze tab can send a prompt to another, wait for it to finish and read
 its reply from the terminal. Claude Code and Codex can talk across tabs this way.
-Control is built on `feat/agent-control` and is not released yet.
+Available in 0.45 (PR #212). Control shares the hooks' local socket and does no work
+when idle; waits block without polling.
 
 Run commands inside a Kaze tab. Use `"$KAZE_BIN"` so they work even when Kaze is not
 on PATH, including inside the macOS app bundle. These examples use zsh or bash;
@@ -1230,6 +1231,7 @@ Done:
 - Editable shortcuts: change any of them in Settings > Shortcuts, or write `none` to drop one (built on `feat/shortcuts-edit`, ships in 0.31 with the palette redesign).
 - Find in the terminal and the docked tabs (#155): Ctrl+Shift+F or Cmd+F, every match marked, on the whole scrollback (built on `feat/find`, release next).
 - Next release (built on `feat/pane-reading`): the subagent panel and the board preview open edits inline with line numbers and code colours, fold quiet commands and open failures.
+- 0.45: agent-to-agent control through `kaze ls`, `read`, `send`, `keys`, `interrupt`, `wait`, `name` and `label`. Claude Code and Codex can hand work across tabs; Settings > Agents can add peer messaging instructions for each agent (PR #212).
 - 0.44: project spaces in the sidebar, an Agents section, tabs above the terminal, the Claude Code pixel mascot, and Settings as a floating sheet over the live terminal. Sidebar subagent trays and row line counts removed (included with PR #210).
 - 0.43: the sidebar on the left or the right, and a slim rail of session tiles; Cmd+B cycles full, rail and hidden (PR #208).
 - 0.42: the purple folded K and terminal underscore across the app, macOS and Windows icons, website and README (PR #206).
