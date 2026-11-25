@@ -67,7 +67,7 @@ func wait(ctx context.Context, host Host, req Request) Reply {
 		if req.For == "" && (tab.Status == "idle" || tab.Status == "needs") {
 			return Reply{OK: true}
 		}
-		if output == nil && (req.For != "" || tab.Status == "shell") {
+		if output == nil && (req.For != "" || quietStatus(tab.Status)) {
 			var last time.Time
 			var hostErr error
 			output, remove, last, hostErr = h.OutputChanges(id)
@@ -83,7 +83,7 @@ func wait(ctx context.Context, host Host, req Request) Reply {
 				quietC = quietTimer.C
 			}
 		}
-		if quietReady && tab.Status == "shell" {
+		if quietReady && quietStatus(tab.Status) {
 			select {
 			case <-output:
 				quietTimer.Reset(quietDuration)
@@ -119,3 +119,7 @@ func wait(ctx context.Context, host Host, req Request) Reply {
 		}
 	}
 }
+
+// quietStatus marks tabs with no hook state, a plain shell or an agent found
+// only by process detection, which are waited on by output quiescence.
+func quietStatus(status string) bool { return status == "shell" || status == "unknown" }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -18,9 +19,15 @@ import (
 // controlPasteEnterDelay bounds the echo wait between a paste and its Enter.
 const controlPasteEnterDelay = 100 * time.Millisecond
 
+// controlPendingGrace is how long a tab reads as working after a send while
+// its prompt hook has not arrived; without it a wait right after a send
+// returns on the previous turn's idle state.
+var controlPendingGrace = 10 * time.Second
+
 type controlSession struct {
 	session *term.Session
-	send    sync.Mutex // keep control sequences and paste/Enter pairs together
+	send    sync.Mutex   // keep control sequences and paste/Enter pairs together
+	pending atomic.Int64 // unix nanos of the last send still awaiting its prompt hook; 0 when none
 }
 type controlSnapshot struct {
 	tabs     []ctl.TabInfo
@@ -42,11 +49,55 @@ type controlHost struct {
 
 var _ ctl.Host = (*controlHost)(nil)
 
+// Tabs returns the published tabs. A hooked agent that was just sent input
+// reads as working until its prompt hook lands or the grace passes.
 func (h *controlHost) Tabs() []ctl.TabInfo {
-	if s := h.snapshot.Load(); s != nil {
-		return s.tabs
+	s := h.snapshot.Load()
+	if s == nil {
+		return nil
 	}
-	return nil
+	var out []ctl.TabInfo
+	now := time.Now().UnixNano()
+	for i, tab := range s.tabs {
+		if tab.Status != "idle" && tab.Status != "needs" {
+			continue
+		}
+		at := s.sessions[tab.ID].pending.Load()
+		if at == 0 || now-at >= int64(controlPendingGrace) {
+			continue
+		}
+		if out == nil {
+			out = slices.Clone(s.tabs)
+		}
+		out[i].Status = "working"
+	}
+	if out != nil {
+		return out
+	}
+	return s.tabs
+}
+
+// holdPending marks a send awaiting its prompt hook and wakes waiters when the
+// grace ends, so a hook that never comes cannot leave a wait stuck.
+func (h *controlHost) holdPending(target *controlSession) {
+	target.pending.Store(time.Now().UnixNano())
+	time.AfterFunc(controlPendingGrace, h.wakeWaiters)
+}
+
+func (h *controlHost) clearPending(id string) {
+	if s := h.snapshot.Load(); s != nil && s.sessions[id] != nil {
+		s.sessions[id].pending.Store(0)
+	}
+}
+
+// wakeWaiters closes the change channel without a new snapshot.
+func (h *controlHost) wakeWaiters() {
+	h.changesMu.Lock()
+	if h.changes != nil {
+		close(h.changes)
+		h.changes = nil
+	}
+	h.changesMu.Unlock()
 }
 func (h *controlHost) session(id string) (*controlSession, error) {
 	if s := h.snapshot.Load(); s != nil {
@@ -85,6 +136,7 @@ func (h *controlHost) Submit(id string, text []byte) error {
 	if result := s.Submit([]byte{'\r'}); result != term.Accepted {
 		return fmt.Errorf("enter to %s: %s", id, result)
 	}
+	h.holdPending(target)
 	return nil
 }
 
@@ -116,6 +168,9 @@ func (win *window) publishControl() {
 			status = "idle"
 			if a.running {
 				status = "working"
+			}
+			if win.agentOf(t.ID).agentName() == "" {
+				status = "unknown" // found by process only: no hook says idle or working
 			}
 		}
 		if win.alerts.markOf(t.ID) == markNeeds {

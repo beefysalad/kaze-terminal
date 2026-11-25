@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -69,6 +70,7 @@ func (win *window) noteAgent(m notify.Msg, id tabs.TabID, seq uint64) {
 			a.arg = firstWord(m.Args, maxAgentArg)
 		}
 		win.alerts.visited(id) // a new prompt answers whatever the tab was waiting on
+		win.control.clearPending("t" + strconv.Itoa(int(id)))
 	case notify.KindDone, notify.KindNeeds, notify.KindInterrupt:
 		a.claude, a.running = agent == "claude", false
 	case notify.KindSession:
