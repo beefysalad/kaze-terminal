@@ -1,12 +1,12 @@
 ## What's changed
 
-- Spaces in the sidebar: one per project, plus a Shell space, with search and + in the header.
-- Agents have their own section, grouped as Needs you, Working and Idle. Click an agent to jump to its tab.
-- A tab strip above the terminal shows only the selected space's tabs.
-- With the sidebar open, the title bar drops its + and search field. Open search with the magnifier in the sidebar header; Cmd/Ctrl+K stays unchanged.
-- Settings opens as a floating sheet over the live terminal. Press Esc or click outside to close it.
-- The Claude agent logo is now the Claude Code pixel mascot.
-- The subagent tray under sidebar rows and line counts in sidebar rows are removed. Subagents remain in the dock panel and agents board.
+- An agent in one tab can read and type into another through the kaze command: ls, read, send, keys, interrupt, wait, name and label. Claude Code can hand work to Codex and back.
+- A send arrives as one paste followed by Enter, tagged `<kaze from=...>` so the receiver can tell a peer from you.
+- Wait blocks until the other agent finishes, without polling.
+- Address a tab by id, by name, or by agent name when only one tab runs it.
+- Settings, Agents has an off-by-default Peer messaging instructions switch for Claude Code and for Codex. It adds instructions to ~/.claude/CLAUDE.md or ~/.codex/AGENTS.md (or $CODEX_HOME/AGENTS.md) so every agent in every tab knows the commands. Turning it off removes exactly that block.
+- Agent control uses the same local socket as the hooks and does no work when idle.
+- A wrong kaze command now prints usage instead of opening a second window.
 
 ## Download
 

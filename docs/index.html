@@ -60,7 +60,7 @@
       </div>
     </div>
   </section>
-  <div class="wrap news"><span class="tag">0.44</span><a href="#changelog">Spaces, tabs on top and a floating Settings <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
+  <div class="wrap news"><span class="tag">0.45</span><a href="#changelog">Agents that talk to each other <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
 
   <section class="k-sec wrap" aria-labelledby="demo-title">
     <header class="k-head">
@@ -104,6 +104,7 @@
       <button class="plate plate-btn" type="button" data-open="sessions" aria-label="See the sidebar"><img src="site-assets/kaze-sessions.png" alt="" width="2200" height="1440" loading="lazy"></button>
     </div>
     <dl class="index">
+      <div><dt><span class="b-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="8" height="12" rx="2"/><rect x="14" y="8" width="8" height="12" rx="2"/><path d="M10 8h7l-2-2M14 16H7l2 2"/></svg></span>Agents that talk to each other</dt><dd><p>Claude Code can hand work to Codex in another tab and read its reply, and Codex can do the same. The kaze command reads, sends a prompt as one paste followed by Enter, and waits for the other agent to finish without polling. Address a tab by id, name or its agent. In Settings, Agents, turn on Peer messaging instructions for each agent to teach it the commands. Control shares the hooks' local socket and does no work when idle.</p><a class="k-link" href="https://github.com/beefysalad/kaze-terminal#agent-to-agent-control">See the commands</a></dd></div>
       <div><dt><span class="b-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>Alert cards</dt><dd><p>When Claude asks or finishes, a card at the bottom right names the session the way the sidebar does, with its branch and slash command, what Claude said or the start of its reply, and how long it ran. <kbd>⌘</kbd> <kbd>J</kbd> opens the newest one. Native notifications reach you while Kaze is in the background; click one to open its session. An optional chime too.</p><a class="k-link" href="https://github.com/beefysalad/kaze-terminal#alerts-claude-code-hooks">Set up the hooks</a></dd></div>
       <div><dt><span class="b-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="19" r="2"/><path d="M5 8v1a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3V8M12 12v5"/></svg></span>Every subagent</dt><dd><p>Read Claude Code and Codex subagents in the dock panel or find them on the agents board. The panel reads like Claude's own transcript: its words first, a short sentence per step, edits open with line numbers and code colours, a click for a command’s output, then a formatted report. Agents started together keep their own names. <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>A</kbd> opens the agents board: filter and search every subagent and preview it without leaving the list.</p><span class="k-links"><button class="k-link" type="button" data-open="agents">See the subagents</button><button class="k-link" type="button" data-open="board">See the board</button></span></dd></div>
       <div><dt><span class="b-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg></span>Servers in the panel</dt><dd><p>Click a workspace member and its terminal opens as a tab in the panel under Claude, next to your subagents. Click the tab to type in it, click Claude’s terminal to take the keyboard back, hide the panel or expand a server to the main view. The panel keeps your session in view.</p><a class="k-link" href="https://github.com/beefysalad/kaze-terminal#workspace-members-in-the-panel">How the panel works</a></dd></div>
@@ -141,7 +142,23 @@
     </header>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.44</span><span class="badge">Latest</span><time datetime="2026-11-23">Nov 23, 2026</time></div>
+        <div class="release-meta"><span class="version">0.45</span><span class="badge">Latest</span><time datetime="2026-11-25">Nov 25, 2026</time></div>
+        <div class="release-body">
+          <h3>Agents that talk to each other</h3>
+          <ul>
+            <li>An agent in one tab can read and type into another through the kaze command: ls, read, send, keys, interrupt, wait, name and label. Claude Code can hand work to Codex and back.</li>
+            <li>A send arrives as one paste followed by Enter, tagged &lt;kaze from=...&gt; so the receiver can tell a peer from you.</li>
+            <li>Wait blocks until the other agent finishes, without polling.</li>
+            <li>Address a tab by id, by name, or by agent name when only one tab runs it.</li>
+            <li>Settings, Agents has an off-by-default Peer messaging instructions switch for Claude Code and for Codex. It adds instructions to ~/.claude/CLAUDE.md or ~/.codex/AGENTS.md (or $CODEX_HOME/AGENTS.md) so every agent in every tab knows the commands. Turning it off removes exactly that block.</li>
+            <li>Agent control uses the same local socket as the hooks and does no work when idle.</li>
+            <li>A wrong kaze command now prints usage instead of opening a second window.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.44</span><time datetime="2026-11-23">Nov 23, 2026</time></div>
         <div class="release-body">
           <h3>Spaces, tabs on top and a floating Settings</h3>
           <ul>
@@ -164,17 +181,6 @@
             <li><b>Left or right:</b> Settings, Appearance, Sidebar puts the sidebar on the right edge of the window. The title bar's buttons above it move with it. Left stays the default.</li>
             <li><b>A slim rail:</b> <kbd>⌘</kbd> <kbd>B</kbd> (Ctrl+Shift+B on Windows) now steps through full, rail and hidden. The rail shows each session as a small tile with its agent and whether it needs you, is running or is done. Hover a tile for its name; click it to open the session.</li>
             <li><b>Small windows:</b> a narrow window shows the rail instead of hiding the sidebar.</li>
-          </ul>
-        </div>
-      </li>
-
-      <li class="release">
-        <div class="release-meta"><span class="version">0.42</span><time datetime="2026-11-16">Nov 16, 2026</time></div>
-        <div class="release-body">
-          <h3>A new purple Kaze icon</h3>
-          <ul>
-            <li><b>A folded K with a terminal underscore:</b> a sharper purple mark now represents Kaze in the Dock, Finder, Windows taskbar and Alt+Tab.</li>
-            <li><b>One identity throughout:</b> the title bar, About, Settings footer, website and README use the new logo, with a deeper purple on light backgrounds.</li>
           </ul>
         </div>
       </li>
