@@ -79,6 +79,7 @@ const (
 )
 
 type window struct {
+	agentDocsNotice     <-chan string
 	control             controlHost
 	orchestratorEnabled bool
 	noteQuiet           time.Duration
@@ -307,6 +308,7 @@ func Run(w *app.Window, opt Options) error {
 		win.srv = srv
 		srv.SetControlContext(controlContextAdapter(&win.control, ctl.Options{Enabled: opt.Config.Control.Enabled, AgentTag: opt.Config.AgentTag}))
 	}
+	win.agentDocsNotice = agentInstructionsNotice(win.agentDocsPaths())
 	return win.loop()
 }
 
@@ -390,6 +392,13 @@ func (win *window) loop() error {
 	for {
 		var next event.Event
 		select {
+		case message := <-win.agentDocsNotice:
+			win.agentDocsNotice = nil
+			if message != "" {
+				win.note(message)
+				win.w.Invalidate()
+			}
+			continue
 		case id := <-activation:
 			win.systemActivation(id)
 			continue
