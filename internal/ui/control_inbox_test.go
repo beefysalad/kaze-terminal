@@ -207,3 +207,42 @@ func TestWorkerDoneClearsNeedsEvenWithUnreadAlert(t *testing.T) {
 		t.Fatal("stale alert hid actual status", got)
 	}
 }
+
+func TestWorkerExitNotesByCloseCause(t *testing.T) {
+	for _, cause := range []string{"parent kill", "owner close", "natural exit"} {
+		t.Run(cause, func(t *testing.T) {
+			win, st := workerWindow(t)
+			if r := win.applyWorker(ctl.Request{Op: "spawn", From: "t1", Agent: "claude", Task: "review"}); !r.OK {
+				t.Fatal(r)
+			}
+			win.workerHook(2, notify.KindPrompt)
+			switch cause {
+			case "parent kill":
+				if r := win.applyWorker(ctl.Request{Op: "kill", From: "t1", Tab: "t2"}); !r.OK {
+					t.Fatal(r)
+				}
+			case "owner close":
+				win.closeTab(2)
+			case "natural exit":
+				st.ptys[1].Close()
+				deadline := time.Now().Add(time.Second)
+				for exited, _ := win.mgr.Lookup(2).Session.Exited(); !exited; exited, _ = win.mgr.Lookup(2).Session.Exited() {
+					if time.Now().After(deadline) {
+						t.Fatal("session did not exit")
+					}
+					time.Sleep(time.Millisecond)
+				}
+			}
+			win.workerTick(win.wsNow())
+			win.workerTick(win.wsNow())
+			got := win.control.Tabs()[0].Inbox
+			if cause == "parent kill" {
+				if len(got) != 0 {
+					t.Fatalf("parent kill sent notes: %+v", got)
+				}
+			} else if len(got) != 1 || !strings.Contains(got[0].Text, "exited") {
+				t.Fatalf("exit notes: %+v", got)
+			}
+		})
+	}
+}

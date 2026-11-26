@@ -18,12 +18,16 @@ import (
 const controlTimeout = 5 * time.Second
 const controlMaxRequest = 64 << 10 // matches the notify server's JSON object cap
 
-const controlUsage = "usage: kaze ls [--children] [--json] | read <t> [--lines N] | send <t> <text|-> [--raw] [--if-idle] | name <t> <name> | label <t> k=v | keys <t> <key...> | interrupt <t> [--ctrl-c] | wait --children all|any [--timeout S] | wait <t> [--for TEXT] [--timeout S] [--quiet MS] | run [--name N] [--cwd D] [--label k=v]... [--mode read-only|edit] [--wait-start] <claude|codex|template> <task|-> | kill <t> | kill --children | report <text|-> | templates"
+const controlUsage = "usage: kaze ls [--children] [--json] | read <t> [--lines N] | send <t> <text|-> [--raw] [--if-idle] | name <t> <name> | label <t> k=v | keys <t> <key...> | interrupt <t> [--ctrl-c] | wait --children all|any [--timeout S] | wait <t> [--for TEXT] [--timeout S] [--quiet MS] | run [--name N] [--cwd D] [--label k=v]... [--mode read-only|edit] [--wait-start] <claude|codex|template> <task|-> | kill <t> | kill --children | report <text|-> | templates\nrun flags may appear before or immediately after the agent/template, before the final task. Use - (stdin) or -- before a task starting with -."
 
 // runControl performs one request without starting any window code.
 func runControl(args []string, env func(string) string, stdin io.Reader, stdout, stderr io.Writer) int {
 	req, asJSON, raw, ok := controlArgsWithRaw(args)
 	if !ok {
+		if len(args) > 0 && args[0] == "run" {
+			_, err := runArgs(args[1:])
+			fmt.Fprintln(stderr, "kaze: run:", err)
+		}
 		if len(args) == 3 && args[0] == "name" {
 			if _, e := control.ValidateName(nil, "", args[2]); e != nil {
 				fmt.Fprintln(stderr, "kaze: name:", e.Message)
@@ -211,6 +215,89 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 	return 0
 }
 
+// runArgs accepts options on either side of the agent, before the final task.
+func runArgs(args []string) (req control.Request, err error) {
+	req.Op = "spawn"
+	seen := map[string]bool{}
+	literal := false
+	for i := 0; i < len(args); {
+		flag := args[i]
+		if !literal && flag == "--" {
+			literal = true
+			i++
+			continue
+		}
+		if !literal && flag != "-" && strings.HasPrefix(flag, "-") {
+			if seen[flag] && flag != "--label" {
+				return req, fmt.Errorf("duplicate flag %s", flag)
+			}
+			seen[flag] = true
+			if flag == "--wait-start" {
+				req.WaitStart = true
+				i++
+				continue
+			}
+			switch flag {
+			case "--name", "--cwd", "--label", "--mode":
+			default:
+				return req, fmt.Errorf("unknown flag %s", flag)
+			}
+			if i+1 >= len(args) || args[i+1] == "" {
+				return req, fmt.Errorf("missing value for %s", flag)
+			}
+			value := args[i+1]
+			switch flag {
+			case "--name":
+				name, e := control.ValidateName(nil, "", value)
+				if e != nil {
+					return req, fmt.Errorf("invalid value for %s", flag)
+				}
+				req.Name = name
+			case "--cwd":
+				req.CWD = value
+			case "--mode":
+				if value != "edit" && value != "read-only" {
+					return req, fmt.Errorf("invalid value for %s", flag)
+				}
+				req.Mode = value
+			case "--label":
+				key, v, found := strings.Cut(value, "=")
+				if !found || control.ValidateLabel(key, v) != nil {
+					return req, fmt.Errorf("invalid value for %s", flag)
+				}
+				if req.Labels == nil {
+					req.Labels = map[string]string{}
+				}
+				if _, exists := req.Labels[key]; exists || len(req.Labels) >= 8 {
+					return req, fmt.Errorf("invalid value for %s", flag)
+				}
+				req.Labels[key] = v
+			default:
+				return req, fmt.Errorf("unknown flag %s", flag)
+			}
+			i += 2
+			continue
+		}
+		if req.Agent == "" {
+			if flag == "" || strings.HasPrefix(flag, "-") {
+				return req, fmt.Errorf("expected an agent or template")
+			}
+			req.Agent = flag
+			i++
+			continue
+		}
+		if i != len(args)-1 {
+			return req, fmt.Errorf("unexpected argument %q after task %q", args[i+1], flag)
+		}
+		if strings.TrimSpace(flag) == "" {
+			return req, fmt.Errorf("task must not be empty")
+		}
+		req.Task = flag
+		return req, nil
+	}
+	return req, fmt.Errorf("expected an agent or template and a final task")
+}
+
 func controlArgs(args []string) (control.Request, bool, bool) {
 	req, asJSON, _, ok := controlArgsWithRaw(args)
 	return req, asJSON, ok
@@ -231,63 +318,9 @@ func controlArgsWithRaw(args []string) (req control.Request, asJSON, raw, ok boo
 		}
 		asJSON, ok = seen["--json"], true
 	case "run":
-		req.Op = "spawn"
-		seen := map[string]bool{}
-		i := 1
-		for i < len(args) && strings.HasPrefix(args[i], "--") {
-			flag := args[i]
-			if seen[flag] && flag != "--label" {
-				return
-			}
-			seen[flag] = true
-			if flag == "--wait-start" {
-				req.WaitStart = true
-				i++
-				continue
-			}
-			if i+1 >= len(args) {
-				return
-			}
-			value := args[i+1]
-			if value == "" {
-				return
-			}
-			switch flag {
-			case "--name":
-				name, e := control.ValidateName(nil, "", value)
-				if e != nil {
-					return
-				}
-				req.Name = name
-			case "--cwd":
-				req.CWD = value
-			case "--mode":
-				if value != "edit" && value != "read-only" {
-					return
-				}
-				req.Mode = value
-			case "--label":
-				key, v, found := strings.Cut(value, "=")
-				if !found || control.ValidateLabel(key, v) != nil {
-					return
-				}
-				if req.Labels == nil {
-					req.Labels = map[string]string{}
-				}
-				if _, exists := req.Labels[key]; exists || len(req.Labels) >= 8 {
-					return
-				}
-				req.Labels[key] = v
-			default:
-				return
-			}
-			i += 2
-		}
-		if len(args)-i != 2 {
-			return
-		}
-		req.Agent, req.Task = args[i], args[i+1]
-		ok = req.Agent != "" && !strings.HasPrefix(req.Agent, "-") && strings.TrimSpace(req.Task) != ""
+		var err error
+		req, err = runArgs(args[1:])
+		ok = err == nil
 	case "kill":
 		if len(args) != 2 {
 			return

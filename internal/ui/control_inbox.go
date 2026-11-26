@@ -116,6 +116,10 @@ func (h *controlHost) recordOwnerKey(id tabs.TabID, now time.Time) {
 	}
 }
 func (win *window) workerNote(id tabs.TabID, w *worker, event string) {
+	if event == "exited" && w.killedByParent {
+		w.killedByParent = false
+		return
+	}
 	if w.noted[event] {
 		return
 	}

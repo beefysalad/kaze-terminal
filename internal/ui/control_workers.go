@@ -28,6 +28,7 @@ type worker struct {
 	exited              bool
 	worked              bool
 	needs               bool
+	killedByParent      bool
 	noted               map[string]bool
 }
 type controlWorkerRequest struct {
@@ -174,6 +175,9 @@ func (win *window) applyWorkerContext(ctx context.Context, req ctl.Request) ctl.
 		}
 		if tab.Role != "worker" || tab.Parent != parent.ID {
 			return workerFailure(ctl.CodeNotAllowed, "only your own workers can be closed")
+		}
+		if w := win.workers[tab.ID]; w != nil {
+			w.killedByParent = true
 		}
 		win.closeTab(tab.ID)
 		return ctl.Reply{OK: true, Text: "closed " + req.Tab}

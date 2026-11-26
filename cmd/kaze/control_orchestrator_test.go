@@ -262,3 +262,52 @@ func TestOrchestratorStdinBoundaries(t *testing.T) {
 		}
 	}
 }
+
+func TestRunFlagOrders(t *testing.T) {
+	flags := []string{"--name", "reviewer", "--cwd", "/tmp", "--label", "a=b", "--label", "c=d", "--mode", "edit", "--wait-start"}
+	for _, agent := range []string{"codex", "claude", "my-template"} {
+		for _, after := range []bool{false, true} {
+			args := []string{"run"}
+			if after {
+				args = append(args, agent)
+			}
+			args = append(args, flags...)
+			if !after {
+				args = append(args, agent)
+			}
+			args = append(args, "task")
+			r, _, ok := controlArgs(args)
+			if !ok || r.Agent != agent || r.Task != "task" || r.Name != "reviewer" || r.CWD != "/tmp" || r.Mode != "edit" || !r.WaitStart || len(r.Labels) != 2 {
+				t.Errorf("%v: %+v, %v", args, r, ok)
+			}
+		}
+	}
+	for _, task := range []string{"--name", "-task"} {
+		if r, _, ok := controlArgs([]string{"run", "codex", "--", task}); !ok || r.Task != task {
+			t.Errorf("literal task %q: %+v %v", task, r, ok)
+		}
+	}
+	for _, tail := range [][]string{
+		{"--name", "a", "--name", "b", "task"}, {"--cwd", "a", "--cwd", "b", "task"},
+		{"--mode", "edit", "--mode", "edit", "task"}, {"--wait-start", "--wait-start", "task"},
+		{"--label", "a=b", "--label", "a=c", "task"}, {"--name", "a"}, {"--wait-start"}, {"-task"},
+	} {
+		args := append([]string{"run", "codex"}, tail...)
+		if _, _, ok := controlArgs(args); ok {
+			t.Errorf("accepted %v", args)
+		}
+	}
+	for _, args := range [][]string{
+		{"run", "codex", "--wat", "task"}, {"run", "--wat", "codex", "task"},
+		{"run", "codex", "task", "--wat"},
+	} {
+		var out, errs bytes.Buffer
+		code := runControl(args, func(string) string { t.Error("bad flags accessed env"); return "" }, nil, &out, &errs)
+		if code != 2 || !strings.Contains(errs.String(), "--wat") || !strings.Contains(errs.String(), "before or immediately after") {
+			t.Errorf("%v: %d %q", args, code, errs.String())
+		}
+	}
+	if !strings.Contains(controlUsage, "before or immediately after") {
+		t.Error("help missing accepted order")
+	}
+}
