@@ -3,6 +3,7 @@ package orchestrate
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -81,16 +82,25 @@ func TestTemplateFilesAndNames(t *testing.T) {
 	if err := os.WriteFile(outside, []byte(valid), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(outside, filepath.Join(dir, "link.md")); err != nil {
-		t.Fatal(err)
-	}
-	if _, _, err := LoadTemplate(dir, "link"); err == nil {
-		t.Fatal("symlink accepted")
-	}
 	catalog := ListTemplates(dir)
-	if len(catalog.Templates) != 1 || len(catalog.Warnings) < 3 {
+	if len(catalog.Templates) != 1 || len(catalog.Warnings) < 2 {
 		t.Fatalf("%+v", catalog)
 	}
+	t.Run("symlink", func(t *testing.T) {
+		if err := os.Symlink(outside, filepath.Join(dir, "link.md")); err != nil {
+			if runtime.GOOS == "windows" {
+				t.Skipf("symlink creation unavailable: %v", err)
+			}
+			t.Fatal(err)
+		}
+		if _, _, err := LoadTemplate(dir, "link"); err == nil {
+			t.Fatal("symlink accepted")
+		}
+		catalog := ListTemplates(dir)
+		if len(catalog.Templates) != 1 || len(catalog.Warnings) < 3 {
+			t.Fatalf("%+v", catalog)
+		}
+	})
 }
 func TestTemplateLimitAndResolution(t *testing.T) {
 	dir := t.TempDir()
