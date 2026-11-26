@@ -188,3 +188,29 @@ func TestWaitShellWorkingShell(t *testing.T) {
 		}
 	})
 }
+
+// An agent with no hook state ("unknown") is waited on by output quiescence,
+// like a shell, not returned at once like a hook-reported idle.
+func TestWaitUnknownUsesQuiescence(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		h := newWaitFixture("unknown")
+		done := make(chan Reply, 1)
+		go func() { done <- HandleContext(context.Background(), h, Request{Op: "wait", Tab: "t1", Timeout: 5}) }()
+		synctest.Wait()
+		select {
+		case <-done:
+			t.Fatal("unknown returned before the output went quiet")
+		default:
+		}
+		time.Sleep(2 * time.Second)
+		synctest.Wait()
+		select {
+		case r := <-done:
+			if !r.OK {
+				t.Fatalf("%+v", r)
+			}
+		default:
+			t.Fatal("quiet unknown tab did not return")
+		}
+	})
+}

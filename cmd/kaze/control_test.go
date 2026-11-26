@@ -10,7 +10,61 @@ import (
 	"time"
 
 	"github.com/beefysalad/kaze-terminal/internal/control"
+	"github.com/beefysalad/kaze-terminal/internal/notify"
 )
+
+func TestControlSendHTMLFitsWireLimit(t *testing.T) {
+	srv, err := notify.Listen(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { srv.Close() })
+	requests := make(chan control.Request, 1)
+	srv.SetControl(func(raw json.RawMessage) any {
+		var req control.Request
+		if err := json.Unmarshal(raw, &req); err != nil {
+			return control.Reply{Error: &control.Error{Code: "invalid_request", Message: err.Error()}}
+		}
+		requests <- req
+		return control.Reply{OK: true}
+	})
+	env := func(key string) string {
+		switch key {
+		case "KAZE_SOCKET":
+			return srv.Addr()
+		case "KAZE_NOTIFY_TOKEN":
+			return srv.Token()
+		}
+		return ""
+	}
+	text := strings.Repeat("<>&", 10000)
+	var out, errs bytes.Buffer
+	if code := runControl([]string{"send", "t2", text}, env, nil, &out, &errs); code != 0 {
+		t.Fatalf("code=%d stderr=%q", code, errs.String())
+	}
+	if got := receiveControlRequest(t, requests).Text; got != text {
+		t.Fatalf("received %d bytes, want %d", len(got), len(text))
+	}
+}
+
+func TestControlRejectsOversizedEncodedRequestBeforeDial(t *testing.T) {
+	for _, text := range []string{strings.Repeat("\"", control.MaxTextBytes), strings.Repeat("\x00", 12000)} {
+		env := func(key string) string {
+			switch key {
+			case "KAZE_SOCKET":
+				return "invalid-address" // No connection should be attempted.
+			case "KAZE_NOTIFY_TOKEN":
+				return "test-token"
+			}
+			return ""
+		}
+		var out, errs bytes.Buffer
+		code := runControl([]string{"send", "t2", text}, env, nil, &out, &errs)
+		if code != 2 || !strings.Contains(errs.String(), "encoded request exceeds 64 KiB") || out.Len() != 0 {
+			t.Fatalf("code=%d stdout=%q stderr=%q", code, out.String(), errs.String())
+		}
+	}
+}
 
 // Each fixture owns its listener and bounds accept, read, write and cleanup.
 func controlServer(t *testing.T, reply control.Reply) (func(string) string, <-chan control.Request) {

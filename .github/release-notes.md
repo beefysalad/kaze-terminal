@@ -1,12 +1,9 @@
 ## What's changed
 
-- An agent in one tab can read and type into another through the kaze command: ls, read, send, keys, interrupt, wait, name and label. Claude Code can hand work to Codex and back.
-- A send arrives as one paste followed by Enter, tagged `<kaze from=...>` so the receiver can tell a peer from you.
-- Wait blocks until the other agent finishes, without polling.
-- Address a tab by id, by name, or by agent name when only one tab runs it.
-- Settings, Agents has an off-by-default Peer messaging instructions switch for Claude Code and for Codex. It adds instructions to ~/.claude/CLAUDE.md or ~/.codex/AGENTS.md (or $CODEX_HOME/AGENTS.md) so every agent in every tab knows the commands. Turning it off removes exactly that block.
-- Agent control uses the same local socket as the hooks and does no work when idle.
-- A wrong kaze command now prints usage instead of opening a second window.
+- After a send, the target counts as working until its next prompt starts, so wait no longer returns at once on the previous turn's idle state.
+- Agents Kaze finds only by looking at the program in front of a tab, such as a Codex whose hooks did not reach Kaze, now show unknown instead of idle. Wait uses output quiet time for them.
+- A request over the 64 KiB cap now fails with a clear message and exit code 2 instead of a silent end of input.
+- A tag cannot be rebuilt out of nested pieces of a closing tag.
 
 ## Download
 

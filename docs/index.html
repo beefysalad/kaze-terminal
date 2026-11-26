@@ -1,12 +1,15 @@
 <!doctype html>
 <html lang="en">
 <head>
+  <script>document.documentElement.classList.add('js');</script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Kaze | Light, fast, and out of the way.</title>
   <meta name="description" content="A lightweight, open-source terminal for Claude Code and Codex on macOS and Windows. Keep sessions in view, see what needs you, and keep your servers close.">
   <link rel="icon" href="site-assets/kaze-icon.svg?v=3">
+  <link rel="preload" href="site-assets/Manrope.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="site-assets/JetBrainsMono-Regular.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="site-assets/lander.css">
 </head>
 <body>
@@ -23,9 +26,9 @@
   <section class="hero" aria-labelledby="hero-title">
     <div class="wrap">
       <div class="hero-inner">
-        <h1 id="hero-title">Light, fast,<span class="q">and out of the way.</span></h1>
-        <p class="lede">A terminal for running Claude Code and Codex all day. <b>Built for the long session.</b> Keep your sessions in view, see when an agent needs you, and keep your servers one click away.</p>
-        <div class="actions">
+        <h1 id="hero-title"><span class="hero-line hero-enter">Light, fast,</span><span class="q hero-enter">and out of the way.</span></h1>
+        <p class="lede hero-enter">A terminal for running Claude Code and Codex all day. <b>Built for the long session.</b> Keep your sessions in view, see when an agent needs you, and keep your servers one click away.</p>
+        <div class="actions hero-enter">
           <a class="button primary" href="https://github.com/beefysalad/kaze-terminal/releases/latest/download/Kaze-macOS.zip" data-download="mac"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg>Download for macOS</a>
           <a class="button secondary" href="https://github.com/beefysalad/kaze-terminal/releases/latest/download/Kaze-Windows-x64.zip" data-download="windows"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M0 0h11.377v11.372H0zm12.623 0H24v11.372H12.623zM0 12.623h11.377V24H0zm12.623 0H24V24H12.623z"/></svg>Download for Windows</a>
         </div>
@@ -37,7 +40,7 @@
         <p class="first-time">Free and open source, for macOS and Windows. First time installing? <a href="#first-launch">Here’s how</a></p>
       </div>
     </div>
-    <div class="wall" aria-label="Kaze screenshots">
+    <div class="wall hero-enter" aria-label="Kaze screenshots">
       <div class="wall-plane">
         <div class="wall-col">
           <button class="tile" type="button" data-shot="sessions"><img src="site-assets/kaze-sessions.png" alt="" width="2200" height="1440" fetchpriority="high"></button>
@@ -60,7 +63,7 @@
       </div>
     </div>
   </section>
-  <div class="wrap news"><span class="tag">0.45</span><a href="#changelog">Agents that talk to each other <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
+  <div class="wrap news"><span class="tag">0.45.1</span><a href="#changelog">Steadier send and wait <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
 
   <section class="k-sec wrap" aria-labelledby="demo-title">
     <header class="k-head">
@@ -142,7 +145,20 @@
     </header>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.45</span><span class="badge">Latest</span><time datetime="2026-11-25">Nov 25, 2026</time></div>
+        <div class="release-meta"><span class="version">0.45.1</span><span class="badge">Latest</span><time datetime="2026-11-26">Nov 26, 2026</time></div>
+        <div class="release-body">
+          <h3>Steadier send and wait</h3>
+          <ul>
+            <li>After a send, the target counts as working until its next prompt starts, so wait no longer returns at once on the previous turn's idle state.</li>
+            <li>Agents Kaze finds only by looking at the program in front of a tab, such as a Codex whose hooks did not reach Kaze, now show unknown instead of idle. Wait uses output quiet time for them.</li>
+            <li>A request over the 64 KiB cap now fails with a clear message and exit code 2 instead of a silent end of input.</li>
+            <li>A tag cannot be rebuilt out of nested pieces of a closing tag.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.45</span><time datetime="2026-11-25">Nov 25, 2026</time></div>
         <div class="release-body">
           <h3>Agents that talk to each other</h3>
           <ul>
@@ -169,18 +185,6 @@
             <li>Settings opens as a floating sheet over the live terminal. Press Esc or click outside to close it.</li>
             <li>The Claude agent logo is now the Claude Code pixel mascot.</li>
             <li>The subagent tray under sidebar rows and line counts in sidebar rows are removed. Subagents remain in the dock panel and agents board.</li>
-          </ul>
-        </div>
-      </li>
-
-      <li class="release">
-        <div class="release-meta"><span class="version">0.43</span><time datetime="2026-11-16">Nov 16, 2026</time></div>
-        <div class="release-body">
-          <h3>The sidebar on either side, and a slim rail</h3>
-          <ul>
-            <li><b>Left or right:</b> Settings, Appearance, Sidebar puts the sidebar on the right edge of the window. The title bar's buttons above it move with it. Left stays the default.</li>
-            <li><b>A slim rail:</b> <kbd>⌘</kbd> <kbd>B</kbd> (Ctrl+Shift+B on Windows) now steps through full, rail and hidden. The rail shows each session as a small tile with its agent and whether it needs you, is running or is done. Hover a tile for its name; click it to open the session.</li>
-            <li><b>Small windows:</b> a narrow window shows the rail instead of hiding the sidebar.</li>
           </ul>
         </div>
       </li>
@@ -263,9 +267,9 @@ go build -ldflags "-H=windowsgui" -o kaze.exe ./cmd/kaze  # Windows</code></pre>
 
 <dialog class="lightbox" id="lightbox" aria-label="Kaze screenshot">
   <button class="close" type="button" data-close>Close · Esc</button>
-  <button class="nav-btn prev" type="button" data-step="-1" aria-label="Previous screenshot">‹</button>
+  <button class="nav-btn prev" type="button" data-step="-1" aria-label="Previous screenshot"><svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="m10 3-5 5 5 5"/></svg></button>
   <figure><img id="lightbox-img" src="" alt=""><figcaption><span id="lightbox-cap"></span><span class="keys">← → to browse</span></figcaption></figure>
-  <button class="nav-btn next" type="button" data-step="1" aria-label="Next screenshot">›</button>
+  <button class="nav-btn next" type="button" data-step="1" aria-label="Next screenshot"><svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg></button>
 </dialog>
 <div id="copy-status" class="sr-only" role="status" aria-live="polite"></div>
 <script src="site-assets/lander.js"></script>
