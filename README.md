@@ -11,10 +11,12 @@
 </p>
 
 kaze is my personal terminal: a small, fast terminal with project spaces and tabs, written in Go with
-[Gio](https://gioui.org). I built it for working in [Claude Code](https://claude.com/claude-code)
-all day, so it does a few things well (project spaces, fast redraws, Japanese text, Claude Code's
-symbols and colour emoji) and leaves out most of what a full terminal suite has. Settings floats over the live terminal for
-the everyday choices, and everything it changes lives in one config file you can also edit by hand.
+[Gio](https://gioui.org). Through their own hooks, it knows which tabs are running
+[Claude Code](https://claude.com/claude-code) or Codex and shows which agent is working,
+waiting for me or done. Alert cards tell me when an agent needs me, and agents can message
+each other and start workers in new tabs. Underneath it is a plain terminal for any shell or
+program. Settings floats over the live terminal, and everything it changes lives in one
+config file I can also edit by hand.
 
 ## Why "kaze"
 
@@ -751,7 +753,7 @@ refuse workers unless `first_message` is `delivered` and the worker is not in
 
 ## Agents starting agents (workers)
 
-Built on `feat/orchestrator-build`, pending release. An agent can start Claude Code
+Available in 0.46. An agent can start Claude Code
 or Codex in background worker tabs, give each one task, wait for results and stop
 them. The active tab stays where it was. Workers appear under their parent in the
 sidebar, share its space and have a worker mark in the tab strip. The status bar
@@ -1330,7 +1332,7 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 Done:
 
-- Built on `feat/orchestrator-build`, pending release: [agents starting agents](#agents-starting-agents-workers), with background worker tabs, consent, reports, child waits, limits and owner templates. Windows runtime and native owner checks remain open.
+- 0.46: [agents starting agents](#agents-starting-agents-workers), with background worker tabs, consent, reports, child waits, limits and owner templates. Windows runtime and native owner checks remain open.
 - Editable shortcuts: change any of them in Settings > Shortcuts, or write `none` to drop one (built on `feat/shortcuts-edit`, ships in 0.31 with the palette redesign).
 - Find in the terminal and the docked tabs (#155): Ctrl+Shift+F or Cmd+F, every match marked, on the whole scrollback (built on `feat/find`, release next).
 - Next release (built on `feat/pane-reading`): the subagent panel and the board preview open edits inline with line numbers and code colours, fold quiet commands and open failures.

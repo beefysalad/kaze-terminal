@@ -1,6 +1,27 @@
 # kaze handoff
 
-Last updated: 2026-11-26, 0.45.1 is a fix release for send and wait; owner checks still open: Claude Code to Codex both ways on the installed build, the Settings switch on a real home folder, Windows runtime.
+Last updated: 2026-11-26, 0.46 is prepared locally on release/0.46; no push, merge or tag. Real-agent and Windows owner gates remain open.
+
+## Release 0.46 prepared locally
+
+`release/0.46` prepares the worker feature for a later release. Version 0.46,
+macOS short version and both regenerated Windows resources agree. README,
+release notes, the news strip and both changelogs describe worker tabs, consent,
+reports, limits, templates and the native claude.exe requirement on Windows.
+The lander retains 0.46, 0.45.1 and 0.45; the archive keeps all releases.
+
+The existing flat lilac lander gains a worker feature row and a section after
+Workspaces, using its same two-column layout. Four Midnight captures were
+retaken from the release commit in a detached demo worktree: nested workers,
+the named worker popover, live consent and Settings showing 0.46. All are
+2200 x 1440 and under 342 KB. The capture helper and private Gio patch remain
+outside this branch, with no screen capture or global input. Other site
+captures remain historical; see `docs/site-assets/SCREENSHOTS.md`.
+
+This is local preparation only. The feature PR is not merged. G2/G3 real-agent
+round trips and native Windows checks remain open; demo captures and cross-builds
+do not close them. Report: `.superpowers/sdd/orchestrator/task-R-report.md`.
+The orchestrator is t4. No push, merge, tag or installed-app change.
 
 ## Orchestrator: tasks 1 to 11 built, pending review and release
 

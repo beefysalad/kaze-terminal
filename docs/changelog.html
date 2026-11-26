@@ -22,7 +22,22 @@
     <div class="section-intro"><a class="archive-back" href="./#changelog">Back to Kaze</a><h1 id="changelog-title">Changelog.</h1><p>Features, improvements and fixes, release by release. Kaze checks for updates in Settings, Updates.</p></div>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.45.1</span><span class="badge">Latest</span><time datetime="2026-11-26">Nov 26, 2026</time></div>
+        <div class="release-meta"><span class="version">0.46</span><span class="badge">Latest</span><time datetime="2026-11-26">Nov 26, 2026</time></div>
+        <div class="release-body">
+          <h3>Agents that start agents</h3>
+          <ul>
+            <li>An agent can start Claude Code or Codex workers in background tabs with kaze run, wait for them, read their reports and stop them.</li>
+            <li>Workers nest under their parent in the same space, with a worker mark, a status bar count and Stop all workers.</li>
+            <li>Off by default: enable Settings &gt; Agents &gt; Let agents start workers. The first time an agent asks to start workers, Kaze asks you to allow it.</li>
+            <li>Templates live in the config folder. Limits keep each agent to 4 workers and Kaze to 8 in total.</li>
+            <li>Workers close with their parent and never come back after a restart. A worker waiting on a trust or approval dialog is left for you to answer.</li>
+            <li>Only Claude Code and Codex can be workers. On Windows, Claude Code needs the native claude.exe.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.45.1</span><time datetime="2026-11-26">Nov 26, 2026</time></div>
         <div class="release-body">
           <h3>Steadier send and wait</h3>
           <ul>
@@ -575,6 +590,6 @@
     <a class="all-releases" href="https://github.com/beefysalad/kaze-terminal/releases">Every release on GitHub <span aria-hidden="true">↗</span></a>
   </section>
 </main>
-<footer class="wrap"><a class="brand brand-foot" href="./#main" aria-label="Kaze home"><img src="site-assets/kaze-lockup.svg?v=3" alt="" width="80" height="24"></a><p>Made for the long session.</p><div><a href="https://github.com/beefysalad/kaze-terminal">GitHub</a><a href="https://github.com/beefysalad/kaze-terminal/blob/main/LICENSE">MIT License</a></div></footer>
+<footer class="wrap"><a class="brand brand-foot" href="./#main" aria-label="Kaze home"><img src="site-assets/kaze-lockup.svg?v=3" alt="" width="80" height="24"></a><p>Kaze means “wind”. Light, fast, and out of the way.</p><div><a href="https://github.com/beefysalad/kaze-terminal">GitHub</a><a href="https://github.com/beefysalad/kaze-terminal/blob/main/LICENSE">MIT License</a></div></footer>
 </body>
 </html>
