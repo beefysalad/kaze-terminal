@@ -73,7 +73,7 @@ func TestControlListLabels(t *testing.T) {
 			t.Fatal(c, errs.String())
 		}
 		if len(args) == 1 {
-			if !strings.Contains(out.String(), "a=b,role=review\n") || !strings.HasSuffix(out.String(), "\t-\n") {
+			if !strings.Contains(out.String(), "a=b,role=review\t-\t-\n") || !strings.HasSuffix(out.String(), "\t-\n") {
 				t.Fatalf("plain %q", out.String())
 			}
 		} else if !strings.Contains(out.String(), `"labels":{"a":"b","role":"review"}`) {

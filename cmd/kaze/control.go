@@ -18,7 +18,7 @@ import (
 const controlTimeout = 5 * time.Second
 const controlMaxRequest = 64 << 10 // matches the notify server's JSON object cap
 
-const controlUsage = "usage: kaze ls [--json] | read <t> [--lines N] | send <t> <text|-> [--raw] [--if-idle] | name <t> <name> | label <t> k=v | keys <t> <key...> | interrupt <t> [--ctrl-c] | wait <t> [--for TEXT] [--timeout S] [--quiet MS]"
+const controlUsage = "usage: kaze ls [--children] [--json] | read <t> [--lines N] | send <t> <text|-> [--raw] [--if-idle] | name <t> <name> | label <t> k=v | keys <t> <key...> | interrupt <t> [--ctrl-c] | wait <t> [--for TEXT] [--timeout S] [--quiet MS] | run [--name N] [--cwd D] [--label k=v]... [--mode read-only|edit] [--wait-start] <claude|codex|template> <task|-> | kill <t> | kill --children | report <text|-> | templates"
 
 // runControl performs one request without starting any window code.
 func runControl(args []string, env func(string) string, stdin io.Reader, stdout, stderr io.Writer) int {
@@ -36,26 +36,43 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 		}
 		return 2
 	}
-	if req.Op == "send" && req.Text == "-" {
+	if req.Op == "templates" {
+		if _, err := fmt.Fprintln(stdout, "no templates"); err != nil {
+			return 1
+		}
+		return 0
+	}
+	if req.Op == "kill" && req.Tab == "--children" {
+		return killControlChildren(env, stdout, stderr)
+	}
+	text, capBytes := &req.Text, control.MaxTextBytes
+	switch req.Op {
+	case "spawn":
+		text, capBytes = &req.Task, 16<<10
+	case "report":
+		capBytes = control.MaxReportBytes
+	}
+	if (req.Op == "send" || req.Op == "spawn" || req.Op == "report") && *text == "-" {
 		if stdin == nil {
-			fmt.Fprintln(stderr, "kaze: send - needs stdin")
+			fmt.Fprintln(stderr, "kaze: - needs stdin")
 			return 2
 		}
-		b, err := io.ReadAll(io.LimitReader(stdin, control.MaxTextBytes+1))
+		b, err := io.ReadAll(io.LimitReader(stdin, int64(capBytes+1)))
 		if err != nil {
 			fmt.Fprintln(stderr, "kaze: stdin:", err)
 			return 1
 		}
-		req.Text = string(b)
+		*text = string(b)
 	}
-	if len(req.Text) > control.MaxTextBytes {
-		fmt.Fprintln(stderr, "kaze: send text exceeds 32 KiB")
+	if len(*text) > capBytes {
+		fmt.Fprintf(stderr, "kaze: text_too_large: text exceeds %d KiB\n", capBytes>>10)
 		return 2
 	}
-	if req.Op == "send" && !raw {
-		req.From = env("KAZE_TAB_ID")
-		if req.From != "" && !strings.HasPrefix(req.From, "t") {
-			req.From = "t" + req.From
+	if (req.Op == "send" && !raw) || req.Op == "spawn" || req.Op == "kill" || req.Op == "report" || (req.Op == "ls" && hasControlFlag(args, "--children")) {
+		req.From = controlCaller(env)
+		if req.From == "" && req.Op != "send" {
+			fmt.Fprintln(stderr, "kaze: KAZE_TAB_ID is required; run inside a Kaze tab")
+			return 1
 		}
 	}
 	addr := env("KAZE_SOCKET")
@@ -96,6 +113,12 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 	if _, err = conn.Write(encoded); err != nil {
 		return controlNetworkError(err, stderr)
 	}
+	if req.Op == "spawn" && req.WaitStart {
+		// The server allows five seconds to apply plus thirty for delivery.
+		if err = conn.SetReadDeadline(time.Now().Add(35*time.Second + controlTimeout)); err != nil {
+			return controlNetworkError(err, stderr)
+		}
+	}
 	if req.Op == "wait" {
 		if err = conn.SetReadDeadline(time.Now().Add(time.Duration(req.Timeout)*time.Second + controlTimeout)); err != nil {
 			return controlNetworkError(err, stderr)
@@ -111,9 +134,11 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 		case control.CodeUnknownKey:
 			fmt.Fprintln(stderr, "allowed keys:", control.AllowedKeys)
 			return 2
-		case "refused", "busy_server", control.CodeBusy, control.CodeDisabled, control.CodeNotAllowed:
+		case "refused", "busy_server", control.CodeBusy, control.CodeDisabled, control.CodeNotAllowed, control.CodeSpawnDisabled, control.CodeLimit, control.CodeRateLimited, "consent_denied":
 			return 3
-		case "timeout":
+		case control.CodeBadCWD, control.CodeUnknownAgent, "unknown_template", control.CodeTextTooLarge:
+			return 2
+		case "timeout", "consent_timeout":
 			return 124
 		}
 		return 1
@@ -128,6 +153,15 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 	if reply.Warning != "" {
 		fmt.Fprintln(stderr, "kaze: warning:", reply.Warning)
 	}
+	if req.Op == "ls" && hasControlFlag(args, "--children") {
+		children := make([]control.TabInfo, 0, len(reply.Tabs))
+		for _, tab := range reply.Tabs {
+			if tab.Parent == req.From && tab.Role == "worker" {
+				children = append(children, tab)
+			}
+		}
+		reply.Tabs = children
+	}
 	if asJSON {
 		err = json.NewEncoder(stdout).Encode(reply)
 	} else {
@@ -141,10 +175,12 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 				if agent == "" {
 					agent = "-"
 				}
-				if _, err = fmt.Fprintf(stdout, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", tab.ID, name, tab.Space, agent, tab.Status, tab.Folder, controlLabels(tab.Labels)); err != nil {
+				if _, err = fmt.Fprintf(stdout, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", tab.ID, name, tab.Space, agent, tab.Status, tab.Folder, controlLabels(tab.Labels), controlColumn(tab.Parent), controlColumn(tab.Role)); err != nil {
 					break
 				}
 			}
+		case "spawn", "kill":
+			_, err = fmt.Fprintln(stdout, reply.Text)
 		case "read":
 			_, err = io.WriteString(stdout, reply.Text)
 		case "send":
@@ -179,8 +215,86 @@ func controlArgsWithRaw(args []string) (req control.Request, asJSON, raw, ok boo
 	req.Op = args[0]
 	switch req.Op {
 	case "ls":
-		ok = len(args) == 1 || (len(args) == 2 && args[1] == "--json")
-		asJSON = len(args) == 2
+		seen := map[string]bool{}
+		for _, flag := range args[1:] {
+			if (flag != "--json" && flag != "--children") || seen[flag] {
+				return
+			}
+			seen[flag] = true
+		}
+		asJSON, ok = seen["--json"], true
+	case "run":
+		req.Op = "spawn"
+		seen := map[string]bool{}
+		i := 1
+		for i < len(args) && strings.HasPrefix(args[i], "--") {
+			flag := args[i]
+			if seen[flag] && flag != "--label" {
+				return
+			}
+			seen[flag] = true
+			if flag == "--wait-start" {
+				req.WaitStart = true
+				i++
+				continue
+			}
+			if i+1 >= len(args) {
+				return
+			}
+			value := args[i+1]
+			if value == "" {
+				return
+			}
+			switch flag {
+			case "--name":
+				name, e := control.ValidateName(nil, "", value)
+				if e != nil {
+					return
+				}
+				req.Name = name
+			case "--cwd":
+				req.CWD = value
+			case "--mode":
+				if value != "edit" && value != "read-only" {
+					return
+				}
+				req.Mode = value
+			case "--label":
+				key, v, found := strings.Cut(value, "=")
+				if !found || control.ValidateLabel(key, v) != nil {
+					return
+				}
+				if req.Labels == nil {
+					req.Labels = map[string]string{}
+				}
+				if _, exists := req.Labels[key]; exists || len(req.Labels) >= 8 {
+					return
+				}
+				req.Labels[key] = v
+			default:
+				return
+			}
+			i += 2
+		}
+		if len(args)-i != 2 {
+			return
+		}
+		req.Agent, req.Task = args[i], args[i+1]
+		ok = req.Agent != "" && !strings.HasPrefix(req.Agent, "-") && strings.TrimSpace(req.Task) != ""
+	case "kill":
+		if len(args) != 2 {
+			return
+		}
+		req.Tab = args[1]
+		ok = req.Tab == "--children" || (req.Tab != "" && !strings.HasPrefix(req.Tab, "-"))
+	case "report":
+		if len(args) != 2 {
+			return
+		}
+		req.Text = args[1]
+		ok = strings.TrimSpace(req.Text) != "" && !strings.HasPrefix(req.Text, "--")
+	case "templates":
+		ok = len(args) == 1
 	case "read":
 		if len(args) != 2 && len(args) != 4 {
 			return
@@ -330,7 +444,7 @@ func controlNetworkError(err error, stderr io.Writer) int {
 func dispatchControl(args []string, env func(string) string, stdin io.Reader, stdout, stderr io.Writer) (bool, int) {
 	if len(args) > 0 {
 		switch args[0] {
-		case "ls", "read", "send", "keys", "interrupt", "wait", "name", "label":
+		case "ls", "read", "send", "keys", "interrupt", "wait", "name", "label", "run", "kill", "report", "templates":
 			return true, runControl(args, env, stdin, stdout, stderr)
 		case "help", "--help", "-h":
 			fmt.Fprintln(stdout, controlUsage)
@@ -362,4 +476,45 @@ func controlLabels(labels map[string]string) string {
 		pairs = append(pairs, k+"="+labels[k])
 	}
 	return strings.Join(pairs, ",")
+}
+
+func controlColumn(value string) string {
+	if value == "" {
+		return "-"
+	}
+	return value
+}
+func hasControlFlag(args []string, flag string) bool {
+	for _, arg := range args[1:] {
+		if arg == flag {
+			return true
+		}
+	}
+	return false
+}
+func controlCaller(env func(string) string) string {
+	id := env("KAZE_TAB_ID")
+	if id != "" && !strings.HasPrefix(id, "t") {
+		id = "t" + id
+	}
+	return id
+}
+
+// Use the same bounded transport and exit handling for each request. A failed
+// close ends the operation immediately, preserving output for prior successes.
+func killControlChildren(env func(string) string, stdout, stderr io.Writer) int {
+	var listing bytes.Buffer
+	if code := runControl([]string{"ls", "--children", "--json"}, env, nil, &listing, stderr); code != 0 {
+		return code
+	}
+	var reply control.Reply
+	if err := json.Unmarshal(listing.Bytes(), &reply); err != nil {
+		return 1
+	}
+	for _, child := range reply.Tabs {
+		if code := runControl([]string{"kill", child.ID}, env, nil, stdout, stderr); code != 0 {
+			return code
+		}
+	}
+	return 0
 }

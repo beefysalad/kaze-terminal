@@ -74,6 +74,9 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		}
 		return Reply{OK: true}
 	}
+	if req.Op == "report" {
+		return report(host, req)
+	}
 	if req.Op == "ls" {
 		return Reply{OK: true, Tabs: host.Tabs()}
 	}

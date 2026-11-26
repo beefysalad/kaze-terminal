@@ -128,7 +128,7 @@ func receiveControlRequest(t *testing.T, requests <-chan control.Request) contro
 
 func TestControlList(t *testing.T) {
 	reply := control.Reply{OK: true, Tabs: []control.TabInfo{
-		{ID: "t1", Name: "review", Space: "project", Agent: "codex", Status: "working", Folder: "/tmp/my project"},
+		{ID: "t1", Name: "review", Space: "project", Agent: "codex", Status: "working", Folder: "/tmp/my project", Parent: "t9", Role: "worker"},
 		{ID: "t2", Space: "Shell", Status: "shell", Folder: "/tmp"},
 	}}
 	for _, asJSON := range []bool{false, true} {
@@ -147,7 +147,7 @@ func TestControlList(t *testing.T) {
 				if out.String() != string(want)+"\n" {
 					t.Fatalf("json=%q", out.String())
 				}
-			} else if out.String() != "t1\treview\tproject\tcodex\tworking\t/tmp/my project\t-\nt2\t-\tShell\t-\tshell\t/tmp\t-\n" {
+			} else if out.String() != "t1\treview\tproject\tcodex\tworking\t/tmp/my project\t-\tt9\tworker\nt2\t-\tShell\t-\tshell\t/tmp\t-\t-\t-\n" {
 				t.Fatalf("plain=%q", out.String())
 			}
 			select {

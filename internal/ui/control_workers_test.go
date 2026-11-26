@@ -539,3 +539,24 @@ func TestWorkerDisconnectDuringLaunchRollsBack(t *testing.T) {
 		t.Fatal("canceled start left a worker")
 	}
 }
+
+func TestWorkerCloseRemovesEntryKeepsParentRate(t *testing.T) {
+	for _, kill := range []bool{false, true} {
+		win, _ := workerWindow(t)
+		id := spawnWorker(t, win, "t1")
+		starts := append([]time.Time(nil), win.workerStarts[1]...)
+		if kill {
+			if r := win.applyWorker(ctl.Request{Op: "kill", From: "t1", Tab: workerID(id)}); !r.OK {
+				t.Fatal(r)
+			}
+		} else {
+			win.closeTab(id)
+		}
+		if win.workers[id] != nil || win.mgr.Has(id) {
+			t.Fatal("closed worker retained")
+		}
+		if len(starts) != 1 || len(win.workerStarts[1]) != 1 || !starts[0].Equal(win.workerStarts[1][0]) {
+			t.Fatal("parent rate history lost")
+		}
+	}
+}
