@@ -138,7 +138,9 @@ func spaceSpan(gtx layout.Context, s spaceEntry) int {
 // agentCounts is how many agent rows each group has.
 func agentCounts(rows []agentRow) (n [3]int) {
 	for _, r := range rows {
-		n[r.State]++
+		if !r.Worker {
+			n[r.State]++
+		}
 	}
 	return n
 }
@@ -150,6 +152,11 @@ func agentsSpan(gtx layout.Context, rows []agentRow) int {
 		return 0
 	}
 	h := gtx.Dp(sideHeadH) + len(rows)*gtx.Dp(sideAgentRowH) + gtx.Dp(6)
+	for _, r := range rows {
+		if r.Worker {
+			h += gtx.Dp(16)
+		}
+	}
 	for _, n := range agentCounts(rows) {
 		if n > 0 {
 			h += gtx.Dp(sideAgentLabelH)
@@ -288,7 +295,7 @@ func (c *chrome) agentsSection(gtx layout.Context, h *sideHits, rows []agentRow,
 	names := [3]string{"Needs you ", "Working ", "Idle "}
 	last := agentGroup(-1)
 	for _, r := range rows {
-		if r.State != last {
+		if !r.Worker && r.State != last {
 			last = r.State
 			lcol := th.Muted
 			if r.State == agentNeeds {
@@ -298,7 +305,11 @@ func (c *chrome) agentsSection(gtx layout.Context, h *sideHits, rows []agentRow,
 			place(ops, lCall, image.Pt(pad+gap, y+(labelH-lSize.Y)/2))
 			y += labelH
 		}
-		rect := image.Rect(pad, y, h.list.Max.X-pad, y+rowH)
+		height := rowH
+		if r.Worker {
+			height += gtx.Dp(16)
+		}
+		rect := image.Rect(pad, y, h.list.Max.X-pad, y+height)
 		y = rect.Max.Y
 		if !rect.Overlaps(h.list) {
 			continue
@@ -322,6 +333,12 @@ func (c *chrome) agentLine(gtx layout.Context, r agentRow, st sideState, rect im
 	}
 	mid := rect.Min.Y + rect.Dy()/2
 	x := rect.Min.X + gap
+	if r.Worker {
+		x += gtx.Dp(16)
+		c.workerMark(gtx, image.Rect(x, mid-gtx.Dp(6), x+gtx.Dp(12), mid+gtx.Dp(6)), th.Muted)
+		x += gtx.Dp(16)
+		mid -= gtx.Dp(7)
+	}
 	logoPx := gtx.Dp(13)
 	if logo, img := agentLogo(r.Name, logoPx, agentLogoColor(r.Name, fg)); img != nil {
 		off := op.Offset(image.Pt(x, mid-logoPx/2)).Push(ops)
@@ -346,6 +363,12 @@ func (c *chrome) agentLine(gtx layout.Context, r agentRow, st sideState, rect im
 	nCall, nSize := c.fitSideWeight(gtx, r.Space, 12, min(max(right-x, 0), gtx.Dp(110)), th.ActiveFG, font.Bold)
 	place(ops, nCall, image.Pt(x, mid-nSize.Y/2))
 	x += nSize.X + gap
+	if r.Worker {
+		call, sz := c.fitSide(gtx, r.Subtitle, 10, max(right-(rect.Min.X+gtx.Dp(40)), 0), th.Muted)
+		place(ops, call, image.Pt(rect.Min.X+gtx.Dp(40), mid+gtx.Dp(9)))
+		_ = sz
+		return
+	}
 	if room := right - x; room > 0 && r.Subtitle != "" {
 		sCall, sSize := c.fitSide(gtx, r.Subtitle, 11, room, th.Muted)
 		place(ops, sCall, image.Pt(x, mid-sSize.Y/2))

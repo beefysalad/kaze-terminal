@@ -2,6 +2,7 @@ package ui
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,6 +14,8 @@ import (
 type sideRow struct {
 	Docs                  []sideDoc
 	ID                    tabs.TabID
+	Parent                tabs.TabID
+	Worker                bool
 	Title, Folder, Branch string
 	Detail                string
 	Agent                 string // agent name while a hook-driven session is active
@@ -68,6 +71,7 @@ type sideModel struct {
 }
 
 type sideInput struct {
+	Worker   func(tabs.TabID) (agent, first string, needs bool)
 	Docs     func(tabs.TabID) []sideDoc
 	Tabs     []*tabs.Tab
 	Loc      func(*tabs.Tab) locEntry
@@ -127,11 +131,21 @@ func buildSide(in sideInput) sideModel {
 	var all []sideGroup
 	var members [][]sideRow // every row per group, unfiltered
 	var loose []sideRow
-	for _, t := range in.Tabs {
+	for _, t := range workerTabOrder(in.Tabs) {
 		if _, ok := in.Member(t); ok {
 			continue // members are not sessions
 		}
 		loc := in.Loc(t)
+		var parent *tabs.Tab
+		if t.Role == "worker" {
+			for _, candidate := range in.Tabs {
+				if candidate.ID == t.Parent {
+					parent = candidate
+					loc = in.Loc(parent)
+					break
+				}
+			}
+		}
 		var a agentState
 		if in.Agent != nil {
 			a = in.Agent(t.ID)
@@ -148,11 +162,33 @@ func buildSide(in sideInput) sideModel {
 			Mark:    in.Mark(t.ID),
 			Since:   a.since,
 		}
+		row.Worker, row.Parent = t.Role == "worker", t.Parent
 		row.Detail = row.Branch
 		if loc.repo == "" {
 			row.Detail = row.Folder
 		} else if loc.worktree != "" && !strings.HasSuffix(folderName(loc.worktree), branchSlug(loc.branch)) {
 			row.Detail = "⑂ " + folderName(loc.worktree) + " · " + loc.branch
+		}
+		if row.Worker {
+			name := "t" + strconv.Itoa(int(t.Parent))
+			if parent != nil {
+				if in.Name != nil && in.Name(parent.ID) != "" {
+					name = in.Name(parent.ID)
+				}
+			}
+			row.Detail = "worker of " + name
+			if in.Worker != nil {
+				agent, first, needs := in.Worker(t.ID)
+				if row.Agent == "" {
+					row.Agent = agent
+				}
+				if needs || first == "failed" || first == "unconfirmed" {
+					row.Mark = markNeeds
+				}
+				if first == "failed" || first == "unconfirmed" {
+					row.Detail = "waiting for you in this tab"
+				}
+			}
 		}
 		if in.Docs != nil {
 			row.Docs = in.Docs(t.ID)
@@ -186,7 +222,7 @@ func buildSide(in sideInput) sideModel {
 				g.Waiting++
 			}
 			g.AgentCount += r.AgentCount
-			if nameHit || r.matches(filter) {
+			if nameHit || workerRowMatches(r, members[i], filter) {
 				g.Rows = append(g.Rows, r)
 			}
 		}
@@ -198,7 +234,7 @@ func buildSide(in sideInput) sideModel {
 	}
 	shellHit := filter != "" && strings.Contains("shell", filter)
 	for _, r := range loose {
-		if shellHit || r.matches(filter) {
+		if shellHit || workerRowMatches(r, loose, filter) {
 			m.Loose = append(m.Loose, r)
 		}
 	}
@@ -395,4 +431,37 @@ func branchSlug(s string) string {
 		}
 		return '-'
 	}, s)
+}
+
+// workerTabOrder keeps launch order among siblings without changing manager order.
+func workerTabOrder(ts []*tabs.Tab) []*tabs.Tab {
+	if !slices.ContainsFunc(ts, func(t *tabs.Tab) bool { return t.Role == "worker" }) {
+		return ts
+	}
+	var out []*tabs.Tab
+	for _, t := range ts {
+		if t.Role == "worker" && slices.ContainsFunc(ts, func(p *tabs.Tab) bool { return p.ID == t.Parent }) {
+			continue
+		}
+		out = append(out, t)
+		for _, w := range ts {
+			if w.Role == "worker" && w.Parent == t.ID {
+				out = append(out, w)
+			}
+		}
+	}
+	return out
+}
+
+// Filtering retains the matching worker's parent and a matching parent's children.
+func workerRowMatches(r sideRow, rows []sideRow, filter string) bool {
+	if r.matches(filter) {
+		return true
+	}
+	for _, other := range rows {
+		if (r.Worker && r.Parent == other.ID || other.Worker && other.Parent == r.ID) && other.matches(filter) {
+			return true
+		}
+	}
+	return false
 }
