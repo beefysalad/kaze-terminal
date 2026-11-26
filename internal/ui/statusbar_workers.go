@@ -19,10 +19,12 @@ type workerPopover struct {
 	tag       bool
 	box, stop image.Rectangle
 	rows      []workerPopoverRow
+	nameOf    func(tabs.TabID) string
 }
 type workerPopoverRow struct {
 	id   tabs.TabID
 	rect image.Rectangle
+	name string
 }
 
 func (win *window) drawWorkerPopover(gtx layout.Context) {
@@ -48,11 +50,19 @@ func (win *window) drawWorkerPopover(gtx layout.Context) {
 	cl := clip.Rect(s.box).Push(ops)
 	y := s.box.Min.Y + pad
 	s.rows = s.rows[:0]
+	if s.nameOf == nil {
+		s.nameOf = func(id tabs.TabID) string { return win.names[id] }
+	}
+	names := sideInput{Name: s.nameOf}
 	for _, t := range win.mgr.Tabs() {
 		if t.Role != "worker" {
 			continue
 		}
-		name := win.names[t.ID]
+		// Share the sidebar naming rule, without folder or agent-summary fallbacks.
+		name := names.ruled(t, locEntry{}, agentState{})
+		if name == "" {
+			name = t.Title
+		}
 		if name == "" {
 			name = "t" + strconv.Itoa(int(t.ID))
 		}
@@ -74,11 +84,11 @@ func (win *window) drawWorkerPopover(gtx layout.Context) {
 		if state == "needs you" {
 			col = th.Needs
 		}
-		call, sz := c.fitSideWeight(gtx, name, 12, rect.Dx(), col, font.Bold)
+		call, sz, shownName := c.fitSideText(gtx, name, 12, rect.Dx(), col, font.Bold)
 		place(ops, call, rect.Min)
 		call, _ = c.fitSide(gtx, agent+" · "+state, 11, rect.Dx(), th.Muted)
 		place(ops, call, image.Pt(rect.Min.X, y+sz.Y+gtx.Dp(3)))
-		s.rows = append(s.rows, workerPopoverRow{t.ID, rect})
+		s.rows = append(s.rows, workerPopoverRow{t.ID, rect, shownName})
 		y += rowH
 	}
 	s.stop = image.Rect(x+pad, y, x+w-pad, y+gtx.Dp(32))

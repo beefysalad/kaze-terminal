@@ -1,9 +1,13 @@
 package ui
 
 import (
-	ctl "github.com/beefysalad/kaze-terminal/internal/control"
 	"image"
+	"strings"
 	"testing"
+
+	"gioui.org/font"
+	ctl "github.com/beefysalad/kaze-terminal/internal/control"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
 func TestWorkerCounterAndPalette(t *testing.T) {
@@ -91,5 +95,57 @@ func TestWorkerStopOneParentAndPopoverActions(t *testing.T) {
 	win.workerPopoverClick(win.stat.workers.stop.Min.Add(image.Pt(2, 2)))
 	if len(win.workers) != 0 || win.mgr.Lookup(parent.ID) == nil || win.mgr.Lookup(1) == nil {
 		t.Fatal("popover stop all")
+	}
+}
+
+func TestWorkerPopoverNames(t *testing.T) {
+	for _, tc := range []struct{ label, name, title, want string }{
+		{"name", "review parser", "terminal title", "review parser"},
+		{"title", "", "terminal title", "terminal title"},
+		{"id", "", "", "t2"},
+		{"long", strings.Repeat("review ", 80), "", ""},
+	} {
+		t.Run(tc.label, func(t *testing.T) {
+			win, _ := workerWindow(t)
+			spawnPresentationWorker(t, win)
+			win.names = map[tabs.TabID]string{2: tc.name}
+			shellTitle(win.mgr.Lookup(2), tc.title)
+			win.stat.workers.open = true
+			g := pageContext(560, 640)
+			win.drawStatus(g, 608, t0)
+			win.drawWorkerPopover(g)
+			row := win.stat.workers.rows[0]
+			if tc.label == "long" {
+				if row.name == tc.name || !strings.HasSuffix(row.name, "…") {
+					t.Fatalf("long name was not ellipsized: %q", row.name)
+				}
+			} else if row.name != tc.want {
+				t.Fatalf("popover name = %q, want %q", row.name, tc.want)
+			}
+			_, sz := win.ui.labelW(g, row.name, 12, win.ui.th.ToastFG, font.Bold)
+			if sz.X > row.rect.Dx() {
+				t.Fatalf("name width %d exceeds row %d", sz.X, row.rect.Dx())
+			}
+		})
+	}
+}
+
+func TestWorkerPopoverStillFrameAllocations(t *testing.T) {
+	win, _ := workerWindow(t)
+	spawnPresentationWorker(t, win)
+	win.names = map[tabs.TabID]string{2: "review"}
+	win.stat.workers.open = true
+	g := pageContext(560, 640)
+	win.drawStatus(g, 608, t0)
+	draw := func() {
+		g.Ops.Reset()
+		win.drawWorkerPopover(g)
+	}
+	for range 3 {
+		draw()
+	}
+	// The previous named-worker popover also used two allocations per draw.
+	if n := testing.AllocsPerRun(20, draw); n > 2 {
+		t.Fatalf("worker popover allocated %g, want at most 2", n)
 	}
 }
