@@ -86,7 +86,10 @@ function show(i) {
 function openShot(key, from) {
   opener = from;
   show(order.indexOf(key));
+  clearTimeout(closeTimer);
   if (!box.open) box.showModal();
+  if (reducedMotion.matches) box.classList.add('is-open');
+  else requestAnimationFrame(() => requestAnimationFrame(() => box.classList.add('is-open')));
 }
 document.querySelectorAll('.tile[data-shot]').forEach(tile => {
   tile.setAttribute('aria-label', `Open screenshot: ${shots[tile.dataset.shot]}`);
@@ -94,8 +97,16 @@ document.querySelectorAll('.tile[data-shot]').forEach(tile => {
 });
 document.querySelectorAll('[data-open]').forEach(button => button.addEventListener('click', () => openShot(button.dataset.open, button)));
 box.querySelectorAll('[data-step]').forEach(button => button.addEventListener('click', () => show(current + Number(button.dataset.step))));
-box.querySelector('[data-close]').addEventListener('click', () => box.close());
-box.addEventListener('click', event => { if (event.target === box) box.close(); });
+let closeTimer;
+function closeShot() {
+  clearTimeout(closeTimer);
+  box.classList.remove('is-open');
+  if (reducedMotion.matches) box.close();
+  else closeTimer = setTimeout(() => box.close(), 320);
+}
+box.querySelector('[data-close]').addEventListener('click', closeShot);
+box.addEventListener('cancel', event => { event.preventDefault(); closeShot(); });
+box.addEventListener('click', event => { if (event.target === box) closeShot(); });
 box.addEventListener('keydown', event => {
   if (event.key === 'ArrowRight') show(current + 1);
   if (event.key === 'ArrowLeft') show(current - 1);
@@ -166,3 +177,78 @@ moment(fromHash && moments[fromHash[1]] ? fromHash[1] : 'needs');
     // Downloads stay usable offline or after rate limiting.
   }
 })();
+
+// Motion is enhancement only: no observer means no hidden content.
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const heroParts = [...document.querySelectorAll('.hero-line, h1 .q, .hero .lede, .hero .actions, .wall')];
+if (!reducedMotion.matches) heroParts.forEach((part, index) => {
+  part.style.setProperty('--hero-delay', `${index * 70}ms`);
+  part.classList.add('hero-enter');
+  part.addEventListener('animationend', () => part.classList.remove('hero-enter'), { once: true });
+});
+if ('IntersectionObserver' in window && !reducedMotion.matches) {
+  const revealObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      // Very tall rows still reveal once their first readable portion arrives.
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('is-visible');
+      revealObserver.unobserve(entry.target);
+    });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('.k-head, .moment-list > *, .relay > li, .index > div, .ws-steps > li, .k-faq > details, .releases > .release, .steps > li').forEach(row => {
+    const siblings = [...row.parentElement.children];
+    row.style.setProperty('--reveal-delay', `${row.matches('.k-head') ? 0 : Math.min(siblings.indexOf(row), 6) * 50}ms`);
+    row.classList.add('reveal');
+    revealObserver.observe(row);
+  });
+}
+reducedMotion.addEventListener('change', () => {
+  if (reducedMotion.matches) document.querySelectorAll('.reveal').forEach(row => row.classList.add('is-visible'));
+  updateWall();
+});
+
+// The wall has no animation work while outside the viewport or in a hidden tab.
+const wall = document.querySelector('.wall');
+let wallInView = false;
+function updateWall() {
+  wall.classList.toggle('is-drifting', wallInView && !document.hidden && !reducedMotion.matches);
+}
+if ('IntersectionObserver' in window) {
+  new IntersectionObserver(entries => {
+    wallInView = entries[0].isIntersecting;
+    updateWall();
+  }).observe(wall);
+}
+document.addEventListener('visibilitychange', updateWall);
+
+// One indicator follows the current section. Geometry is read only on scroll/resize.
+const header = document.querySelector('.site-header');
+const nav = document.querySelector('.nav');
+const navLinks = [...nav.querySelectorAll('a')];
+const indicator = document.createElement('span');
+indicator.className = 'nav-indicator';
+indicator.setAttribute('aria-hidden', 'true');
+nav.appendChild(indicator);
+function updateHeader() {
+  header.classList.toggle('is-scrolled', scrollY > 8);
+  let active = null;
+  navLinks.forEach(link => {
+    const rect = document.querySelector(link.hash).getBoundingClientRect();
+    if (rect.top <= innerHeight * .4 && rect.bottom > 84) active = link;
+    link.removeAttribute('aria-current');
+  });
+  if (active && nav.getClientRects().length) {
+    active.setAttribute('aria-current', 'location');
+    indicator.style.transform = `translateX(${active.offsetLeft}px) scaleX(${active.offsetWidth})`;
+    indicator.style.opacity = '1';
+  } else indicator.style.opacity = '0';
+}
+let headerFrame = 0;
+function scheduleHeader() {
+  if (headerFrame) return;
+  headerFrame = requestAnimationFrame(() => { headerFrame = 0; updateHeader(); });
+}
+addEventListener('scroll', scheduleHeader, { passive: true });
+addEventListener('resize', scheduleHeader);
+document.fonts.ready.then(updateHeader);
+updateHeader();
