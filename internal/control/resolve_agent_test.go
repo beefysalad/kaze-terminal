@@ -1,8 +1,10 @@
 package control
 
 import (
+	"context"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestResolveFallsBackToAUniqueAgentName(t *testing.T) {
@@ -53,4 +55,87 @@ func TestSendReplyNamesTheTarget(t *testing.T) {
 	if !reply.OK || len(reply.Tabs) != 1 || reply.Tabs[0].ID != "t2" {
 		t.Fatalf("%+v", reply)
 	}
+}
+
+func TestResolveFromSpaces(t *testing.T) {
+	tabs := []TabInfo{{ID: "t1", Agent: "claude", Space: "A"}, {ID: "t2", Agent: "codex", Space: "A"}, {ID: "t7", Agent: "codex", Space: "B"}}
+	for _, tc := range []struct {
+		address, from, want string
+		code                string
+	}{
+		{"codex", "t1", "t2", ""}, {"CODEX", "t1", "t2", ""}, {"t7", "t1", "t7", ""},
+		{"codex", "", "", CodeAmbiguousTab}, {"codex", "missing", "", CodeAmbiguousTab},
+	} {
+		got, e := ResolveFrom(tabs, tc.address, tc.from)
+		if tc.code != "" {
+			if e == nil || e.Code != tc.code {
+				t.Fatalf("%+v: %v", tc, e)
+			}
+		} else if e != nil || got.ID != tc.want {
+			t.Fatalf("%+v: %v %v", tc, got, e)
+		}
+	}
+	// Exact names still take priority over an agent, even in another space.
+	tabs[2].Name = "codex"
+	if got, e := ResolveFrom(tabs, "codex", "t1"); e != nil || got.ID != "t7" {
+		t.Fatalf("name priority: %v %v", got, e)
+	}
+	tabs[2].Name = ""
+	tabs[1].Agent = ""
+	if got, e := ResolveFrom(tabs, "codex", "t1"); e != nil || got.ID != "t7" {
+		t.Fatalf("other space only: %v %v", got, e)
+	}
+	tabs[1].Agent = "codex"
+	tabs = append(tabs, TabInfo{ID: "t3", Agent: "codex", Space: "A"})
+	if _, e := ResolveFrom(tabs, "codex", "t1"); e == nil || e.Code != CodeAmbiguousTab {
+		t.Fatalf("multiple local: %v", e)
+	}
+	_, e := Resolve(tabs, "codex")
+	for _, part := range []string{"t2 (codex, space A)", "t7 (codex, space B)"} {
+		if e == nil || !strings.Contains(e.Message, part) {
+			t.Fatalf("missing %q: %v", part, e)
+		}
+	}
+}
+
+// All terminal operations go to this in-memory fake, never a live tab.
+func TestHandleSpaceSafety(t *testing.T) {
+	tabs := []TabInfo{{ID: "t1", Agent: "claude", Space: "kaze-terminal", Status: "idle"}, {ID: "t2", Agent: "codex", Space: "kaze-terminal", Status: "idle"}, {ID: "t7", Agent: "codex", Space: "other-api", Status: "idle"}}
+	const warning = "target t7 is in space other-api, not your space kaze-terminal; use it only if the owner named that tab"
+	for _, op := range []string{"send", "read", "keys", "interrupt", "wait"} {
+		for _, tc := range []struct{ from, target, wantID, wantWarning string }{
+			{"t1", "codex", "t2", ""}, {"t1", "t7", "t7", warning}, {"", "t7", "t7", ""}, {"missing", "t7", "t7", ""}, {"t2", "t1", "t1", ""},
+		} {
+			h := &spaceHost{fakeHost: fakeHost{tabs: tabs}}
+			ctx, cancel := context.WithTimeout(context.Background(), 100000000)
+			r := HandleContext(ctx, h, Request{Op: op, Tab: tc.target, From: tc.from, Text: "review", Args: []string{"enter"}})
+			cancel()
+			wantWarning := tc.wantWarning
+			if op == "wait" {
+				wantWarning = ""
+			} // Wait uses caller resolution without a cross-space warning.
+			if !r.OK || r.Warning != wantWarning {
+				t.Fatalf("%s %+v: %+v", op, tc, r)
+			}
+			if op != "wait" && h.id != tc.wantID {
+				t.Fatalf("%s routed to %s", op, h.id)
+			}
+		}
+	}
+	h := &fakeHost{tabs: append([]TabInfo(nil), tabs...)}
+	h.tabs[2].Status = "working"
+	r := Handle(h, Request{Op: "send", Tab: "t7", From: "t1", Text: "review"})
+	if !r.OK || r.Warning != "busy; "+warning {
+		t.Fatalf("busy warning: %+v", r)
+	}
+	if r = Handle(h, Request{Op: "send", Tab: "t7", From: "t1", Text: "review", IfIdle: true}); r.Error == nil || r.Error.Code != CodeBusy {
+		t.Fatalf("busy guard: %+v", r)
+	}
+}
+
+type spaceHost struct{ fakeHost }
+
+func (h *spaceHost) StatusChanges() ([]TabInfo, <-chan struct{}) { return h.tabs, make(chan struct{}) }
+func (h *spaceHost) OutputChanges(string) (<-chan struct{}, func(), time.Time, error) {
+	panic("idle wait must not observe output")
 }

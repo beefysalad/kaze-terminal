@@ -62,7 +62,7 @@ func wait(ctx context.Context, host Host, req Request) Reply {
 		if address == "" {
 			address = req.Tab
 		}
-		tab, err := Resolve(tabs, address)
+		tab, err := ResolveFrom(tabs, address, req.From)
 		if err != nil {
 			return Reply{Error: err}
 		}
