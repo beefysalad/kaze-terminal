@@ -21,6 +21,25 @@ Builds on `2026-11-24-kaze-agent-control-design.md` (0.45, PR #212).
 - The riskiest assumption gets a spike first. Can both CLIs start interactively with the task as an
   argument, report through the hooks from the new tab, and can Kaze tell that the task was delivered?
 
+## Owner decisions (2026-11-26)
+
+The owner answered the five questions at the end of this document. These decisions win over anything below.
+
+1. **Consent banner: yes.** The first spawn from each parent tab per run asks on screen (Allow for this session
+   or Deny). A setting (`confirm = "never"`) turns it off. Herdr does not ask; Kaze does by owner choice.
+2. **Depth is enforced at 1.** Only tabs the owner opened can start workers; a worker cannot. A `max_depth`
+   setting (default 1) can raise it later. Herdr only tells agents not to; Kaze enforces it.
+3. **Workers close with their parent tab and are never restored.** `--outlive-parent` is NOT in v1 (herdr has
+   it; here nothing survives quitting Kaze anyway, and the owner sees no use for it). Ignore every mention of
+   `--outlive-parent` below.
+4. **Notes to the parent** (worker finished, blocked, exited) are typed into the parent's prompt only when the
+   parent is idle AND the owner has not pressed a key in that tab for 5 seconds (`note_quiet`, default 5).
+   Otherwise the note waits, and `wait --children` returns it, with an unread counter. Herdr types notes after
+   a draft pause of up to 60 seconds; Kaze waits for a quiet pause instead of a draft.
+5. **Caps as designed:** 4 workers per parent, 8 in total, 6 starts a minute per parent.
+
+Spike first (task 0), then the owner gate G1, as the plan says.
+
 ## 1. What the code does today (recon, with evidence)
 
 ### 1.1 Where a tab is created, and how a socket goroutine can ask for one
@@ -423,7 +442,7 @@ Order: 0, G1, then 1 and 2 in parallel (separate files), 3, 4, 5, 6, G2, 7 and 9
 6. A same-user process can read `KAZE_TAB_KEY` from another process's environment. This is accepted for now,
    like the 0.45 token model.
 
-### Questions for the owner
+### Questions for the owner (answered 2026-11-26, see "Owner decisions" above)
 
 1. **Should the first spawn from each tab ask you on screen?** Recommended: yes, once per parent tab per run
    (`confirm = "first"`). `never` is available if it gets in the way.
