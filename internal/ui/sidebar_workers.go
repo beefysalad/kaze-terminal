@@ -40,3 +40,10 @@ func (c *chrome) workerMark(gtx layout.Context, r image.Rectangle, col color.NRG
 	}
 	paint.FillShape(gtx.Ops, col, clip.Stroke{Path: p.End(), Width: float32(max(gtx.Dp(1), 1))}.Op())
 }
+
+// workerBranch joins adjacent worker rows; the last sibling ends at its elbow.
+func (c *chrome) workerBranch(gtx layout.Context, x, top, bottom, mid, end int) {
+	col := c.sideTheme().Border
+	paint.FillShape(gtx.Ops, col, clip.Rect(image.Rect(x, top, x+1, bottom+1)).Op())
+	paint.FillShape(gtx.Ops, col, clip.Rect(image.Rect(x, mid, end, mid+1)).Op())
+}

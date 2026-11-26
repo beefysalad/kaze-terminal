@@ -172,6 +172,9 @@ func buildSide(in sideInput) sideModel {
 		if row.Worker {
 			name := "t" + strconv.Itoa(int(t.Parent))
 			if parent != nil {
+				if title := strings.TrimSpace(in.clean(parent.Title)); title != "" {
+					name = title
+				}
 				if in.Name != nil && in.Name(parent.ID) != "" {
 					name = in.Name(parent.ID)
 				}
