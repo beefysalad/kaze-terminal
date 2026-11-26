@@ -281,8 +281,8 @@ func (s *Server) handle(c net.Conn) {
 		_ = json.Unmarshal(envelope["op"], &op)
 		var waitStart bool
 		_ = json.Unmarshal(envelope["wait_start"], &waitStart)
-		spawnWait := op == "spawn" && waitStart
-		// A spawn awaiting delivery uses only a wait slot, leaving the control
+		spawnWait := op == "spawn"
+		// A spawn may await owner consent and uses only a wait slot, leaving the control
 		// budget available. Both budgets refuse immediately and reserve hook capacity.
 		if !spawnWait {
 			select {
@@ -303,7 +303,10 @@ func (s *Server) handle(c net.Conn) {
 			}
 		}
 		if spawnWait {
-			duration = 35 * time.Second
+			duration = 65 * time.Second
+			if waitStart {
+				duration = 100 * time.Second
+			}
 		}
 		if op == "wait" {
 			seconds := 120

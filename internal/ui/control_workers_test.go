@@ -32,6 +32,7 @@ func workerWindow(t *testing.T) (*window, *recStarter) {
 	}
 	win.opt.Dir = t.TempDir()
 	win.orchestratorEnabled = true
+	win.opt.Config.Orchestrator.Confirm = "never" // Immediate-spawn fixture; consent has dedicated tests.
 	_, err := win.mgr.NewOpts(tabs.StartOpts{Dir: win.opt.Dir})
 	if err != nil {
 		t.Fatal(err)

@@ -16,15 +16,15 @@ func TestControlSpawnWaitBudget(t *testing.T) {
 			if !ok {
 				t.Error("request has no deadline")
 			}
+			budget := 65 * time.Second
 			if waitStart {
-				if remaining < 34*time.Second || remaining > 35*time.Second {
-					t.Errorf("spawn wait budget: %s", remaining)
-				}
-				if len(s.waitSem) != 1 || len(s.controlSem) != 0 {
-					t.Errorf("wrong admission: wait=%d control=%d", len(s.waitSem), len(s.controlSem))
-				}
-			} else if remaining > 100*time.Millisecond || len(s.waitSem) != 0 || len(s.controlSem) != 1 {
-				t.Errorf("ordinary spawn changed: %s wait=%d control=%d", remaining, len(s.waitSem), len(s.controlSem))
+				budget = 100 * time.Second
+			}
+			if remaining < budget-time.Second || remaining > budget {
+				t.Errorf("spawn wait budget: %s", remaining)
+			}
+			if len(s.waitSem) != 1 || len(s.controlSem) != 0 {
+				t.Errorf("wrong admission: wait=%d control=%d", len(s.waitSem), len(s.controlSem))
 			}
 			return map[string]any{"ok": true}
 		})
@@ -68,7 +68,7 @@ func TestControlSpawnWaitAdmission(t *testing.T) {
 		}
 	}
 	for range 8 {
-		request("spawn", true)
+		request("spawn", false)
 	}
 	for _, wire := range []string{`{"op":"spawn","wait_start":true,"token":"test-control-token"}`, `{"op":"wait","token":"test-control-token"}`} {
 		got := controlExchange(t, s, wire)

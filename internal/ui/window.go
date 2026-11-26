@@ -82,6 +82,7 @@ type window struct {
 	control             controlHost
 	orchestratorEnabled bool
 	noteQuiet           time.Duration
+	consent             workerConsentState
 	workers             map[tabs.TabID]*worker
 	workerStarts        map[tabs.TabID][]time.Time
 	w                   *app.Window
@@ -778,6 +779,7 @@ func (win *window) frame(gtx layout.Context) error {
 		win.renameEvents(gtx)
 		win.toastEvents(gtx)
 		win.bannerEvents(gtx)
+		win.consentEvents(gtx)
 		win.findEvents(gtx) // before the panel and the terminal
 		active = win.mgr.Active()
 		if win.set.shown {
@@ -814,6 +816,9 @@ func (win *window) frame(gtx layout.Context) error {
 	win.publish(win.shownTab(), win.focused)
 	win.drainControl()
 	win.drainAlerts(gtx.Now)
+	if at, ok := win.consentTick(win.wsNow()); ok {
+		gtx.Execute(op.InvalidateCmd{At: at})
+	}
 	if at, ok := win.workerTick(win.wsNow()); ok {
 		gtx.Execute(op.InvalidateCmd{At: at})
 	}
@@ -903,7 +908,11 @@ func (win *window) frame(gtx layout.Context) error {
 	} else {
 		win.rend.SetFocused(win.focused && !win.set.shown && !win.dockMemberKeys())
 		win.drawTerminal(gtx, active, termRect, grid, &sel)
-		win.drawWsBanner(gtx, active, termRect) // after the terminal, so it takes the clicks it covers
+		if !win.drawWorkerConsent(gtx, active, termRect) {
+			win.drawWsBanner(gtx, active, termRect) // after the terminal, so it takes the clicks it covers
+		} else {
+			win.wsr.hits = win.wsr.hits[:0]
+		}
 		win.drawShownDock(gtx)
 		win.drawFind(gtx, win.findPane(termRect)) // over its pane, so it takes the clicks it covers
 	}

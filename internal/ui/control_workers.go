@@ -32,9 +32,10 @@ type worker struct {
 	noted               map[string]bool
 }
 type controlWorkerRequest struct {
-	ctx  context.Context
-	req  ctl.Request
-	done chan ctl.Reply
+	ctx        context.Context
+	req        ctl.Request
+	done       chan ctl.Reply
+	consenting chan struct{}
 }
 
 func (h *controlHost) Spawn(ctx context.Context, req ctl.Request) ctl.Reply {
@@ -88,12 +89,12 @@ func workerError(err error) ctl.Reply {
 // queueWorker accesses only host-owned synchronization and immutable snapshots.
 // The sole callback requests a frame; all window mutation happens in the drain.
 func (h *controlHost) queueWorker(ctx context.Context, req ctl.Request) ctl.Reply {
-	ctx, cancel := context.WithTimeout(ctx, controlWorkerTimeout)
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	if ctx.Err() != nil {
 		return workerFailure("timeout", "worker request canceled")
 	}
-	r := &controlWorkerRequest{ctx: ctx, req: req, done: make(chan ctl.Reply, 1)}
+	r := &controlWorkerRequest{ctx: ctx, req: req, done: make(chan ctl.Reply, 1), consenting: make(chan struct{})}
 	h.spawnMu.Lock()
 	if len(h.workerRequests) >= 8 {
 		h.spawnMu.Unlock()
@@ -111,11 +112,29 @@ func (h *controlHost) queueWorker(ctx context.Context, req ctl.Request) ctl.Repl
 	if h.wake != nil {
 		h.wake()
 	}
-	select {
-	case reply := <-r.done:
-		return reply
-	case <-ctx.Done():
-		return workerFailure("timeout", "worker request was not applied within 5 seconds")
+	timer := time.NewTimer(controlWorkerTimeout)
+	defer timer.Stop()
+	consenting := r.consenting
+	for {
+		select {
+		case reply := <-r.done:
+			return reply
+		case <-consenting:
+			// Only the UI can extend admission to the bounded consent budget.
+			consenting = nil
+			timer.Reset(65 * time.Second)
+		case <-ctx.Done():
+			if h.wake != nil {
+				h.wake()
+			} // discard disconnected consent on the next frame
+			return workerFailure("timeout", "worker request canceled")
+		case <-timer.C:
+			cancel()
+			if h.wake != nil {
+				h.wake()
+			}
+			return workerFailure("timeout", "worker request was not applied before its deadline")
+		}
 	}
 }
 func (win *window) drainWorkers() {
@@ -128,7 +147,9 @@ func (win *window) drainWorkers() {
 		if r.ctx.Err() != nil {
 			continue
 		}
-		r.done <- win.applyWorkerContext(r.ctx, r.req)
+		if !win.holdWorkerConsent(r) {
+			r.done <- win.applyWorkerContext(r.ctx, r.req)
+		}
 	}
 }
 
@@ -312,6 +333,7 @@ func (win *window) applyWorkerContext(ctx context.Context, req ctl.Request) ctl.
 }
 
 func (win *window) workerHook(id tabs.TabID, kind notify.Kind) {
+	win.consentHook(id, kind)
 	w := win.workers[id]
 	if w == nil {
 		return
@@ -399,6 +421,7 @@ func (win *window) workerTick(now time.Time) (wake time.Time, ok bool) {
 
 // closeWorkers runs on the UI goroutine before the normal parent close path.
 func (win *window) closeWorkers(parent tabs.TabID) {
+	win.closeWorkerConsent(parent)
 	if w := win.workers[parent]; w != nil {
 		win.workerNote(parent, w, "exited")
 	}

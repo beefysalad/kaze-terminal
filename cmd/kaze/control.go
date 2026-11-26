@@ -117,9 +117,8 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 	if _, err = conn.Write(encoded); err != nil {
 		return controlNetworkError(err, stderr)
 	}
-	if req.Op == "spawn" && req.WaitStart {
-		// The server allows five seconds to apply plus thirty for delivery.
-		if err = conn.SetReadDeadline(time.Now().Add(35*time.Second + controlTimeout)); err != nil {
+	if req.Op == "spawn" {
+		if err = conn.SetReadDeadline(time.Now().Add(controlReadBudget(req))); err != nil {
 			return controlNetworkError(err, stderr)
 		}
 	}
@@ -594,4 +593,16 @@ func printChildrenWait(out io.Writer, r control.Reply) error {
 	}
 	_, err := fmt.Fprintln(out, r.Reason)
 	return err
+}
+
+// Consent may take sixty seconds before the normal start and delivery path.
+// Keep a client margin beyond the corresponding server request budget.
+func controlReadBudget(req control.Request) time.Duration {
+	if req.Op == "spawn" {
+		if req.WaitStart {
+			return 100*time.Second + controlTimeout
+		}
+		return 65*time.Second + controlTimeout
+	}
+	return controlTimeout
 }
