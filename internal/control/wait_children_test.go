@@ -2,6 +2,7 @@ package control
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"testing"
 	"testing/synctest"
@@ -114,7 +115,7 @@ func TestNeedsWorkerInputGuard(t *testing.T) {
 	for _, op := range []string{"keys", "send", "interrupt"} {
 		for _, status := range []string{"needs", "idle", "working"} {
 			for _, role := range []string{"worker", ""} {
-				h := &fakeHost{tabs: []TabInfo{{ID: "t2", Parent: "t1", Role: role, Status: status}}}
+				h := &fakeHost{tabs: []TabInfo{{ID: "t2", Parent: "t1", Role: role, Status: status, FirstMessage: "delivered"}}}
 				r := Handle(h, Request{Op: op, Tab: "t2", From: "t1", Text: "text", Args: []string{"enter"}})
 				if status == "needs" && role == "worker" {
 					if r.Error == nil || r.Error.Code != CodeNotAllowed || h.submitCalls != 0 || h.id != "" {
@@ -154,4 +155,18 @@ func TestWaitChildrenAllRequiresLastChild(t *testing.T) {
 			t.Fatal("cancel did not return")
 		}
 	})
+}
+
+func TestWorkerTrustDialogInputGuard(t *testing.T) {
+	for _, first := range []string{"pending", "unconfirmed", "failed", ""} {
+		for _, op := range []string{"send", "keys", "interrupt"} {
+			for _, ctrlC := range []bool{false, true} {
+				h := &fakeHost{tabs: []TabInfo{{ID: "t2", Role: "worker", Status: "starting", FirstMessage: first}}}
+				r := Handle(h, Request{Op: op, Tab: "t2", Text: "yes", Args: []string{"enter"}, CtrlC: ctrlC})
+				if r.Error == nil || r.Error.Code != CodeNotAllowed || !strings.Contains(r.Error.Message, "owner") || !strings.Contains(r.Error.Message, "in that tab") || h.submitCalls != 0 || h.id != "" {
+					t.Errorf("%s/%s/%v: %+v", first, op, ctrlC, r)
+				}
+			}
+		}
+	}
 }

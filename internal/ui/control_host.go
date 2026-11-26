@@ -153,14 +153,14 @@ func (h *controlHost) submitLocked(id string, text []byte, target *controlSessio
 	// Hold before Enter is observable, so the prompt hook cannot clear first.
 	release := h.holdPending(target)
 	mark := s.EchoMark()
-	if result := s.Submit(input.EncodePaste(string(text), modes)); result != term.Accepted {
+	if err := h.submitInput(id, target, input.EncodePaste(string(text), modes)); err != nil {
 		release()
-		return fmt.Errorf("paste to %s: %s", id, result)
+		return err
 	}
 	s.WaitEcho(mark, controlPasteEnterDelay)
-	if result := s.Submit([]byte{'\r'}); result != term.Accepted {
+	if err := h.submitInput(id, target, []byte{'\r'}); err != nil {
 		release()
-		return fmt.Errorf("enter to %s: %s", id, result)
+		return err
 	}
 	return nil
 }
@@ -310,4 +310,28 @@ func (h *controlHost) OwnerKey(id string) string {
 		return s.ownerKeys[id]
 	}
 	return ""
+}
+
+// submitInput pairs the latest immutable eligibility check with the bounded
+// input enqueue. Publication uses the same lock, so a published refusal cannot
+// be bypassed by a request waiting on send or echo. No UI state is read here.
+func (h *controlHost) submitInput(id string, target *controlSession, data []byte) error {
+	h.changesMu.Lock()
+	defer h.changesMu.Unlock()
+	snapshot := h.snapshot.Load()
+	if snapshot == nil || snapshot.sessions[id] != target {
+		return fmt.Errorf("tab %s is closed or unknown", id)
+	}
+	for _, tab := range snapshot.tabs {
+		if tab.ID == id {
+			if err := ctl.WorkerInputGuard(tab); err != nil {
+				return err
+			}
+			if result := target.session.Submit(data); result != term.Accepted {
+				return fmt.Errorf("input to %s: %s", id, result)
+			}
+			return nil
+		}
+	}
+	return fmt.Errorf("tab %s is closed or unknown", id)
 }
