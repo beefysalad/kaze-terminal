@@ -734,6 +734,7 @@ A block you changed shows **Edited** with **Reset**, which replaces your edits w
 Kaze's text and keeps a backup. The switch stays on for both states and still removes
 the block when turned off. At startup, one notice points you to Settings if any
 installed block is outdated; Kaze does not update it automatically.
+If you already switched instructions on, press **Update** once in **Settings > Agents**.
 Agents may need a new session to load changed global instructions.
 
 As a manual alternative, add the same block to your `CLAUDE.md` or `AGENTS.md`:
@@ -786,8 +787,10 @@ max_depth = 1
 
 In Settings > Agents, the separate **Worker instructions** switches install a
 managed block for Claude Code or Codex. It teaches the commands below and says to
-start workers only when the owner asks. Peer messaging instructions remain a
-separate switch. An agent may need a new session to load either block.
+start workers only when the owner asks or the peer messaging rule calls for a
+worker in your own space. Workers are told to talk only to their parent. Peer
+messaging instructions remain a separate switch. An agent may need a new session
+to load either block.
 
 Use `"$KAZE_BIN"` in a Kaze tab (PowerShell: `& $env:KAZE_BIN`):
 
@@ -1342,6 +1345,7 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 Done:
 
+- 0.46.1: agents resolve names within their own project first, cross-space commands warn, and Settings can update outdated instructions or reset edited blocks. If instructions are already on, press Update once in Settings > Agents.
 - 0.46: [agents starting agents](#agents-starting-agents-workers), with background worker tabs, consent, reports, child waits, limits and owner templates. Windows runtime and native owner checks remain open.
 - Editable shortcuts: change any of them in Settings > Shortcuts, or write `none` to drop one (built on `feat/shortcuts-edit`, ships in 0.31 with the palette redesign).
 - Find in the terminal and the docked tabs (#155): Ctrl+Shift+F or Cmd+F, every match marked, on the whole scrollback (built on `feat/find`, release next).
