@@ -29,7 +29,7 @@ func TestSettingsScrollReachesClippedClaudeSetup(t *testing.T) {
 	if r := find("claude_fix"); r.Min.Y < 38 || r.Max.Y > 326 {
 		t.Fatalf("last control still clipped after scrolling: %v", r)
 	}
-	win.settingsPointer(pointer.Event{Kind: pointer.Scroll, Scroll: f32.Pt(0, -1000)})
+	win.settingsPointer(pointer.Event{Kind: pointer.Scroll, Scroll: f32.Pt(0, -float32(win.set.scroll))})
 	draw()
 	if r := find("chime_test"); r.Min.Y < 38 || r.Max.Y > 326 {
 		t.Fatalf("alert control not reachable after scrolling back: %v", r)

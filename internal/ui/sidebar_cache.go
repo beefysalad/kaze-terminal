@@ -16,6 +16,9 @@ import (
 
 type sideTabInput struct {
 	id                        tabs.TabID
+	parent                    tabs.TabID
+	role, first, workerAgent  string
+	needs                     bool
 	title, fixed, color, name string
 	exited                    bool
 	run                       uint64
@@ -95,7 +98,8 @@ func (win *window) cachedSide(now time.Time) sideModel {
 	for i, t := range s.tabs {
 		run, _ := win.isMember(t)
 		add, del := win.linesOf(t.ID)
-		v := sideTabInput{id: t.ID, title: t.Title, fixed: t.FixedTitle, color: t.Color, name: win.names[t.ID], exited: t.Exited, run: run, loc: win.locOf(t), agent: win.rowAgent(t.ID), mark: win.alerts.markOf(t.ID), lines: lineCount{add, del}}
+		wa, first, needs := win.workerPresentation(t.ID)
+		v := sideTabInput{parent: t.Parent, role: t.Role, first: first, workerAgent: wa, needs: needs, id: t.ID, title: t.Title, fixed: t.FixedTitle, color: t.Color, name: win.names[t.ID], exited: t.Exited, run: run, loc: win.locOf(t), agent: win.rowAgent(t.ID), mark: win.alerts.markOf(t.ID), lines: lineCount{add, del}}
 		if i >= oldLen || c.inputs[i] != v {
 			dirty = true
 			c.inputs[i] = v

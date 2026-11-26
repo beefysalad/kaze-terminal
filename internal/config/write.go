@@ -380,6 +380,10 @@ func topStarts(lines []string) []bool {
 // keysTable finds the [keys] header and the index of the next table header
 // (or len(lines)). h is -1 when there is no plain [keys] header.
 func keysTable(lines []string, top []bool) (h, end int) {
+	return findTable(lines, top, keysHeader)
+}
+
+func findTable(lines []string, top []bool, header *regexp.Regexp) (h, end int) {
 	h, end = -1, len(lines)
 	for i, l := range lines {
 		if !top[i] || !tableHeader.MatchString(l) {
@@ -388,7 +392,7 @@ func keysTable(lines []string, top []bool) (h, end int) {
 		if h >= 0 {
 			return h, i
 		}
-		if keysHeader.MatchString(strings.TrimSuffix(l, "\n")) {
+		if header.MatchString(strings.TrimSuffix(l, "\n")) {
 			h = i
 		}
 	}
@@ -398,8 +402,12 @@ func keysTable(lines []string, top []bool) (h, end int) {
 // editKeyLine sets name to lit (or removes it when lit is "") in [keys],
 // creating the table at the end of the file when a line must be added.
 func editKeyLine(lines []string, name, lit, eol string) []string {
+	return editTableLine(lines, name, lit, eol, "keys", keysHeader)
+}
+
+func editTableLine(lines []string, name, lit, eol, table string, header *regexp.Regexp) []string {
 	top := topStarts(lines)
-	h, end := keysTable(lines, top)
+	h, end := findTable(lines, top, header)
 	// span returns the end of the assignment starting at i (its value may run on).
 	span := func(i int) int {
 		j := i + 1
@@ -447,5 +455,5 @@ func editKeyLine(lines []string, name, lit, eol string) []string {
 			lines = append(lines, eol)
 		}
 	}
-	return append(lines, "[keys]"+eol, name+" = "+lit+eol)
+	return append(lines, "["+table+"]"+eol, name+" = "+lit+eol)
 }

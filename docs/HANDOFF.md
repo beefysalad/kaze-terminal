@@ -2,6 +2,40 @@
 
 Last updated: 2026-11-26, 0.45.1 is a fix release for send and wait; owner checks still open: Claude Code to Codex both ways on the installed build, the Settings switch on a real home folder, Windows runtime.
 
+## Orchestrator: tasks 1 to 11 built, pending review and release
+
+`feat/orchestrator-build` implements background Claude Code and Codex workers:
+pure policy and launch planning, per-tab caller keys, UI spawn/kill queues,
+first-message tracking, CLI commands, child waits and inboxes, quiet note delivery,
+worker presentation and stop controls, consent, config and instructions switches,
+and owner templates. Off by default; enable Settings > Agents > Let agents start
+workers. Defaults: first consent per parent, depth 1, 4 children per parent,
+8 total, 6 starts per minute, 5 seconds of owner quiet before notes. Workers close
+with their parent and are never restored. No outlive-parent option or bypass flags.
+README documents the commands and template format. No version bump or release changes.
+
+Task 11 adds `TestWorkerEndToEnd` in `internal/ui/worker_e2e_test.go`: JSON control
+adapter, real tab manager keys and sessions with in-memory PTYs, both worker agents,
+hooks, sidebar/space metadata, tagged report submission, report/note child waits,
+quiet rule, approval guards, kill, close cascade, restore exclusion, feature off,
+and Allow/Deny. Run the following with no real agent, native input or home files:
+
+```sh
+go test -count=1 -timeout=30s ./internal/ui -run 'TestWorker(EndToEnd|READMEContract)$'
+```
+
+Reports: `.superpowers/sdd/orchestrator/task-1-report.md` through `task-11-report.md`.
+
+Open owner gates G2/G3: a current local build with real Claude and Codex round trips,
+including waits, reports, kill, consent and visuals on macOS and Windows. Windows
+runtime remains unverified; cross-builds and pure planner tests cannot prove it.
+Check a fresh Codex folder's unanswered trust dialog and hook delivery after trust.
+Templates v1 are listed with Open folder, not editable in Settings. As confirmed
+by t4, v1 intentionally exposes only enabled, confirm, note_quiet and max_depth;
+the owner fixed the 4/8/6 caps and folder confinement. Full branch
+review, PR, owner checks and the later release remain separate; t4 coordinates.
+Read `docs/HANDOFF-orchestrator.md` for decisions and spike evidence.
+
 ## Agent control: Task 10
 
 Settings > Agents now has an off-by-default "Peer messaging instructions" switch
@@ -92,6 +126,13 @@ No push, release, changelog or lander changes. Whole-branch controller review
 and owner checks remain separate from this Task 9 handoff; t4 is the orchestrator.
 
 ## Where things stand
+
+**Orchestrator feature (agents starting worker agents, like herdr's `hc run`): tasks 1 to 11 built on `feat/orchestrator-build`, pending review and owner gates (2026-11-26).**
+Read `docs/HANDOFF-orchestrator.md` first: it has the owner's decisions, the spike results, the 11-task plan, and how
+Claude (plans and verifies) and Codex (implements, run with `--dangerously-bypass-approvals-and-sandbox`) work together.
+Design: `docs/superpowers/specs/2026-11-26-kaze-orchestrator-design.md`. Implementation is on `feat/orchestrator-build`.
+Released so far: 0.45 (agent control) and 0.45.1 (steadier send and wait); the lander motion shipped in PR #215.
+
 
 **Lander motion (2026-11-26, `feat/lander-motion`):** added restrained hero and scroll entrances, header and control feedback, lightbox transitions and wall pause controls. Reveals are JS-gated and reduced-motion safe. Preview: `python3 -m http.server 8731 --bind 127.0.0.1 --directory docs`.
 

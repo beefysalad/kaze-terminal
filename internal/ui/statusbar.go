@@ -23,6 +23,7 @@ const (
 	grpNotice
 	grpBattery // last, so the groups above keep their numbers
 	grpModel
+	grpWorkers
 )
 
 // statusDims are the status bar's sizes in px.
@@ -254,6 +255,9 @@ func statusPlace(m statusModel, width int, measure func(s string, mono bool) int
 	}
 	p.UsageKeys = keys
 
+	if m.Workers > 0 {
+		right = append(right, item{grpWorkers, 2*ip + d.Icon + gap + measure(workerCounter(m.Workers), true), true})
+	}
 	if !f.noTabs {
 		right = append(right, item{grpTabs, 2*ip + d.Icon + gap + measure(strconv.Itoa(m.Tabs)+" tabs", true), f.noMem || len(keys) > 0})
 	}

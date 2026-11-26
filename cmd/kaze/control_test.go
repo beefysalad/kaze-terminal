@@ -128,7 +128,7 @@ func receiveControlRequest(t *testing.T, requests <-chan control.Request) contro
 
 func TestControlList(t *testing.T) {
 	reply := control.Reply{OK: true, Tabs: []control.TabInfo{
-		{ID: "t1", Name: "review", Space: "project", Agent: "codex", Status: "working", Folder: "/tmp/my project"},
+		{ID: "t1", Name: "review", Space: "project", Agent: "codex", Status: "working", Folder: "/tmp/my project", Parent: "t9", Role: "worker"},
 		{ID: "t2", Space: "Shell", Status: "shell", Folder: "/tmp"},
 	}}
 	for _, asJSON := range []bool{false, true} {
@@ -147,7 +147,7 @@ func TestControlList(t *testing.T) {
 				if out.String() != string(want)+"\n" {
 					t.Fatalf("json=%q", out.String())
 				}
-			} else if out.String() != "t1\treview\tproject\tcodex\tworking\t/tmp/my project\t-\nt2\t-\tShell\t-\tshell\t/tmp\t-\n" {
+			} else if out.String() != "t1\treview\tproject\tcodex\tworking\t/tmp/my project\t-\tt9\tworker\nt2\t-\tShell\t-\tshell\t/tmp\t-\t-\t-\n" {
 				t.Fatalf("plain=%q", out.String())
 			}
 			select {
@@ -242,7 +242,7 @@ func TestControlErrorReply(t *testing.T) {
 		wire string
 		exit int
 	}{
-		{"unknown_tab", 1}, {"unauthorized", 1}, {"control_unavailable", 1}, {"refused", 3}, {"busy_server", 3}, {"timeout", 124},
+		{"unknown_tab", 1}, {"unauthorized", 1}, {"control_unavailable", 1}, {"refused", 3}, {"busy_server", 3}, {"not_allowed", 3}, {"timeout", 124},
 	} {
 		t.Run(tc.wire, func(t *testing.T) {
 			env, _ := controlServer(t, control.Reply{Error: &control.Error{Code: tc.wire, Message: "test explanation"}})
@@ -447,5 +447,28 @@ func TestControlReadTruncationWarning(t *testing.T) {
 	code := runControl([]string{"read", "t2"}, env, nil, &out, &errs)
 	if code != 0 || out.String() != "newest answer\n" || !strings.Contains(errs.String(), "truncated") || !strings.Contains(errs.String(), "newest") {
 		t.Fatalf("code=%d out=%q stderr=%q", code, out.String(), errs.String())
+	}
+}
+
+func TestControlCopiesCallerKeyWithoutChangingLabelKey(t *testing.T) {
+	env, requests := controlServer(t, control.Reply{OK: true})
+	withKey := func(name string) string {
+		if name == "KAZE_TAB_KEY" {
+			return "owner-key"
+		}
+		return env(name)
+	}
+	var out, errs bytes.Buffer
+	if code := runControl([]string{"label", "t2", "team=review"}, withKey, nil, &out, &errs); code != 0 {
+		t.Fatalf("code=%d %s", code, errs.String())
+	}
+	req := receiveControlRequest(t, requests)
+	wire, _ := json.Marshal(req)
+	var fields map[string]any
+	if err := json.Unmarshal(wire, &fields); err != nil {
+		t.Fatal(err)
+	}
+	if fields["caller_key"] != "owner-key" || fields["key"] != "team" {
+		t.Fatalf("request fields: %s", wire)
 	}
 }

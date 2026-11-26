@@ -79,11 +79,16 @@ const (
 )
 
 type window struct {
-	control controlHost
-	w       *app.Window
-	opt     Options
-	pal     render.Palette
-	km      keymap
+	control             controlHost
+	orchestratorEnabled bool
+	noteQuiet           time.Duration
+	consent             workerConsentState
+	workers             map[tabs.TabID]*worker
+	workerStarts        map[tabs.TabID][]time.Time
+	w                   *app.Window
+	opt                 Options
+	pal                 render.Palette
+	km                  keymap
 	// binds is each [keys] action's shortcut, overrides included, for display.
 	binds map[string]input.Shortcut
 
@@ -256,6 +261,7 @@ func Run(w *app.Window, opt Options) error {
 		cfgPath:   config.Path(),
 		startedAt: time.Now(),
 	}
+	win.initOrchestratorConfig()
 	win.opt.Warnings = append(win.opt.Warnings, win.applyKeys(opt.Config.Keys)...)
 	win.applyTheme(startTheme(opt.Config))
 	win.snapFocused.Store(true)
@@ -302,6 +308,18 @@ func Run(w *app.Window, opt Options) error {
 		srv.SetControlContext(controlContextAdapter(&win.control, ctl.Options{Enabled: opt.Config.Control.Enabled, AgentTag: opt.Config.AgentTag}))
 	}
 	return win.loop()
+}
+
+// initOrchestratorConfig runs once before control starts. Worker spawning also
+// requires control, even when Config was constructed without the loader.
+func (win *window) initOrchestratorConfig() {
+	c := win.opt.Config
+	win.orchestratorEnabled = c.Orchestrator.Enabled && c.Control.Enabled
+	win.noteQuiet = controlNoteQuiet
+	if seconds := c.Orchestrator.NoteQuiet; seconds >= 1 && seconds <= 60 {
+		win.noteQuiet = time.Duration(seconds) * time.Second
+	}
+	win.control.noteQuiet = win.noteQuiet
 }
 
 // newChime builds the chime player; tests replace it.
@@ -561,6 +579,9 @@ func modes(s *term.Session) term.Modes {
 
 // start launches a tab's shell in dir, or the configured start folder when empty.
 func (win *window) start(env []string, dir string) (ptyx.Session, error) {
+	return win.startArgv(nil, env, dir)
+}
+func (win *window) startArgv(argv, env []string, dir string) (ptyx.Session, error) {
 	if dir == "" {
 		dir = win.plainStartDir()
 	}
@@ -568,7 +589,10 @@ func (win *window) start(env []string, dir string) (ptyx.Session, error) {
 	if win.opt.ShellEnv != nil {
 		env = win.opt.ShellEnv(env)
 	}
-	return ptyx.Start(win.opt.Shell, cols, rows, env, dir)
+	if len(argv) == 0 {
+		argv = win.opt.Shell
+	}
+	return ptyx.Start(argv, cols, rows, env, dir)
 }
 
 func (win *window) newTab() { win.newTabIn(win.plainStartDir()) }
@@ -714,7 +738,7 @@ func (win *window) frame(gtx layout.Context) error {
 		if win.bench != nil {
 			notify = func() { win.bench.Output(time.Now()); win.w.Invalidate() }
 		}
-		win.mgr = tabs.NewManager(win.start, cols, rows, notify)
+		win.mgr = tabs.NewManagerWithArgv(win.startArgv, cols, rows, notify)
 		win.liveMgr.Store(win.mgr)
 		win.mgr.SetScrollback(win.opt.Config.ScrollbackLines)
 		if win.srv != nil {
@@ -755,6 +779,7 @@ func (win *window) frame(gtx layout.Context) error {
 		win.renameEvents(gtx)
 		win.toastEvents(gtx)
 		win.bannerEvents(gtx)
+		win.consentEvents(gtx)
 		win.findEvents(gtx) // before the panel and the terminal
 		active = win.mgr.Active()
 		if win.set.shown {
@@ -791,6 +816,12 @@ func (win *window) frame(gtx layout.Context) error {
 	win.publish(win.shownTab(), win.focused)
 	win.drainControl()
 	win.drainAlerts(gtx.Now)
+	if at, ok := win.consentTick(win.wsNow()); ok {
+		gtx.Execute(op.InvalidateCmd{At: at})
+	}
+	if at, ok := win.workerTick(win.wsNow()); ok {
+		gtx.Execute(op.InvalidateCmd{At: at})
+	}
 	win.drainSubs(gtx.Now)
 	win.dropGoneAgents() // after the drain, so a panel never closes on an agent not applied yet
 	if at, ok := win.subTimer(gtx.Now); ok {
@@ -877,7 +908,11 @@ func (win *window) frame(gtx layout.Context) error {
 	} else {
 		win.rend.SetFocused(win.focused && !win.set.shown && !win.dockMemberKeys())
 		win.drawTerminal(gtx, active, termRect, grid, &sel)
-		win.drawWsBanner(gtx, active, termRect) // after the terminal, so it takes the clicks it covers
+		if !win.drawWorkerConsent(gtx, active, termRect) {
+			win.drawWsBanner(gtx, active, termRect) // after the terminal, so it takes the clicks it covers
+		} else {
+			win.wsr.hits = win.wsr.hits[:0]
+		}
 		win.drawShownDock(gtx)
 		win.drawFind(gtx, win.findPane(termRect)) // over its pane, so it takes the clicks it covers
 	}
@@ -1269,6 +1304,7 @@ func (win *window) routeView(gtx layout.Context, v termView, batch []event.Event
 		switch e := ev.(type) {
 		case key.Event:
 			if e.State == key.Press {
+				win.control.recordOwnerKey(t.ID, win.wsNow())
 				win.blinkFrom = time.Time{} // typing shows the cursor and restarts the blink
 			}
 			before := win.mgr.Active()
@@ -1295,6 +1331,7 @@ func (win *window) routeView(gtx layout.Context, v termView, batch []event.Event
 		case key.CompositionEvent:
 			win.composing = compositionActive(e)
 		case key.EditEvent:
+			win.control.recordOwnerKey(t.ID, win.wsNow())
 			edited = true
 			win.blinkFrom = time.Time{}
 			if win.gate.allow() && editCommits(batch, i, win.composing) && e.Text != "" {

@@ -158,6 +158,7 @@ func (win *window) skillSources() (skills.Sources, string) {
 // palInput is the palette's live input: states change while it is open.
 func (win *window) palInput() palInput {
 	p := &win.palette
+	win.syncWorkerPaletteActions()
 	return palInput{
 		Query:    p.ed.Text(),
 		Sessions: sessionRows(buildSide(win.sideIn())),
@@ -188,6 +189,10 @@ func (win *window) palActions() []palAction {
 			a.Keys = splitShortcut(formatShortcut(runtime.GOOS, sc))
 		}
 		out = append(out, a)
+	}
+	out = append(out, palAction{Name: "Stop all workers", Config: "stop_all_workers", Icon: "close"})
+	if a := win.mgr.Active(); a != nil && win.hasWorkers(a.ID) {
+		out = append(out, palAction{Name: "Stop workers of this tab", Config: "stop_tab_workers", Icon: "close"})
 	}
 	return append(out, workspaceActions(win.palette.spaces)...)
 }
@@ -444,7 +449,13 @@ func (win *window) palAct(gtx layout.Context, it palItem, shift bool) {
 		win.startPrompt(it.Prompt, shift)
 	case palKaze:
 		win.closePalette()
-		if it.Workspace != "" {
+		if it.Key == "act:stop_all_workers" {
+			win.stopWorkerTabs(0)
+		} else if it.Key == "act:stop_tab_workers" {
+			if a := win.mgr.Active(); a != nil {
+				win.stopWorkerTabs(a.ID)
+			}
+		} else if it.Workspace != "" {
 			win.runWorkspace(it.Workspace)
 		} else {
 			win.runShortcut(gtx, it.Act)
@@ -552,4 +563,25 @@ func (win *window) drawPalette(gtx layout.Context, main image.Rectangle) {
 	area := clip.Rect{Max: gtx.Constraints.Max}.Push(gtx.Ops)
 	event.Op(gtx.Ops, &p.tag)
 	area.Pop()
+}
+
+// The palette can stay open while control requests close or start workers.
+func (win *window) syncWorkerPaletteActions() {
+	p := &win.palette
+	want := false
+	if a := win.mgr.Active(); a != nil {
+		want = win.hasWorkers(a.ID)
+	}
+	for i, a := range p.actions {
+		if a.Config != "stop_tab_workers" {
+			continue
+		}
+		if !want {
+			p.actions = append(p.actions[:i], p.actions[i+1:]...)
+		}
+		return
+	}
+	if want {
+		p.actions = append(p.actions, palAction{Name: "Stop workers of this tab", Config: "stop_tab_workers", Icon: "close"})
+	}
 }

@@ -27,13 +27,21 @@ type Control struct {
 	Enabled bool `toml:"enabled"`
 }
 
+type Orchestrator struct {
+	Enabled   bool   `toml:"enabled"`
+	Confirm   string `toml:"confirm"`
+	NoteQuiet int    `toml:"note_quiet"`
+	MaxDepth  int    `toml:"max_depth"`
+}
+
 type Config struct {
-	AgentTag        bool    `toml:"agent_tag"`
-	Control         Control `toml:"control"`
-	StartDir        string  `toml:"start_dir"`        // cwd for new plain tabs; empty means home
-	RestoreSessions bool    `toml:"restore_sessions"` // restore folders and exact agent conversations; default true
-	FontSize        float32 `toml:"font_size"`        // default 14
-	FontFamily      string  `toml:"font_family"`      // not supported yet; a set value warns
+	Orchestrator    Orchestrator `toml:"orchestrator"`
+	AgentTag        bool         `toml:"agent_tag"`
+	Control         Control      `toml:"control"`
+	StartDir        string       `toml:"start_dir"`        // cwd for new plain tabs; empty means home
+	RestoreSessions bool         `toml:"restore_sessions"` // restore folders and exact agent conversations; default true
+	FontSize        float32      `toml:"font_size"`        // default 14
+	FontFamily      string       `toml:"font_family"`      // not supported yet; a set value warns
 	// Shell empty means "use the platform default shell"; the caller
 	// resolves it at startup.
 	Shell               []string          `toml:"shell"`
@@ -84,6 +92,7 @@ func Default() Config {
 	return Config{
 		AgentTag:            true,
 		Control:             Control{Enabled: true},
+		Orchestrator:        Orchestrator{Confirm: "first", NoteQuiet: 5, MaxDepth: 1},
 		RestoreSessions:     true,
 		FontSize:            defaultFontSize,
 		ScrollbackLines:     defaultScrollback,
@@ -249,6 +258,35 @@ func Load(path string) (Config, []string, error) {
 			loadBool(v, k, &cfg.ShowUsage, warn)
 		case "agent_tag":
 			loadBool(v, k, &cfg.AgentTag, warn)
+		case "orchestrator":
+			table, ok := v.(map[string]any)
+			if !ok {
+				warn("orchestrator must be a table; using defaults")
+				continue
+			}
+			for _, key := range sortedKeys(table) {
+				value, name := table[key], "orchestrator."+key
+				switch key {
+				case "enabled":
+					loadBool(value, name, &cfg.Orchestrator.Enabled, warn)
+				case "confirm":
+					loadChoice(value, name, &cfg.Orchestrator.Confirm, []string{"first", "always", "never"}, warn)
+				case "note_quiet":
+					if n, ok := value.(int64); ok && n >= 1 && n <= 60 {
+						cfg.Orchestrator.NoteQuiet = int(n)
+					} else {
+						warn("%s must be an integer from 1 to 60 seconds, got %v; using 5", name, value)
+					}
+				case "max_depth":
+					if n, ok := value.(int64); ok && n == 1 {
+						cfg.Orchestrator.MaxDepth = 1
+					} else {
+						warn("%s must be 1 in v1, got %v; using 1", name, value)
+					}
+				default:
+					warn("unknown setting %q ignored", name)
+				}
+			}
 		case "control":
 			table, ok := v.(map[string]any)
 			if !ok {
@@ -292,6 +330,9 @@ func Load(path string) (Config, []string, error) {
 		default:
 			warn("unknown setting %q ignored", k)
 		}
+	}
+	if cfg.Orchestrator.Enabled && !cfg.Control.Enabled {
+		warn("[orchestrator] enabled needs [control] enabled = true; worker spawning is disabled")
 	}
 	return cfg, warns, nil
 }

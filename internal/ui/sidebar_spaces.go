@@ -138,7 +138,9 @@ func spaceSpan(gtx layout.Context, s spaceEntry) int {
 // agentCounts is how many agent rows each group has.
 func agentCounts(rows []agentRow) (n [3]int) {
 	for _, r := range rows {
-		n[r.State]++
+		if !r.Worker {
+			n[r.State]++
+		}
 	}
 	return n
 }
@@ -150,6 +152,11 @@ func agentsSpan(gtx layout.Context, rows []agentRow) int {
 		return 0
 	}
 	h := gtx.Dp(sideHeadH) + len(rows)*gtx.Dp(sideAgentRowH) + gtx.Dp(6)
+	for _, r := range rows {
+		if workerAttention(r) {
+			h += gtx.Dp(16)
+		}
+	}
 	for _, n := range agentCounts(rows) {
 		if n > 0 {
 			h += gtx.Dp(sideAgentLabelH)
@@ -287,8 +294,8 @@ func (c *chrome) agentsSection(gtx layout.Context, h *sideHits, rows []agentRow,
 	counts := agentCounts(rows)
 	names := [3]string{"Needs you ", "Working ", "Idle "}
 	last := agentGroup(-1)
-	for _, r := range rows {
-		if r.State != last {
+	for i, r := range rows {
+		if !r.Worker && r.State != last {
 			last = r.State
 			lcol := th.Muted
 			if r.State == agentNeeds {
@@ -298,18 +305,23 @@ func (c *chrome) agentsSection(gtx layout.Context, h *sideHits, rows []agentRow,
 			place(ops, lCall, image.Pt(pad+gap, y+(labelH-lSize.Y)/2))
 			y += labelH
 		}
-		rect := image.Rect(pad, y, h.list.Max.X-pad, y+rowH)
+		height := rowH
+		if workerAttention(r) {
+			height += gtx.Dp(16)
+		}
+		rect := image.Rect(pad, y, h.list.Max.X-pad, y+height)
 		y = rect.Max.Y
 		if !rect.Overlaps(h.list) {
 			continue
 		}
-		c.agentLine(gtx, r, st, rect)
+		lastWorker := i+1 == len(rows) || !rows[i+1].Worker || rows[i+1].Parent != r.Parent
+		c.agentLine(gtx, r, st, rect, lastWorker)
 		h.rows = append(h.rows, sideRowHit{id: r.ID, rect: rect.Intersect(h.list)})
 	}
 }
 
 // agentLine draws one agent row in rect: logo, space name, subtitle, age, state mark.
-func (c *chrome) agentLine(gtx layout.Context, r agentRow, st sideState, rect image.Rectangle) {
+func (c *chrome) agentLine(gtx layout.Context, r agentRow, st sideState, rect image.Rectangle, lastWorker bool) {
 	ops, th := gtx.Ops, c.sideTheme()
 	gap := gtx.Dp(8)
 	fg := th.Folder
@@ -320,8 +332,16 @@ func (c *chrome) agentLine(gtx layout.Context, r agentRow, st sideState, rect im
 	case r.ID == st.hover:
 		paint.FillShape(ops, tint(th.Active, 0x90), clip.UniformRRect(rect, gtx.Dp(7)).Op(ops))
 	}
-	mid := rect.Min.Y + rect.Dy()/2
-	x := rect.Min.X + gap
+	mid := rect.Min.Y + gtx.Dp(sideAgentRowH)/2
+	cols := sidebarAgentColumns(gtx, rect, r.Worker)
+	x := cols.logo
+	if r.Worker {
+		bottom := rect.Max.Y
+		if lastWorker {
+			bottom = mid
+		}
+		c.workerBranch(gtx, rect.Min.X+gap+gtx.Dp(6), rect.Min.Y, bottom, mid, x-gtx.Dp(4))
+	}
 	logoPx := gtx.Dp(13)
 	if logo, img := agentLogo(r.Name, logoPx, agentLogoColor(r.Name, fg)); img != nil {
 		off := op.Offset(image.Pt(x, mid-logoPx/2)).Push(ops)
@@ -331,23 +351,46 @@ func (c *chrome) agentLine(gtx layout.Context, r agentRow, st sideState, rect im
 	} else {
 		c.icon(gtx, "terminal", image.Rect(x, mid-logoPx/2, x+logoPx, mid+logoPx/2), fg)
 	}
-	x += logoPx + gap
-
+	x = cols.name
 	dot := gtx.Dp(7)
-	right := rect.Max.X - gap
-	c.sideDot(gtx, image.Rect(right-dot, mid-dot/2, right, mid-dot/2+dot), r.Mark, r.Running)
-	right -= dot + gap
+	c.sideDot(gtx, image.Rect(cols.dot, mid-dot/2, cols.dot+dot, mid-dot/2+dot), r.Mark, r.Running)
 	if age := agentAge(gtx.Now, r.Since); age != "" {
-		aCall, aSize := c.label(gtx, age, 11, th.Muted)
-		right -= aSize.X
-		place(ops, aCall, image.Pt(right, mid-aSize.Y/2))
-		right -= gap
+		call, sz := c.fitSide(gtx, age, 11, gtx.Dp(30), th.Muted)
+		place(ops, call, image.Pt(cols.ageRight-sz.X, mid-sz.Y/2))
 	}
-	nCall, nSize := c.fitSideWeight(gtx, r.Space, 12, min(max(right-x, 0), gtx.Dp(110)), th.ActiveFG, font.Bold)
+	room := max(cols.right-x, 0)
+	nameRoom := room
+	if !r.Worker {
+		nameRoom = min(room, gtx.Dp(110))
+	}
+	nCall, nSize := c.fitSideWeight(gtx, r.Space, 12, nameRoom, th.ActiveFG, font.Bold)
 	place(ops, nCall, image.Pt(x, mid-nSize.Y/2))
-	x += nSize.X + gap
-	if room := right - x; room > 0 && r.Subtitle != "" {
-		sCall, sSize := c.fitSide(gtx, r.Subtitle, 11, room, th.Muted)
-		place(ops, sCall, image.Pt(x, mid-sSize.Y/2))
+	if r.Worker {
+		if workerAttention(r) {
+			call, _ := c.fitSide(gtx, "waiting for you in this tab", 10, max(rect.Max.X-gap-x, 0), th.Muted)
+			place(ops, call, image.Pt(x, mid+gtx.Dp(9)))
+		}
+		return
 	}
+	x += nSize.X + gap
+	if room := cols.right - x; room > 0 && r.Subtitle != "" {
+		call, sz := c.fitSide(gtx, r.Subtitle, 11, room, th.Muted)
+		place(ops, call, image.Pt(x, mid-sz.Y/2))
+	}
+}
+
+func workerAttention(r agentRow) bool { return r.Worker && r.Mark == markNeeds }
+
+// sidebarAgentColumns reserves the same age and status columns for every row.
+func sidebarAgentColumns(gtx layout.Context, rect image.Rectangle, worker bool) (c struct{ logo, name, right, ageRight, dot int }) {
+	gap := gtx.Dp(8)
+	c.logo = rect.Min.X + gap
+	if worker {
+		c.logo += gtx.Dp(16)
+	}
+	c.name = c.logo + gtx.Dp(13) + gap
+	c.dot = rect.Max.X - gap - gtx.Dp(7)
+	c.ageRight = c.dot - gap
+	c.right = c.ageRight - gtx.Dp(30) - gap
+	return
 }

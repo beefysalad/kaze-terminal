@@ -279,17 +279,21 @@ func (s *Server) handle(c net.Conn) {
 		duration := s.deadline
 		var op string
 		_ = json.Unmarshal(envelope["op"], &op)
-		// Control budgets are acquired only after authentication and never wait.
-		// The remaining connection slots stay available to legacy hooks and
-		// bounded decoding clients under sustained control load.
-		select {
-		case s.controlSem <- struct{}{}:
-			defer func() { <-s.controlSem }()
-		default:
-			s.writeControl(c, controlError("busy_server", "control request budget exhausted; retry later"))
-			return
+		var waitStart bool
+		_ = json.Unmarshal(envelope["wait_start"], &waitStart)
+		spawnWait := op == "spawn"
+		// A spawn may await owner consent and uses only a wait slot, leaving the control
+		// budget available. Both budgets refuse immediately and reserve hook capacity.
+		if !spawnWait {
+			select {
+			case s.controlSem <- struct{}{}:
+				defer func() { <-s.controlSem }()
+			default:
+				s.writeControl(c, controlError("busy_server", "control request budget exhausted; retry later"))
+				return
+			}
 		}
-		if op == "wait" {
+		if op == "wait" || spawnWait {
 			select {
 			case s.waitSem <- struct{}{}:
 				defer func() { <-s.waitSem }()
@@ -297,6 +301,14 @@ func (s *Server) handle(c net.Conn) {
 				s.writeControl(c, controlError("busy_server", "wait request budget exhausted; retry later"))
 				return
 			}
+		}
+		if spawnWait {
+			duration = 65 * time.Second
+			if waitStart {
+				duration = 100 * time.Second
+			}
+		}
+		if op == "wait" {
 			seconds := 120
 			var requested int
 			if json.Unmarshal(envelope["timeout"], &requested) == nil && requested > 0 && requested <= 600 {

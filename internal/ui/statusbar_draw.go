@@ -27,15 +27,16 @@ const grpNone statusGroup = -1
 
 // statusState is the status bar as last drawn, for input.
 type statusState struct {
-	tag    *int
-	l      statusLayout
-	m      statusModel
-	y      int         // the bar's top in window px
-	hover  statusGroup // grpNone when the pointer is elsewhere
-	card   resourceCardState
-	cache  statusLayoutCache
-	locale system.Locale
-	bat    batteryInkCache
+	tag     *int
+	l       statusLayout
+	m       statusModel
+	y       int         // the bar's top in window px
+	hover   statusGroup // grpNone when the pointer is elsewhere
+	workers workerPopover
+	card    resourceCardState
+	cache   statusLayoutCache
+	locale  system.Locale
+	bat     batteryInkCache
 }
 
 func statusDimsFor(gtx layout.Context) statusDims {
@@ -45,7 +46,7 @@ func statusDimsFor(gtx layout.Context) statusDims {
 
 // clickable reports whether a status group does something when clicked (spec 6.2).
 func clickable(g statusGroup) bool {
-	return g == grpUpdate || g == grpAgents || g == grpServers || g == grpUsage
+	return g == grpWorkers || g == grpUpdate || g == grpAgents || g == grpServers || g == grpUsage
 }
 
 // statusRect is a group's rectangle in window px, empty when not shown.
@@ -226,6 +227,9 @@ func (win *window) drawStatus(gtx layout.Context, y int, now time.Time) {
 				x = c.statusLabel(gtx, x+2*gap, mid, "RAM") + gap/2
 			}
 			text(x, ram, true, c.statusValueColor())
+		case grpWorkers:
+			c.workerMark(gtx, image.Rect(x, mid-d.Icon/2, x+d.Icon, mid+d.Icon/2), th.Accent)
+			text(x+d.Icon+gap, workerCounter(m.Workers), true, c.statusValueColor())
 		case grpTabs:
 			x = icon(x, "tabs", th.Muted) + gap
 			unit := " tabs"
@@ -294,6 +298,7 @@ func usageByKey(ds []usage.Detail, k string) usage.Detail {
 
 // statusEvents handles hover and clicks on the status bar (spec 6.2).
 func (win *window) statusEvents(gtx layout.Context) {
+	win.workerPopoverEvents(gtx)
 	win.resourceCardEvents(gtx)
 	if win.stat.tag == nil {
 		win.stat.tag = new(int) // before the first draw, so its filter is up when the first click comes
@@ -339,6 +344,11 @@ func (win *window) statusPointer(e pointer.Event) {
 
 func (win *window) statusClick(g statusGroup) {
 	switch g {
+	case grpWorkers:
+		win.stat.workers.open = !win.stat.workers.open
+		if win.w != nil {
+			win.w.Invalidate()
+		}
 	case grpUpdate:
 		win.updClick()
 	case grpAgents:
@@ -357,6 +367,7 @@ func (win *window) statusClick(g statusGroup) {
 
 // drawUsageCard is the card above the usage group while it is hovered (spec 6.2).
 func (win *window) drawUsageCard(gtx layout.Context) {
+	win.drawWorkerPopover(gtx)
 	if win.stat.hover != grpUsage || len(win.stat.m.Usage) == 0 {
 		return
 	}

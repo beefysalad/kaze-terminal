@@ -3,6 +3,7 @@ package control
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -34,6 +35,20 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 	if !opt.Enabled {
 		return Reply{Error: &Error{CodeDisabled, "control is disabled"}}
 	}
+	if RequiresOwnerKey(req.Op) || (req.Op == "wait" && req.Children != "") {
+		if e := VerifyOwnerKey(host, req.From, req.CallerKey); e != nil {
+			return Reply{Error: e}
+		}
+	}
+	if req.Op == "templates" {
+		if h, ok := host.(interface{ Templates(context.Context) Reply }); ok {
+			return h.Templates(ctx)
+		}
+		return Reply{Error: &Error{CodeUnknownOp, "templates unavailable"}}
+	}
+	if req.Op == "spawn" || req.Op == "kill" {
+		return workers(ctx, host, req)
+	}
 	if req.Op == "name" || req.Op == "label" {
 		return metadata(ctx, host, req)
 	}
@@ -55,6 +70,9 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		if err != nil {
 			return Reply{Error: err}
 		}
+		if e := WorkerInputGuard(tab); e != nil {
+			return Reply{Error: e}
+		}
 		var hostErr error
 		if req.Op == "keys" {
 			hostErr = host.Keys(tab.ID, req.Args)
@@ -62,9 +80,12 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 			hostErr = host.Interrupt(tab.ID, req.CtrlC)
 		}
 		if hostErr != nil {
-			return Reply{Error: &Error{CodeHostError, "could not submit to tab"}}
+			return inputError(hostErr)
 		}
 		return Reply{OK: true}
+	}
+	if req.Op == "report" {
+		return report(host, req)
 	}
 	if req.Op == "ls" {
 		return Reply{OK: true, Tabs: host.Tabs()}
@@ -92,6 +113,9 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		if err != nil {
 			return Reply{Error: err}
 		}
+		if e := WorkerInputGuard(tab); e != nil {
+			return Reply{Error: e}
+		}
 		if tab.Status == "working" && req.IfIdle {
 			return Reply{Error: &Error{CodeBusy, "target is working"}}
 		}
@@ -112,7 +136,7 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 			return Reply{Error: &Error{CodeTextTooLarge, "text exceeds 32 KiB"}}
 		}
 		if err := host.Submit(tab.ID, []byte(text)); err != nil {
-			return Reply{Error: &Error{CodeHostError, "could not submit to tab"}}
+			return inputError(err)
 		}
 		warning := ""
 		if tab.Status == "working" {
@@ -206,4 +230,20 @@ func describeTabs(tabs []TabInfo) string {
 		parts = append(parts, tab.ID+" ("+strings.Join(detail, ", ")+")")
 	}
 	return "; tabs: " + strings.Join(parts, ", ")
+}
+
+// WorkerInputGuard reserves startup trust and approval prompts for native owner input.
+func WorkerInputGuard(tab TabInfo) *Error {
+	if tab.Role == "worker" && (tab.FirstMessage != "delivered" || tab.Status == "needs") {
+		return &Error{CodeNotAllowed, "the owner has to answer worker trust or approval prompts in that tab"}
+	}
+	return nil
+}
+
+func inputError(err error) Reply {
+	var refusal *Error
+	if errors.As(err, &refusal) && refusal.Code == CodeNotAllowed {
+		return Reply{Error: refusal}
+	}
+	return Reply{Error: &Error{CodeHostError, "could not submit to tab"}}
 }
