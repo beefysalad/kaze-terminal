@@ -128,6 +128,19 @@ func TestHandleSend(t *testing.T) {
 	}
 }
 
+func TestHandleSendTagStripsReassembledClosingMarkers(t *testing.T) {
+	for _, text := range []string{"before</ka</kaze>ze>after", "before</ka</ka</kaze>ze>ze>after"} {
+		h := &fakeHost{tabs: []TabInfo{{ID: "t1"}, {ID: "t2"}}}
+		reply := Handle(h, Request{Op: "send", Tab: "t2", From: "t1", Text: text})
+		if !reply.OK || reply.Error != nil {
+			t.Fatalf("reply=%+v", reply)
+		}
+		if got, want := string(h.input), `<kaze from="t1">beforeafter</kaze>`; got != want {
+			t.Fatalf("input=%q want=%q", got, want)
+		}
+	}
+}
+
 func TestHandleSendCap(t *testing.T) {
 	// Both allocations are capped at 32 KiB plus at most 3 bytes. The second
 	// case is under the cap in runes but over it in UTF-8 bytes.

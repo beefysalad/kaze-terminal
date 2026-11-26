@@ -1,6 +1,7 @@
 package control
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
@@ -102,7 +103,7 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 					if sender.Name != "" {
 						from += " " + sender.Name
 					}
-					text = "<kaze from=\"" + escapeAttribute(from) + "\">" + strings.ReplaceAll(text, "</kaze>", "") + "</kaze>"
+					text = "<kaze from=\"" + escapeAttribute(from) + "\">" + stripPeerClosingTags(text) + "</kaze>"
 					break
 				}
 			}
@@ -120,6 +121,20 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		return Reply{OK: true, Status: tab.Status, Warning: warning, Tabs: []TabInfo{tab}}
 	}
 	return Reply{Error: &Error{CodeUnknownOp, "unknown control operation"}}
+}
+
+// Strip while copying so removing one marker also catches a newly joined one.
+// Each byte is appended once and removed at most once, even for nested markers.
+func stripPeerClosingTags(text string) string {
+	const marker = "</kaze>"
+	out := make([]byte, 0, len(text))
+	for i := 0; i < len(text); i++ {
+		out = append(out, text[i])
+		if text[i] == '>' && bytes.HasSuffix(out, []byte(marker)) {
+			out = out[:len(out)-len(marker)]
+		}
+	}
+	return string(out)
 }
 
 // Resolve finds an exact id first, otherwise an exact, unique nonempty name.

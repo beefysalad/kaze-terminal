@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -93,6 +94,10 @@ func (win *window) noteAgent(m notify.Msg, id tabs.TabID, seq uint64) {
 	}
 	win.agents[id] = a
 	win.publishControl()
+	if m.Kind == notify.KindPrompt {
+		// After the publish: a reader that sees the hold cleared sees working.
+		win.control.clearPending("t" + strconv.Itoa(int(id)))
+	}
 }
 
 // firstWord is the first whitespace-separated word of s, cut to n runes.

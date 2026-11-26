@@ -669,10 +669,11 @@ hook and process detection, so it can lag activity:
 
 | Status | Meaning |
 |---|---|
-| `working` | An agent turn is running. |
+| `working` | An agent turn is running, or input was just sent and the agent's prompt hook has not arrived yet (for up to 10 seconds). |
 | `idle` | An agent is present and is not running a turn. |
 | `needs` | The tab is waiting on you. `wait` treats it as stopped. |
 | `shell` | No agent is known. `wait` uses output quietness. |
+| `unknown` | An agent was found by process detection but no hook has reported. `wait` uses output quietness. |
 
 The server admits at most 8 concurrent waits and 16 concurrent control requests in total.
 Excess requests immediately return `busy_server`; retry later. Control load leaves

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 )
 
 const controlTimeout = 5 * time.Second
+const controlMaxRequest = 64 << 10 // matches the notify server's JSON object cap
 
 const controlUsage = "usage: kaze ls [--json] | read <t> [--lines N] | send <t> <text|-> [--raw] [--if-idle] | name <t> <name> | label <t> k=v | keys <t> <key...> | interrupt <t> [--ctrl-c] | wait <t> [--for TEXT] [--timeout S] [--quiet MS]"
 
@@ -69,6 +71,19 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 		fmt.Fprintln(stderr, "kaze: KAZE_NOTIFY_TOKEN is required; run inside a Kaze tab")
 		return 1
 	}
+	var wire bytes.Buffer
+	encoder := json.NewEncoder(&wire)
+	encoder.SetEscapeHTML(false)
+	if err := encoder.Encode(req); err != nil {
+		fmt.Fprintln(stderr, "kaze: encode request:", err)
+		return 2
+	}
+	// The server decodes one complete JSON object without needing a newline.
+	encoded := bytes.TrimSuffix(wire.Bytes(), []byte{'\n'})
+	if len(encoded) > controlMaxRequest {
+		fmt.Fprintln(stderr, "kaze: encoded request exceeds 64 KiB; shorten the text or arguments")
+		return 2
+	}
 	conn, err := net.DialTimeout("tcp", addr, controlTimeout)
 	if err != nil {
 		return controlNetworkError(err, stderr)
@@ -77,7 +92,7 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 	if err = conn.SetDeadline(time.Now().Add(controlTimeout)); err != nil {
 		return controlNetworkError(err, stderr)
 	}
-	if err = json.NewEncoder(conn).Encode(req); err != nil {
+	if _, err = conn.Write(encoded); err != nil {
 		return controlNetworkError(err, stderr)
 	}
 	if req.Op == "wait" {
