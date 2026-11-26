@@ -25,9 +25,11 @@ const controlPasteEnterDelay = 100 * time.Millisecond
 var controlPendingGrace = 10 * time.Second
 
 type controlSession struct {
-	session *term.Session
-	send    sync.Mutex   // keep control sequences and paste/Enter pairs together
-	pending atomic.Int64 // unix nanos of the last send still awaiting its prompt hook; 0 when none
+	session     *term.Session
+	send        sync.Mutex   // keep control sequences and paste/Enter pairs together
+	lastKey     atomic.Int64 // last owner key press, retained across publications
+	noteSending atomic.Bool
+	pending     atomic.Int64 // unix nanos of the last send still awaiting its prompt hook; 0 when none
 }
 type controlSnapshot struct {
 	ownerKeys map[string]string // private immutable authentication data; never serialized
@@ -48,6 +50,7 @@ type controlHost struct {
 	wake           func() // immutable after initialization; only invalidates like onNotify
 	labelsMu       sync.Mutex
 	labels         map[string]map[string]string
+	inbox          map[string]*controlInbox
 }
 
 var _ ctl.Host = (*controlHost)(nil)
@@ -73,7 +76,7 @@ func (h *controlHost) Tabs() []ctl.TabInfo {
 func overlayPending(s *controlSnapshot, now int64) []ctl.TabInfo {
 	out, cloned := s.tabs, false
 	for i, tab := range s.tabs {
-		if tab.Status != "idle" && tab.Status != "needs" {
+		if tab.Status != "idle" && tab.Status != "needs" || (tab.Status == "needs" && tab.Role == "worker") {
 			continue
 		}
 		at := s.sessions[tab.ID].pending.Load()
@@ -137,6 +140,11 @@ func (h *controlHost) Submit(id string, text []byte) error {
 	}
 	target.send.Lock()
 	defer target.send.Unlock()
+	return h.submitLocked(id, text, target)
+}
+
+// submitLocked keeps the paste and Enter under the caller's send lock.
+func (h *controlHost) submitLocked(id string, text []byte, target *controlSession) error {
 	s := target.session
 	s.Lock()
 	modes := s.Applier().Modes()
@@ -192,7 +200,7 @@ func (win *window) publishControl() {
 				status = "unknown" // found by process only: no hook says idle or working
 			}
 		}
-		if win.alerts.markOf(t.ID) == markNeeds {
+		if win.alerts.markOf(t.ID) == markNeeds && t.Role != "worker" {
 			status = "needs"
 		}
 		parent, firstMessage := "", ""
@@ -203,6 +211,9 @@ func (win *window) publishControl() {
 			firstMessage = w.firstMessage
 			if !w.hooked {
 				status = "starting"
+			}
+			if w.needs {
+				status = "needs"
 			}
 			if a.agentName() == "" {
 				a.agent = w.agent
@@ -219,7 +230,8 @@ func (win *window) publishControl() {
 		if folder == "" {
 			folder = t.Dir
 		}
-		next.tabs = append(next.tabs, ctl.TabInfo{Parent: parent, Role: t.Role, FirstMessage: firstMessage, ID: id, Name: name, Space: controlSpaceName(loc), Folder: folder,
+		messages := win.control.inboxMessages(id)
+		next.tabs = append(next.tabs, ctl.TabInfo{Unread: len(messages), Inbox: messages, Parent: parent, Role: t.Role, FirstMessage: firstMessage, ID: id, Name: name, Space: controlSpaceName(loc), Folder: folder,
 			Labels: cloneLabels(win.control.labels[id]), Agent: a.agentName(), Status: status, Since: a.since, Workspace: t.Group != nil})
 		var target *controlSession
 		if old != nil {
@@ -233,6 +245,11 @@ func (win *window) publishControl() {
 	for id := range win.control.labels {
 		if next.sessions[id] == nil {
 			delete(win.control.labels, id)
+		}
+	}
+	for id := range win.control.inbox {
+		if next.sessions[id] == nil {
+			delete(win.control.inbox, id)
 		}
 	}
 	win.control.publish(next)

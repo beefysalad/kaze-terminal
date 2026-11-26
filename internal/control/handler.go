@@ -34,7 +34,7 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 	if !opt.Enabled {
 		return Reply{Error: &Error{CodeDisabled, "control is disabled"}}
 	}
-	if RequiresOwnerKey(req.Op) {
+	if RequiresOwnerKey(req.Op) || (req.Op == "wait" && req.Children != "") {
 		if e := VerifyOwnerKey(host, req.From, req.CallerKey); e != nil {
 			return Reply{Error: e}
 		}
@@ -62,6 +62,9 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		tab, err := Resolve(host.Tabs(), req.Tab)
 		if err != nil {
 			return Reply{Error: err}
+		}
+		if e := workerInputGuard(tab); e != nil {
+			return Reply{Error: e}
 		}
 		var hostErr error
 		if req.Op == "keys" {
@@ -102,6 +105,9 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		tab, err := Resolve(tabs, req.Tab)
 		if err != nil {
 			return Reply{Error: err}
+		}
+		if e := workerInputGuard(tab); e != nil {
+			return Reply{Error: e}
 		}
 		if tab.Status == "working" && req.IfIdle {
 			return Reply{Error: &Error{CodeBusy, "target is working"}}
@@ -217,4 +223,11 @@ func describeTabs(tabs []TabInfo) string {
 		parts = append(parts, tab.ID+" ("+strings.Join(detail, ", ")+")")
 	}
 	return "; tabs: " + strings.Join(parts, ", ")
+}
+
+func workerInputGuard(tab TabInfo) *Error {
+	if tab.Role == "worker" && tab.Status == "needs" {
+		return &Error{CodeNotAllowed, "worker approval prompts require the owner"}
+	}
+	return nil
 }

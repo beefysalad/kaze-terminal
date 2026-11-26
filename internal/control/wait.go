@@ -22,6 +22,9 @@ func wait(ctx context.Context, host Host, req Request) Reply {
 	if req.Timeout < 0 || req.Timeout > MaxWaitTimeout || req.Quiet < 0 || req.Quiet > int((1<<63-1)/int64(time.Millisecond)) || len(req.For) > MaxTextBytes {
 		return Reply{Error: &Error{CodeInvalidRequest, "invalid wait limits"}}
 	}
+	if req.Children != "" {
+		return waitChildren(ctx, host, req)
+	}
 	h, ok := host.(WaitHost)
 	if !ok {
 		return Reply{Error: &Error{CodeHostError, "wait unavailable"}}
@@ -123,3 +126,86 @@ func wait(ctx context.Context, host Host, req Request) Reply {
 // quietStatus marks tabs with no hook state, a plain shell or an agent found
 // only by process detection, which are waited on by output quiescence.
 func quietStatus(status string) bool { return status == "shell" || status == "unknown" }
+
+// InboxHost consumes only messages visible in the snapshot that satisfied a wait.
+// Later arrivals remain unread. Implementations synchronize without touching UI.
+type InboxHost interface {
+	ConsumeInbox(id string, through uint64) []InboxMessage
+}
+
+func waitChildren(ctx context.Context, host Host, req Request) Reply {
+	if (req.Children != "all" && req.Children != "any") || req.Tab != "" || req.For != "" || req.Quiet != 0 {
+		return Reply{Error: &Error{CodeInvalidRequest, "invalid children wait"}}
+	}
+	h, ok := host.(WaitHost)
+	if !ok {
+		return Reply{Error: &Error{CodeHostError, "wait unavailable"}}
+	}
+	inbox, ok := host.(InboxHost)
+	if !ok {
+		return Reply{Error: &Error{CodeHostError, "inbox unavailable"}}
+	}
+	timeout := req.Timeout
+	if timeout == 0 {
+		timeout = DefaultWaitTimeout
+	}
+	timer := time.NewTimer(time.Duration(timeout) * time.Second)
+	defer timer.Stop()
+	expired := false
+	for {
+		tabs, changed := h.StatusChanges()
+		var children []TabInfo
+		var parent TabInfo
+		stopped := 0
+		for _, tab := range tabs {
+			if tab.ID == req.From {
+				parent = tab
+			}
+			if tab.Parent != req.From || tab.Role != "worker" {
+				continue
+			}
+			children = append(children, tab)
+			if tab.Status == "idle" || tab.Status == "needs" || tab.Status == "exited" {
+				stopped++
+			}
+		}
+		if parent.ID == "" {
+			return Reply{Error: &Error{CodeUnknownTab, "parent is closed"}}
+		}
+		reason := ""
+		if len(parent.Inbox) > 0 {
+			reason = parent.Inbox[0].Kind
+		} else if req.Children == "all" && stopped == len(children) {
+			reason = "all_stopped"
+		} else if req.Children == "any" && stopped > 0 {
+			reason = "any_stopped"
+		}
+		if reason != "" {
+			r := Reply{OK: true, Tabs: children, Reason: reason}
+			if len(parent.Inbox) > 0 {
+				messages := inbox.ConsumeInbox(req.From, parent.Inbox[len(parent.Inbox)-1].Sequence)
+				// Another concurrent wait may already have consumed this snapshot.
+				if len(messages) == 0 {
+					continue
+				}
+				r.Reason = messages[0].Kind
+				parts := make([]string, len(messages))
+				for i, m := range messages {
+					parts[i] = m.Text
+				}
+				r.Text = strings.Join(parts, "\n")
+			}
+			return r
+		}
+		if expired {
+			return Reply{Reason: "timeout", Tabs: children, Error: &Error{"timeout", "wait timeout"}}
+		}
+		select {
+		case <-ctx.Done():
+			return Reply{Error: &Error{"cancelled", "wait cancelled"}}
+		case <-timer.C:
+			expired = true
+		case <-changed:
+		}
+	}
+}

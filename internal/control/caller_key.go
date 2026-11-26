@@ -10,7 +10,7 @@ type OwnerKeyHost interface {
 
 // RequiresOwnerKey reserves worker-management operations before their handlers
 // are added. Ordinary control operations and hook messages need no caller key.
-// Child waits must use VerifyOwnerKey when that wait mode is implemented.
+// HandleContext also verifies owner keys for wait requests with children set.
 func RequiresOwnerKey(op string) bool {
 	return op == "spawn" || op == "kill"
 }

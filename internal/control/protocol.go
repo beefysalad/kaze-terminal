@@ -15,6 +15,7 @@ const (
 // Request is one control operation. The transport authenticates Token before
 // calling Handle; worker management also authenticates the per-tab caller key.
 type Request struct {
+	Children  string            `json:"children,omitempty"`
 	Agent     string            `json:"agent,omitempty"`
 	CWD       string            `json:"cwd,omitempty"`
 	Labels    map[string]string `json:"labels,omitempty"`
@@ -39,8 +40,17 @@ type Request struct {
 	Token     string            `json:"token,omitempty"`
 }
 
+// InboxMessage is an unread worker message in an immutable snapshot.
+type InboxMessage struct {
+	Sequence uint64 `json:"sequence"`
+	Kind     string `json:"kind"`
+	Text     string `json:"text"`
+}
+
 // TabInfo is a value in the Host's immutable tab snapshot.
 type TabInfo struct {
+	Unread       int               `json:"unread,omitempty"`
+	Inbox        []InboxMessage    `json:"inbox,omitempty"`
 	Parent       string            `json:"parent,omitempty"`
 	Role         string            `json:"role,omitempty"`
 	FirstMessage string            `json:"first_message,omitempty"`
@@ -57,6 +67,7 @@ type TabInfo struct {
 
 // Reply is the result of one operation. Error is present only on failure.
 type Reply struct {
+	Reason    string    `json:"reason,omitempty"`
 	Status    string    `json:"status,omitempty"`
 	Warning   string    `json:"warning,omitempty"`
 	OK        bool      `json:"ok"`

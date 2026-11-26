@@ -1281,6 +1281,7 @@ func (win *window) routeView(gtx layout.Context, v termView, batch []event.Event
 		switch e := ev.(type) {
 		case key.Event:
 			if e.State == key.Press {
+				win.control.recordOwnerKey(t.ID, win.wsNow())
 				win.blinkFrom = time.Time{} // typing shows the cursor and restarts the blink
 			}
 			before := win.mgr.Active()
@@ -1307,6 +1308,7 @@ func (win *window) routeView(gtx layout.Context, v termView, batch []event.Event
 		case key.CompositionEvent:
 			win.composing = compositionActive(e)
 		case key.EditEvent:
+			win.control.recordOwnerKey(t.ID, win.wsNow())
 			edited = true
 			win.blinkFrom = time.Time{}
 			if win.gate.allow() && editCommits(batch, i, win.composing) && e.Text != "" {

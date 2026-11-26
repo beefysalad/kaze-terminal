@@ -18,7 +18,7 @@ import (
 const controlTimeout = 5 * time.Second
 const controlMaxRequest = 64 << 10 // matches the notify server's JSON object cap
 
-const controlUsage = "usage: kaze ls [--children] [--json] | read <t> [--lines N] | send <t> <text|-> [--raw] [--if-idle] | name <t> <name> | label <t> k=v | keys <t> <key...> | interrupt <t> [--ctrl-c] | wait <t> [--for TEXT] [--timeout S] [--quiet MS] | run [--name N] [--cwd D] [--label k=v]... [--mode read-only|edit] [--wait-start] <claude|codex|template> <task|-> | kill <t> | kill --children | report <text|-> | templates"
+const controlUsage = "usage: kaze ls [--children] [--json] | read <t> [--lines N] | send <t> <text|-> [--raw] [--if-idle] | name <t> <name> | label <t> k=v | keys <t> <key...> | interrupt <t> [--ctrl-c] | wait --children all|any [--timeout S] | wait <t> [--for TEXT] [--timeout S] [--quiet MS] | run [--name N] [--cwd D] [--label k=v]... [--mode read-only|edit] [--wait-start] <claude|codex|template> <task|-> | kill <t> | kill --children | report <text|-> | templates"
 
 // runControl performs one request without starting any window code.
 func runControl(args []string, env func(string) string, stdin io.Reader, stdout, stderr io.Writer) int {
@@ -68,7 +68,7 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 		fmt.Fprintf(stderr, "kaze: text_too_large: text exceeds %d KiB\n", capBytes>>10)
 		return 2
 	}
-	if (req.Op == "send" && !raw) || req.Op == "spawn" || req.Op == "kill" || req.Op == "report" || (req.Op == "ls" && hasControlFlag(args, "--children")) {
+	if (req.Op == "send" && !raw) || req.Op == "spawn" || req.Op == "kill" || req.Op == "report" || (req.Op == "wait" && req.Children != "") || (req.Op == "ls" && hasControlFlag(args, "--children")) {
 		req.From = controlCaller(env)
 		if req.From == "" && req.Op != "send" {
 			fmt.Fprintln(stderr, "kaze: KAZE_TAB_ID is required; run inside a Kaze tab")
@@ -129,6 +129,9 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 		return controlNetworkError(err, stderr)
 	}
 	if reply.Error != nil {
+		if req.Children != "" && reply.Reason == "timeout" {
+			printChildrenWait(stdout, reply)
+		}
 		fmt.Fprintf(stderr, "kaze: %s: %s\n", reply.Error.Code, reply.Error.Message)
 		switch reply.Error.Code {
 		case control.CodeUnknownKey:
@@ -178,6 +181,10 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 				if _, err = fmt.Fprintf(stdout, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", tab.ID, name, tab.Space, agent, tab.Status, tab.Folder, controlLabels(tab.Labels), controlColumn(tab.Parent), controlColumn(tab.Role)); err != nil {
 					break
 				}
+			}
+		case "wait":
+			if req.Children != "" {
+				err = printChildrenWait(stdout, reply)
 			}
 		case "spawn", "kill":
 			_, err = fmt.Fprintln(stdout, reply.Text)
@@ -323,6 +330,28 @@ func controlArgsWithRaw(args []string) (req control.Request, asJSON, raw, ok boo
 		}
 		ok = req.Tab != "" && !strings.HasPrefix(req.Tab, "-")
 	case "wait":
+		if len(args) > 1 && args[1] == "--children" {
+			if len(args) != 3 && len(args) != 5 {
+				return
+			}
+			req.Children = args[2]
+			req.Timeout = control.DefaultWaitTimeout
+			if req.Children != "all" && req.Children != "any" {
+				return
+			}
+			if len(args) == 5 {
+				if args[3] != "--timeout" {
+					return
+				}
+				n, e := strconv.Atoi(args[4])
+				if e != nil || n <= 0 || n > control.MaxWaitTimeout {
+					return
+				}
+				req.Timeout = n
+			}
+			ok = true
+			return
+		}
 		if len(args) < 2 || len(args)%2 != 0 {
 			return
 		}
@@ -517,4 +546,19 @@ func killControlChildren(env func(string) string, stdout, stderr io.Writer) int 
 		}
 	}
 	return 0
+}
+
+func printChildrenWait(out io.Writer, r control.Reply) error {
+	for _, tab := range r.Tabs {
+		if _, err := fmt.Fprintf(out, "%s\t%s\t%s\n", tab.ID, tab.Status, tab.Name); err != nil {
+			return err
+		}
+	}
+	if r.Text != "" {
+		if _, err := fmt.Fprintln(out, r.Text); err != nil {
+			return err
+		}
+	}
+	_, err := fmt.Fprintln(out, r.Reason)
+	return err
 }

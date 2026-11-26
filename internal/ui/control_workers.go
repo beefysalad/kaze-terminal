@@ -26,6 +26,9 @@ type worker struct {
 	firstMessage, agent string
 	hooked              bool
 	exited              bool
+	worked              bool
+	needs               bool
+	noted               map[string]bool
 }
 type controlWorkerRequest struct {
 	ctx  context.Context
@@ -312,6 +315,20 @@ func (win *window) workerHook(id tabs.TabID, kind notify.Kind) {
 	// Honor an elapsed deadline or process exit before accepting a late hook.
 	win.workerTick(win.wsNow())
 	w.hooked = true
+	switch kind {
+	case notify.KindPrompt:
+		w.worked = true
+		w.needs = false
+		clear(w.noted)
+	case notify.KindNeeds:
+		w.needs = true
+		win.workerNote(id, w, "blocked")
+	case notify.KindDone, notify.KindInterrupt:
+		w.needs = false
+		if w.worked {
+			win.workerNote(id, w, "done")
+		}
+	}
 	if w.firstMessage != "pending" {
 		return
 	}
@@ -322,7 +339,7 @@ func (win *window) workerHook(id tabs.TabID, kind notify.Kind) {
 	}
 }
 
-// workerTick returns a single deadline only while a first message is pending.
+// workerTick returns a deadline only for a pending first message or inbox delivery.
 func (win *window) workerTick(now time.Time) (wake time.Time, ok bool) {
 	changed := false
 	for id, w := range win.workers {
@@ -333,6 +350,9 @@ func (win *window) workerTick(now time.Time) (wake time.Time, ok bool) {
 		}
 		if exited != w.exited {
 			w.exited = exited
+			if exited {
+				win.workerNote(id, w, "exited")
+			}
 			changed = true
 		}
 		if w.firstMessage != "pending" {
@@ -340,6 +360,7 @@ func (win *window) workerTick(now time.Time) (wake time.Time, ok bool) {
 		}
 		if exited {
 			w.firstMessage = "failed"
+			win.workerNote(id, w, "not_started")
 			changed = true
 			continue
 		}
@@ -351,11 +372,19 @@ func (win *window) workerTick(now time.Time) (wake time.Time, ok bool) {
 		}
 		if !now.Before(due) {
 			w.firstMessage = state
+			win.workerNote(id, w, "not_started")
 			changed = true
 			continue
 		}
 		if !ok || due.Before(wake) {
 			wake, ok = due, true
+		}
+	}
+	if at, ready := win.noteTick(now, nil); ready {
+		if !at.After(now) {
+			win.noteTick(now, win.control.submitNote)
+		} else if !ok || at.Before(wake) {
+			wake, ok = at, true
 		}
 	}
 	if changed {
@@ -366,6 +395,9 @@ func (win *window) workerTick(now time.Time) (wake time.Time, ok bool) {
 
 // closeWorkers runs on the UI goroutine before the normal parent close path.
 func (win *window) closeWorkers(parent tabs.TabID) {
+	if w := win.workers[parent]; w != nil {
+		win.workerNote(parent, w, "exited")
+	}
 	for id, w := range win.workers {
 		if w.parent == parent {
 			win.closeTab(id)
