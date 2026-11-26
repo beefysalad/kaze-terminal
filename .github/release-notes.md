@@ -1,9 +1,11 @@
 ## What's changed
 
-- After a send, the target counts as working until its next prompt starts, so wait no longer returns at once on the previous turn's idle state.
-- Agents Kaze finds only by looking at the program in front of a tab, such as a Codex whose hooks did not reach Kaze, now show unknown instead of idle. Wait uses output quiet time for them.
-- A request over the 64 KiB cap now fails with a clear message and exit code 2 instead of a silent end of input.
-- A tag cannot be rebuilt out of nested pieces of a closing tag.
+- An agent can start Claude Code or Codex workers in background tabs with kaze run, wait for them, read their reports and stop them.
+- Workers nest under their parent in the same space, with a worker mark, a status bar count and Stop all workers.
+- Off by default: enable Settings > Agents > Let agents start workers. The first time an agent asks to start workers, Kaze asks you to allow it.
+- Templates live in the config folder. Limits keep each agent to 4 workers and Kaze to 8 in total.
+- Workers close with their parent and never come back after a restart. A worker waiting on a trust or approval dialog is left for you to answer.
+- Only Claude Code and Codex can be workers. On Windows, Claude Code needs the native claude.exe.
 
 ## Download
 
