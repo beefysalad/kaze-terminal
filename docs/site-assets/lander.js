@@ -180,10 +180,7 @@ moment(fromHash && moments[fromHash[1]] ? fromHash[1] : 'needs');
 
 // Motion is enhancement only: no observer means no hidden content.
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-const heroParts = [...document.querySelectorAll('.hero-line, h1 .q, .hero .lede, .hero .actions, .wall')];
-if (!reducedMotion.matches) heroParts.forEach((part, index) => {
-  part.style.setProperty('--hero-delay', `${index * 70}ms`);
-  part.classList.add('hero-enter');
+document.querySelectorAll('.hero-enter').forEach(part => {
   part.addEventListener('animationend', () => part.classList.remove('hero-enter'), { once: true });
 });
 if ('IntersectionObserver' in window && !reducedMotion.matches) {
