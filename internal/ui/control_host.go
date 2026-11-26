@@ -40,6 +40,7 @@ type controlSnapshot struct {
 // controlHost keeps socket access on immutable snapshots and synchronized sessions.
 // Renames cross a bounded inbox; its wake callback only invalidates the window.
 type controlHost struct {
+	noteQuiet      time.Duration // immutable after initialization; zero uses the default
 	snapshot       atomic.Pointer[controlSnapshot]
 	changesMu      sync.Mutex
 	changes        chan struct{}

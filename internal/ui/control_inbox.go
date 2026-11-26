@@ -195,7 +195,11 @@ func (win *window) noteTick(now time.Time, submit func(string, []byte) error) (w
 		}
 		due := now
 		if keyAt := target.lastKey.Load(); keyAt != 0 {
-			due = time.Unix(0, keyAt).Add(controlNoteQuiet)
+			quiet := win.noteQuiet
+			if quiet == 0 {
+				quiet = controlNoteQuiet
+			}
+			due = time.Unix(0, keyAt).Add(quiet)
 		}
 		if due.After(now) || submit == nil {
 			if due.Before(now) {
@@ -254,7 +258,11 @@ func (h *controlHost) submitNote(id string, text []byte) error {
 	defer target.send.Unlock()
 	now := time.Now()
 	last := target.lastKey.Load()
-	if last != 0 && now.Sub(time.Unix(0, last)) < controlNoteQuiet {
+	quiet := h.noteQuiet
+	if quiet == 0 {
+		quiet = controlNoteQuiet
+	}
+	if last != 0 && now.Sub(time.Unix(0, last)) < quiet {
 		return errNoteDeferred
 	}
 	idle := false

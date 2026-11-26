@@ -81,6 +81,7 @@ const (
 type window struct {
 	control             controlHost
 	orchestratorEnabled bool
+	noteQuiet           time.Duration
 	workers             map[tabs.TabID]*worker
 	workerStarts        map[tabs.TabID][]time.Time
 	w                   *app.Window
@@ -259,6 +260,7 @@ func Run(w *app.Window, opt Options) error {
 		cfgPath:   config.Path(),
 		startedAt: time.Now(),
 	}
+	win.initOrchestratorConfig()
 	win.opt.Warnings = append(win.opt.Warnings, win.applyKeys(opt.Config.Keys)...)
 	win.applyTheme(startTheme(opt.Config))
 	win.snapFocused.Store(true)
@@ -305,6 +307,18 @@ func Run(w *app.Window, opt Options) error {
 		srv.SetControlContext(controlContextAdapter(&win.control, ctl.Options{Enabled: opt.Config.Control.Enabled, AgentTag: opt.Config.AgentTag}))
 	}
 	return win.loop()
+}
+
+// initOrchestratorConfig runs once before control starts. Worker spawning also
+// requires control, even when Config was constructed without the loader.
+func (win *window) initOrchestratorConfig() {
+	c := win.opt.Config
+	win.orchestratorEnabled = c.Orchestrator.Enabled && c.Control.Enabled
+	win.noteQuiet = controlNoteQuiet
+	if seconds := c.Orchestrator.NoteQuiet; seconds >= 1 && seconds <= 60 {
+		win.noteQuiet = time.Duration(seconds) * time.Second
+	}
+	win.control.noteQuiet = win.noteQuiet
 }
 
 // newChime builds the chime player; tests replace it.
