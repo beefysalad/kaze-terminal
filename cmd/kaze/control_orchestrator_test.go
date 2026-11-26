@@ -193,9 +193,13 @@ func TestOrchestratorChildren(t *testing.T) {
 
 func TestOrchestratorHelpAndTemplates(t *testing.T) {
 	var out, errs bytes.Buffer
-	handled, code := dispatchControl([]string{"templates"}, func(string) string { t.Error("templates accessed env"); return "" }, nil, &out, &errs)
-	if !handled || code != 0 || out.String() != "no templates\n" {
+	env, requests := controlServer(t, control.Reply{OK: true, Text: "no templates (put <name>.md in /tmp/templates)"})
+	handled, code := dispatchControl([]string{"templates"}, env, nil, &out, &errs)
+	if !handled || code != 0 || out.String() != "no templates (put <name>.md in /tmp/templates)\n" {
 		t.Fatalf("%v %d %s %s", handled, code, &out, &errs)
+	}
+	if req := receiveControlRequest(t, requests); req.Op != "templates" {
+		t.Fatal(req)
 	}
 	out.Reset()
 	dispatchControl([]string{"--help"}, func(string) string { return "" }, nil, &out, &errs)
@@ -309,5 +313,28 @@ func TestRunFlagOrders(t *testing.T) {
 	}
 	if !strings.Contains(controlUsage, "before or immediately after") {
 		t.Error("help missing accepted order")
+	}
+}
+
+func TestTemplatesCLIListAndFailure(t *testing.T) {
+	for _, tt := range []struct {
+		reply control.Reply
+		code  int
+		text  string
+	}{
+		{control.Reply{OK: true, Text: "review  codex  Review changes\nwriter  claude  Write docs", Warning: "broken: missing agent"}, 0, "review  codex  Review changes\nwriter  claude  Write docs\n"},
+		{control.Reply{Error: &control.Error{Code: control.CodeDisabled, Message: "disabled"}}, 3, ""},
+	} {
+		env, requests := controlServer(t, tt.reply)
+		var out, errs bytes.Buffer
+		if code := runControl([]string{"templates"}, env, nil, &out, &errs); code != tt.code || out.String() != tt.text {
+			t.Fatalf("%d %q %q", code, &out, &errs)
+		}
+		if req := receiveControlRequest(t, requests); req.Op != "templates" {
+			t.Fatal(req)
+		}
+		if tt.reply.Warning != "" && !strings.Contains(errs.String(), tt.reply.Warning) {
+			t.Fatal(&errs)
+		}
 	}
 }

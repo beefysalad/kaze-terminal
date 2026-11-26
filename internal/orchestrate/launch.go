@@ -50,6 +50,9 @@ func Plan(r Request, o LaunchOptions) (LaunchPlan, error) {
 			flags = append(flags, "--sandbox", "read-only")
 		}
 	}
+	if r.Model != "" {
+		flags = append(flags, "--model", r.Model)
+	}
 	switch o.GOOS {
 	case "darwin", "linux":
 		base := path.Base(o.Shell)
@@ -57,10 +60,10 @@ func Plan(r Request, o LaunchOptions) (LaunchPlan, error) {
 			return LaunchPlan{}, failure(CodeSpawnFailed, "worker shell must be an absolute zsh, bash or sh path")
 		}
 		script := `t="$KAZE_TASK"; unset KAZE_TASK; exec ` + r.Agent
-		// All flags come from the table above. Only name and UUID need quoting.
+		// Flags come from the table above. External values are always quoted.
 		for i, flag := range flags {
 			script += " "
-			if i > 0 && (flags[i-1] == "--session-id" || flags[i-1] == "-n") {
+			if i > 0 && (flags[i-1] == "--session-id" || flags[i-1] == "-n" || flags[i-1] == "--model") {
 				script += quotePOSIX(flag)
 			} else {
 				script += flag

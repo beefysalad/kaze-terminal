@@ -440,7 +440,7 @@ func TestWorkerValidationAndLaunchFailures(t *testing.T) {
 		req  ctl.Request
 		code string
 	}{
-		{ctl.Request{Agent: "shell", Task: "review"}, ctl.CodeUnknownAgent},
+		{ctl.Request{Agent: "shell", Task: "review"}, ctl.CodeUnknownTemplate},
 		{ctl.Request{Agent: "claude", Task: strings.Repeat("x", (16<<10)+1)}, ctl.CodeTextTooLarge},
 		{ctl.Request{Agent: "claude", Task: "review", CWD: filepath.Join(t.TempDir(), "missing")}, ctl.CodeBadCWD},
 		{ctl.Request{Agent: "claude", Task: "review", CWD: t.TempDir()}, ctl.CodeBadCWD},

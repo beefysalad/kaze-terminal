@@ -30,9 +30,9 @@ type Error struct{ Code, Message string }
 func (e *Error) Error() string           { return e.Message }
 func failure(code, message string) error { return &Error{Code: code, Message: message} }
 
-// Request has no arbitrary flags. Templates are reserved for the template loader;
-// until resolved to a concrete agent they fail closed with unknown_template.
-type Request struct{ Agent, Template, Name, Task, CWD, Mode string }
+// Request has no arbitrary flags. ResolveTemplate supplies template metadata,
+// model and instructions before validation and planning.
+type Request struct{ Agent, Template, Name, Task, CWD, Mode, Model, Instructions string }
 
 // Parent is supplied by the authenticated host, never from request claims.
 type Parent struct {
@@ -49,11 +49,17 @@ type FileSystem interface {
 }
 
 func validateText(r Request) error {
-	if r.Template != "" {
+	if r.Template != "" && (r.Agent != "claude" && r.Agent != "codex") {
 		return failure(CodeUnknownTemplate, "template must be resolved before spawning")
 	}
 	if r.Agent != "claude" && r.Agent != "codex" {
 		return failure(CodeUnknownAgent, "agent must be claude or codex")
+	}
+	if r.Model != "" && !modelName.MatchString(r.Model) {
+		return failure(CodeInvalidRequest, "invalid model name")
+	}
+	if len(r.Instructions) > MaxTemplateBytes || !utf8.ValidString(r.Instructions) || strings.ContainsRune(r.Instructions, 0) {
+		return failure(CodeInvalidRequest, "invalid template instructions")
 	}
 	if len(r.Task) > MaxTaskBytes {
 		return failure(CodeTextTooLarge, "task exceeds 16 KiB")

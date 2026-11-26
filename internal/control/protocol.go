@@ -86,22 +86,23 @@ type Error struct {
 func (e *Error) Error() string { return e.Message }
 
 const (
-	CodeSpawnDisabled  = "spawn_disabled"
-	CodeLimit          = orchestrate.CodeLimit
-	CodeRateLimited    = orchestrate.CodeRateLimited
-	CodeBadCWD         = orchestrate.CodeBadCWD
-	CodeUnknownAgent   = orchestrate.CodeUnknownAgent
-	CodeSpawnFailed    = orchestrate.CodeSpawnFailed
-	CodeNotAllowed     = "not_allowed"
-	CodeBusy           = "busy"
-	CodeDisabled       = "disabled"
-	CodeUnknownKey     = "unknown_key"
-	CodeUnknownTab     = "unknown_tab"
-	CodeAmbiguousTab   = "ambiguous_tab"
-	CodeInvalidRequest = "invalid_request"
-	CodeUnknownOp      = "unknown_op"
-	CodeTextTooLarge   = orchestrate.CodeTextTooLarge
-	CodeHostError      = "host_error"
+	CodeSpawnDisabled   = "spawn_disabled"
+	CodeLimit           = orchestrate.CodeLimit
+	CodeRateLimited     = orchestrate.CodeRateLimited
+	CodeBadCWD          = orchestrate.CodeBadCWD
+	CodeUnknownTemplate = orchestrate.CodeUnknownTemplate
+	CodeUnknownAgent    = orchestrate.CodeUnknownAgent
+	CodeSpawnFailed     = orchestrate.CodeSpawnFailed
+	CodeNotAllowed      = "not_allowed"
+	CodeBusy            = "busy"
+	CodeDisabled        = "disabled"
+	CodeUnknownKey      = "unknown_key"
+	CodeUnknownTab      = "unknown_tab"
+	CodeAmbiguousTab    = "ambiguous_tab"
+	CodeInvalidRequest  = "invalid_request"
+	CodeUnknownOp       = "unknown_op"
+	CodeTextTooLarge    = orchestrate.CodeTextTooLarge
+	CodeHostError       = "host_error"
 )
 
 // Host exposes thread-safe terminal operations without UI or transport types.

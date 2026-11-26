@@ -27,6 +27,7 @@ import (
 // settingsState is the modal Settings sheet.
 // open keeps its sidebar entry; shown places the sheet over the terminal.
 type settingsState struct {
+	templates   templateSettings
 	aboutCopy   string     // pending clipboard content, consumed by the About layout
 	cmdCopy     string     // the same for the Shortcuts section
 	cmdFilter   string     // the Shortcuts section's search text

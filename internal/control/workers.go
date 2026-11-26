@@ -21,8 +21,8 @@ func workers(ctx context.Context, host Host, req Request) Reply {
 		return Reply{Error: &Error{CodeUnknownOp, "unknown control operation"}}
 	}
 	if req.Op == "spawn" {
-		if req.Agent != "claude" && req.Agent != "codex" {
-			return Reply{Error: &Error{CodeUnknownAgent, "agent must be claude or codex"}}
+		if req.Agent != "claude" && req.Agent != "codex" && !orchestrate.ValidTemplateName(req.Agent) {
+			return Reply{Error: &Error{CodeUnknownAgent, "expected claude, codex or a valid template name"}}
 		}
 		if len(req.Task) > orchestrate.MaxTaskBytes {
 			return Reply{Error: &Error{CodeTextTooLarge, "task exceeds 16 KiB"}}

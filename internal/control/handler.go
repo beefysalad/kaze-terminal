@@ -39,6 +39,12 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 			return Reply{Error: e}
 		}
 	}
+	if req.Op == "templates" {
+		if h, ok := host.(interface{ Templates(context.Context) Reply }); ok {
+			return h.Templates(ctx)
+		}
+		return Reply{Error: &Error{CodeUnknownOp, "templates unavailable"}}
+	}
 	if req.Op == "spawn" || req.Op == "kill" {
 		return workers(ctx, host, req)
 	}

@@ -44,7 +44,9 @@ func TestSpawnRejectsMalformedRequestBeforeHost(t *testing.T) {
 		agent, task, mode, name string
 		code                    string
 	}{
-		{"other", "review", "", "", CodeUnknownAgent},
+		{"../other", "review", "", "", CodeUnknownAgent},
+		{"", "review", "", "", CodeUnknownAgent},
+		{strings.Repeat("a", 33), "review", "", "", CodeUnknownAgent},
 		{"claude", "", "", "", CodeInvalidRequest},
 		{"claude", "review", "bypass", "", CodeInvalidRequest},
 		{"claude", "review", "", "bad\nname", CodeInvalidRequest},

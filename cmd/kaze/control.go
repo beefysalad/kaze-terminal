@@ -40,12 +40,6 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 		}
 		return 2
 	}
-	if req.Op == "templates" {
-		if _, err := fmt.Fprintln(stdout, "no templates"); err != nil {
-			return 1
-		}
-		return 0
-	}
 	if req.Op == "kill" && req.Tab == "--children" {
 		return killControlChildren(env, stdout, stderr)
 	}
@@ -189,7 +183,7 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 			if req.Children != "" {
 				err = printChildrenWait(stdout, reply)
 			}
-		case "spawn", "kill":
+		case "spawn", "kill", "templates":
 			_, err = fmt.Fprintln(stdout, reply.Text)
 		case "read":
 			_, err = io.WriteString(stdout, reply.Text)

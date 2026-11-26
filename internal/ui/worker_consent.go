@@ -10,6 +10,7 @@ import (
 	"gioui.org/op"
 	ctl "github.com/beefysalad/kaze-terminal/internal/control"
 	"github.com/beefysalad/kaze-terminal/internal/notify"
+	"github.com/beefysalad/kaze-terminal/internal/orchestrate"
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
@@ -64,9 +65,17 @@ func (win *window) holdWorkerConsent(r *controlWorkerRequest) bool {
 	if folder == "" {
 		folder = win.opt.Dir
 	}
-	agent := "Claude Code"
-	if r.req.Agent == "codex" {
-		agent = "Codex"
+	agent := cleanReason(r.req.Agent)
+	resolved, _, err := orchestrate.ResolveTemplate(win.templateFolder(), orchestrate.Request{Agent: r.req.Agent})
+	if err == nil {
+		if resolved.Agent == "codex" {
+			agent = "Codex"
+		} else {
+			agent = "Claude Code"
+		}
+		if resolved.Template != "" {
+			agent += " (" + resolved.Template + ")"
+		}
 	}
 	fromAgent := win.rowAgent(parent.ID).agentName()
 	if fromAgent == "" {

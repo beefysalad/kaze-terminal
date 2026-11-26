@@ -73,6 +73,9 @@ func (h *controlHost) Spawn(ctx context.Context, req ctl.Request) ctl.Reply {
 		}
 	}
 }
+func (h *controlHost) Templates(ctx context.Context) ctl.Reply {
+	return h.queueWorker(ctx, ctl.Request{Op: "templates"})
+}
 func (h *controlHost) Kill(ctx context.Context, from, id string) ctl.Reply {
 	return h.queueWorker(ctx, ctl.Request{Op: "kill", From: from, Tab: id})
 }
@@ -182,6 +185,10 @@ func (win *window) applyWorkerContext(ctx context.Context, req ctl.Request) ctl.
 	if ctx.Err() != nil {
 		return workerFailure("timeout", "worker request canceled")
 	}
+	if req.Op == "templates" {
+		catalog := orchestrate.ListTemplates(win.templateFolder())
+		return ctl.Reply{OK: true, Text: catalog.TemplateText(), Warning: strings.Join(catalog.Warnings, "; ")}
+	}
 	if win.mgr == nil {
 		return workerFailure(ctl.CodeUnknownTab, "parent tab is closed")
 	}
@@ -220,7 +227,11 @@ func (win *window) applyWorkerContext(ctx context.Context, req ctl.Request) ctl.
 		return workerFailure(ctl.CodeBadCWD, "cannot resolve parent folder")
 	}
 	folder = canonicalFolder
-	r, err := orchestrate.Validate(orchestrate.Request{Agent: req.Agent, CWD: req.CWD, Name: req.Name, Task: req.Task, Mode: req.Mode}, orchestrate.Parent{Folder: folder, RepoRoot: workerRoot(folder)}, workerFS{})
+	resolved, warnings, err := orchestrate.ResolveTemplate(win.templateFolder(), orchestrate.Request{Agent: req.Agent, CWD: req.CWD, Name: req.Name, Task: req.Task, Mode: req.Mode})
+	if err != nil {
+		return workerError(err)
+	}
+	r, err := orchestrate.Validate(resolved, orchestrate.Parent{Folder: folder, RepoRoot: workerRoot(folder)}, workerFS{})
 	if err != nil {
 		return workerError(err)
 	}
@@ -326,7 +337,7 @@ func (win *window) applyWorkerContext(ctx context.Context, req ctl.Request) ctl.
 	win.publishControl()
 	for _, info := range win.control.Tabs() {
 		if info.ID == workerID(tab.ID) {
-			return ctl.Reply{OK: true, Text: "started " + info.ID + " (" + r.Agent + ")", Tabs: []ctl.TabInfo{info}}
+			return ctl.Reply{OK: true, Text: "started " + info.ID + " (" + r.Agent + ")", Warning: strings.Join(warnings, "; "), Tabs: []ctl.TabInfo{info}}
 		}
 	}
 	return workerFailure(ctl.CodeSpawnFailed, "worker snapshot unavailable")
