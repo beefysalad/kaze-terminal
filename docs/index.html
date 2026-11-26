@@ -16,7 +16,10 @@
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site-header">
   <div class="header-inner wrap">
-    <a class="brand brand-lock" href="#main" aria-label="Kaze by Patrick home"><img src="site-assets/kaze-lockup.svg?v=3" alt="" width="94" height="28"><span class="brand-by" aria-hidden="true">by Patrick</span></a>
+    <div class="brand-group">
+      <a class="brand brand-lock" href="#main" aria-label="Kaze by Patrick home"><img src="site-assets/kaze-lockup.svg?v=3" alt="" width="94" height="28"><span class="brand-by" aria-hidden="true">by Patrick</span></a>
+      <span class="beta-badge">Beta</span>
+    </div>
     <nav class="nav" aria-label="Main navigation"><a href="#sessions">Features</a><a href="#workspaces">Workspaces</a><a href="#changelog">What’s new</a><a href="#faq">FAQ</a></nav>
     <div class="header-cta"><a class="ghost" href="https://github.com/beefysalad/kaze-terminal"><svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>GitHub</a><a class="pill" href="#install">Download</a></div>
   </div>
@@ -37,6 +40,7 @@
           <div><b>~14 MB</b><span>the whole app</span></div>
           <div id="download-fact" hidden><b id="download-count">0</b><span>downloads</span></div>
         </div>
+        <p class="beta-note"><span class="beta-badge">Beta</span><span>Kaze is in beta. Expect rough edges and quick fixes.</span></p>
         <p class="first-time">Free and open source, for macOS and Windows. First time installing? <a href="#first-launch">Here’s how</a></p>
       </div>
     </div>
@@ -215,6 +219,7 @@
     <header class="k-head"><h2 id="faq-title">Questions.</h2></header>
     <div class="k-faq">
       <details><summary>What is Kaze?</summary><p>A lightweight terminal for macOS and Windows that knows when Claude Code or Codex is running in a tab. It reads their own hooks, so the sidebar shows which agent is working, waiting for you or done, an alert card tells you when one needs you, and agents can message each other and start helper agents in new tabs. Underneath it is a plain terminal: any shell, any program, and nothing extra runs until an agent does.</p></details>
+      <details><summary>Is Kaze finished?</summary><p>Kaze is in beta. It is my daily terminal and it ships often, but things can change.</p></details>
       <details><summary>Which agents does it work with?</summary><p>Claude Code and Codex, through their own hooks. Settings checks your Claude Code setup and adds what’s missing. Any other tool runs fine as a normal terminal program, just without the alerts.</p></details>
       <details><summary>Is it free?</summary><p>Yes. Kaze is free and open source under the MIT license. The code is on <a href="https://github.com/beefysalad/kaze-terminal">GitHub</a>.</p></details>
       <details><summary>Why does my computer warn me when I open it?</summary><p>Kaze isn’t signed by Apple or Microsoft yet, so the first launch asks you to confirm it once. <a href="#first-launch">The step-by-step guide</a> shows exactly what to click. Updates don’t ask again.</p></details>
