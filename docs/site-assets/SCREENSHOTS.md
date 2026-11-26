@@ -221,7 +221,7 @@ of the app like the other shots, so none is faked here. The development captures
 ## 0.46 orchestrator demo captures (November 26, 2026)
 
 Four captures retaken from a running macOS demo build of `release/0.46`
-at release commit `d92103ecd1cb2fd2f47001bc963d42c13215ecad`, at 2200 x 1440 px (1100 x 720 logical, Retina 2x), in Midnight.
+at release commit `7638d0e8e0577fbdeb4b77b6a12e991051744160`, at 2200 x 1440 px (1100 x 720 logical, Retina 2x), in Midnight.
 Only the Midnight set was retaken for this release.
 
 - `kaze-workers.png`: Claude parent in todo-api with reviewer (Codex, working),
@@ -239,6 +239,9 @@ How they were made:
 - A detached demo worktree and a throwaway home contained only todo-api, web-app
   and notes-cli demo projects, example.com modules and a demo git author. The
   owner's home, settings, agent instructions and installed Kaze were untouched.
+  HOME and the launch folder used the same canonical `/private/tmp` prefix, so
+  shell-reported folders abbreviate correctly to `~/todo-api`; every status bar
+  shows that folder and branch `feature/token-expiry`.
 - Claude Code and Codex were not run. PATH-first demo executables named claude
   and codex accepted the planner's real flags, printed illustrative agent output,
   and called Kaze's real notify session/prompt/tool/needs/done and report commands.
@@ -262,14 +265,14 @@ How they were made:
 - Each PNG was inspected for cut-off feature text, stray content and personal
   data. Native demo processes and their children were stopped after capture.
   The helper patch, private Gio patch, scripts, configs and CLI evidence remain
-  in `/tmp/kaze-release-046-captures/shots-kit/` outside the repository.
+  in `/private/tmp/kaze-release-046-R2-captures/shots-kit/` outside the repository.
   The four final PNGs were copied into `docs/site-assets/`, each under 500 KB.
 
 These captures document a native demo build, not a real-agent acceptance test.
 The existing Windows and real-agent owner gates remain open. The Settings footer
 shows the compiled 0.46 version; no version was fabricated.
 
-The detached worktree is `/tmp/kaze-release-046-demo/`. The demo helper and fresh
+The detached worktree is `/private/tmp/kaze-release-046-R2-demo/`. The demo helper and fresh
 private Gio copy were patched there only; no helper or dependency change is part
 of the release branch. No global input was injected and no screen capture tool ran.
 
