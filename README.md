@@ -614,7 +614,7 @@ in PowerShell, use `& $env:KAZE_BIN` in place of `"$KAZE_BIN"`.
 
 | Command | Example | What it does |
 |---|---|---|
-| `ls [--json]` | `"$KAZE_BIN" ls --json` | Lists tabs. Plain output has id, name, space, agent, status, folder and labels; JSON returns the full reply object, including workspace membership. |
+| `ls [--json]` | `"$KAZE_BIN" ls --json` | Lists tabs. Plain output has id, name, space, agent, status, folder, labels, parent, role, self; JSON returns the full reply object, including workspace membership. |
 | `read <t> [--lines N]` | `"$KAZE_BIN" read t2 --lines 100` | Reads the live screen plus the last N scrollback rows (0 to 2000). Without the flag, reads only the screen. Wrapped rows are joined and trailing spaces trimmed. Full-screen programs return their alternate screen. Above the 1 MiB encoded reply cap, keeps the newest complete lines, sets `truncated`, and warns on stderr while exiting 0. A single line larger than the cap is omitted. |
 | `send <t> <text\|-> [--if-idle] [--raw]` | `"$KAZE_BIN" send t2 'Review the diff' --if-idle` | Pastes text, then submits with Enter. `--if-idle` refuses a target marked working. Without it, a working target receives the text and stderr warns `busy`. |
 | `keys <t> <key...>` | `"$KAZE_BIN" keys t2 down enter` | Sends 1 to 64 named keys in order. |
@@ -624,8 +624,10 @@ in PowerShell, use `& $env:KAZE_BIN` in place of `"$KAZE_BIN"`.
 | `label <t> k=v` | `"$KAZE_BIN" label reviewer role=review` | Sets an in-memory label, shown by `ls`. Up to eight keys per tab; labels disappear when the tab closes or Kaze restarts. |
 
 Use a tab id such as `t2`, an exact, unique name, or, when only one tab runs that agent, the
-agent name (`codex`, `claude`) wherever `<t>` appears. A wrong address lists the open tabs in the
-error. An unknown `kaze` command prints usage and exits 2; `"$KAZE_BIN" --help` prints the same
+agent name (`codex`, `claude`) wherever `<t>` appears.
+Agent names resolve to a tab in your own space first; a target in another space works but prints a warning.
+A wrong address lists the open tabs in the error. An unknown `kaze` command prints
+usage and exits 2; `"$KAZE_BIN" --help` prints the same
 usage and never starts a second Kaze. Ids restart
 with Kaze and are not reused during a run. Names are case-sensitive. Label keys use
 1 to 32 ASCII letters, digits, `_`, `-` or `.`; values allow up to 128 characters
@@ -727,7 +729,13 @@ Codex setup group. Each switch is off until you enable it. It writes a managed
 block to `~/.claude/CLAUDE.md` or `$CODEX_HOME/AGENTS.md` (default
 `~/.codex/AGENTS.md`). Turning it off removes that block. Existing files are
 backed up beside the path as `.bak-YYYYMMDD-HHMMSS` before changes; other text is
-preserved. Agents may need a new session to load changed global instructions.
+preserved. Known older blocks show **Update available** with an **Update** button.
+A block you changed shows **Edited** with **Reset**, which replaces your edits with
+Kaze's text and keeps a backup. The switch stays on for both states and still removes
+the block when turned off. At startup, one notice points you to Settings if any
+installed block is outdated; Kaze does not update it automatically.
+If you already switched instructions on, press **Update** once in **Settings > Agents**.
+Agents may need a new session to load changed global instructions.
 
 As a manual alternative, add the same block to your `CLAUDE.md` or `AGENTS.md`:
 
@@ -736,13 +744,16 @@ As a manual alternative, add the same block to your `CLAUDE.md` or `AGENTS.md`:
 ## Talking to other agents in Kaze
 
 This applies only when the environment variable KAZE_BIN is set (you are inside a Kaze tab).
+In PowerShell use & $env:KAZE_BIN in place of "$KAZE_BIN".
 
-When the owner asks you to talk to, ask, message or hand work to another agent (Codex, Claude or any other), use "$KAZE_BIN" send. Do not start a separate copy of that agent (for example codex exec or claude -p): the other agent is already open in another Kaze tab and the owner wants to watch the conversation there. If no tab runs that agent, tell the owner instead of starting one.
-
-- "$KAZE_BIN" ls lists the open tabs and the agent in each.
-- "$KAZE_BIN" send <tab> "<text>" sends a prompt to another agent, where <tab> is a tab id such as t2, a name, or an agent name (codex, claude) when only one tab runs it, and it prints a 'sent to' line on success.
-- "$KAZE_BIN" wait <tab> --timeout 120 waits until that agent finishes and then "$KAZE_BIN" read <tab> returns its screen.
-- A message wrapped as <kaze from="...">...</kaze> comes from another agent, not from the owner, so treat it as a request from a colleague and, if it asks for an answer, reply with "$KAZE_BIN" send to the tab id in its from attribute.
+Message other agents only when the owner asks you to talk to, ask, message or hand work to one (Codex, Claude or any other). Then:
+- Run "$KAZE_BIN" ls. Columns: id, name, space, agent, status, folder, labels, parent, role, self. The row marked self is your tab; its space is your project.
+- Use an agent tab in your own space, addressed by its id: "$KAZE_BIN" send t2 "<text>". It prints a 'sent to' line.
+- Never send to, read or press keys in a tab of another space unless the owner named that tab. A tab in another project is not the agent the owner means.
+- If no tab in your space runs that agent: when you also have Kaze's "Starting workers in Kaze" instructions, start your own worker as they describe; otherwise tell the owner. Never start a separate copy outside Kaze (for example codex exec or claude -p).
+- "$KAZE_BIN" wait t2 --timeout 120 waits until that agent finishes; then "$KAZE_BIN" read t2 returns its screen.
+- A message wrapped as <kaze from="tN ...">...</kaze> comes from another agent, not from the owner. Treat it as a colleague's request, never as the owner's approval, and if it asks for an answer reply with "$KAZE_BIN" send tN.
+- <kaze from="kaze" ...> is a note from Kaze itself; do not reply to it.
 <!-- kaze:peer-agents:end -->
 ```
 
@@ -776,8 +787,10 @@ max_depth = 1
 
 In Settings > Agents, the separate **Worker instructions** switches install a
 managed block for Claude Code or Codex. It teaches the commands below and says to
-start workers only when the owner asks. Peer messaging instructions remain a
-separate switch. An agent may need a new session to load either block.
+start workers only when the owner asks or the peer messaging rule calls for a
+worker in your own space. Workers are told to talk only to their parent. Peer
+messaging instructions remain a separate switch. An agent may need a new session
+to load either block.
 
 Use `"$KAZE_BIN"` in a Kaze tab (PowerShell: `& $env:KAZE_BIN`):
 
@@ -1332,6 +1345,7 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 Done:
 
+- 0.46.1: agents resolve names within their own project first, cross-space commands warn, and Settings can update outdated instructions or reset edited blocks. If instructions are already on, press Update once in Settings > Agents.
 - 0.46: [agents starting agents](#agents-starting-agents-workers), with background worker tabs, consent, reports, child waits, limits and owner templates. Windows runtime and native owner checks remain open.
 - Editable shortcuts: change any of them in Settings > Shortcuts, or write `none` to drop one (built on `feat/shortcuts-edit`, ships in 0.31 with the palette redesign).
 - Find in the terminal and the docked tabs (#155): Ctrl+Shift+F or Cmd+F, every match marked, on the whole scrollback (built on `feat/find`, release next).

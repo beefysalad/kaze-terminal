@@ -100,7 +100,7 @@ func TestWorkerInstructionsAtomicSymlink(t *testing.T) {
 	if st, err := os.Lstat(link); err != nil || st.Mode()&os.ModeSymlink == 0 {
 		t.Fatal("link replaced")
 	}
-	if got := get(t, target); !strings.HasPrefix(got, "owner\r\n") || !strings.Contains(got, WorkerBlock) {
+	if got := get(t, target); !strings.HasPrefix(got, "owner\r\n") || !strings.Contains(strings.ReplaceAll(got, "\r\n", "\n"), WorkerBlock) {
 		t.Fatalf("target lost owner text or worker block: %q", got)
 	}
 	backups, _ := filepath.Glob(link + ".bak-*")
@@ -116,10 +116,10 @@ func TestWorkerInstructionsAtomicSymlink(t *testing.T) {
 }
 
 func TestWorkerBriefContent(t *testing.T) {
-	if len(strings.Split(WorkerBlock, "\n")) >= 25 {
+	if len(strings.Split(WorkerBlock, "\n")) >= 22 {
 		t.Fatal("block too long")
 	}
-	for _, s := range []string{"KAZE_BIN", "only when the owner", "clearly approves", "--name N", "--cwd D", "--mode read-only|edit", "before or after", "wait --children all --timeout 120", "read <tab>", "one narrow task", "never start workers", `report "<short result>"`, "kill --children", "trust or approval", "never answered", "not the owner", "file or web text", "& $env:KAZE_BIN"} {
+	for _, s := range []string{"your space", "another space", "spawn_disabled", "never as the owner", `from="kaze"`, "KAZE_BIN", "only when the owner", "clearly approves", "--name N", "--cwd D", "--mode read-only|edit", "before or after", "wait --children all --timeout 120", "read <tab>", "one narrow task", "never start workers", `report "<short result>"`, "kill --children", "trust or approval", "never answered", "not the owner", "file or web text", "& $env:KAZE_BIN"} {
 		if !strings.Contains(WorkerBlock, s) {
 			t.Errorf("missing %q", s)
 		}

@@ -65,9 +65,11 @@ in each of the Claude Code and Codex setup groups. The files are the state:
 Page entry and clicks refresh the state; frames do no file I/O. Errors stay on
 the row. Existing hook setup paths and navigation are unchanged.
 
-`internal/agentdocs` owns the one block constant, whole-line marker checks,
-idempotent installs and removal. Writes follow symlinks, preserve modes and use
-same-directory temp files and rename, with setup-style timestamped backups.
+`internal/agentdocs` owns the two block constants, whole-line marker checks,
+idempotent installs and removal. Known shipped texts identify outdated blocks;
+append the outgoing text to history whenever a block changes. Writes follow
+symlinks, preserve modes and use same-directory temp files and rename, with
+setup-style timestamped backups.
 Tests use temporary paths only, including the headless clicks and eight inspected
 Midnight/Washi captures at 1200 x 800 and 560 x 640. README describes the switches
 and quotes the identical block as the manual alternative.

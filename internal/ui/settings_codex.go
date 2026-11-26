@@ -140,6 +140,18 @@ func (win *window) codexRows() []settingRow {
 }
 func agentsAct(win *window, id string, arg int) {
 	switch id {
+	case "claude_worker_docs_update", "claude_worker_docs_reset":
+		win.claudeDocs.workers.set(true)
+		return
+	case "codex_worker_docs_update", "codex_worker_docs_reset":
+		win.codexDocs.workers.set(true)
+		return
+	case "claude_peer_docs_update", "claude_peer_docs_reset":
+		win.claudeDocs.set(true)
+		return
+	case "codex_peer_docs_update", "codex_peer_docs_reset":
+		win.codexDocs.set(true)
+		return
 	case "templates_open":
 		win.openTemplates()
 		return

@@ -147,7 +147,7 @@ func TestControlList(t *testing.T) {
 				if out.String() != string(want)+"\n" {
 					t.Fatalf("json=%q", out.String())
 				}
-			} else if out.String() != "t1\treview\tproject\tcodex\tworking\t/tmp/my project\t-\tt9\tworker\nt2\t-\tShell\t-\tshell\t/tmp\t-\t-\t-\n" {
+			} else if out.String() != "t1\treview\tproject\tcodex\tworking\t/tmp/my project\t-\tt9\tworker\t-\nt2\t-\tShell\t-\tshell\t/tmp\t-\t-\t-\t-\n" {
 				t.Fatalf("plain=%q", out.String())
 			}
 			select {
@@ -472,3 +472,126 @@ func TestControlCopiesCallerKeyWithoutChangingLabelKey(t *testing.T) {
 		t.Fatalf("request fields: %s", wire)
 	}
 }
+
+func TestControlSpaceContext(t *testing.T) {
+	for _, args := range [][]string{{"read", "t2"}, {"keys", "t2", "enter"}, {"interrupt", "t2"}, {"wait", "t2", "--timeout", "1"}} {
+		for _, caller := range []string{"2", ""} {
+			base, requests := controlServer(t, control.Reply{OK: true})
+			env := func(k string) string {
+				if k == "KAZE_TAB_ID" {
+					return caller
+				}
+				return base(k)
+			}
+			var out, errs bytes.Buffer
+			if code := runControl(args, env, nil, &out, &errs); code != 0 {
+				t.Fatalf("%v: %d %s", args, code, &errs)
+			}
+			want := ""
+			if caller != "" {
+				want = "t2"
+			}
+			if req := receiveControlRequest(t, requests); req.From != want {
+				t.Fatalf("%v: %+v", args, req)
+			}
+		}
+	}
+}
+func TestControlLsMarksSelf(t *testing.T) {
+	base, _ := controlServer(t, control.Reply{OK: true, Tabs: []control.TabInfo{{ID: "t1"}, {ID: "t2"}, {ID: "t3"}}})
+	env := func(k string) string {
+		if k == "KAZE_TAB_ID" {
+			return "2"
+		}
+		return base(k)
+	}
+	var out, errs bytes.Buffer
+	if code := runControl([]string{"ls"}, env, nil, &out, &errs); code != 0 {
+		t.Fatalf("%d %s", code, &errs)
+	}
+	for i, line := range strings.Split(strings.TrimSuffix(out.String(), "\n"), "\n") {
+		fields := strings.Split(line, "\t")
+		want := "-"
+		if i == 1 {
+			want = "self"
+		}
+		if len(fields) != 10 || fields[9] != want {
+			t.Fatalf("row %d: %q", i, line)
+		}
+	}
+}
+func TestControlSendConfirmationShowsSpace(t *testing.T) {
+	base, _ := controlServer(t, control.Reply{OK: true, Tabs: []control.TabInfo{{ID: "t2", Agent: "codex", Status: "idle", Space: "kaze-terminal"}}, Warning: "cross-space test warning"})
+	var out, errs bytes.Buffer
+	if code := runControl([]string{"send", "t2", "review"}, base, nil, &out, &errs); code != 0 || out.String() != "sent to t2 (codex, idle, space kaze-terminal)\n" || !strings.Contains(errs.String(), "kaze: warning: cross-space test warning") {
+		t.Fatalf("%d %q %q", code, &out, &errs)
+	}
+	if !strings.Contains(controlUsage, "Address tabs by id from ls. ls marks your tab self; tabs in another space belong to another project.") {
+		t.Fatal("usage lacks space guidance")
+	}
+}
+
+// Exercise the CLI wire format and real handler together with a bounded fake host.
+func TestControlCrossSpaceScript(t *testing.T) {
+	host := &controlSpaceScriptHost{tabs: []control.TabInfo{
+		{ID: "t1", Agent: "claude", Space: "A", Status: "idle"},
+		{ID: "t2", Agent: "codex", Space: "A", Status: "idle"},
+		{ID: "t7", Agent: "codex", Space: "B", Status: "idle"},
+	}, submitted: make(chan string, 1)}
+	srv, err := notify.Listen(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { srv.Close() })
+	srv.SetControl(func(raw json.RawMessage) any {
+		var req control.Request
+		if err := json.Unmarshal(raw, &req); err != nil {
+			return control.Reply{Error: &control.Error{Code: "invalid_request", Message: err.Error()}}
+		}
+		return control.Handle(host, req)
+	})
+	env := func(k string) string {
+		switch k {
+		case "KAZE_SOCKET":
+			return srv.Addr()
+		case "KAZE_NOTIFY_TOKEN":
+			return srv.Token()
+		case "KAZE_TAB_ID":
+			return "1"
+		}
+		return ""
+	}
+	for _, step := range []struct{ target, id, warning string }{{"codex", "t2", ""}, {"t7", "t7", "target t7 is in space B, not your space A; use it only if the owner named that tab"}} {
+		var out, errs bytes.Buffer
+		if code := runControl([]string{"send", step.target, "review"}, env, nil, &out, &errs); code != 0 {
+			t.Fatalf("%+v: %d %s", step, code, &errs)
+		}
+		if !strings.HasPrefix(out.String(), "sent to "+step.id+" (codex, idle, space ") {
+			t.Fatalf("confirmation: %s", &out)
+		}
+		wantErr := ""
+		if step.warning != "" {
+			wantErr = "kaze: warning: " + step.warning + "\n"
+		}
+		if errs.String() != wantErr {
+			t.Fatalf("warning: %q", &errs)
+		}
+		select {
+		case id := <-host.submitted:
+			if id != step.id {
+				t.Fatalf("submitted to %s", id)
+			}
+		case <-time.After(time.Second):
+			t.Fatal("no submission")
+		}
+	}
+}
+
+type controlSpaceScriptHost struct {
+	control.Host
+	tabs      []control.TabInfo
+	submitted chan string
+}
+
+func (h *controlSpaceScriptHost) Tabs() []control.TabInfo          { return h.tabs }
+func (h *controlSpaceScriptHost) Submit(id string, _ []byte) error { h.submitted <- id; return nil }

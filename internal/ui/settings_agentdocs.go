@@ -41,9 +41,14 @@ func (s *agentDocsFileState) row(id, displayPath string) settingRow {
 		r.label = "Worker instructions"
 		r.hint = "Writes worker instructions to " + displayPath + "."
 	}
-	if s.status == agentdocs.Different {
-		r.pill = "Modified"
-		r.tone = "warn"
+	switch s.status {
+	case agentdocs.Outdated:
+		r.pill, r.tone = "Update available", "warn"
+		r.ctrls = append(r.ctrls, ctrl{kind: ctlButton, id: id + "_update", text: "Update"})
+	case agentdocs.Different:
+		r.pill, r.tone = "Edited", "warn"
+		r.hint += " Replaces your edits with Kaze's text; a backup is kept."
+		r.ctrls = append(r.ctrls, ctrl{kind: ctlButton, id: id + "_reset", text: "Reset", ghost: true})
 	}
 	if s.err != "" {
 		r.pill = "Error"
@@ -72,10 +77,9 @@ func (s *agentDocsFileState) set(on bool) {
 		s.err = err.Error()
 	}
 }
-func (win *window) loadPeerDocs() {
+func (win *window) agentDocsPaths() (claude, codex string) {
 	// Derive from the existing injectable agent paths. Empty paths never resolve
 	// the real home, including for headless/test windows.
-	claude, codex := "", ""
 	if win.claudePath != "" {
 		claude = filepath.Join(filepath.Dir(win.claudePath), "CLAUDE.md")
 	}
@@ -86,10 +90,41 @@ func (win *window) loadPeerDocs() {
 	if dir != "" {
 		codex = filepath.Join(dir, "AGENTS.md")
 	}
+	return claude, codex
+}
+
+func (win *window) loadPeerDocs() {
+	claude, codex := win.agentDocsPaths()
 	win.claudeDocs.load(claude)
 	win.codexDocs.load(codex)
 	win.claudeDocs.workers.worker = true
 	win.codexDocs.workers.worker = true
 	win.claudeDocs.workers.load(claude)
 	win.codexDocs.workers.load(codex)
+}
+
+// agentInstructionsNotice performs the four read-only checks once, off the UI
+// goroutine. Empty injected paths never fall back to the process home.
+func agentInstructionsNotice(claude, codex string) <-chan string {
+	result := make(chan string, 1)
+	go func() {
+		outdated := false
+		for _, path := range []string{claude, codex} {
+			if path == "" {
+				continue
+			}
+			for _, state := range []func(string) (agentdocs.Status, error){agentdocs.State, agentdocs.WorkersState} {
+				status, err := state(path)
+				if err == nil && status == agentdocs.Outdated {
+					outdated = true
+				}
+			}
+		}
+		message := ""
+		if outdated {
+			message = "Kaze's agent instructions changed. Update them in Settings > Agents."
+		}
+		result <- message
+	}()
+	return result
 }

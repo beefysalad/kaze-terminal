@@ -220,6 +220,8 @@ of the app like the other shots, so none is faked here. The development captures
 
 ## 0.46 orchestrator demo captures (November 26, 2026)
 
+The Settings capture was taken at 0.46; the new Update/Edited pills are not shown in any capture.
+
 Four captures retaken from a running macOS demo build of `release/0.46`
 at release commit `7638d0e8e0577fbdeb4b77b6a12e991051744160`, at 2200 x 1440 px (1100 x 720 logical, Retina 2x), in Midnight.
 Only the Midnight set was retaken for this release.

@@ -18,7 +18,7 @@ import (
 const controlTimeout = 5 * time.Second
 const controlMaxRequest = 64 << 10 // matches the notify server's JSON object cap
 
-const controlUsage = "usage: kaze ls [--children] [--json] | read <t> [--lines N] | send <t> <text|-> [--raw] [--if-idle] | name <t> <name> | label <t> k=v | keys <t> <key...> | interrupt <t> [--ctrl-c] | wait --children all|any [--timeout S] | wait <t> [--for TEXT] [--timeout S] [--quiet MS] | run [--name N] [--cwd D] [--label k=v]... [--mode read-only|edit] [--wait-start] <claude|codex|template> <task|-> | kill <t> | kill --children | report <text|-> | templates\nrun flags may appear before or immediately after the agent/template, before the final task. Use - (stdin) or -- before a task starting with -."
+const controlUsage = "usage: kaze ls [--children] [--json] | read <t> [--lines N] | send <t> <text|-> [--raw] [--if-idle] | name <t> <name> | label <t> k=v | keys <t> <key...> | interrupt <t> [--ctrl-c] | wait --children all|any [--timeout S] | wait <t> [--for TEXT] [--timeout S] [--quiet MS] | run [--name N] [--cwd D] [--label k=v]... [--mode read-only|edit] [--wait-start] <claude|codex|template> <task|-> | kill <t> | kill --children | report <text|-> | templates\nrun flags may appear before or immediately after the agent/template, before the final task. Use - (stdin) or -- before a task starting with -.\nAddress tabs by id from ls. ls marks your tab self; tabs in another space belong to another project."
 
 // runControl performs one request without starting any window code.
 func runControl(args []string, env func(string) string, stdin io.Reader, stdout, stderr io.Writer) int {
@@ -72,6 +72,9 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 			fmt.Fprintln(stderr, "kaze: KAZE_TAB_ID is required; run inside a Kaze tab")
 			return 1
 		}
+	}
+	if req.Op == "read" || req.Op == "keys" || req.Op == "interrupt" || (req.Op == "wait" && req.Children == "") {
+		req.From = controlCaller(env)
 	}
 	addr := env("KAZE_SOCKET")
 	if addr == "" {
@@ -175,7 +178,11 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 				if agent == "" {
 					agent = "-"
 				}
-				if _, err = fmt.Fprintf(stdout, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", tab.ID, name, tab.Space, agent, tab.Status, tab.Folder, controlLabels(tab.Labels), controlColumn(tab.Parent), controlColumn(tab.Role)); err != nil {
+				self := "-"
+				if tab.ID == controlCaller(env) {
+					self = "self"
+				}
+				if _, err = fmt.Fprintf(stdout, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", tab.ID, name, tab.Space, agent, tab.Status, tab.Folder, controlLabels(tab.Labels), controlColumn(tab.Parent), controlColumn(tab.Role), self); err != nil {
 					break
 				}
 			}
@@ -196,6 +203,9 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 					if p != "" {
 						parts = append(parts, p)
 					}
+				}
+				if tab.Space != "" {
+					parts = append(parts, "space "+tab.Space)
 				}
 				_, err = fmt.Fprintf(stdout, "sent to %s (%s)\n", tab.ID, strings.Join(parts, ", "))
 			}

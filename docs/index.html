@@ -67,7 +67,7 @@
       </div>
     </div>
   </section>
-  <div class="wrap news"><span class="tag">0.46</span><a href="#changelog">Agents that start agents <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
+  <div class="wrap news"><span class="tag">0.46.1</span><a href="#changelog">Agents stay in their own project <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
 
   <section class="k-sec wrap" aria-labelledby="demo-title">
     <header class="k-head">
@@ -169,7 +169,22 @@
     </header>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.46</span><span class="badge">Latest</span><time datetime="2026-11-26">Nov 26, 2026</time></div>
+        <div class="release-meta"><span class="version">0.46.1</span><span class="badge">Latest</span><time datetime="2026-11-27">Nov 27, 2026</time></div>
+        <div class="release-body">
+          <h3>Agents stay in their own project</h3>
+          <ul>
+            <li>kaze ls marks your own tab with a self column. An agent name like codex resolves to a tab in your own space first.</li>
+            <li>Sending to, reading from or pressing keys in a tab of another space prints a warning.</li>
+            <li>Peer messaging and worker instructions share one rule: use a tab in your own space, never another project's tab unless you named it. If none is available, start your own worker when worker instructions are installed; otherwise tell the owner. Peer instructions now include the PowerShell form.</li>
+            <li>Settings shows Update available with an Update button for outdated instruction blocks, and Edited with Reset for blocks you changed. A one-time note at startup points out outdated instructions. If you already switched instructions on, press Update once in Settings &gt; Agents.</li>
+            <li>Instruction blocks saved with Windows line endings no longer show as Modified.</li>
+            <li>Workers are told to talk only to their parent.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.46</span><time datetime="2026-11-26">Nov 26, 2026</time></div>
         <div class="release-body">
           <h3>Agents that start agents</h3>
           <ul>
@@ -196,21 +211,6 @@
         </div>
       </li>
 
-      <li class="release">
-        <div class="release-meta"><span class="version">0.45</span><time datetime="2026-11-25">Nov 25, 2026</time></div>
-        <div class="release-body">
-          <h3>Agents that talk to each other</h3>
-          <ul>
-            <li>An agent in one tab can read and type into another through the kaze command: ls, read, send, keys, interrupt, wait, name and label. Claude Code can hand work to Codex and back.</li>
-            <li>A send arrives as one paste followed by Enter, tagged &lt;kaze from=...&gt; so the receiver can tell a peer from you.</li>
-            <li>Wait blocks until the other agent finishes, without polling.</li>
-            <li>Address a tab by id, by name, or by agent name when only one tab runs it.</li>
-            <li>Settings, Agents has an off-by-default Peer messaging instructions switch for Claude Code and for Codex. It adds instructions to ~/.claude/CLAUDE.md or ~/.codex/AGENTS.md (or $CODEX_HOME/AGENTS.md) so every agent in every tab knows the commands. Turning it off removes exactly that block.</li>
-            <li>Agent control uses the same local socket as the hooks and does no work when idle.</li>
-            <li>A wrong kaze command now prints usage instead of opening a second window.</li>
-          </ul>
-        </div>
-      </li>
     </ol>
     <a class="all-releases" href="changelog">View all releases <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
   </section>

@@ -1,11 +1,11 @@
 ## What's changed
 
-- An agent can start Claude Code or Codex workers in background tabs with kaze run, wait for them, read their reports and stop them.
-- Workers nest under their parent in the same space, with a worker mark, a status bar count and Stop all workers.
-- Off by default: enable Settings > Agents > Let agents start workers. The first time an agent asks to start workers, Kaze asks you to allow it.
-- Templates live in the config folder. Limits keep each agent to 4 workers and Kaze to 8 in total.
-- Workers close with their parent and never come back after a restart. A worker waiting on a trust or approval dialog is left for you to answer.
-- Only Claude Code and Codex can be workers. On Windows, Claude Code needs the native claude.exe.
+- kaze ls marks your own tab with a self column. An agent name like codex resolves to a tab in your own space first.
+- Sending to, reading from or pressing keys in a tab of another space prints a warning.
+- Peer messaging and worker instructions share one rule: use a tab in your own space, never another project's tab unless you named it. If none is available, start your own worker when worker instructions are installed; otherwise tell the owner. Peer instructions now include the PowerShell form.
+- Settings shows Update available with an Update button for outdated instruction blocks, and Edited with Reset for blocks you changed. A one-time note at startup points out outdated instructions. If you already switched instructions on, press Update once in Settings > Agents.
+- Instruction blocks saved with Windows line endings no longer show as Modified.
+- Workers are told to talk only to their parent.
 
 ## Download
 
