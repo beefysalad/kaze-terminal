@@ -8,10 +8,15 @@ import (
 	"gioui.org/io/event"
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
+	"gioui.org/io/system"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"gioui.org/text"
+	"gioui.org/unit"
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
 
 type workerPopover struct {
@@ -19,8 +24,28 @@ type workerPopover struct {
 	tag       bool
 	box, stop image.Rectangle
 	rows      []workerPopoverRow
-	nameOf    func(tabs.TabID) string
+	tabs      []*tabs.Tab
+	inputs    []workerPopoverInput
+	key       workerPopoverKey
+	valid     bool
+	ops       op.Ops
+	call      op.CallOp
+	draws     uint64
 }
+type workerPopoverInput struct {
+	id                 tabs.TabID
+	name, agent, state string
+}
+type workerPopoverKey struct {
+	size   image.Point
+	anchor image.Rectangle
+	count  int
+	metric unit.Metric
+	locale system.Locale
+	theme  theme.Chrome
+	shaper *text.Shaper
+}
+
 type workerPopoverRow struct {
 	id   tabs.TabID
 	rect image.Rectangle
@@ -36,35 +61,19 @@ func (win *window) drawWorkerPopover(gtx layout.Context) {
 		s.open = false
 		return
 	}
-	c, ops, th := win.ui, gtx.Ops, win.ui.th
-	w := min(gtx.Dp(340), gtx.Constraints.Max.X-gtx.Dp(16))
-	pad, rowH := gtx.Dp(12), gtx.Dp(42)
-	anchor := win.statusRect(grpWorkers)
-	x := max(gtx.Dp(8), min(anchor.Max.X-w, gtx.Constraints.Max.X-w-gtx.Dp(8)))
-	bottom := anchor.Min.Y - gtx.Dp(8)
-	h := pad*2 + win.workerCount()*rowH + gtx.Dp(36)
-	s.box = image.Rect(x, max(gtx.Dp(8), bottom-h), x+w, bottom)
-	paint.FillShape(ops, th.ToastBG, clip.UniformRRect(s.box, gtx.Dp(8)).Op(ops))
-	rr := clip.UniformRRect(s.box, gtx.Dp(8))
-	paint.FillShape(ops, th.ToastLine, clip.Stroke{Path: rr.Path(ops), Width: float32(max(gtx.Dp(1), 1))}.Op())
-	cl := clip.Rect(s.box).Push(ops)
-	y := s.box.Min.Y + pad
-	s.rows = s.rows[:0]
-	if s.nameOf == nil {
-		s.nameOf = func(id tabs.TabID) string { return win.names[id] }
-	}
-	names := sideInput{Name: s.nameOf}
-	for _, t := range win.mgr.Tabs() {
+	// Compare raw presentation values before formatting, fitting or shaping text.
+	// Retain both the tab scratch and Gio ops, as the sidebar does.
+	key := workerPopoverKey{gtx.Constraints.Max, win.statusRect(grpWorkers), win.workerCount(), gtx.Metric, gtx.Locale, win.ui.th, win.ui.shaper}
+	dirty := !s.valid || s.key != key
+	s.tabs = win.mgr.TabsInto(s.tabs)
+	n := 0
+	for _, t := range s.tabs {
 		if t.Role != "worker" {
 			continue
 		}
-		// Share the sidebar naming rule, without folder or agent-summary fallbacks.
-		name := names.ruled(t, locEntry{}, agentState{})
+		name := win.names[t.ID]
 		if name == "" {
 			name = t.Title
-		}
-		if name == "" {
-			name = "t" + strconv.Itoa(int(t.ID))
 		}
 		agent, first, needs := win.workerPresentation(t.ID)
 		state := "idle"
@@ -79,6 +88,58 @@ func (win *window) drawWorkerPopover(gtx layout.Context) {
 		case first == "pending":
 			state = "starting"
 		}
+		in := workerPopoverInput{t.ID, name, agent, state}
+		if n >= len(s.inputs) {
+			s.inputs = append(s.inputs, in)
+			dirty = true
+		} else if s.inputs[n] != in {
+			s.inputs[n] = in
+			dirty = true
+		}
+		n++
+	}
+	if n != len(s.inputs) {
+		clear(s.inputs[n:])
+		s.inputs = s.inputs[:n]
+		dirty = true
+	}
+	if dirty {
+		s.ops.Reset()
+		cached := gtx
+		cached.Ops = &s.ops
+		rec := op.Record(cached.Ops)
+		win.buildWorkerPopover(cached)
+		s.call = rec.Stop()
+		// Fitting a new name can load a fallback font and replace the shaper.
+		key.shaper = win.ui.shaper
+		s.key, s.valid = key, true
+		s.draws++
+	}
+	s.call.Add(gtx.Ops)
+}
+
+func (win *window) buildWorkerPopover(gtx layout.Context) {
+	s := &win.stat.workers
+	c, ops, th := win.ui, gtx.Ops, win.ui.th
+	w := min(gtx.Dp(340), gtx.Constraints.Max.X-gtx.Dp(16))
+	pad, rowH := gtx.Dp(12), gtx.Dp(42)
+	anchor := win.statusRect(grpWorkers)
+	x := max(gtx.Dp(8), min(anchor.Max.X-w, gtx.Constraints.Max.X-w-gtx.Dp(8)))
+	bottom := anchor.Min.Y - gtx.Dp(8)
+	h := pad*2 + win.workerCount()*rowH + gtx.Dp(36)
+	s.box = image.Rect(x, max(gtx.Dp(8), bottom-h), x+w, bottom)
+	paint.FillShape(ops, th.ToastBG, clip.UniformRRect(s.box, gtx.Dp(8)).Op(ops))
+	rr := clip.UniformRRect(s.box, gtx.Dp(8))
+	paint.FillShape(ops, th.ToastLine, clip.Stroke{Path: rr.Path(ops), Width: float32(max(gtx.Dp(1), 1))}.Op())
+	cl := clip.Rect(s.box).Push(ops)
+	y := s.box.Min.Y + pad
+	s.rows = s.rows[:0]
+	for _, in := range s.inputs {
+		name := in.name
+		if name == "" {
+			name = "t" + strconv.Itoa(int(in.id))
+		}
+		agent, state := in.agent, in.state
 		rect := image.Rect(x+pad, y, x+w-pad, y+rowH)
 		col := th.ToastFG
 		if state == "needs you" {
@@ -88,7 +149,7 @@ func (win *window) drawWorkerPopover(gtx layout.Context) {
 		place(ops, call, rect.Min)
 		call, _ = c.fitSide(gtx, agent+" · "+state, 11, rect.Dx(), th.Muted)
 		place(ops, call, image.Pt(rect.Min.X, y+sz.Y+gtx.Dp(3)))
-		s.rows = append(s.rows, workerPopoverRow{t.ID, rect, shownName})
+		s.rows = append(s.rows, workerPopoverRow{in.id, rect, shownName})
 		y += rowH
 	}
 	s.stop = image.Rect(x+pad, y, x+w-pad, y+gtx.Dp(32))

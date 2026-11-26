@@ -3,6 +3,7 @@ package agentdocs
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -92,11 +93,15 @@ func TestWorkerInstructionsAtomicSymlink(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if os.SameFile(before, after) {
+	// Windows file identity does not distinguish replacement reliably here.
+	if runtime.GOOS != "windows" && os.SameFile(before, after) {
 		t.Fatal("target was not atomically replaced")
 	}
 	if st, err := os.Lstat(link); err != nil || st.Mode()&os.ModeSymlink == 0 {
 		t.Fatal("link replaced")
+	}
+	if got := get(t, target); !strings.HasPrefix(got, "owner\r\n") || !strings.Contains(got, WorkerBlock) {
+		t.Fatalf("target lost owner text or worker block: %q", got)
 	}
 	backups, _ := filepath.Glob(link + ".bak-*")
 	if len(backups) != 1 || get(t, backups[0]) != "owner\r\n" {

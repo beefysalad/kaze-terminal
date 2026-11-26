@@ -1,13 +1,17 @@
 package ui
 
 import (
+	"fmt"
 	"image"
 	"strings"
 	"testing"
 
 	"gioui.org/font"
+	"gioui.org/io/system"
+	"gioui.org/text"
 	ctl "github.com/beefysalad/kaze-terminal/internal/control"
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
 
 func TestWorkerCounterAndPalette(t *testing.T) {
@@ -131,21 +135,94 @@ func TestWorkerPopoverNames(t *testing.T) {
 }
 
 func TestWorkerPopoverStillFrameAllocations(t *testing.T) {
+	for _, key := range []string{"midnight", "washi"} {
+		for _, name := range []string{"review", "", strings.Repeat("review ", 80)} {
+			for _, locale := range []system.Locale{{}, {Language: "ja"}} {
+				for _, warmup := range []int{1, 3, 10} {
+					t.Run(fmt.Sprintf("%s/name-%d/%s/warmup-%d", key, len(name), locale.Language, warmup), func(t *testing.T) {
+						win, _ := workerWindow(t)
+						spawnPresentationWorker(t, win)
+						th, _ := theme.ByKey(key)
+						win.applyTheme(th)
+						win.names = map[tabs.TabID]string{2: name}
+						win.stat.workers.open = true
+						g := pageContext(560, 640)
+						g.Locale = locale
+						win.drawStatus(g, 608, t0)
+						draw := func() { g.Ops.Reset(); win.drawWorkerPopover(g) }
+						for range warmup {
+							draw()
+						}
+						if n := testing.AllocsPerRun(20, draw); n != 0 {
+							t.Fatalf("worker popover allocated %g, want 0", n)
+						}
+					})
+				}
+			}
+		}
+	}
+}
+
+func TestWorkerPopoverCacheRefreshes(t *testing.T) {
 	win, _ := workerWindow(t)
 	spawnPresentationWorker(t, win)
 	win.names = map[tabs.TabID]string{2: "review"}
 	win.stat.workers.open = true
 	g := pageContext(560, 640)
 	win.drawStatus(g, 608, t0)
-	draw := func() {
-		g.Ops.Reset()
-		win.drawWorkerPopover(g)
+	draw := func() { g.Ops.Reset(); win.drawWorkerPopover(g) }
+	draw()
+	for _, tc := range []struct {
+		name                string
+		change              func()
+		wantName, wantState string
+	}{
+		{"rename", func() { win.names[2] = "tests" }, "tests", "starting"},
+		{"title", func() { delete(win.names, 2); shellTitle(win.mgr.Lookup(2), "terminal title") }, "terminal title", "starting"},
+		{"id", func() { shellTitle(win.mgr.Lookup(2), "") }, "t2", "starting"},
+		{"first-message", func() { win.workers[2].firstMessage = "unconfirmed" }, "t2", "needs you"},
+		{"delivered", func() { win.workers[2].firstMessage = "delivered" }, "t2", "idle"},
+		{"agent", func() { win.workers[2].agent = "codex" }, "t2", "idle"},
+		{"needs", func() { win.workers[2].needs = true }, "t2", "needs you"},
+		{"exited", func() {
+			tab := win.mgr.Lookup(2)
+			tab.Session.Close()
+			waitControlCondition(t, func() bool { exited, _ := tab.Session.Exited(); return exited })
+		}, "t2", "exited"},
+		{"theme", func() { th, _ := theme.ByKey("washi"); win.applyTheme(th) }, "t2", "exited"},
+		{"locale", func() { g.Locale.Language = "ja" }, "t2", "exited"},
+		{"scale", func() { g.Metric.PxPerSp = 1.25 }, "t2", "exited"},
+		{"size", func() { g.Constraints.Max.X = 500 }, "t2", "exited"},
+		{"shaper", func() { win.ui.shaper = text.NewShaper(text.NoSystemFonts(), text.WithCollection(win.ui.faces)) }, "t2", "exited"},
+		{"spawn", func() { spawnPresentationWorker(t, win) }, "t2", "exited"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			before := win.stat.workers.draws
+			tc.change()
+			draw()
+			s := &win.stat.workers
+			if s.draws != before+1 || s.rows[0].name != tc.wantName || s.inputs[0].state != tc.wantState {
+				t.Fatalf("stale presentation: draws %d, rows %+v, inputs %+v", s.draws, s.rows, s.inputs)
+			}
+			draw()
+			if s.draws != before+1 {
+				t.Fatal("unchanged popover rebuilt")
+			}
+		})
 	}
-	for range 3 {
-		draw()
+	if len(win.stat.workers.rows) != 2 {
+		t.Fatal("spawn missing")
 	}
-	// The previous named-worker popover also used two allocations per draw.
-	if n := testing.AllocsPerRun(20, draw); n > 2 {
-		t.Fatalf("worker popover allocated %g, want at most 2", n)
+	win.closeTab(2)
+	draw()
+	if len(win.stat.workers.rows) != 1 || win.stat.workers.rows[0].id != 3 {
+		t.Fatal("stale closed worker")
+	}
+	win.stat.workers.open = false
+	draw()
+	win.stat.workers.open = true
+	draw()
+	if len(win.stat.workers.rows) != 1 {
+		t.Fatal("reopen lost rows")
 	}
 }
