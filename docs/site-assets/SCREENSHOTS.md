@@ -217,3 +217,65 @@ member's tab in the panel with the bar open on "warn" and its matches marked. It
 of the app like the other shots, so none is faked here. The development captures in
 `docs/audits/find/` are not for the lander.
 - 0.33 put the Kaze mark and name at the left of the title bar on both platforms. Every capture that shows the title bar now shows the old one and needs retaking. Do not fake it.
+
+## 0.46 orchestrator demo captures (November 26, 2026)
+
+Four captures retaken from a running macOS demo build of `release/0.46`
+at release commit `d92103ecd1cb2fd2f47001bc963d42c13215ecad`, at 2200 x 1440 px (1100 x 720 logical, Retina 2x), in Midnight.
+Only the Midnight set was retaken for this release.
+
+- `kaze-workers.png`: Claude parent in todo-api with reviewer (Codex, working),
+  tests (Claude, idle, green), docs (Codex, waiting, amber), three nested workers,
+  the real run/wait output and tagged reports, and the 3 workers status counter.
+- `kaze-workers-popover.png`: the same running state with the workers popover
+  open, names reviewer, tests and docs visible, and Stop all workers available.
+- `kaze-workers-consent.png`: a separate run with confirm = "first", captured
+  while the real spawn request was pending, before its 60 second deadline.
+- `kaze-workers-settings.png`: Settings > Agents scrolled to show Workers enabled,
+  the reviewer template and the Worker instructions control.
+
+How they were made:
+
+- A detached demo worktree and a throwaway home contained only todo-api, web-app
+  and notes-cli demo projects, example.com modules and a demo git author. The
+  owner's home, settings, agent instructions and installed Kaze were untouched.
+- Claude Code and Codex were not run. PATH-first demo executables named claude
+  and codex accepted the planner's real flags, printed illustrative agent output,
+  and called Kaze's real notify session/prompt/tool/needs/done and report commands.
+  The parent was a demo script in an ordinary owner-role startup tab, running real
+  run --wait-start, wait --children, read and ls --children commands. Spawn,
+  first-message confirmation, reports, notes, worker states and counts were real
+  code paths. The displayed test-result sentences are demo content.
+- Orchestration and control were enabled. Main shots used confirm = "never";
+  consent shots used confirm = "first". A demo reviewer Markdown template and
+  valid throwaway Claude hook settings were loaded from the demo home.
+- A temporary helper, never committed, opened the background sessions, dismissed
+  alert cards without clearing their marks, opened the workers popover and
+  Settings > Agents, and scrolled the real Settings list. It dropped native
+  input. An env-gated patch to the private Gio dependency suppressed activation
+  and key-window ordering, so the demo stayed behind the owner's applications.
+- The helper captured each running window's actual frame ops in process with
+  Gio's headless GPU renderer at 2x, then encoded the resulting PNG. This was
+  not a fixture render or a macOS screen capture. No UI drawing code or pixels
+  were generated, composited or retouched. Parent note lines were filtered from
+  the terminal presentation; complete real wait output was retained in the kit.
+- Each PNG was inspected for cut-off feature text, stray content and personal
+  data. Native demo processes and their children were stopped after capture.
+  The helper patch, private Gio patch, scripts, configs and CLI evidence remain
+  in `/tmp/kaze-release-046-captures/shots-kit/` outside the repository.
+  The four final PNGs were copied into `docs/site-assets/`, each under 500 KB.
+
+These captures document a native demo build, not a real-agent acceptance test.
+The existing Windows and real-agent owner gates remain open. The Settings footer
+shows the compiled 0.46 version; no version was fabricated.
+
+The detached worktree is `/tmp/kaze-release-046-demo/`. The demo helper and fresh
+private Gio copy were patched there only; no helper or dependency change is part
+of the release branch. No global input was injected and no screen capture tool ran.
+
+All other captures remain historical. `kaze-sessions.png`, `kaze-palette.png`,
+`kaze-workspaces.png`, `kaze-about.png`, `kaze-settings.png`, `kaze-agents.png`,
+`kaze-board.png`, `kaze-moment-needs.png`, `kaze-moment-servers.png` and
+`kaze-moment-done.png` still predate the current title bar, project spaces,
+sidebar and top tab strip. About still shows its older version. Those shots
+need separate retakes; none was changed for 0.46.
