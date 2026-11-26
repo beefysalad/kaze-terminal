@@ -57,7 +57,9 @@ func CodexPath() (string, error) {
 
 // span recognizes only exact whole-line markers, including in fenced Markdown.
 // Reject ambiguous/malformed markers rather than risking unrelated text.
-func span(b []byte) (start, stop int, err error) {
+func span(b []byte) (start, stop int, err error) { return peerBlock.span(b) }
+
+func (m managedBlock) span(b []byte) (start, stop int, err error) {
 	start, stop = -1, -1
 	for off := 0; off < len(b); {
 		n := bytes.IndexByte(b[off:], '\n')
@@ -67,12 +69,12 @@ func span(b []byte) (start, stop int, err error) {
 		}
 		line := strings.TrimSuffix(strings.TrimSuffix(string(b[off:next]), "\n"), "\r")
 		switch line {
-		case begin:
+		case m.begin:
 			if start >= 0 {
 				return -1, -1, errors.New("multiple peer instruction begin markers")
 			}
 			start = off
-		case end:
+		case m.end:
 			if start < 0 || stop >= 0 {
 				return -1, -1, errors.New("unmatched peer instruction end marker")
 			}
@@ -109,19 +111,21 @@ func read(path string) ([]byte, error) {
 	return os.ReadFile(path)
 }
 
-func State(path string) (Status, error) {
+func State(path string) (Status, error) { return peerBlock.state(path) }
+
+func (m managedBlock) state(path string) (Status, error) {
 	b, e := read(path)
 	if e != nil {
 		return NotInstalled, e
 	}
-	s, z, e := span(b)
+	s, z, e := m.span(b)
 	if e != nil {
 		return NotInstalled, e
 	}
 	if s < 0 {
 		return NotInstalled, nil
 	}
-	if string(b[s:z]) == Block {
+	if string(b[s:z]) == m.text {
 		return Installed, nil
 	}
 	return Different, nil
@@ -130,12 +134,14 @@ func State(path string) (Status, error) {
 func Install(path string) error { return change(path, true) }
 func Remove(path string) error  { return change(path, false) }
 
-func change(path string, install bool) error {
+func change(path string, install bool) error { return peerBlock.change(path, install) }
+
+func (m managedBlock) change(path string, install bool) error {
 	b, e := read(path)
 	if e != nil {
 		return e
 	}
-	s, z, e := span(b)
+	s, z, e := m.span(b)
 	if e != nil {
 		return e
 	}
@@ -143,7 +149,7 @@ func change(path string, install bool) error {
 	switch {
 	case s >= 0 && install:
 		out = append(out, b[:s]...)
-		out = append(out, Block...)
+		out = append(out, m.text...)
 		out = append(out, b[z:]...)
 	case s >= 0:
 		// Install retains whether the original ended in a newline. At EOF a
@@ -178,7 +184,7 @@ func change(path string, install bool) error {
 				out = append(out, '\n', '\n')
 			}
 		}
-		out = append(out, Block...)
+		out = append(out, m.text...)
 		if len(b) > 0 && b[len(b)-1] == '\n' {
 			out = append(out, '\n')
 		}

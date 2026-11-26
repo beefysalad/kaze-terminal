@@ -139,6 +139,15 @@ func (win *window) codexRows() []settingRow {
 }
 func agentsAct(win *window, id string, arg int) {
 	switch id {
+	case "orchestrator_enabled":
+		win.setOrchestratorEnabled(arg == 1)
+		return
+	case "claude_worker_docs":
+		win.claudeDocs.workers.set(arg == 1)
+		return
+	case "codex_worker_docs":
+		win.codexDocs.workers.set(arg == 1)
+		return
 	case "claude_peer_docs":
 		win.claudeDocs.set(arg == 1)
 		return
@@ -221,10 +230,13 @@ func (win *window) writeCodex() {
 // agentsRows keeps the alert configuration shared while setup is per agent.
 func agentsRows(win *window) []settingRow {
 	rows := sharedAgentRows(win)
+	rows = append(rows, settingRow{heading: "Workers"}, win.orchestratorSettingRow())
 	rows = append(rows, settingRow{heading: "Claude Code setup"})
 	rows = append(rows, win.claudeDocs.row("claude_peer_docs", tildeHome(win.claudeDocs.path, win.home)))
+	rows = append(rows, win.claudeDocs.workers.row("claude_worker_docs", tildeHome(win.claudeDocs.path, win.home)))
 	rows = append(rows, win.setupRows()...)
 	rows = append(rows, settingRow{heading: "Codex setup"})
 	rows = append(rows, win.codexDocs.row("codex_peer_docs", tildeHome(win.codexDocs.path, win.home)))
+	rows = append(rows, win.codexDocs.workers.row("codex_worker_docs", tildeHome(win.codexDocs.path, win.home)))
 	return append(rows, win.codexRows()...)
 }
