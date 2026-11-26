@@ -1,6 +1,10 @@
 package control
 
-import "time"
+import (
+	"time"
+
+	"github.com/beefysalad/kaze-terminal/internal/orchestrate"
+)
 
 const (
 	MaxKeys      = 64
@@ -11,35 +15,44 @@ const (
 // Request is one control operation. The transport authenticates Token before
 // calling Handle; worker management also authenticates the per-tab caller key.
 type Request struct {
-	CallerKey string   `json:"caller_key,omitempty"` // separate from label Key
-	From      string   `json:"from,omitempty"`
-	IfIdle    bool     `json:"if_idle,omitempty"`
-	Name      string   `json:"name,omitempty"`
-	Key       string   `json:"key,omitempty"`
-	Value     string   `json:"value,omitempty"`
-	For       string   `json:"for,omitempty"`
-	Timeout   int      `json:"timeout,omitempty"` // seconds, zero selects 120
-	Quiet     int      `json:"quiet,omitempty"`   // milliseconds, zero selects 1500
-	Args      []string `json:"args,omitempty"`
-	CtrlC     bool     `json:"ctrl_c,omitempty"`
-	Op        string   `json:"op"`
-	Tab       string   `json:"tab,omitempty"` // stable id (t3) or an exact, unique name
-	Text      string   `json:"text,omitempty"`
-	Lines     int      `json:"lines,omitempty"`
-	Token     string   `json:"token,omitempty"`
+	Agent     string            `json:"agent,omitempty"`
+	CWD       string            `json:"cwd,omitempty"`
+	Labels    map[string]string `json:"labels,omitempty"`
+	Mode      string            `json:"mode,omitempty"`
+	WaitStart bool              `json:"wait_start,omitempty"`
+	Task      string            `json:"task,omitempty"`
+	CallerKey string            `json:"caller_key,omitempty"` // separate from label Key
+	From      string            `json:"from,omitempty"`
+	IfIdle    bool              `json:"if_idle,omitempty"`
+	Name      string            `json:"name,omitempty"`
+	Key       string            `json:"key,omitempty"`
+	Value     string            `json:"value,omitempty"`
+	For       string            `json:"for,omitempty"`
+	Timeout   int               `json:"timeout,omitempty"` // seconds, zero selects 120
+	Quiet     int               `json:"quiet,omitempty"`   // milliseconds, zero selects 1500
+	Args      []string          `json:"args,omitempty"`
+	CtrlC     bool              `json:"ctrl_c,omitempty"`
+	Op        string            `json:"op"`
+	Tab       string            `json:"tab,omitempty"` // stable id (t3) or an exact, unique name
+	Text      string            `json:"text,omitempty"`
+	Lines     int               `json:"lines,omitempty"`
+	Token     string            `json:"token,omitempty"`
 }
 
 // TabInfo is a value in the Host's immutable tab snapshot.
 type TabInfo struct {
-	Labels    map[string]string `json:"labels"`
-	ID        string            `json:"id"`
-	Name      string            `json:"name"`
-	Space     string            `json:"space"`
-	Folder    string            `json:"folder"`
-	Agent     string            `json:"agent"`
-	Status    string            `json:"status"`
-	Since     time.Time         `json:"since"`
-	Workspace bool              `json:"workspace"` // a workspace-run member
+	Parent       string            `json:"parent,omitempty"`
+	Role         string            `json:"role,omitempty"`
+	FirstMessage string            `json:"first_message,omitempty"`
+	Labels       map[string]string `json:"labels"`
+	ID           string            `json:"id"`
+	Name         string            `json:"name"`
+	Space        string            `json:"space"`
+	Folder       string            `json:"folder"`
+	Agent        string            `json:"agent"`
+	Status       string            `json:"status"`
+	Since        time.Time         `json:"since"`
+	Workspace    bool              `json:"workspace"` // a workspace-run member
 }
 
 // Reply is the result of one operation. Error is present only on failure.
@@ -62,6 +75,12 @@ type Error struct {
 func (e *Error) Error() string { return e.Message }
 
 const (
+	CodeSpawnDisabled  = "spawn_disabled"
+	CodeLimit          = orchestrate.CodeLimit
+	CodeRateLimited    = orchestrate.CodeRateLimited
+	CodeBadCWD         = orchestrate.CodeBadCWD
+	CodeUnknownAgent   = orchestrate.CodeUnknownAgent
+	CodeSpawnFailed    = orchestrate.CodeSpawnFailed
 	CodeNotAllowed     = "not_allowed"
 	CodeBusy           = "busy"
 	CodeDisabled       = "disabled"
@@ -70,7 +89,7 @@ const (
 	CodeAmbiguousTab   = "ambiguous_tab"
 	CodeInvalidRequest = "invalid_request"
 	CodeUnknownOp      = "unknown_op"
-	CodeTextTooLarge   = "text_too_large"
+	CodeTextTooLarge   = orchestrate.CodeTextTooLarge
 	CodeHostError      = "host_error"
 )
 

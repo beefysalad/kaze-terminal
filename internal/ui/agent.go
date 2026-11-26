@@ -51,6 +51,7 @@ func shellSeq(t *tabs.Tab) uint64 {
 // noteAgent folds one hook message into the tab's state; UI goroutine only.
 // seq is shellSeq when the message arrived, not when a frame applies it.
 func (win *window) noteAgent(m notify.Msg, id tabs.TabID, seq uint64) {
+	win.workerHook(id, m.Kind)
 	a := win.agents[id]
 	agent := m.Agent
 	if agent == "" {

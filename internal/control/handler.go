@@ -39,6 +39,9 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 			return Reply{Error: e}
 		}
 	}
+	if req.Op == "spawn" || req.Op == "kill" {
+		return workers(ctx, host, req)
+	}
 	if req.Op == "name" || req.Op == "label" {
 		return metadata(ctx, host, req)
 	}

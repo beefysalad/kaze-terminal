@@ -79,11 +79,14 @@ const (
 )
 
 type window struct {
-	control controlHost
-	w       *app.Window
-	opt     Options
-	pal     render.Palette
-	km      keymap
+	control             controlHost
+	orchestratorEnabled bool
+	workers             map[tabs.TabID]*worker
+	workerStarts        map[tabs.TabID][]time.Time
+	w                   *app.Window
+	opt                 Options
+	pal                 render.Palette
+	km                  keymap
 	// binds is each [keys] action's shortcut, overrides included, for display.
 	binds map[string]input.Shortcut
 
@@ -561,6 +564,9 @@ func modes(s *term.Session) term.Modes {
 
 // start launches a tab's shell in dir, or the configured start folder when empty.
 func (win *window) start(env []string, dir string) (ptyx.Session, error) {
+	return win.startArgv(nil, env, dir)
+}
+func (win *window) startArgv(argv, env []string, dir string) (ptyx.Session, error) {
 	if dir == "" {
 		dir = win.plainStartDir()
 	}
@@ -568,7 +574,10 @@ func (win *window) start(env []string, dir string) (ptyx.Session, error) {
 	if win.opt.ShellEnv != nil {
 		env = win.opt.ShellEnv(env)
 	}
-	return ptyx.Start(win.opt.Shell, cols, rows, env, dir)
+	if len(argv) == 0 {
+		argv = win.opt.Shell
+	}
+	return ptyx.Start(argv, cols, rows, env, dir)
 }
 
 func (win *window) newTab() { win.newTabIn(win.plainStartDir()) }
@@ -714,7 +723,7 @@ func (win *window) frame(gtx layout.Context) error {
 		if win.bench != nil {
 			notify = func() { win.bench.Output(time.Now()); win.w.Invalidate() }
 		}
-		win.mgr = tabs.NewManager(win.start, cols, rows, notify)
+		win.mgr = tabs.NewManagerWithArgv(win.startArgv, cols, rows, notify)
 		win.liveMgr.Store(win.mgr)
 		win.mgr.SetScrollback(win.opt.Config.ScrollbackLines)
 		if win.srv != nil {
@@ -791,6 +800,9 @@ func (win *window) frame(gtx layout.Context) error {
 	win.publish(win.shownTab(), win.focused)
 	win.drainControl()
 	win.drainAlerts(gtx.Now)
+	if at, ok := win.workerTick(win.wsNow()); ok {
+		gtx.Execute(op.InvalidateCmd{At: at})
+	}
 	win.drainSubs(gtx.Now)
 	win.dropGoneAgents() // after the drain, so a panel never closes on an agent not applied yet
 	if at, ok := win.subTimer(gtx.Now); ok {

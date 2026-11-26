@@ -263,8 +263,8 @@ func TestControlOwnerKeySnapshot(t *testing.T) {
 		b, _ := json.Marshal(map[string]string{"op": "spawn", "from": from, "caller_key": key})
 		return controlAdapter(&win.control)(b).(ctl.Reply)
 	}
-	if r := call("t1", key); r.Error == nil || r.Error.Code != ctl.CodeUnknownOp {
-		t.Fatalf("owner rejected: %+v", r)
+	if r := call("t1", key); r.Error == nil || r.Error.Code != ctl.CodeUnknownAgent {
+		t.Fatalf("authenticated owner did not reach spawn validation: %+v", r)
 	}
 	if r := call("t2", key); r.Error == nil || r.Error.Code != "not_allowed" {
 		t.Fatalf("worker accepted: %+v", r)

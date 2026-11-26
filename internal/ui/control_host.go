@@ -38,14 +38,16 @@ type controlSnapshot struct {
 // controlHost keeps socket access on immutable snapshots and synchronized sessions.
 // Renames cross a bounded inbox; its wake callback only invalidates the window.
 type controlHost struct {
-	snapshot  atomic.Pointer[controlSnapshot]
-	changesMu sync.Mutex
-	changes   chan struct{}
-	renameMu  sync.Mutex
-	renames   []*controlRename
-	wake      func() // immutable after initialization; only invalidates like onNotify
-	labelsMu  sync.Mutex
-	labels    map[string]map[string]string
+	snapshot       atomic.Pointer[controlSnapshot]
+	changesMu      sync.Mutex
+	changes        chan struct{}
+	spawnMu        sync.Mutex
+	workerRequests []*controlWorkerRequest
+	renameMu       sync.Mutex
+	renames        []*controlRename
+	wake           func() // immutable after initialization; only invalidates like onNotify
+	labelsMu       sync.Mutex
+	labels         map[string]map[string]string
 }
 
 var _ ctl.Host = (*controlHost)(nil)
@@ -193,6 +195,22 @@ func (win *window) publishControl() {
 		if win.alerts.markOf(t.ID) == markNeeds {
 			status = "needs"
 		}
+		parent, firstMessage := "", ""
+		if t.Parent != 0 {
+			parent = workerID(t.Parent)
+		}
+		if w := win.workers[t.ID]; w != nil {
+			firstMessage = w.firstMessage
+			if !w.hooked {
+				status = "starting"
+			}
+			if a.agentName() == "" {
+				a.agent = w.agent
+			}
+		}
+		if t.Exited {
+			status = "exited"
+		}
 		name := win.names[t.ID]
 		if name == "" {
 			name = t.FixedTitle
@@ -201,7 +219,7 @@ func (win *window) publishControl() {
 		if folder == "" {
 			folder = t.Dir
 		}
-		next.tabs = append(next.tabs, ctl.TabInfo{ID: id, Name: name, Space: controlSpaceName(loc), Folder: folder,
+		next.tabs = append(next.tabs, ctl.TabInfo{Parent: parent, Role: t.Role, FirstMessage: firstMessage, ID: id, Name: name, Space: controlSpaceName(loc), Folder: folder,
 			Labels: cloneLabels(win.control.labels[id]), Agent: a.agentName(), Status: status, Since: a.since, Workspace: t.Group != nil})
 		var target *controlSession
 		if old != nil {
