@@ -30,8 +30,9 @@ type controlSession struct {
 	pending atomic.Int64 // unix nanos of the last send still awaiting its prompt hook; 0 when none
 }
 type controlSnapshot struct {
-	tabs     []ctl.TabInfo
-	sessions map[string]*controlSession
+	ownerKeys map[string]string // private immutable authentication data; never serialized
+	tabs      []ctl.TabInfo
+	sessions  map[string]*controlSession
 }
 
 // controlHost keeps socket access on immutable snapshots and synchronized sessions.
@@ -163,9 +164,12 @@ func (win *window) publishControl() {
 	defer win.control.labelsMu.Unlock()
 	old := win.control.snapshot.Load()
 	list := win.mgr.Tabs()
-	next := &controlSnapshot{tabs: make([]ctl.TabInfo, 0, len(list)), sessions: make(map[string]*controlSession, len(list))}
+	next := &controlSnapshot{ownerKeys: make(map[string]string, len(list)), tabs: make([]ctl.TabInfo, 0, len(list)), sessions: make(map[string]*controlSession, len(list))}
 	for _, t := range list {
 		id := "t" + strconv.Itoa(int(t.ID))
+		if key := win.mgr.OwnerKey(t.ID); key != "" {
+			next.ownerKeys[id] = key
+		}
 		// Discovery belongs to the existing UI model refresh. Publishing itself
 		// must not start a worker whose completion could request a frame.
 		loc := win.locs[t.ID]
@@ -262,4 +266,12 @@ func (h *controlHost) OutputChanges(id string) (<-chan struct{}, func(), time.Ti
 		}
 	})
 	return wake, remove, target.session.LastOutputTime(), nil
+}
+
+// OwnerKey reads only the immutable published snapshot on socket goroutines.
+func (h *controlHost) OwnerKey(id string) string {
+	if s := h.snapshot.Load(); s != nil {
+		return s.ownerKeys[id]
+	}
+	return ""
 }

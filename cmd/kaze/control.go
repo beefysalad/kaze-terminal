@@ -63,6 +63,7 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 		addr = env("KAZE_NOTIFY")
 	}
 	req.Token = env("KAZE_NOTIFY_TOKEN")
+	req.CallerKey = env("KAZE_TAB_KEY")
 	if addr == "" {
 		fmt.Fprintln(stderr, "kaze: KAZE_SOCKET (or KAZE_NOTIFY) is required; run inside a Kaze tab")
 		return 1
@@ -110,7 +111,7 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 		case control.CodeUnknownKey:
 			fmt.Fprintln(stderr, "allowed keys:", control.AllowedKeys)
 			return 2
-		case "refused", "busy_server", control.CodeBusy, control.CodeDisabled:
+		case "refused", "busy_server", control.CodeBusy, control.CodeDisabled, control.CodeNotAllowed:
 			return 3
 		case "timeout":
 			return 124

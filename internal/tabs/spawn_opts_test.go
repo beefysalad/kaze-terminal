@@ -78,10 +78,15 @@ func TestOrchestratorEnvironmentDoesNotLeakIntoOrdinaryTabs(t *testing.T) {
 	t.Cleanup(m.CloseAll)
 	mustNew(t, m)
 	for _, e := range st.envs[0] {
-		name, _, _ := strings.Cut(e, "=")
+		name, value, _ := strings.Cut(e, "=")
 		switch strings.ToUpper(name) {
-		case "KAZE_TASK", "KAZE_PARENT", "KAZE_ROLE", "KAZE_TAB_KEY":
+		case "KAZE_TASK", "KAZE_PARENT", "KAZE_ROLE":
 			t.Errorf("inherited orchestration environment leaked: %q", e)
+		case "KAZE_TAB_KEY":
+			// Owner tabs now receive a fresh key, never either inherited value.
+			if value == "inherited" || value == "inherited-lowercase" || len(value) != 64 {
+				t.Error("caller key was inherited or malformed")
+			}
 		}
 	}
 }

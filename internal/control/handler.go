@@ -34,6 +34,11 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 	if !opt.Enabled {
 		return Reply{Error: &Error{CodeDisabled, "control is disabled"}}
 	}
+	if RequiresOwnerKey(req.Op) {
+		if e := VerifyOwnerKey(host, req.From, req.CallerKey); e != nil {
+			return Reply{Error: e}
+		}
+	}
 	if req.Op == "name" || req.Op == "label" {
 		return metadata(ctx, host, req)
 	}

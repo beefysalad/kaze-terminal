@@ -242,7 +242,7 @@ func TestControlErrorReply(t *testing.T) {
 		wire string
 		exit int
 	}{
-		{"unknown_tab", 1}, {"unauthorized", 1}, {"control_unavailable", 1}, {"refused", 3}, {"busy_server", 3}, {"timeout", 124},
+		{"unknown_tab", 1}, {"unauthorized", 1}, {"control_unavailable", 1}, {"refused", 3}, {"busy_server", 3}, {"not_allowed", 3}, {"timeout", 124},
 	} {
 		t.Run(tc.wire, func(t *testing.T) {
 			env, _ := controlServer(t, control.Reply{Error: &control.Error{Code: tc.wire, Message: "test explanation"}})
@@ -447,5 +447,28 @@ func TestControlReadTruncationWarning(t *testing.T) {
 	code := runControl([]string{"read", "t2"}, env, nil, &out, &errs)
 	if code != 0 || out.String() != "newest answer\n" || !strings.Contains(errs.String(), "truncated") || !strings.Contains(errs.String(), "newest") {
 		t.Fatalf("code=%d out=%q stderr=%q", code, out.String(), errs.String())
+	}
+}
+
+func TestControlCopiesCallerKeyWithoutChangingLabelKey(t *testing.T) {
+	env, requests := controlServer(t, control.Reply{OK: true})
+	withKey := func(name string) string {
+		if name == "KAZE_TAB_KEY" {
+			return "owner-key"
+		}
+		return env(name)
+	}
+	var out, errs bytes.Buffer
+	if code := runControl([]string{"label", "t2", "team=review"}, withKey, nil, &out, &errs); code != 0 {
+		t.Fatalf("code=%d %s", code, errs.String())
+	}
+	req := receiveControlRequest(t, requests)
+	wire, _ := json.Marshal(req)
+	var fields map[string]any
+	if err := json.Unmarshal(wire, &fields); err != nil {
+		t.Fatal(err)
+	}
+	if fields["caller_key"] != "owner-key" || fields["key"] != "team" {
+		t.Fatalf("request fields: %s", wire)
 	}
 }

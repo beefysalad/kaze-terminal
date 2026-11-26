@@ -3,6 +3,7 @@
 package tabs
 
 import (
+	"crypto/rand"
 	"errors"
 	"os"
 	"slices"
@@ -81,6 +82,7 @@ type Manager struct {
 	onChange      func()
 	stateObserver atomic.Pointer[func()]
 	baseEnv       []string
+	callerSecret  [32]byte // immutable per window, separate from the notify token
 
 	closing sync.WaitGroup // shells Close is still releasing in the background
 
@@ -112,7 +114,11 @@ func NewManagerWithArgv(start func(argv, env []string, dir string) (ptyx.Session
 	if onChange == nil {
 		onChange = func() {}
 	}
-	return &Manager{start: start, onChange: onChange, baseEnv: baseEnv(os.Environ()), cols: cols, rows: rows}
+	m := &Manager{start: start, onChange: onChange, baseEnv: baseEnv(os.Environ()), cols: cols, rows: rows}
+	if _, err := rand.Read(m.callerSecret[:]); err != nil {
+		panic("initialize tab caller secret: " + err.Error())
+	}
+	return m
 }
 
 // Inherited terminal identity is dropped (a kaze started from Windows Terminal or
@@ -173,7 +179,17 @@ func (m *Manager) newTab(o StartOpts, prefeed func(*term.Session)) (*Tab, error)
 	cols, rows, sb, nenv := m.cols, m.rows, m.sbLines, m.notifyEnv
 	m.mu.Unlock()
 
-	env := append(slices.Clip(m.baseEnv), o.Env...)
+	env := slices.Clone(m.baseEnv)
+	// Callers may add launch metadata, but cannot supply or override caller keys.
+	for _, e := range o.Env {
+		name, _, _ := strings.Cut(e, "=")
+		if !strings.EqualFold(name, "KAZE_TAB_KEY") {
+			env = append(env, e)
+		}
+	}
+	if o.Parent == 0 && o.Role == "" {
+		env = append(env, "KAZE_TAB_KEY="+m.deriveOwnerKey(id))
+	}
 	env = append(env, nenv...)
 	env = append(env, "KAZE_TAB_ID="+strconv.Itoa(int(id)))
 	p, err := m.start(o.Argv, env, o.Dir)

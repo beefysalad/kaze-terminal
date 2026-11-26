@@ -9,23 +9,24 @@ const (
 )
 
 // Request is one control operation. The transport authenticates Token before
-// calling Handle; handlers do not authenticate callers themselves.
+// calling Handle; worker management also authenticates the per-tab caller key.
 type Request struct {
-	From    string   `json:"from,omitempty"`
-	IfIdle  bool     `json:"if_idle,omitempty"`
-	Name    string   `json:"name,omitempty"`
-	Key     string   `json:"key,omitempty"`
-	Value   string   `json:"value,omitempty"`
-	For     string   `json:"for,omitempty"`
-	Timeout int      `json:"timeout,omitempty"` // seconds, zero selects 120
-	Quiet   int      `json:"quiet,omitempty"`   // milliseconds, zero selects 1500
-	Args    []string `json:"args,omitempty"`
-	CtrlC   bool     `json:"ctrl_c,omitempty"`
-	Op      string   `json:"op"`
-	Tab     string   `json:"tab,omitempty"` // stable id (t3) or an exact, unique name
-	Text    string   `json:"text,omitempty"`
-	Lines   int      `json:"lines,omitempty"`
-	Token   string   `json:"token,omitempty"`
+	CallerKey string   `json:"caller_key,omitempty"` // separate from label Key
+	From      string   `json:"from,omitempty"`
+	IfIdle    bool     `json:"if_idle,omitempty"`
+	Name      string   `json:"name,omitempty"`
+	Key       string   `json:"key,omitempty"`
+	Value     string   `json:"value,omitempty"`
+	For       string   `json:"for,omitempty"`
+	Timeout   int      `json:"timeout,omitempty"` // seconds, zero selects 120
+	Quiet     int      `json:"quiet,omitempty"`   // milliseconds, zero selects 1500
+	Args      []string `json:"args,omitempty"`
+	CtrlC     bool     `json:"ctrl_c,omitempty"`
+	Op        string   `json:"op"`
+	Tab       string   `json:"tab,omitempty"` // stable id (t3) or an exact, unique name
+	Text      string   `json:"text,omitempty"`
+	Lines     int      `json:"lines,omitempty"`
+	Token     string   `json:"token,omitempty"`
 }
 
 // TabInfo is a value in the Host's immutable tab snapshot.
@@ -61,6 +62,7 @@ type Error struct {
 func (e *Error) Error() string { return e.Message }
 
 const (
+	CodeNotAllowed     = "not_allowed"
 	CodeBusy           = "busy"
 	CodeDisabled       = "disabled"
 	CodeUnknownKey     = "unknown_key"
