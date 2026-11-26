@@ -192,6 +192,7 @@ type statusModel struct {
 	Servers         []serverDot
 	Usage           []usage.Detail
 	Model           string
+	Workers         int
 	Tabs            int
 	Resources       resources.Snapshot
 	Notice          string
@@ -199,7 +200,7 @@ type statusModel struct {
 }
 
 func (win *window) statusModel(now time.Time) statusModel {
-	m := statusModel{Tabs: len(win.mgr.Tabs()), Agents: win.subs.Active(0)}
+	m := statusModel{Workers: win.workerCount(), Tabs: len(win.mgr.Tabs()), Agents: win.subs.Active(0)}
 	if win.resources != nil {
 		if win.resources.needRoots(now) {
 			win.resources.tick(now, win.resourceRoots())
