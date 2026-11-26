@@ -93,6 +93,8 @@ and owner checks remain separate from this Task 9 handoff; t4 is the orchestrato
 
 ## Where things stand
 
+**Lander motion (2026-11-26, `feat/lander-motion`):** added restrained hero and scroll entrances, header and control feedback, lightbox transitions and wall pause controls. Reveals are JS-gated and reduced-motion safe. Preview: `python3 -m http.server 8731 --bind 127.0.0.1 --directory docs`.
+
 **Release 0.45 prepared on `release/0.45` (2026-11-25), based on main after PR #212.**
 Version, macOS short version, both regenerated Windows resources, release notes, README,
 changelog and lander are updated together. The bundle version remains 1, as in 0.44.
