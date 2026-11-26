@@ -210,8 +210,10 @@ func (win *window) publishControl() {
 		}
 		if w := win.workers[t.ID]; w != nil {
 			firstMessage = w.firstMessage
-			if !w.hooked {
+			if w.firstMessage == "pending" {
 				status = "starting"
+			} else if w.firstMessage == "failed" || w.firstMessage == "unconfirmed" {
+				status = "idle"
 			}
 			if w.needs {
 				status = "needs"
