@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 
@@ -335,6 +336,37 @@ func TestTemplatesCLIListAndFailure(t *testing.T) {
 		}
 		if tt.reply.Warning != "" && !strings.Contains(errs.String(), tt.reply.Warning) {
 			t.Fatal(&errs)
+		}
+	}
+}
+
+func TestTemplatesREADMECommandContract(t *testing.T) {
+	b, err := os.ReadFile("../../README.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := strings.ReplaceAll(string(b), "\r\n", "\n")
+	found := false
+	for _, line := range strings.Split(text, "\n") {
+		if !strings.HasPrefix(line, "| `templates") {
+			continue
+		}
+		found = true
+		command := strings.Split(line, "`")[1]
+		if command != "templates" {
+			t.Fatalf("README advertises unsupported templates flags: %s", command)
+		}
+		req, _, ok := controlArgs(strings.Fields(command))
+		if !ok || req.Op != "templates" {
+			t.Fatalf("documented invocation rejected: %s", command)
+		}
+	}
+	if !found {
+		t.Fatal("README templates command missing")
+	}
+	for _, args := range [][]string{{"run", "-review", "task"}, {"run", "--", "-review", "task"}, {"templates", "--json"}} {
+		if _, _, ok := controlArgs(args); ok {
+			t.Errorf("accepted unsupported invocation: %v", args)
 		}
 	}
 }

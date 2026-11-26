@@ -204,3 +204,18 @@ README documents this final scope.
 - Scratch reports live in `.superpowers/sdd/orchestrator/` (git-ignored), including `task-11-report.md`.
 - Next: t4 verifies Task 11, arranges the read-only whole-branch review and any test-first fix round,
   and coordinates G2/G3 owner checks. No release preparation until the feature shipping gate.
+
+## Final review fix round F
+
+Worker control input (`send`, `keys`, `interrupt`) requires `first_message=delivered`
+and a status other than `needs`; the owner answers trust and approval prompts in
+that tab. Immutable publication and each serialized input enqueue share a lock,
+including the final Enter after paste echo. Pending first delivery stays `starting`
+through SessionStart, then failed/unconfirmed startup becomes stopped with the
+existing not_started note. Native owner input is unchanged.
+
+Unix template opens are confined, nonblocking and no-follow, followed by regular
+file and identity checks before bounded reads. Template names match
+`^[a-z0-9][a-z0-9-]{0,31}$`; `claude` and `codex` remain reserved. Leading hyphens
+produce list warnings and cannot launch. The documented command is `templates`
+without a JSON flag. G2/G3 native owner checks remain open.

@@ -746,7 +746,8 @@ When the owner asks you to talk to, ask, message or hand work to another agent (
 
 Control listens on loopback only. Any process in a tab holds the shared token.
 Worker management also requires the owner tab's private key; `send` and `keys`
-refuse workers in `needs` so an agent cannot answer their approval prompts.
+refuse workers unless `first_message` is `delivered` and the worker is not in
+`needs`. The owner has to answer trust and approval prompts in that tab.
 
 ## Agents starting agents (workers)
 
@@ -785,7 +786,7 @@ Use `"$KAZE_BIN"` in a Kaze tab (PowerShell: `& $env:KAZE_BIN`):
 | `report <text\|->` | `"$KAZE_BIN" report 'Review complete, no findings'` | A worker reports to its parent, with a `<kaze from="tN name" kind="report">` tag. Text is limited to 4 KiB. |
 | `kill <t>` / `kill --children` | `"$KAZE_BIN" kill --children` | Closes one of the caller's workers or all its workers. A non-child target is refused. |
 | `ls --children [--json]` | `"$KAZE_BIN" ls --children --json` | Lists the caller's workers, including parent, role, status and first-message state. |
-| `templates [--json]` | `"$KAZE_BIN" templates` | Lists valid owner templates and warnings for invalid files. |
+| `templates` | `"$KAZE_BIN" templates` | Lists valid owner templates and warnings for invalid files. |
 
 `--wait-start` waits up to 30 seconds for a prompt hook to confirm the first
 message. Snapshots show `first_message` as `pending`, `delivered`, `unconfirmed`
@@ -814,7 +815,8 @@ parent's inbox. Kaze submits them only while the parent is idle and the owner ha
 not pressed a key there for `note_quiet` seconds (default 5). A working parent
 receives them through `wait --children`. Tags identify agent text as a hint;
 any token holder can forge them. An approval or trust dialog in a worker is the
-owner's to answer in that tab. `send` and `keys` into a worker in `needs` are refused.
+owner's to answer in that tab. `send`, `keys` and `interrupt` into a worker are refused until its first message
+is delivered, and while it is in `needs`.
 
 Only `claude` and `codex` can run, including through templates. Requests cannot
 supply arbitrary commands, extra CLI flags or permission bypass flags. On Windows,
@@ -839,7 +841,8 @@ Review the requested changes. Report findings once, then stop.
 
 Frontmatter accepts `description`, `agent` (`claude` or `codex`), `model` and
 `mode` (`read-only` or `edit`); only `agent` is required. The Markdown body becomes
-worker instructions. Names use 1 to 32 lowercase letters, digits or hyphens;
+worker instructions. Names use 1 to 32 lowercase letters, digits or hyphens and
+must start with a letter or digit (`^[a-z0-9][a-z0-9-]{0,31}$`);
 `claude` and `codex` are reserved. Files must be regular UTF-8 files without
 symlinks, at most 32 KiB, and are read fresh on each spawn. Listing is capped at
 64 templates. Unknown frontmatter keys produce warnings and never pass flags

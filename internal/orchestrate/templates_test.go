@@ -155,3 +155,27 @@ func TestTemplatePlannerGolden(t *testing.T) {
 		t.Fatal("model injection accepted")
 	}
 }
+
+func TestTemplateNamesMatchLaunchableCatalog(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"-review", "-", "review", "0-review", "review-", strings.Repeat("a", 32)} {
+		writeTemplate(t, dir, name, "---\nagent: codex\n---\nReview")
+		valid := !strings.HasPrefix(name, "-")
+		if ValidTemplateName(name) != valid {
+			t.Errorf("name %q accepted=%v", name, !valid)
+		}
+		_, _, err := LoadTemplate(dir, name)
+		if (err == nil) != valid {
+			t.Errorf("load %q: %v", name, err)
+		}
+	}
+	catalog := ListTemplates(dir)
+	if len(catalog.Templates) != 4 || len(catalog.Warnings) != 2 {
+		t.Fatalf("catalog: %+v", catalog)
+	}
+	for _, name := range []string{"-review.md", "-.md"} {
+		if !strings.Contains(strings.Join(catalog.Warnings, "\n"), name) {
+			t.Errorf("missing filename warning for %s", name)
+		}
+	}
+}

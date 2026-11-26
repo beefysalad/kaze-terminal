@@ -16,7 +16,7 @@ import (
 const MaxTemplateBytes = 32 << 10
 const MaxTemplates = 64
 
-var templateName = regexp.MustCompile(`^[a-z0-9-]{1,32}$`)
+var templateName = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,31}$`)
 var modelName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$`)
 
 // ValidTemplateName excludes the built-ins, which always keep their meaning.
