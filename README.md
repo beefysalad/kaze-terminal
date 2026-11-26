@@ -744,8 +744,106 @@ When the owner asks you to talk to, ask, message or hand work to another agent (
 <!-- kaze:peer-agents:end -->
 ```
 
-Control listens on loopback only. Any process in a tab holds the token and can
-type into any other tab. There are no permissions between tabs.
+Control listens on loopback only. Any process in a tab holds the shared token.
+Worker management also requires the owner tab's private key; `send` and `keys`
+refuse workers in `needs` so an agent cannot answer their approval prompts.
+
+## Agents starting agents (workers)
+
+Built on `feat/orchestrator-build`, pending release. An agent can start Claude Code
+or Codex in background worker tabs, give each one task, wait for results and stop
+them. The active tab stays where it was. Workers appear under their parent in the
+sidebar, share its space and have a worker mark in the tab strip. The status bar
+worker count and palette offer **Stop all workers**; the palette also offers
+**Stop workers of this tab**.
+
+This is off by default. Enable **Settings > Agents > Let agents start workers**,
+or set the following in `config.toml` and restart. Control must also be enabled:
+
+```toml
+[control]
+enabled = true
+
+[orchestrator]
+enabled = true
+confirm = "first"
+note_quiet = 5
+max_depth = 1
+```
+
+In Settings > Agents, the separate **Worker instructions** switches install a
+managed block for Claude Code or Codex. It teaches the commands below and says to
+start workers only when the owner asks. Peer messaging instructions remain a
+separate switch. An agent may need a new session to load either block.
+
+Use `"$KAZE_BIN"` in a Kaze tab (PowerShell: `& $env:KAZE_BIN`):
+
+| Command | Example | What it does |
+|---|---|---|
+| `run [flags] <claude\|codex\|template> <task\|->` | `"$KAZE_BIN" run --name review --mode read-only claude 'Review the diff and report once'` | Starts a background worker. Flags: `--name`, `--cwd`, repeated `--label k=v`, `--mode read-only\|edit`, `--wait-start`. Flags go before the agent/template or immediately after it, before the task. `-` reads up to 16 KiB of task text from stdin. |
+| `wait --children all\|any [--timeout S]` | `"$KAZE_BIN" wait --children all --timeout 120` | Waits for all or any child to stop, or returns early with an unread report or note. Prints child statuses, unread inbox text and a reason such as `all_stopped`, `report` or `note`. |
+| `report <text\|->` | `"$KAZE_BIN" report 'Review complete, no findings'` | A worker reports to its parent, with a `<kaze from="tN name" kind="report">` tag. Text is limited to 4 KiB. |
+| `kill <t>` / `kill --children` | `"$KAZE_BIN" kill --children` | Closes one of the caller's workers or all its workers. A non-child target is refused. |
+| `ls --children [--json]` | `"$KAZE_BIN" ls --children --json` | Lists the caller's workers, including parent, role, status and first-message state. |
+| `templates [--json]` | `"$KAZE_BIN" templates` | Lists valid owner templates and warnings for invalid files. |
+
+`--wait-start` waits up to 30 seconds for a prompt hook to confirm the first
+message. Snapshots show `first_message` as `pending`, `delivered`, `unconfirmed`
+or `failed`. A session hook without a prompt for 20 seconds is unconfirmed; no
+hook for 30 seconds, or exiting before delivery, fails. Check the worker tab for
+a trust dialog or missing hooks. Worker status can also be `starting` or `exited`;
+an exited worker keeps its screen until its tab closes.
+
+`confirm = "first"` asks once per parent tab per run, using an on-screen banner.
+`"always"` asks for each worker; `"never"` skips the banner. Allow lets the request
+proceed; Deny returns `consent_denied`; an unanswered banner times out after
+60 seconds. Disabled spawning returns `spawn_disabled`. Limits refuse immediately:
+4 workers per parent, 8 total and 6 starts per minute per parent. These limits
+are fixed in the current build.
+
+Only owner-opened tabs receive `KAZE_TAB_KEY`. Worker management checks that
+per-tab key in addition to the loopback token. Workers get `KAZE_PARENT` and
+`KAZE_ROLE=worker`, without a caller key. Depth is limited to 1: workers cannot
+start workers. They close with their parent, are never saved in `sessions.json`
+and never return after a restart. There is no outlive-parent option in v1.
+The working folder must resolve inside the parent's repo, or its folder without
+a repo. The current build does not expose an outside-folder override.
+
+Reports and automatic done, blocked, exited and not-started notes enter the
+parent's inbox. Kaze submits them only while the parent is idle and the owner has
+not pressed a key there for `note_quiet` seconds (default 5). A working parent
+receives them through `wait --children`. Tags identify agent text as a hint;
+any token holder can forge them. An approval or trust dialog in a worker is the
+owner's to answer in that tab. `send` and `keys` into a worker in `needs` are refused.
+
+Only `claude` and `codex` can run, including through templates. Requests cannot
+supply arbitrary commands, extra CLI flags or permission bypass flags. On Windows,
+the native claude.exe is required; npm `.cmd` and `.bat` shims are refused. Codex
+uses Kaze's private launcher. Native Windows worker behavior still needs owner
+verification.
+
+Templates live beside `config.toml` in `templates/`: on macOS,
+`~/Library/Application Support/kaze/templates/`; on Windows,
+`%AppData%\kaze\templates\`. Settings > Agents lists them with **Open folder**;
+v1 does not edit templates in Settings. For example, save `review.md`:
+
+```markdown
+---
+description: Review changes without editing
+agent: claude
+model: sonnet
+mode: read-only
+---
+Review the requested changes. Report findings once, then stop.
+```
+
+Frontmatter accepts `description`, `agent` (`claude` or `codex`), `model` and
+`mode` (`read-only` or `edit`); only `agent` is required. The Markdown body becomes
+worker instructions. Names use 1 to 32 lowercase letters, digits or hyphens;
+`claude` and `codex` are reserved. Files must be regular UTF-8 files without
+symlinks, at most 32 KiB, and are read fresh on each spawn. Listing is capped at
+64 templates. Unknown frontmatter keys produce warnings and never pass flags
+through to the CLI. Templates cannot add commands or bypass flags.
 
 ## About
 
@@ -1229,6 +1327,7 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 Done:
 
+- Built on `feat/orchestrator-build`, pending release: [agents starting agents](#agents-starting-agents-workers), with background worker tabs, consent, reports, child waits, limits and owner templates. Windows runtime and native owner checks remain open.
 - Editable shortcuts: change any of them in Settings > Shortcuts, or write `none` to drop one (built on `feat/shortcuts-edit`, ships in 0.31 with the palette redesign).
 - Find in the terminal and the docked tabs (#155): Ctrl+Shift+F or Cmd+F, every match marked, on the whole scrollback (built on `feat/find`, release next).
 - Next release (built on `feat/pane-reading`): the subagent panel and the board preview open edits inline with line numbers and code colours, fold quiet commands and open failures.

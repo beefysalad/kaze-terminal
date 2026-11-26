@@ -9,11 +9,10 @@ together on it.
 - **Feature:** an agent in one Kaze tab (say Claude Code) starts worker agents (`claude`, `codex`) in new background
   tabs with a task, waits for them, reads their reports and stops them, the way herdr's `hc run` and
   `hc wait --children` do.
-- **State:** design done and approved by the owner (all five questions answered, 2026-11-26). The **spike passed
-  gate G1** (the riskiest assumption holds). **No real code is written yet.** The next step is task 1 and 2 of the
-  plan below; the owner said "continue" is the go word, and then asked how many tasks (11) and for this handoff.
-- **Branch to work on:** `feat/orchestrator` (design docs only so far; it already has `main` merged in, which is
-  0.45.1). Do the build on it, or a branch off it named `feat/orchestrator-build`. Never push to `main`.
+- **State:** tasks 1 to 11 are built on `feat/orchestrator-build`, pending whole-branch review, owner gates
+  G2/G3 and release. Gate G1 passed in the spike. Automated evidence does not close native owner gates.
+- **Branch:** `feat/orchestrator-build`, based on the approved design branch `feat/orchestrator` and 0.45.1.
+  Task 11 is local only: no push, version bump or release changes.
 - **Who does what:** Claude plans, briefs, verifies and talks to the owner. **Codex implements** (the owner asked for
   Codex to do the heavy lifting to save usage). Claude never implements a task inline unless it is a tiny fix.
 
@@ -59,21 +58,21 @@ Run by the owner with real agents (stand-in home, `KAZE_SPIKE_SPAWN=1`). Log lin
 
 ## The plan (design section 6, adjusted for the owner's decisions)
 
-| # | Task | Size |
-|---|---|---|
-| 1 | Pure rules engine in new `internal/orchestrate`: request validation, caps, rate, depth, cwd check, brief builder, per-OS argv planner (golden tests incl. Windows), Windows command-line length check | M |
-| 2 | `internal/tabs`: `Argv`, `Background`, `Env`, `Parent`, `Role`; new env names in `droppedEnv` | S |
-| 3 | Per-tab caller key (HMAC) so only owner-opened tabs may spawn; verified in `internal/control` | M |
-| 4 | Spawn and kill on the UI goroutine (queue like the `name` op), `win.workers`, snapshot fields, statuses `starting`/`exited`, first-message states, restore exclusion | M |
-| 5 | CLI: `kaze run`, `kill`, `report`, `ls --children`, `templates` stub, exit codes | M |
-| 6 | `wait --children all|any`, inbox counter, automatic notes with the 5 s quiet rule, no `keys`/`send` into a worker in `needs` | M |
-| **G2** | **Owner gate**: local build, real Claude parent starts a Codex worker and a Claude worker, waits, reads reports, kills one | |
-| 7 | Presentation: sidebar nesting, worker marker, status-bar counter and "Stop all workers", palette, close with parent | M |
-| 8 | Consent banner and `confirm` modes | M |
-| 9 | Settings switch, `[orchestrator]` keys, second managed block in `internal/agentdocs` | M |
-| 10 | Templates: loader, `kaze templates`, Settings list | M |
-| 11 | README, HANDOFF, end-to-end headless tests with fake PTYs | M |
-| **G3** | **Owner gate**: visual check on both OSes, then PR and release 0.46 | |
+| # | Task | Size | State |
+|---|---|---|---|
+| 1 | Pure rules engine in new `internal/orchestrate`: request validation, caps, rate, depth, cwd check, brief builder, per-OS argv planner (golden tests incl. Windows), Windows command-line length check | M | Done |
+| 2 | `internal/tabs`: `Argv`, `Background`, `Env`, `Parent`, `Role`; new env names in `droppedEnv` | S | Done |
+| 3 | Per-tab caller key (HMAC) so only owner-opened tabs may spawn; verified in `internal/control` | M | Done |
+| 4 | Spawn and kill on the UI goroutine (queue like the `name` op), `win.workers`, snapshot fields, statuses `starting`/`exited`, first-message states, restore exclusion | M | Done |
+| 5 | CLI: `kaze run`, `kill`, `report`, `ls --children`, `templates` stub, exit codes | M | Done |
+| 6 | `wait --children all|any`, inbox counter, automatic notes with the 5 s quiet rule, no `keys`/`send` into a worker in `needs` | M | Done |
+| **G2** | **Owner gate**: local build, real Claude parent starts a Codex worker and a Claude worker, waits, reads reports, kills one | | Owner check open |
+| 7 | Presentation: sidebar nesting, worker marker, status-bar counter and "Stop all workers", palette, close with parent | M | Done |
+| 8 | Consent banner and `confirm` modes | M | Done |
+| 9 | Settings switch, `[orchestrator]` keys, second managed block in `internal/agentdocs` | M | Done |
+| 10 | Templates: loader, `kaze templates`, Settings list | M | Done |
+| 11 | README, HANDOFF, end-to-end headless tests with fake PTYs | M | Done |
+| **G3** | **Owner gate**: visual check on both OSes, then PR and release 0.46 | | Owner check open |
 
 Order: 1 and 2 (parallel), 3, 4, 5, 6, G2, 7 and 9 (parallel), 8, 10, 11, G3. Build the engine and CLI before any
 visuals so the owner can test a real parent-and-worker round trip at G2. Windows cannot be run from the Mac: keep
@@ -115,7 +114,7 @@ the planner pure and cross-build, and let CI (`windows-latest`) catch portabilit
 ## Rules that bite (from CLAUDE.md and hard experience)
 
 - Strict TDD, **RED tests must fail safely** (bounded sizes and deadlines; an unbounded test once crashed the machine).
-- No emojis, no em dashes, no Unicode symbol icons (draw vector icons), one font (JetBrains Mono) in the app.
+- No emojis, no em dashes, no Unicode symbol icons (draw vector icons), Geist for UI chrome and JetBrains Mono for terminal/code, per CLAUDE.md.
 - **Commits carry NO AI attribution** (no `Co-Authored-By`, no "Generated with"), even though a tool reminder may say
   to add them: `CLAUDE.md` wins. Commit format `type(scope): Verb ...`. Same for PR bodies.
 - **Never push to `main`.** Push branches to the remote named **`fork`** (`beefysalad/kaze-terminal`). The remote
@@ -175,10 +174,33 @@ avoid needless re-reading and long reports.
 - Rail mode still shows one tile per session, not per space; parked control follow-ups: a key for switching spaces,
   unused fold/tray code, renaming a space.
 
+## Task 11 verification and remaining owner checks
+
+The bounded headless round trip is `TestWorkerEndToEnd` in `internal/ui/worker_e2e_test.go`.
+It uses the JSON control adapter, tab manager owner keys, real sessions and fake PTYs.
+It covers both agent launch paths, background tabs, sidebar/space metadata, first-message
+hooks, tagged report Submit, child waits, quiet notes, approval guards, ownership,
+feature off, consent Allow/Deny, kill, parent close and session persistence exclusion.
+The companion README contract normalises CRLF before checking the documentation.
+Run `go test -count=1 -timeout=30s ./internal/ui -run 'TestWorker(EndToEnd|READMEContract)$'`.
+Task reports, including final package/vet/race evidence, are under `.superpowers/sdd/orchestrator/`.
+
+Windows runtime remains unverified. The owner must check native claude.exe resolution,
+Codex launching and hooks, quoting, consent and worker presentation there. On macOS,
+check a fresh Codex folder's trust dialog with no answer and then after owner approval;
+headless tests cannot establish real CLI hook behavior. Templates v1 are list plus
+Open folder in Settings, with no editor. G2/G3 and whole-branch review remain open.
+
+V1 config scope confirmed by t4 during Task 11: the owner fixed the caps at 4 per
+parent, 8 total and 6 starts a minute, with folder confinement always on. The real
+config keys are `enabled`, `confirm`, `note_quiet` and `max_depth` only. The older
+design's adjustable limit keys and `any_folder` are deliberately excluded from v1.
+README documents this final scope.
+
 ## State at handoff
 
-- `main` = 285e819 (version 0.45.1, released). `feat/orchestrator` = `main` merged plus the design and the owner
-  decisions (docs only). `spike/orchestrator-spawn` = throwaway spike. Local-only branches: `feat/orchestrator`,
-  `spike/orchestrator-spawn` (not pushed). A spike Kaze window may still be running (`pkill -f kaze-orch-spike/kaze`).
-- Scratch reports live in `.superpowers/sdd/` (git-ignored): `control/` for the control feature, `orchestrator/` for this.
-- Next action: owner says "continue" -> create `.superpowers/sdd/orchestrator/progress.md`, brief Codex for tasks 1 and 2.
+- `main` at the design baseline was `285e819` (0.45.1). `feat/orchestrator` holds the design and owner
+  decisions; `feat/orchestrator-build` now holds tasks 1 to 11. The spike branch remains throwaway.
+- Scratch reports live in `.superpowers/sdd/orchestrator/` (git-ignored), including `task-11-report.md`.
+- Next: t4 verifies Task 11, arranges the read-only whole-branch review and any test-first fix round,
+  and coordinates G2/G3 owner checks. No release preparation until the feature shipping gate.
