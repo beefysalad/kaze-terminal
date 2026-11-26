@@ -93,6 +93,13 @@ and owner checks remain separate from this Task 9 handoff; t4 is the orchestrato
 
 ## Where things stand
 
+**Orchestrator feature (agents starting worker agents, like herdr's `hc run`): designed and spike-verified, not built (2026-11-26).**
+Read `docs/HANDOFF-orchestrator.md` first: it has the owner's decisions, the spike results, the 11-task plan, and how
+Claude (plans and verifies) and Codex (implements, run with `--dangerously-bypass-approvals-and-sandbox`) work together.
+Design: `docs/superpowers/specs/2026-11-26-kaze-orchestrator-design.md`. Work happens on `feat/orchestrator`.
+Released so far: 0.45 (agent control) and 0.45.1 (steadier send and wait); the lander motion shipped in PR #215.
+
+
 **Lander motion (2026-11-26, `feat/lander-motion`):** added restrained hero and scroll entrances, header and control feedback, lightbox transitions and wall pause controls. Reveals are JS-gated and reduced-motion safe. Preview: `python3 -m http.server 8731 --bind 127.0.0.1 --directory docs`.
 
 **Release 0.45 prepared on `release/0.45` (2026-11-25), based on main after PR #212.**
