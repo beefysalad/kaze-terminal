@@ -61,15 +61,11 @@ func loadTemplate(root *os.Root, name string) (Template, []string, error) {
 	if st.Size() > MaxTemplateBytes {
 		return bad("template exceeds 32 KiB")
 	}
-	f, err := root.Open(name + ".md")
+	f, err := openCheckedTemplate(root, name+".md", st)
 	if err != nil {
 		return bad("cannot read template")
 	}
 	defer f.Close()
-	opened, err := f.Stat()
-	if err != nil || !opened.Mode().IsRegular() || !os.SameFile(st, opened) {
-		return bad("template changed while opening")
-	}
 	b, err := io.ReadAll(io.LimitReader(f, MaxTemplateBytes+1))
 	if err != nil || len(b) > MaxTemplateBytes {
 		return bad("cannot read template within 32 KiB")
@@ -265,4 +261,18 @@ func (c TemplateCatalog) TemplateText() string {
 		lines = append(lines, t.Name+"  "+t.Agent+"  "+t.Description)
 	}
 	return strings.Join(lines, "\n")
+}
+
+// openCheckedTemplate verifies the opened handle against the preflight stat.
+func openCheckedTemplate(root *os.Root, name string, checked os.FileInfo) (*os.File, error) {
+	f, err := openTemplateHandle(root, name)
+	if err != nil {
+		return nil, err
+	}
+	opened, err := f.Stat()
+	if err != nil || !opened.Mode().IsRegular() || !os.SameFile(checked, opened) {
+		f.Close()
+		return nil, fmt.Errorf("template changed while opening")
+	}
+	return f, nil
 }
