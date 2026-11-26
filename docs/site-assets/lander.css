@@ -155,14 +155,14 @@ h1 .q{color:var(--k1)}
 .k-head h2 em,.get h2 em,.statement em{font-style:normal;color:var(--k1)}
 .k-head p{color:var(--muted);font-size:16px;line-height:1.65;max-width:46ch}
 
-.k-link{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--k1);text-decoration:underline;text-decoration-color:var(--k-line);text-underline-offset:4px;transition:transform var(--motion-feedback) var(--motion-ease)}
+.k-link{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:var(--k1);text-decoration:underline;text-decoration-color:var(--k-line);text-underline-offset:4px;transition:transform var(--motion-feedback) var(--motion-ease),scale var(--motion-feedback) var(--motion-ease)}
 .k-link:hover{text-decoration-color:var(--k1)}
 .k-links{display:flex;gap:22px;flex-wrap:wrap}
 
 /* A screenshot on a plate: one hairline, no glow. */
 .plate{display:block;margin:0;border:1px solid var(--hair2);border-radius:12px;overflow:hidden;background:#0e0f15}
 .plate img{display:block;width:100%;height:auto}
-.plate-btn{transition:transform var(--motion-feedback) var(--motion-ease)}
+.plate-btn{transition:transform var(--motion-feedback) var(--motion-ease),scale var(--motion-feedback) var(--motion-ease)}
 .plate-btn:hover{border-color:var(--k-line)}
 
 /* Moments */
@@ -315,7 +315,7 @@ html{scroll-padding-top:0}
 .nav a[aria-current]{color:var(--text)}
 a,button{transition:transform var(--motion-feedback) var(--motion-ease),scale var(--motion-feedback) var(--motion-ease)}
 a:active,button:active{scale:.98}
-.b-ico{transition:transform var(--motion-feedback) var(--motion-ease)}
+.b-ico{transition:transform var(--motion-feedback) var(--motion-ease),scale var(--motion-feedback) var(--motion-ease)}
 @media (hover:hover){.index>div:hover .b-ico{transform:translateX(2px)}}
 .js .hero-line{display:block}
 h1 .q{--hero-delay:70ms}
