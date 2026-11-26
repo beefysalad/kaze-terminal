@@ -5,8 +5,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <title>Kaze | Light, fast, and out of the way.</title>
-  <meta name="description" content="A lightweight, open-source terminal for Claude Code and Codex on macOS and Windows. Keep sessions in view, see what needs you, and keep your servers close.">
+  <title>Kaze | The terminal that knows what your agents are doing</title>
+  <meta name="description" content="A lightweight, open-source terminal for macOS and Windows that knows what Claude Code and Codex are doing in every tab: who is working, who needs you, who is done. Agents can message each other and start helpers.">
   <link rel="icon" href="site-assets/kaze-icon.svg?v=3">
   <link rel="preload" href="site-assets/Manrope.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="preload" href="site-assets/JetBrainsMono-Regular.ttf" as="font" type="font/ttf" crossorigin>
@@ -26,8 +26,8 @@
   <section class="hero" aria-labelledby="hero-title">
     <div class="wrap">
       <div class="hero-inner">
-        <h1 id="hero-title"><span class="hero-line hero-enter">Light, fast,</span><span class="q hero-enter">and out of the way.</span></h1>
-        <p class="lede hero-enter">A terminal for running Claude Code and Codex all day. <b>Built for the long session.</b> Keep your sessions in view, see when an agent needs you, and keep your servers one click away.</p>
+        <h1 id="hero-title"><span class="hero-line hero-enter">The terminal that knows</span><span class="q hero-enter">what your agents are doing.</span></h1>
+        <p class="lede hero-enter">Claude Code and Codex run in your tabs. Kaze sees which one is working, <b>which one is waiting for you</b> and which one is done, through their own hooks, so you never have to check each tab. They can message each other and start helper agents, and you watch all of it from one sidebar.</p>
         <div class="actions hero-enter">
           <a class="button primary" href="https://github.com/beefysalad/kaze-terminal/releases/latest/download/Kaze-macOS.zip" data-download="mac"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg>Download for macOS</a>
           <a class="button secondary" href="https://github.com/beefysalad/kaze-terminal/releases/latest/download/Kaze-Windows-x64.zip" data-download="windows"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M0 0h11.377v11.372H0zm12.623 0H24v11.372H12.623zM0 12.623h11.377V24H0zm12.623 0H24V24H12.623z"/></svg>Download for Windows</a>
@@ -213,7 +213,7 @@
   <section class="k-sec wrap" id="faq" aria-labelledby="faq-title">
     <header class="k-head"><h2 id="faq-title">Questions.</h2></header>
     <div class="k-faq">
-      <details><summary>What is Kaze?</summary><p>A terminal for macOS and Windows, built for running Claude Code and Codex all day. Underneath it’s a plain terminal: any shell, any program. The sidebar, alert cards, subagent panel and workspaces only come into play when an agent is running.</p></details>
+      <details><summary>What is Kaze?</summary><p>A lightweight terminal for macOS and Windows that knows when Claude Code or Codex is running in a tab. It reads their own hooks, so the sidebar shows which agent is working, waiting for you or done, an alert card tells you when one needs you, and agents can message each other and start helper agents in new tabs. Underneath it is a plain terminal: any shell, any program, and nothing extra runs until an agent does.</p></details>
       <details><summary>Which agents does it work with?</summary><p>Claude Code and Codex, through their own hooks. Settings checks your Claude Code setup and adds what’s missing. Any other tool runs fine as a normal terminal program, just without the alerts.</p></details>
       <details><summary>Is it free?</summary><p>Yes. Kaze is free and open source under the MIT license. The code is on <a href="https://github.com/beefysalad/kaze-terminal">GitHub</a>.</p></details>
       <details><summary>Why does my computer warn me when I open it?</summary><p>Kaze isn’t signed by Apple or Microsoft yet, so the first launch asks you to confirm it once. <a href="#first-launch">The step-by-step guide</a> shows exactly what to click. Updates don’t ask again.</p></details>
@@ -277,7 +277,7 @@ go build -ldflags "-H=windowsgui" -o kaze.exe ./cmd/kaze  # Windows</code></pre>
   <span class="foot-kanji" aria-hidden="true">風</span>
   <div class="wrap k-foot-row">
     <a class="brand brand-foot" href="#main" aria-label="Kaze home"><img src="site-assets/kaze-lockup.svg?v=3" alt="" width="80" height="24"></a>
-    <p>Made for the long session. Kaze means “wind”.</p>
+    <p>Kaze means “wind”. Light, fast, and out of the way.</p>
     <nav aria-label="Footer"><a href="#install">Download</a><a href="changelog">Releases</a><a href="#faq">FAQ</a><a href="https://github.com/beefysalad/kaze-terminal">GitHub</a><a href="https://github.com/beefysalad/kaze-terminal/blob/main/LICENSE">MIT</a></nav>
   </div>
 </footer>

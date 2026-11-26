@@ -11,10 +11,12 @@
 </p>
 
 kaze is my personal terminal: a small, fast terminal with project spaces and tabs, written in Go with
-[Gio](https://gioui.org). I built it for working in [Claude Code](https://claude.com/claude-code)
-all day, so it does a few things well (project spaces, fast redraws, Japanese text, Claude Code's
-symbols and colour emoji) and leaves out most of what a full terminal suite has. Settings floats over the live terminal for
-the everyday choices, and everything it changes lives in one config file you can also edit by hand.
+[Gio](https://gioui.org). Through their own hooks, it knows which tabs are running
+[Claude Code](https://claude.com/claude-code) or Codex and shows which agent is working,
+waiting for me or done. Alert cards tell me when an agent needs me, and agents can message
+each other and start workers in new tabs. Underneath it is a plain terminal for any shell or
+program. Settings floats over the live terminal, and everything it changes lives in one
+config file I can also edit by hand.
 
 ## Why "kaze"
 

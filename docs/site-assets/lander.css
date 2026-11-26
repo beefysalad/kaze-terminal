@@ -42,7 +42,7 @@ code{font:13px var(--mono)}
 /* Hero: words on the left, a slowly drifting wall of real Kaze windows on the right. */
 .hero{position:relative;overflow:hidden;border-bottom:1px solid var(--line)}
 .hero-inner{position:relative;z-index:2;min-height:640px;display:flex;flex-direction:column;justify-content:center;padding:72px 0 64px;max-width:520px}
-h1{font-size:clamp(52px,6.6vw,92px);font-weight:600;line-height:.98;letter-spacing:-.055em}
+h1{font-size:clamp(46px,6.6vw,68px);font-weight:600;line-height:.98;letter-spacing:-.055em}
 h1 .q{display:block;color:var(--dim)}
 .lede{margin-top:26px;font-size:17px;line-height:1.7;color:var(--muted);max-width:470px}
 .lede b{color:var(--text);font-weight:600}
