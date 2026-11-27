@@ -148,11 +148,15 @@ func agentCounts(rows []agentRow) (n [3]int) {
 // agentsSpan is the Agents section's height: its header, a label per group present
 // and a row per agent; 0 for no agents.
 func agentsSpan(gtx layout.Context, rows []agentRow) int {
+	return agentsSpanState(gtx, rows, sideState{})
+}
+func agentsSpanState(gtx layout.Context, rows []agentRow, st sideState) int {
 	if len(rows) == 0 {
 		return 0
 	}
 	h := gtx.Dp(sideHeadH) + len(rows)*gtx.Dp(sideAgentRowH) + gtx.Dp(6)
 	for _, r := range rows {
+		h += agentChildrenHeight(gtx, r, st)
 		if workerAttention(r) {
 			h += gtx.Dp(16)
 		}
@@ -176,7 +180,7 @@ func (c *chrome) sideList(gtx layout.Context, h *sideHits, m sideModel, st sideS
 	for _, s := range m.Spaces {
 		spacesH += spaceSpan(gtx, s)
 	}
-	agentsH := agentsSpan(gtx, m.Agents)
+	agentsH := agentsSpanState(gtx, m.Agents, st)
 	total := spacesH + agentsH
 	h.scrollMax = max(0, total-h.list.Dy())
 	if total == 0 && st.filter != "" && !h.list.Empty() {
@@ -211,7 +215,7 @@ func (c *chrome) spaceLine(gtx layout.Context, h *sideHits, s spaceEntry, st sid
 	pad, gap := gtx.Dp(8), gtx.Dp(8)
 	rect := image.Rect(pad, y, h.list.Max.X-pad, y+gtx.Dp(sideSpaceH))
 	bx := rect.Min.X + gap
-	c.docLines(gtx, h, sideRow{Docs: s.Docs}, st, bx, rect.Max.X-gap, rect.Max.Y+gtx.Dp(sideSpaceGap), closeCall, closeSize)
+	c.docLines(gtx, h, sideRow{Docs: s.Docs}, st, bx+gtx.Dp(16), rect.Max.X-gap, rect.Max.Y+gtx.Dp(sideSpaceGap), closeCall, closeSize)
 	if !rect.Overlaps(h.list) {
 		return
 	}
@@ -311,11 +315,28 @@ func (c *chrome) agentsSection(gtx layout.Context, h *sideHits, rows []agentRow,
 		}
 		rect := image.Rect(pad, y, h.list.Max.X-pad, y+height)
 		y = rect.Max.Y
+		childX := rect.Min.X + gtx.Dp(16)
+		if r.Worker {
+			childX += gtx.Dp(16)
+		}
+		trayY := y
+		if !st.trayFolded[r.ID] {
+			c.trayLines(gtx, h, sideRow{ID: r.ID, Agents: r.Agents, Hidden: r.Hidden}, image.Rect(childX-gtx.Dp(sideTrayIndent), rect.Min.Y, rect.Max.X, rect.Max.Y), trayY, st.openAgent, c.sideInk())
+			trayY += agentTrayHeight(gtx, r)
+		}
+		closeCall, closeSize := c.label(gtx, "×", 12, th.Muted)
+		c.docLines(gtx, h, sideRow{Docs: r.Docs}, st, childX, rect.Max.X-gap, trayY, closeCall, closeSize)
+		y += agentChildrenHeight(gtx, r, st)
 		if !rect.Overlaps(h.list) {
 			continue
 		}
 		lastWorker := i+1 == len(rows) || !rows[i+1].Worker || rows[i+1].Parent != r.Parent
 		c.agentLine(gtx, r, st, rect, lastWorker)
+		if r.TrayTotal > 0 {
+			fold := image.Rect(rect.Min.X, rect.Min.Y, rect.Min.X+gtx.Dp(12), rect.Max.Y)
+			c.icon(gtx, "plus", fold.Inset(gtx.Dp(2)), th.Muted)
+			h.folds = append(h.folds, sideRowHit{id: r.ID, rect: fold.Intersect(h.list)})
+		}
 		h.rows = append(h.rows, sideRowHit{id: r.ID, rect: rect.Intersect(h.list)})
 	}
 }
@@ -393,4 +414,22 @@ func sidebarAgentColumns(gtx layout.Context, rect image.Rectangle, worker bool) 
 	c.ageRight = c.dot - gap
 	c.right = c.ageRight - gtx.Dp(30) - gap
 	return
+}
+
+func agentTrayHeight(gtx layout.Context, r agentRow) int {
+	if len(r.Agents) == 0 && r.Hidden.Total() == 0 {
+		return 0
+	}
+	n := gtx.Dp(sideTrayGap) + len(r.Agents)*gtx.Dp(sideAgentH) + gtx.Dp(sideTrayPad)
+	if r.Hidden.Total() > 0 {
+		n += gtx.Dp(sideChipH)
+	}
+	return n
+}
+func agentChildrenHeight(gtx layout.Context, r agentRow, st sideState) int {
+	n := len(r.Docs) * gtx.Dp(sideDocH)
+	if !st.trayFolded[r.ID] {
+		n += agentTrayHeight(gtx, r)
+	}
+	return n
 }

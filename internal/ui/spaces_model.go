@@ -7,6 +7,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
@@ -64,7 +65,9 @@ func newSpace(key, name string, rows []sideRow, active tabs.TabID) spaceEntry {
 	s := spaceEntry{Key: key, Name: name, Badge: spaceBadge(name), Color: spaceColor(name), Count: len(rows)}
 	for _, r := range rows {
 		s.Tabs = append(s.Tabs, r.ID)
-		s.Docs = append(s.Docs, r.Docs...)
+		if r.Agent == "" && !r.Worker {
+			s.Docs = append(s.Docs, r.Docs...)
+		}
 		if r.Mark == markNeeds {
 			s.Waiting++
 		}
@@ -81,10 +84,14 @@ func newSpace(key, name string, rows []sideRow, active tabs.TabID) spaceEntry {
 func buildSpaces(side sideModel, active tabs.TabID) spaceModel {
 	var m spaceModel
 	for _, g := range side.Groups {
-		m.Spaces = append(m.Spaces, newSpace(g.Key, g.Name, g.Rows, active))
+		entry := newSpace(g.Key, g.Name, g.Rows, active)
+		entry.Docs = agentlessDocs(side, g.Rows)
+		m.Spaces = append(m.Spaces, entry)
 	}
 	if len(side.Loose) > 0 {
-		m.Spaces = append(m.Spaces, newSpace(shellSpaceKey, "Shell", side.Loose, active))
+		entry := newSpace(shellSpaceKey, "Shell", side.Loose, active)
+		entry.Docs = agentlessDocs(side, side.Loose)
+		m.Spaces = append(m.Spaces, entry)
 	}
 	return m
 }
@@ -100,6 +107,11 @@ const (
 
 // agentRow is one session that has a known agent.
 type agentRow struct {
+	Docs      []sideDoc
+	Agents    []sideAgent
+	Hidden    subagents.TrayCounts
+	TrayTotal int
+
 	ID       tabs.TabID
 	Parent   tabs.TabID
 	Worker   bool
@@ -147,7 +159,7 @@ func buildAgents(side sideModel) agentsModel {
 					sub = ""
 				}
 			}
-			by[st] = append(by[st], agentRow{ID: r.ID, Name: r.Agent, Subtitle: sub, Since: r.Since, State: st,
+			by[st] = append(by[st], agentRow{Docs: r.Docs, Agents: r.Agents, Hidden: r.Hidden, TrayTotal: r.TrayTotal, ID: r.ID, Name: r.Agent, Subtitle: sub, Since: r.Since, State: st,
 				Space: label, Mark: r.Mark, Running: r.Running})
 		}
 	}
@@ -186,7 +198,7 @@ func buildAgents(side sideModel) agentsModel {
 				} else if child.Running {
 					st = agentWorking
 				}
-				m.Rows = append(m.Rows, agentRow{ID: child.ID, Parent: child.Parent, Worker: true, Name: child.Agent, Subtitle: child.Detail, Space: child.Title, State: st, Mark: child.Mark, Running: child.Running, Since: child.Since})
+				m.Rows = append(m.Rows, agentRow{Docs: child.Docs, Agents: child.Agents, Hidden: child.Hidden, TrayTotal: child.TrayTotal, ID: child.ID, Parent: child.Parent, Worker: true, Name: child.Agent, Subtitle: child.Detail, Space: child.Title, State: st, Mark: child.Mark, Running: child.Running, Since: child.Since})
 			}
 		}
 	}
@@ -216,4 +228,13 @@ func hasWorkerRows(side sideModel, parent tabs.TabID) bool {
 		}
 	}
 	return false
+}
+
+func agentlessDocs(side sideModel, rows []sideRow) (docs []sideDoc) {
+	for _, r := range rows {
+		if r.Agent == "" && !r.Worker && !hasWorkerRows(side, r.ID) {
+			docs = append(docs, r.Docs...)
+		}
+	}
+	return
 }

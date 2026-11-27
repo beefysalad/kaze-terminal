@@ -2,6 +2,10 @@ package ui
 
 import (
 	"fmt"
+	"gioui.org/layout"
+	"gioui.org/op/clip"
+	"gioui.org/op/paint"
+	"image"
 	"strconv"
 	"strings"
 	"time"
@@ -126,4 +130,72 @@ func (win *window) sideAgents(id tabs.TabID) sideTray {
 		tr.Shown = append(tr.Shown, sideAgentOf(a, now))
 	}
 	return tr
+}
+
+const sideAgentH, sideTrayGap, sideTrayPad, sideChipH = 22, 3, 4, 22
+const sideTrayIndent = 14
+
+func (c *chrome) trayLines(gtx layout.Context, h *sideHits, r sideRow, row image.Rectangle, y int, open subagents.Key, ink sideInk) {
+	if len(r.Agents) == 0 && r.Hidden.Total() == 0 {
+		return
+	}
+	ops, th := gtx.Ops, c.th
+	lineH := gtx.Dp(sideAgentH)
+	tree, x1 := row.Min.X+gtx.Dp(sideTrayIndent), row.Max.X
+	dot, gap := gtx.Dp(6), gtx.Dp(7)
+	y += gtx.Dp(sideTrayGap)
+	for _, a := range r.Agents {
+		band := image.Rect(tree, y, x1, y+lineH)
+		y = band.Max.Y
+		if !band.Overlaps(h.list) {
+			continue
+		}
+		mid := band.Min.Y + lineH/2
+		isOpen := open != (subagents.Key{}) && a.Key == open
+		if isOpen {
+			// The agent whose panel is shown, highlighted like the selected session row.
+			paint.FillShape(ops, th.Active, clip.RRect{Rect: band, NE: gtx.Dp(6), SE: gtx.Dp(6)}.Op(ops))
+			paint.FillShape(ops, th.Accent, clip.Rect(image.Rect(tree, band.Min.Y, tree+gtx.Dp(2), band.Max.Y)).Op())
+		}
+		bottom := band.Max.Y
+		if a.Key == r.Agents[len(r.Agents)-1].Key && r.Hidden.Total() == 0 {
+			bottom = mid
+		}
+		c.workerBranch(gtx, tree, band.Min.Y, bottom, mid, tree+gtx.Dp(7))
+		mx := tree + gtx.Dp(10)
+		mk := markNone
+		switch a.State {
+		case subagents.Waiting:
+			mk = markNeeds
+		case subagents.Done:
+			mk = markDone
+		}
+		c.stateDot(gtx, image.Rect(mx, mid-dot/2, mx+dot, mid-dot/2+dot), mk, a.State == subagents.Running, false)
+		eCall, eSize := c.label(gtx, a.Elapsed, 10, ink.muted)
+		right := x1 - gtx.Dp(6) - eSize.X
+		place(ops, eCall, image.Pt(right, mid-eSize.Y/2))
+		tx := mx + dot + gap
+		tCall, tSize := c.fitSide(gtx, a.Type, 11, max(right-gap-tx, 0)/2, ink.kind)
+		place(ops, tCall, image.Pt(tx, mid-tSize.Y/2))
+		col := th.Folder
+		switch a.State {
+		case subagents.Waiting:
+			col = ink.needs
+		case subagents.Done:
+			col = ink.muted
+		}
+		kx := tx + tSize.X + gap
+		kCall, kSize := c.fitSide(gtx, a.Task, 11, max(right-gap-kx, 0), col)
+		place(ops, kCall, image.Pt(kx, mid-kSize.Y/2))
+		h.agents = append(h.agents, sideAgentHit{key: a.Key, tab: r.ID,
+			rect: band.Intersect(h.list)})
+	}
+	if r.Hidden.Total() > 0 {
+		if band := image.Rect(tree, y, x1, y+gtx.Dp(sideChipH)); band.Overlaps(h.list) {
+			c.workerBranch(gtx, tree, band.Min.Y, band.Min.Y+band.Dy()/2, band.Min.Y+band.Dy()/2, tree+gtx.Dp(7))
+			call, sz := c.fitSide(gtx, "+"+strconv.Itoa(r.Hidden.Total())+" more, open board", 11, max(band.Dx()-gtx.Dp(10), 0), ink.muted)
+			place(ops, call, image.Pt(tree+gtx.Dp(10), band.Min.Y+(band.Dy()-sz.Y)/2))
+			h.agents = append(h.agents, sideAgentHit{tab: r.ID, more: true, rect: band.Intersect(h.list)})
+		}
+	}
 }

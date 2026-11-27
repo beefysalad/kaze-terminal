@@ -17,6 +17,7 @@ import (
 	"gioui.org/widget"
 
 	kinput "github.com/beefysalad/kaze-terminal/internal/input"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
 
@@ -216,9 +217,13 @@ func (win *window) drawSide(gtx layout.Context, r image.Rectangle) {
 		s.st.doc = win.docs.shown
 		s.st.settings, s.st.settingsOn = win.set.open, win.set.shown
 		s.st.docked = win.shownMember()
+		s.st.openAgent = subagents.Key{}
+		if d := win.dockOf(s.st.shown); d != nil {
+			s.st.openAgent = d.agent
+		}
 		s.st.right = win.sideRight()
 		s.st.tipRoom = max(gtx.Constraints.Max.X-r.Dx(), 1) // the tooltip stays inside the window
-		key := sideDrawKey{activeRepo: s.st.activeRepo, space: s.st.space, hoverSpace: s.st.hoverSpace, hoverBtn: s.st.hoverBtn, filterOpen: s.st.filterOpen, ages: agentAges(gtx.Now, m.Agents), size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, right: s.st.right, tipRoom: s.st.tipRoom, mode: s.mode, docked: s.st.docked, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds}
+		key := sideDrawKey{trayFolds: trayFoldKey(s.st.trayFolded), openAgent: s.st.openAgent, activeRepo: s.st.activeRepo, space: s.st.space, hoverSpace: s.st.hoverSpace, hoverBtn: s.st.hoverBtn, filterOpen: s.st.filterOpen, ages: agentAges(gtx.Now, m.Agents), size: r.Size(), metric: sg.Metric, locale: sg.Locale, shown: s.st.shown, doc: s.st.doc, hoverDoc: s.st.hoverDoc, hover: s.st.hover, scroll: s.st.scroll, settings: s.st.settings, settingsOn: s.st.settingsOn, right: s.st.right, tipRoom: s.st.tipRoom, mode: s.mode, docked: s.st.docked, theme: win.ui.th, shaper: win.ui.shaper, generation: s.cache.builds}
 		if !s.cache.drawValid || s.cache.drawKey != key || s.reveal {
 			s.cache.ops.Reset()
 			cg := sg
@@ -575,11 +580,38 @@ func revealScroll(gtx layout.Context, m sideModel, st sideState, h sideHits) (in
 			switch {
 			case docAt >= 0:
 				top, rH, found = y+gtx.Dp(sideSpaceH)+gtx.Dp(sideSpaceGap)+docAt*gtx.Dp(sideDocH), gtx.Dp(sideDocH), true
-			case s.Key == st.space:
+			case st.doc == 0 && s.Key == st.space:
 				top, found = y, true
 			}
 		}
 		y += spaceSpan(gtx, s)
+	}
+	if st.doc != 0 && !found {
+		total := y + agentsSpanState(gtx, m.Agents, st)
+		if total <= h.list.Dy() {
+			y = h.list.Dy() - agentsSpanState(gtx, m.Agents, st)
+		}
+		y += gtx.Dp(sideHeadH)
+		last := agentGroup(-1)
+		for _, r := range m.Agents {
+			if !r.Worker && r.State != last {
+				last = r.State
+				y += gtx.Dp(sideAgentLabelH)
+			}
+			y += gtx.Dp(sideAgentRowH)
+			if workerAttention(r) {
+				y += gtx.Dp(16)
+			}
+			if !st.trayFolded[r.ID] {
+				y += agentTrayHeight(gtx, r)
+			}
+			for _, d := range r.Docs {
+				if d.ID == st.doc {
+					top, rH, found = y, gtx.Dp(sideDocH), true
+				}
+				y += gtx.Dp(sideDocH)
+			}
+		}
 	}
 	if !found {
 		return 0, false
@@ -704,6 +736,28 @@ func (win *window) sidePress(p image.Point, b pointer.Buttons) {
 			return
 		}
 	}
+	if primary {
+		for _, f := range h.folds {
+			if p.In(f.rect) {
+				if win.side.st.trayFolded == nil {
+					win.side.st.trayFolded = map[tabs.TabID]bool{}
+				}
+				flip(win.side.st.trayFolded, f.id)
+				win.side.cache.drawValid = false
+				return
+			}
+		}
+		for _, a := range h.agents {
+			if p.In(a.rect) {
+				if a.more {
+					win.openBoard(a.tab)
+				} else {
+					win.showAgent(a.tab, a.key, true)
+				}
+				return
+			}
+		}
+	}
 	if r, ok := h.lineAt(p); ok {
 		switch {
 		case middle, p.In(r.close):
@@ -744,4 +798,13 @@ func (win *window) drawSideEditors(gtx layout.Context) {
 		c.lineEditor(gtx, &s.ed, r, "Filter spaces and agents…", c.th.Muted, gtx.Dp(8))
 		cl.Pop()
 	}
+}
+
+func trayFoldKey(folds map[tabs.TabID]bool) (key uint64) {
+	for id, on := range folds {
+		if on {
+			key ^= uint64(id) * 1099511628211
+		}
+	}
+	return
 }
