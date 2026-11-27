@@ -1,8 +1,9 @@
 ## What's changed
 
-- A short tour shows once on a fresh install: spaces and agents, workspaces, the bottom bar, the Agents board and turning on live status. Skip it any time; replay it from About or the command palette.
-- Settings, Workspaces shows one collapsed row per workspace. Click a row for its tabs and commands; search and state filters appear as the list grows.
-- The interface now uses Geist. The terminal, code, paths and commands stay in JetBrains Mono.
+- An agent can list and reach only tabs in its own space through the kaze command line. Other spaces are refused unless you set `[control] cross_space = true` in `config.toml`.
+- A space is one repository. Workers share their parent's space, and tab names only have to be unique within a space.
+- The Claude row icon now matches the real Claude Code mascot, with a wide body, arms, small eyes and four feet.
+- Settings, Appearance, Sidebar has an Animated status switch (`animate_status`). Turn it on to spin and pulse the working mark while an agent works. It is off by default; leaving it off keeps idle CPU at zero.
 
 ## Download
 

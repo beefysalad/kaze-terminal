@@ -245,7 +245,9 @@ The sidebar lists spaces, one per project plus a Shell space. The tab strip sits
   Its + opens a new tab in the selected space's folder. Double-click a tab to rename it;
   Enter saves and Esc cancels. Close it with its close button or your usual shortcut.
 - **Agents:** a separate section groups agent sessions as Needs you, Working and Idle.
-  Click an agent to jump to its tab. Claude uses the Claude Code pixel mascot; Codex has its own logo.
+  Click an agent to jump to its tab. Claude uses the real Claude Code mascot, with a wide body, arms, small eyes and four feet; Codex has its own logo.
+- **Animated status:** Settings > Appearance > Sidebar can spin and pulse the working mark while
+  an agent works (`animate_status`). It is off by default; off keeps idle CPU at zero.
 - **Header:** use + to open a session or the magnifier to open search. Cmd/Ctrl+K stays unchanged
   (the default Windows palette shortcut is Ctrl+Shift+K).
 - **Subagents:** each agent row shows up to 3 subagents, then "+N more, open board" for the rest.
@@ -492,7 +494,7 @@ as a floating sheet over the live terminal and dock. Press Esc or click outside 
 return focus to your terminal. In a small window it fills the window. Its menu on the left has:
 
 - **Appearance:** theme cards (each a small terminal in that theme's colors), a live preview,
-  font size, line spacing, cursor shape and blinking.
+  font size, line spacing, cursor shape and blinking, plus sidebar side and Animated status.
 - **Workspaces:** saved launch recipes, collapsed rows with their state, plus Start folder, startup and session restoration choices (see Workspaces below).
 - **Agents:** shared alert choices (chimes, taskbar flash and done-toast duration), Claude usage,
   the Discord card (see Discord below), and separate setup checks for Claude Code and Codex.
@@ -614,18 +616,19 @@ in PowerShell, use `& $env:KAZE_BIN` in place of `"$KAZE_BIN"`.
 
 | Command | Example | What it does |
 |---|---|---|
-| `ls [--json]` | `"$KAZE_BIN" ls --json` | Lists tabs. Plain output has id, name, space, agent, status, folder, labels, parent, role, self; JSON returns the full reply object, including workspace membership. |
+| `ls [--json]` | `"$KAZE_BIN" ls --json` | Lists tabs in your own space. Plain output has id, name, space, agent, status, folder, labels, parent, role, self; JSON returns the full reply object, including workspace membership. |
 | `read <t> [--lines N]` | `"$KAZE_BIN" read t2 --lines 100` | Reads the live screen plus the last N scrollback rows (0 to 2000). Without the flag, reads only the screen. Wrapped rows are joined and trailing spaces trimmed. Full-screen programs return their alternate screen. Above the 1 MiB encoded reply cap, keeps the newest complete lines, sets `truncated`, and warns on stderr while exiting 0. A single line larger than the cap is omitted. |
 | `send <t> <text\|-> [--if-idle] [--raw]` | `"$KAZE_BIN" send t2 'Review the diff' --if-idle` | Pastes text, then submits with Enter. `--if-idle` refuses a target marked working. Without it, a working target receives the text and stderr warns `busy`. |
 | `keys <t> <key...>` | `"$KAZE_BIN" keys t2 down enter` | Sends 1 to 64 named keys in order. |
 | `interrupt <t> [--ctrl-c]` | `"$KAZE_BIN" interrupt t2` | Sends Esc to a known Claude Code or Codex tab, otherwise Ctrl+C. `--ctrl-c` always sends Ctrl+C. |
 | `wait <t> [--for TEXT] [--timeout S] [--quiet MS]` | `"$KAZE_BIN" wait t2 --timeout 120` | Waits for idle or needs status. A shell uses an output quiet period instead. |
-| `name <t> <name>` | `"$KAZE_BIN" name t2 reviewer` | Renames the tab. Names must be unique, 1 to 64 characters, with no control characters, cannot start with a hyphen, and cannot look like a tab id. |
+| `name <t> <name>` | `"$KAZE_BIN" name t2 reviewer` | Renames the tab. Names must be unique within a space, 1 to 64 characters, with no control characters, cannot start with a hyphen, and cannot look like a tab id. |
 | `label <t> k=v` | `"$KAZE_BIN" label reviewer role=review` | Sets an in-memory label, shown by `ls`. Up to eight keys per tab; labels disappear when the tab closes or Kaze restarts. |
 
-Use a tab id such as `t2`, an exact, unique name, or, when only one tab runs that agent, the
-agent name (`codex`, `claude`) wherever `<t>` appears.
-Agent names resolve to a tab in your own space first; a target in another space works but prints a warning.
+Use a tab id such as `t2`, an exact name unique within your space, or, when only one tab in your
+space runs that agent, the agent name (`codex`, `claude`) wherever `<t>` appears.
+An agent can list and reach only tabs in its own space. Targets in other spaces are refused
+with `cross_space` unless you set `[control] cross_space = true` in `config.toml`.
 A wrong address lists the open tabs in the error. An unknown `kaze` command prints
 usage and exits 2; `"$KAZE_BIN" --help` prints the same
 usage and never starts a second Kaze. Ids restart
@@ -1368,6 +1371,7 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 Done:
 
+- 0.48: agents can list and reach only tabs in their own repository space unless cross-space access is enabled in config.toml. Workers share their parent's space; names are unique within a space. The Claude row uses the real Claude Code mascot, and Settings > Appearance > Sidebar adds Animated status, off by default.
 - 0.47: a first-run tour, a collapsed Workspaces list with search and state filters as it grows, and Geist for interface text. Terminal text, code, paths and commands stay in JetBrains Mono.
 - 0.46.1: agents resolve names within their own project first, cross-space commands warn, and Settings can update outdated instructions or reset edited blocks. If instructions are already on, press Update once in Settings > Agents.
 - 0.46: [agents starting agents](#agents-starting-agents-workers), with background worker tabs, consent, reports, child waits, limits and owner templates. Windows runtime and native owner checks remain open.
