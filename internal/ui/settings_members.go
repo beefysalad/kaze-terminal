@@ -249,3 +249,18 @@ func (p *page) fit(s string, sz unit.Sp, w int) string {
 	}
 	return string(r) + "…"
 }
+
+// fitEndMono shortens code s at its end with "…" until it is no wider than w.
+func (p *page) fitEndMono(s string, sz unit.Sp, w int) string {
+	if _, size := p.c.labelMono(p.gtx, s, sz, p.col.fg); size.X <= w {
+		return s
+	}
+	r := []rune(s)
+	for len(r) > 1 {
+		r = r[:len(r)-1]
+		if _, size := p.c.labelMono(p.gtx, string(r)+"…", sz, p.col.fg); size.X <= w {
+			break
+		}
+	}
+	return string(r) + "…"
+}

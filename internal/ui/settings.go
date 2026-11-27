@@ -41,6 +41,7 @@ type settingsState struct {
 	section           int             // index into the sections; never a later one
 	focus             int             // index into controls; -1 when no control has focus
 	navFocus          bool            // focus is on a sidebar entry instead of a control
+	pointerFocus      bool            // focus came from a click, so no keyboard ring is drawn
 	navIndex          int             // index into selectable nav entries
 	scroll, scrollMax int             // vertical pane position, clamped after each layout
 	scrollFocus       int             // last control revealed by keyboard focus
@@ -395,7 +396,7 @@ func (win *window) settingsPointer(e pointer.Event) {
 	}
 	for i, c := range win.set.controls {
 		if p.In(c.rect) {
-			win.set.focus, win.set.navFocus = i, false
+			win.set.focus, win.set.navFocus, win.set.pointerFocus = i, false, true
 			if c.kind == ctlText {
 				win.editField(c.id) // its padding, around the editor
 			} else if !c.dead {
@@ -477,6 +478,7 @@ func (win *window) moveFocus(d int) {
 	}
 	at = ((at+d)%total + total) % total
 	s.navFocus = at >= n
+	s.pointerFocus = false
 	if s.navFocus {
 		s.navIndex, s.focus = at-n, -1
 	} else {
