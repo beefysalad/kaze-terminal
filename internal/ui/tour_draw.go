@@ -59,9 +59,12 @@ func (w *window) drawTour(g layout.Context) {
 		dy := r.Min.Y + g.Dp(22)
 		paint.FillShape(ops, dot, clip.Ellipse(image.Rect(dx, dy, dx+g.Dp(4), dy+g.Dp(4))).Op(ops))
 	}
-	call, sz := c.labelW(g, s.Title, 20, th.ToastTitle, font.Bold)
-	place(ops, call, image.Pt(x, y))
-	y += sz.Y + g.Dp(12)
+	for _, title := range measurePage.wrap(s.Title, 16, max(1, r.Dx()-g.Dp(36))) {
+		call, sz := c.labelW(g, title, 16, th.ToastTitle, font.Bold)
+		place(ops, call, image.Pt(x, y))
+		y += sz.Y
+	}
+	y += g.Dp(12)
 	// Reuse the settings word wrapper, including bounded splitting of long words.
 	bodyRect := image.Rect(r.Min.X, y, r.Max.X, max(y, r.Max.Y-g.Dp(48)))
 	bodyClip := clip.Rect(bodyRect).Push(ops)
@@ -108,13 +111,24 @@ func (w *window) drawTour(g layout.Context) {
 		thumb.Max.Y = min(track.Max.Y, thumb.Min.Y+g.Dp(20))
 		paint.FillShape(ops, th.Muted, clip.Rect(thumb).Op())
 	}
-	y = r.Max.Y - g.Dp(36)
-	button(s.SkipLabel, -1, image.Pt(x, y))
+
+	y = r.Max.Y - g.Dp(32)
+	labels := []string{s.SkipLabel, s.NextLabel}
+	actions := []int{-1, 0}
 	if w.tour.step > 0 {
-		button("Back", -2, image.Pt(x+g.Dp(125), y))
+		labels = []string{s.SkipLabel, "Back", s.NextLabel}
+		actions = []int{-1, -2, 0}
 	}
-	_, ns := c.label(g, s.NextLabel, 12, th.ToastGo)
-	button(s.NextLabel, 0, image.Pt(r.Max.X-g.Dp(18)-ns.X, y))
+	slot := max(1, (r.Dx()-g.Dp(16))/len(labels))
+	for i, label := range labels {
+		at := image.Pt(r.Min.X+g.Dp(8)+i*slot, y)
+		call, sz := c.fitSide(g, label, 12, max(0, slot-g.Dp(8)), th.ToastGo)
+		place(ops, call, at)
+		rr := image.Rectangle{Min: at.Sub(image.Pt(2, 2)), Max: at.Add(sz).Add(image.Pt(2, 2))}.Intersect(r)
+		if !rr.Empty() {
+			w.tour.hits = append(w.tour.hits, tourHit{rr, actions[i]})
+		}
+	}
 	cl.Pop()
 	area := clip.Rect(bounds).Push(ops)
 	event.Op(ops, &w.tour.tag)

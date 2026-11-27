@@ -4,6 +4,7 @@ import (
 	"gioui.org/f32"
 	"gioui.org/io/input"
 	"gioui.org/io/pointer"
+	"image"
 	"testing"
 )
 
@@ -57,5 +58,26 @@ func TestTourBoardPreservesDocumentSelection(t *testing.T) {
 	w.tourBack()
 	if w.docs.shown != docID(42) {
 		t.Fatal("tour lost document selection")
+	}
+}
+
+func TestTinyTourFooterActionsAreDisjoint(t *testing.T) {
+	for _, sz := range []image.Point{{200, 160}, {160, 120}} {
+		w := sheetWindow(t, "midnight")
+		w.hideSettings()
+		w.openTour(true)
+		w.tourMove(5)
+		w.drawTour(pageContext(sz.X, sz.Y))
+		bounds := image.Rectangle{Max: sz}
+		for i, a := range w.tour.hits {
+			if !a.r.In(bounds) {
+				t.Fatal("outside window", a)
+			}
+			for j, b := range w.tour.hits {
+				if i != j && !a.r.Intersect(b.r).Empty() {
+					t.Fatal("overlap", a, b)
+				}
+			}
+		}
 	}
 }
