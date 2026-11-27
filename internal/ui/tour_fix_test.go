@@ -28,3 +28,22 @@ func TestTourWheelRouter(t *testing.T) {
 		t.Fatal("wheel did not scroll overflowing body")
 	}
 }
+
+func TestTourHookHitsExcludeFooter(t *testing.T) {
+	w := sheetWindow(t, "midnight")
+	w.hideSettings()
+	w.openTour(true)
+	w.tourMove(5)
+	w.tour.hooks = []tourHook{{"Claude Code", hookNeedsFix}, {"Codex", hookNeedsFix}}
+	for _, scroll := range []int{0, 20, 40} {
+		w.tour.scroll = scroll
+		w.drawTour(pageContext(320, 240))
+		for _, a := range w.tour.hits {
+			for _, b := range w.tour.hits {
+				if a.action > 0 && b.action <= 0 && !a.r.Intersect(b.r).Empty() {
+					t.Fatalf("hook overlaps footer: %v %v", a, b)
+				}
+			}
+		}
+	}
+}

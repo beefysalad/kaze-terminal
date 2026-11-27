@@ -63,7 +63,8 @@ func (w *window) drawTour(g layout.Context) {
 	place(ops, call, image.Pt(x, y))
 	y += sz.Y + g.Dp(12)
 	// Reuse the settings word wrapper, including bounded splitting of long words.
-	bodyClip := clip.Rect(image.Rect(r.Min.X, y, r.Max.X, r.Max.Y-g.Dp(48))).Push(ops)
+	bodyRect := image.Rect(r.Min.X, y, r.Max.X, max(y, r.Max.Y-g.Dp(48)))
+	bodyClip := clip.Rect(bodyRect).Push(ops)
 	y -= w.tour.scroll
 	p := &page{gtx: g, c: c, st: &w.set}
 	for _, line := range p.wrap(s.Body, 13, max(r.Dx()-g.Dp(36), 1)) {
@@ -74,7 +75,12 @@ func (w *window) drawTour(g layout.Context) {
 		call, sz := c.label(g, text, 12, th.ToastGo)
 		place(ops, call, at)
 		rr := image.Rectangle{Min: at.Sub(image.Pt(4, 4)), Max: at.Add(sz).Add(image.Pt(4, 4))}
-		w.tour.hits = append(w.tour.hits, tourHit{rr, action})
+		if action > 0 {
+			rr = rr.Intersect(bodyRect)
+		}
+		if !rr.Empty() {
+			w.tour.hits = append(w.tour.hits, tourHit{rr, action})
+		}
 		return sz
 	}
 	if s.Hooks {
