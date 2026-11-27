@@ -1,9 +1,8 @@
 ## What's changed
 
-- An agent can list and reach only tabs in its own space through the kaze command line. Other spaces are refused unless you set `[control] cross_space = true` in `config.toml`.
-- A space is one repository. Workers share their parent's space, and tab names only have to be unique within a space.
-- The Claude row icon now matches the real Claude Code mascot, with a wide body, arms, small eyes and four feet.
-- Settings, Appearance, Sidebar has an Animated status switch (`animate_status`). Turn it on to spin and pulse the working mark while an agent works. It is off by default; leaving it off keeps idle CPU at zero.
+- Each workspace in Settings, Workspaces is now one card. Open it to see its tabs on two lines, with the folder, command and wait tag, and Edit and Delete inside the card.
+- A collapsed card lists its tab names, the All, Open and Closed filters sit on their own, and Run at startup lives in the card's menu.
+- A button you click no longer keeps a purple ring; the ring only shows when you move with the keyboard.
 
 ## Download
 
