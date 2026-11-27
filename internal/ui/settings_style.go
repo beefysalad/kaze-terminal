@@ -34,13 +34,13 @@ func (p *page) textW(s string, size unit.Sp, col color.NRGBA, w font.Weight) (op
 // mono is text in the terminal's font, for keys, paths, commands and versions.
 func (p *page) mono(s string, size unit.Sp, col color.NRGBA) (op.CallOp, image.Point) {
 	p.st.texts = append(p.st.texts, s)
-	return p.c.label(p.gtx, s, size, col)
+	return p.c.labelMono(p.gtx, s, size, col)
 }
 
 // monoBase is mono text with its baseline, measured from the top.
 func (p *page) monoBase(s string, size unit.Sp, col color.NRGBA) (op.CallOp, image.Point, int) {
 	p.st.texts = append(p.st.texts, s)
-	call, d := p.c.labelDims(p.gtx, s, size, col, font.Normal)
+	call, d := p.c.labelFaceDims(p.gtx, s, size, col, font.Normal, monoFace)
 	return call, d.Size, d.Size.Y - d.Baseline
 }
 

@@ -348,7 +348,7 @@ func (c *chrome) palSwitch(gtx layout.Context, skills bool, right, mid int, h *p
 
 // palKeycapW is the width of s drawn as a keycap.
 func (c *chrome) palKeycapW(gtx layout.Context, s string, ink *palInk) int {
-	_, sz := c.label(gtx, s, 11, ink.keyFG)
+	_, sz := c.labelMono(gtx, s, 11, ink.keyFG)
 	return sz.X + 2*gtx.Dp(5) + 2*max(gtx.Dp(1), 1)
 }
 
@@ -357,7 +357,7 @@ func (c *chrome) palKeycapW(gtx layout.Context, s string, ink *palInk) int {
 func (c *chrome) palKeycap(gtx layout.Context, s string, x, mid int, ink *palInk) int {
 	ops := gtx.Ops
 	ink.note("keycap", ink.keyFG, ink.keyBG, 4.5)
-	call, sz := c.label(gtx, s, 11, ink.keyFG)
+	call, sz := c.labelMono(gtx, s, 11, ink.keyFG)
 	line := max(gtx.Dp(1), 1)
 	kh := gtx.Dp(17) + 3*line
 	kw := sz.X + 2*gtx.Dp(5) + 2*line

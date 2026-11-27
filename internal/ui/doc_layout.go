@@ -183,7 +183,7 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 				face.Weight = font.Medium
 			}
 			if sp.Style&mdoc.Code != 0 {
-				face.Typeface = chromeFace
+				face.Typeface = monoFace
 				rr = roleCode
 			}
 			link := -1
@@ -312,7 +312,7 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 			pad := min(dp(12), max(0, (width-x0-1)/3))
 			top := y
 			y += pad
-			y = wrap([]mdoc.Span{{Text: strings.ReplaceAll(b.Code, "\t", "    ")}}, x0+pad, max(x0+pad+1, width-pad), y, dp(19), spx(12.5), font.Font{Typeface: chromeFace}, roleCode, true)
+			y = wrap([]mdoc.Span{{Text: strings.ReplaceAll(b.Code, "\t", "    ")}}, x0+pad, max(x0+pad+1, width-pad), y, dp(19), spx(12.5), font.Font{Typeface: monoFace}, roleCode, true)
 			y += pad
 			l.boxes = append(l.boxes, docBox{image.Rect(x0, top, width, y), boxCode})
 			y += dp(10)
