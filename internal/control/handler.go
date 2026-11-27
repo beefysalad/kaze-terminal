@@ -67,7 +67,7 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 			}
 		}
 		tabs := host.Tabs()
-		tab, err := ResolveFrom(tabs, req.Tab, req.From)
+		tab, _, err := resolveScoped(tabs, req.Tab, req.From, opt.CrossSpace)
 		if err != nil {
 			return Reply{Error: err}
 		}
@@ -83,20 +83,20 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		if hostErr != nil {
 			return inputError(hostErr)
 		}
-		return Reply{OK: true, Warning: crossSpace(tabs, req.From, tab)}
+		return Reply{OK: true, Warning: crossSpace(tabs, req.From, tab, opt.CrossSpace)}
 	}
 	if req.Op == "report" {
 		return report(host, req)
 	}
 	if req.Op == "ls" {
-		return Reply{OK: true, Tabs: host.Tabs()}
+		return Reply{OK: true, Tabs: scopedTabs(host.Tabs(), req.From, opt.CrossSpace)}
 	}
 	if req.Op == "read" {
 		if req.Lines < 0 {
 			return Reply{Error: &Error{CodeInvalidRequest, "lines must not be negative"}}
 		}
 		tabs := host.Tabs()
-		tab, err := ResolveFrom(tabs, req.Tab, req.From)
+		tab, _, err := resolveScoped(tabs, req.Tab, req.From, opt.CrossSpace)
 		if err != nil {
 			return Reply{Error: err}
 		}
@@ -104,14 +104,14 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		if hostErr != nil {
 			return Reply{Error: &Error{CodeHostError, "could not read tab"}}
 		}
-		return Reply{OK: true, Text: text, Warning: crossSpace(tabs, req.From, tab)}
+		return Reply{OK: true, Text: text, Warning: crossSpace(tabs, req.From, tab, opt.CrossSpace)}
 	}
 	if req.Op == "send" {
 		if len(req.Text) > MaxTextBytes && (!opt.AgentTag || req.From == "") {
 			return Reply{Error: &Error{CodeTextTooLarge, "text exceeds 32 KiB"}}
 		}
 		tabs := host.Tabs()
-		tab, err := ResolveFrom(tabs, req.Tab, req.From)
+		tab, _, err := resolveScoped(tabs, req.Tab, req.From, opt.CrossSpace)
 		if err != nil {
 			return Reply{Error: err}
 		}
@@ -144,7 +144,7 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		if tab.Status == "working" {
 			warning = "busy"
 		}
-		if spaceWarning := crossSpace(tabs, req.From, tab); spaceWarning != "" {
+		if spaceWarning := crossSpace(tabs, req.From, tab, opt.CrossSpace); spaceWarning != "" {
 			if warning != "" {
 				warning += "; "
 			}
@@ -155,9 +155,41 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 	return Reply{Error: &Error{CodeUnknownOp, "unknown control operation"}}
 }
 
+// scopedTabs returns the caller's space, or all tabs for unrestricted callers.
+func scopedTabs(tabs []TabInfo, from string, cross bool) []TabInfo {
+	if cross || from == "" {
+		return tabs
+	}
+	for _, sender := range tabs {
+		if sender.ID != from {
+			continue
+		}
+		visible := make([]TabInfo, 0, len(tabs))
+		for _, tab := range tabs {
+			if tab.Space == sender.Space {
+				visible = append(visible, tab)
+			}
+		}
+		return visible
+	}
+	return tabs
+}
+
+// resolveScoped resolves only visible tabs and refuses targets in other spaces.
+func resolveScoped(tabs []TabInfo, address, from string, cross bool) (TabInfo, []TabInfo, *Error) {
+	visible := scopedTabs(tabs, from, cross)
+	tab, err := ResolveFrom(visible, address, from)
+	if err != nil && err.Code == CodeUnknownTab {
+		if _, globalErr := ResolveFrom(tabs, address, from); globalErr == nil {
+			return TabInfo{}, visible, &Error{CodeCrossSpace, "that tab is in another space; cross-space control is off"}
+		}
+	}
+	return tab, visible, err
+}
+
 // crossSpace warns about a different project without refusing an explicit target.
-func crossSpace(tabs []TabInfo, from string, target TabInfo) string {
-	if from == "" {
+func crossSpace(tabs []TabInfo, from string, target TabInfo, enabled bool) string {
+	if !enabled || from == "" {
 		return ""
 	}
 	for _, sender := range tabs {

@@ -98,6 +98,7 @@ const (
 	CodeDisabled        = "disabled"
 	CodeUnknownKey      = "unknown_key"
 	CodeUnknownTab      = "unknown_tab"
+	CodeCrossSpace      = "cross_space"
 	CodeAmbiguousTab    = "ambiguous_tab"
 	CodeInvalidRequest  = "invalid_request"
 	CodeUnknownOp       = "unknown_op"

@@ -10,7 +10,7 @@ import (
 )
 
 // Options is the per-handler configuration. Omitted options use enabled defaults.
-type Options struct{ Enabled, AgentTag bool }
+type Options struct{ Enabled, AgentTag, CrossSpace bool }
 
 type MetadataHost interface {
 	Name(context.Context, string, string) *Error
