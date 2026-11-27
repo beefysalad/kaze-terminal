@@ -233,8 +233,12 @@ func (win *window) stripPointer(e pointer.Event) {
 func (win *window) newTabInSpace() {
 	dir := ""
 	sp := win.spaces()
+	key := win.strip.spaceKey
+	if a := win.mgr.Active(); a != nil {
+		key = win.selectedSpaceKey(a.ID)
+	}
 	for _, s := range sp {
-		if s.Key == win.strip.spaceKey {
+		if s.Key == key {
 			dir = win.spaceFolder(s)
 			break
 		}

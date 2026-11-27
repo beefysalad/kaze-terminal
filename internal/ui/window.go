@@ -610,7 +610,10 @@ func (win *window) startArgv(argv, env []string, dir string) (ptyx.Session, erro
 	return ptyx.Start(argv, cols, rows, env, dir)
 }
 
-func (win *window) newTab() { win.newTabIn(win.plainStartDir()) }
+// newTab opens a session in the space being looked at, so Ctrl+T and the + in
+// the sidebar start where you are; with no space, or the shell space, it uses
+// the start folder.
+func (win *window) newTab() { win.newTabInSpace() }
 
 // newTabIn opens a tab whose shell starts in dir.
 func (win *window) newTabIn(dir string) {
