@@ -80,7 +80,7 @@ func (w *window) tourBack() {
 }
 func (w *window) tourEvents(g layout.Context) {
 	for {
-		e, ok := g.Event(key.Filter{Focus: &w.tour.tag, Name: key.NameEscape}, key.Filter{Focus: &w.tour.tag, Name: key.NameReturn}, key.Filter{Focus: &w.tour.tag, Name: key.NameLeftArrow}, key.Filter{Focus: &w.tour.tag, Name: key.NameRightArrow}, pointer.Filter{Target: &w.tour.tag, Kinds: pointer.Press | pointer.Release | pointer.Scroll})
+		e, ok := g.Event(key.Filter{Focus: &w.tour.tag, Name: key.NameEscape}, key.Filter{Focus: &w.tour.tag, Name: key.NameReturn}, key.Filter{Focus: &w.tour.tag, Name: key.NameLeftArrow}, key.Filter{Focus: &w.tour.tag, Name: key.NameRightArrow}, pointer.Filter{Target: &w.tour.tag, Kinds: pointer.Press | pointer.Release | pointer.Scroll, ScrollY: pointer.ScrollRange{Min: -100000, Max: 100000}})
 		if !ok {
 			return
 		}
