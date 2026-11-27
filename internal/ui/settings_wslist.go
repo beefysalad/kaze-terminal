@@ -17,6 +17,7 @@ const (
 type wsListRow struct {
 	ID, Name, Initial, Sub, State, Tone, RunLabel string
 	Dots                                          []string
+	Titles                                        string
 	Tabs                                          []wsListTab
 	Open                                          bool
 }
@@ -55,6 +56,7 @@ func buildWSList(w *window, filter wsFilter, query, open string) wsListModel {
 		if ws.ID == w.opt.Config.StartupWorkspace {
 			r.Sub += " · runs at startup"
 		}
+		var titles []string
 		for _, t := range ws.Tabs {
 			mem := w.listMember(t)
 			tab := wsListTab{Title: mem.title, Folder: mem.folder, Cmd: "no commands", Wait: mem.tag, Color: mem.color}
@@ -72,7 +74,9 @@ func buildWSList(w *window, filter wsFilter, query, open string) wsListModel {
 			}
 			r.Tabs = append(r.Tabs, tab)
 			r.Dots = append(r.Dots, t.Color)
+			titles = append(titles, mem.title)
 		}
+		r.Titles = strings.Join(titles, ", ")
 		m.Rows = append(m.Rows, r)
 	}
 	return m

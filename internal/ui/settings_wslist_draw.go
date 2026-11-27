@@ -20,14 +20,19 @@ func (p *page) wsList(r image.Rectangle, y int, w *window) int {
 	}
 	m := buildWSList(w, w.wsp.filter, w.wsp.query, w.wsp.open)
 	if len(w.wsp.doc.Workspaces) > 1 {
-		var chips []ctrl
+		x, rowH := r.Min.X, 0
 		for i, name := range []string{"All", "Open", "Closed"} {
-			chips = append(chips, ctrl{kind: ctlButton, id: "ws.filter", arg: i, text: name + " (" + strconv.Itoa(m.Counts[i]) + ")", strong: int(w.wsp.filter) == i})
+			call, sz, from := p.ctrl(ctrl{kind: ctlButton, id: "ws.filter", arg: i, text: name + " (" + strconv.Itoa(m.Counts[i]) + ")", strong: int(w.wsp.filter) == i}, 0)
+			at := image.Pt(x, y)
+			p.st.shift(from, len(p.st.controls), at)
+			place(p.gtx.Ops, call, at)
+			x += sz.X + g.Dp(8)
+			rowH = max(rowH, sz.Y)
 		}
-		y = p.rows(r, y, []settingRow{{ctrls: chips}})
+		y += rowH + g.Dp(10)
 	}
 	if m.ShowSearch {
-		y = p.rows(r, y, []settingRow{{ctrls: []ctrl{{kind: ctlText, id: "ws.search", val: w.wsp.query, placeholder: "Search workspaces and tabs", width: 300, set: func(s string) { w.wsp.query = s }}}}})
+		y = p.rows(r, y, []settingRow{{ctrls: []ctrl{{kind: ctlText, id: "ws.search", val: w.wsp.query, placeholder: "Search workspaces and tabs", width: 300, set: func(s string) { w.wsp.query = s }}}}}) + g.Dp(8)
 	}
 	for _, row := range m.Rows {
 		idx := 0
@@ -157,7 +162,11 @@ func (p *page) wsHeader(r image.Rectangle, top int, row wsListRow, idx int, narr
 	}
 	nc, ns := p.textW(p.fitSans(row.Name, 13, max(1, right-x), font.SemiBold), 13, col.title, font.SemiBold)
 	place(ops, nc, image.Pt(x, top+g.Dp(9)))
-	sc, _ := p.text(p.fitSans(row.Sub, 11, max(1, right-x), font.Normal), 11, col.muted)
+	sub := row.Sub
+	if row.Titles != "" {
+		sub += " · " + row.Titles
+	}
+	sc, _ := p.text(p.fitSans(sub, 11, max(1, right-x), font.Normal), 11, col.muted)
 	place(ops, sc, image.Pt(x, top+g.Dp(10)+ns.Y))
 	p.hit(ctlButton, bg, "ws.toggle", idx, false)
 }

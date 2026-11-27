@@ -105,7 +105,7 @@ func (p *page) ctrl(k ctrl, w int) (op.CallOp, image.Point, int) {
 // hit records a clickable area; the focused one gets a 1px accent ring.
 func (p *page) hit(kind ctrlKind, r image.Rectangle, id string, arg int, dead bool) {
 	// A field with the keyboard shows it with its own accent border instead.
-	if len(p.st.controls) == p.st.focus && (kind != ctlText || id != p.st.editing) {
+	if len(p.st.controls) == p.st.focus && !p.st.pointerFocus && (kind != ctlText || id != p.st.editing) {
 		g := p.gtx.Dp(2)
 		stroke(p.gtx.Ops, r.Inset(-g), p.gtx.Dp(9), p.col.accent)
 	}
