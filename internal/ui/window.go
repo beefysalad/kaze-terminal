@@ -905,7 +905,10 @@ func (win *window) frame(gtx layout.Context) error {
 	win.frameRuns = &runs
 	win.drawSide(gtx, sideRect)
 	win.tour.targets[tourSidebar] = sideRect
-	win.tour.targets[tourWorkspaces] = sideRect
+	win.tour.targets[tourWorkspaces] = image.Rectangle{}
+	if len(win.side.hits.runs) > 0 {
+		win.tour.targets[tourWorkspaces] = image.Rect(sideRect.Min.X, sideRect.Min.Y+win.side.hits.list.Max.Y, sideRect.Max.X, sideRect.Max.Y)
+	}
 	win.drawStrip(gtx, stripRect)
 
 	if at, ok := win.docTick(gtx.Now); ok {

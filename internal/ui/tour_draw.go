@@ -31,7 +31,15 @@ func (w *window) drawTour(g layout.Context) {
 	if s.Target != tourNone && !target.Empty() {
 		stroke(ops, target, 4, th.Accent)
 	}
-	r := tourCardRect(bounds, target, image.Pt(g.Dp(440), g.Dp(370)))
+	measurePage := &page{gtx: g, c: c, st: &w.set}
+	width := min(g.Dp(440), max(1, bounds.Dx()-g.Dp(32)))
+	lines := measurePage.wrap(s.Body, 13, max(1, width-g.Dp(36)))
+	_, lineSize := c.label(g, "Ag", 13, th.ToastFG)
+	height := g.Dp(135) + len(lines)*(lineSize.Y+g.Dp(7))
+	if s.Hooks {
+		height += g.Dp(64)
+	}
+	r := tourCardRect(bounds, target, image.Pt(width, min(g.Dp(370), height)))
 	paint.FillShape(ops, th.ToastBG, clip.UniformRRect(r, g.Dp(12)).Op(ops))
 	stroke(ops, r, g.Dp(12), th.ToastLine)
 	cl := clip.Rect(r).Push(ops)
