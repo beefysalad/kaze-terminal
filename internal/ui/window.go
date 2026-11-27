@@ -904,6 +904,8 @@ func (win *window) frame(gtx layout.Context) error {
 	runs := win.reuseSideRuns()
 	win.frameRuns = &runs
 	win.drawSide(gtx, sideRect)
+	win.tour.targets[tourSidebar] = sideRect
+	win.tour.targets[tourWorkspaces] = sideRect
 	win.drawStrip(gtx, stripRect)
 
 	if at, ok := win.docTick(gtx.Now); ok {

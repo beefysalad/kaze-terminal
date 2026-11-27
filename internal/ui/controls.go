@@ -373,7 +373,11 @@ func (p *page) textField(k ctrl) image.Point {
 	// Layout drains Update itself and would drop a change still queued; take it first.
 	p.win.drainField(gtx, k.id, f)
 	t := op.Offset(at).Push(ops)
-	f.ed.Layout(eg, p.c.shaper, font.Font{Typeface: monoFace}, 12, fgc, selc)
+	face := font.Typeface(monoFace)
+	if k.id == "ws.search" {
+		face = chromeFace
+	}
+	f.ed.Layout(eg, p.c.shaper, font.Font{Typeface: face}, 12, fgc, selc)
 	t.Pop()
 	p.hit(ctlText, box, k.id, 0, false)
 

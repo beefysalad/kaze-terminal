@@ -12,6 +12,8 @@ import (
 )
 
 type tourState struct {
+	targets                   [5]image.Rectangle
+	scroll                    int
 	open                      bool
 	step                      int
 	replay, boardOpenedByTour bool
@@ -53,6 +55,7 @@ func (w *window) tourMove(n int) {
 		w.closeBoard()
 		w.tour.boardOpenedByTour = false
 	}
+	w.tour.scroll = 0
 	w.tour.step = n
 	if tourSteps()[n].Board && !w.board.open && w.mgr != nil {
 		w.openBoard(0)
@@ -95,6 +98,9 @@ func (w *window) tourEvents(g layout.Context) {
 				w.tourNext()
 			}
 		case pointer.Event:
+			if e.Kind == pointer.Scroll {
+				w.tour.scroll = max(0, w.tour.scroll+int(e.Scroll.Y))
+			}
 			if e.Kind == pointer.Release {
 				pt := image.Pt(int(e.Position.X), int(e.Position.Y))
 				for _, h := range w.tour.hits {

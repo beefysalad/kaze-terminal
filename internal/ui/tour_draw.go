@@ -21,7 +21,17 @@ func (w *window) drawTour(g layout.Context) {
 	bounds := image.Rectangle{Max: g.Constraints.Max}
 	paint.FillShape(ops, color.NRGBA{A: 150}, clip.Rect(bounds).Op())
 	s := tourSteps()[w.tour.step]
-	r := tourCardRect(bounds, image.Rectangle{}, image.Pt(g.Dp(440), g.Dp(370)))
+	target := w.tour.targets[s.Target]
+	if s.Target == tourStatusBar {
+		target = image.Rect(0, w.stat.y, bounds.Max.X, bounds.Max.Y)
+	}
+	if s.Target == tourAgentsButton {
+		target = w.bar.Agents
+	}
+	if s.Target != tourNone && !target.Empty() {
+		stroke(ops, target, 4, th.Accent)
+	}
+	r := tourCardRect(bounds, target, image.Pt(g.Dp(440), g.Dp(370)))
 	paint.FillShape(ops, th.ToastBG, clip.UniformRRect(r, g.Dp(12)).Op(ops))
 	stroke(ops, r, g.Dp(12), th.ToastLine)
 	cl := clip.Rect(r).Push(ops)
@@ -36,6 +46,8 @@ func (w *window) drawTour(g layout.Context) {
 	place(ops, call, image.Pt(x, y))
 	y += sz.Y + g.Dp(12)
 	// Reuse the settings word wrapper, including bounded splitting of long words.
+	bodyClip := clip.Rect(image.Rect(r.Min.X, y, r.Max.X, r.Max.Y-g.Dp(48))).Push(ops)
+	y -= w.tour.scroll
 	p := &page{gtx: g, c: c, st: &w.set}
 	for _, line := range p.wrap(s.Body, 13, max(r.Dx()-g.Dp(36), 1)) {
 		put(line, 13, th.ToastFG)
@@ -63,6 +75,7 @@ func (w *window) drawTour(g layout.Context) {
 			}
 		}
 	}
+	bodyClip.Pop()
 	y = r.Max.Y - g.Dp(36)
 	button(s.SkipLabel, -1, image.Pt(x, y))
 	if w.tour.step > 0 {

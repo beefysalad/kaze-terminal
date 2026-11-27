@@ -33,3 +33,11 @@ func TestCheck(t *testing.T) {
 		t.Fatal("seen")
 	}
 }
+func TestMarkSeenWriteFailure(t *testing.T) {
+	d := t.TempDir()
+	p := filepath.Join(d, "file")
+	os.WriteFile(p, []byte("x"), 0600)
+	if MarkSeen(p) == nil {
+		t.Fatal("expected failure")
+	}
+}
