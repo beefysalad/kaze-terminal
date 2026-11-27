@@ -12,6 +12,12 @@ import (
 
 func (p *page) wsList(r image.Rectangle, y int, w *window) int {
 	g, ops, col := p.gtx, p.gtx.Ops, p.col
+	if len(w.wsp.doc.Workspaces) <= 5 {
+		w.wsp.query = ""
+	}
+	if len(w.wsp.doc.Workspaces) <= 1 {
+		w.wsp.filter = wsAll
+	}
 	m := buildWSList(w, w.wsp.filter, w.wsp.query, w.wsp.open)
 	if len(w.wsp.doc.Workspaces) > 1 {
 		var chips []ctrl

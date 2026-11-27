@@ -1024,3 +1024,58 @@ func TestEditorFolderControlsFitIntermediateWidth(t *testing.T) {
 		})
 	}
 }
+
+func TestDeleteResetsHiddenWorkspaceControls(t *testing.T) {
+	f := newWSPage(t)
+	f.win.wsp.query = "samurai"
+	f.win.wsp.filter = wsClosedOnly
+	f.press("ws.delete", 0)
+	f.press("ws.del.ok", 0)
+	if f.win.wsp.query != "" || f.win.wsp.filter != wsAll {
+		t.Fatal("hidden controls retain filtering")
+	}
+}
+
+func TestDeleteAcrossWorkspaceControlThresholds(t *testing.T) {
+	for _, count := range []int{6, 2} {
+		t.Run(fmt.Sprint(count), func(t *testing.T) {
+			f := newWSPage(t)
+			doc, rev, err := workspaces.Load(workspaces.Path(f.win.cfgPath))
+			if err != nil {
+				t.Fatal(err)
+			}
+			base := doc.Workspaces[0]
+			doc.Workspaces = nil
+			for i := 0; i < count; i++ {
+				ws := base
+				ws.ID = fmt.Sprintf("ws_case%d", i)
+				ws.Name = fmt.Sprintf("case%d", i)
+				doc.Workspaces = append(doc.Workspaces, ws)
+			}
+			if _, err = workspaces.Save(workspaces.Path(f.win.cfgPath), doc, rev); err != nil {
+				t.Fatal(err)
+			}
+			f.win.loadWorkspaces()
+			f.draw()
+			if count == 6 {
+				f.typeInto("ws.search", "case0")
+			} else {
+				f.press("ws.filter", 2)
+			}
+			f.press("ws.delete", 0)
+			f.press("ws.del.ok", 0)
+			if len(f.win.wsp.doc.Workspaces) != count-1 {
+				t.Fatal("deletion did not cross threshold")
+			}
+			if count == 6 && f.win.wsp.query != "" {
+				t.Fatal("query remained hidden")
+			}
+			if count == 2 && f.win.wsp.filter != wsAll {
+				t.Fatal("filter remained hidden")
+			}
+			if _, ok := f.ctl("ws.run", 0); !ok {
+				t.Fatal("remaining workspace hidden")
+			}
+		})
+	}
+}
