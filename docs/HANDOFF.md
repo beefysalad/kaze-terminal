@@ -1,6 +1,21 @@
 # kaze handoff
 
-Last updated: 2026-11-26, 0.46 is prepared locally on release/0.46; no push, merge or tag. Real-agent and Windows owner gates remain open.
+Last updated: 2026-11-27, 0.46 is prepared locally on release/0.46; no push, merge or tag. Real-agent and Windows owner gates remain open.
+
+## Control space isolation (branch fix/control-space-isolation, unmerged)
+
+An agent that calls the control CLI now sees and reaches only tabs in its own space.
+`ls` lists the caller's space; `read`, `send`, `keys`, `interrupt`, `wait`, `name` and
+`label` on a tab in another space return `cross_space`, and agent-name lookup no longer
+falls back to other spaces. `[control] cross_space = true` restores the old behavior with
+its warning. Requests with no `from` tab stay unrestricted. The peer-messaging block in
+`internal/agentdocs` changed (the 0.46.2 text is in history as `peer0462`). The UI test
+covers the adapter with both option values; the `window.go` wiring of the config value is
+a one-line pass-through that no test exercises, so check it by hand. Spec and plan:
+`docs/superpowers/specs/2026-11-27-control-space-isolation-design.md` and
+`docs/superpowers/plans/2026-11-27-control-space-isolation.md`. Owner check on a local
+build: two spaces each with an agent, confirm `"$KAZE_BIN" ls` shows only its own space
+and a send to the other space is refused. Release (minor) follows the merge.
 
 ## Release 0.46 prepared locally
 

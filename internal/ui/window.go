@@ -306,7 +306,7 @@ func Run(w *app.Window, opt Options) error {
 		win.opt.Warnings = append(win.opt.Warnings, "alerts are off: "+err.Error())
 	} else {
 		win.srv = srv
-		srv.SetControlContext(controlContextAdapter(&win.control, ctl.Options{Enabled: opt.Config.Control.Enabled, AgentTag: opt.Config.AgentTag}))
+		srv.SetControlContext(controlContextAdapter(&win.control, ctl.Options{Enabled: opt.Config.Control.Enabled, AgentTag: opt.Config.AgentTag, CrossSpace: opt.Config.Control.CrossSpace}))
 	}
 	win.agentDocsNotice = agentInstructionsNotice(win.agentDocsPaths())
 	return win.loop()

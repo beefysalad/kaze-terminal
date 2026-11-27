@@ -433,7 +433,7 @@ func TestHistoryCoversShippedTexts(t *testing.T) {
 		history []string
 		hashes  []string
 	}{
-		{Block, peerBlock.history, []string{"0c350b96aa8ac1b379c0bdba42135d6e9ce9d36438701561355f29cdb1a63fde", "557b432ae5c0a8c54dc9db115108281d7f680a757aaf6e06a1dbb52eb487bd07", "b69e4c63fc8fc45476ac40e0122e4910490d844172acb49d64d97ba9a716000f"}},
+		{Block, peerBlock.history, []string{"0c350b96aa8ac1b379c0bdba42135d6e9ce9d36438701561355f29cdb1a63fde", "557b432ae5c0a8c54dc9db115108281d7f680a757aaf6e06a1dbb52eb487bd07", "b69e4c63fc8fc45476ac40e0122e4910490d844172acb49d64d97ba9a716000f", "477e1f50477d2ae9f1e7ea6650367dd9217d3bf2f88f1ac63199139c8d829b3c"}},
 		{WorkerBlock, workersBlock.history, []string{"1ee71213cd3659547701dfd1ee96813a3971c5f51bc70a9c7e47ee7aa64d8db3", "9289de2b448ed8ef769e750391dad3c6d3caff4d833ee4f5e4d5b70140ff7ebc"}},
 	} {
 		known := map[string]bool{}
@@ -445,5 +445,16 @@ func TestHistoryCoversShippedTexts(t *testing.T) {
 				t.Errorf("shipped block %s missing from current text and history", hash)
 			}
 		}
+	}
+}
+
+func TestBlockStatesCrossSpaceRefusal(t *testing.T) {
+	for _, want := range []string{"cross_space", "only tabs in your own space", "refused"} {
+		if !strings.Contains(Block, want) {
+			t.Errorf("Block missing %q", want)
+		}
+	}
+	if strings.Contains(Block, "unless the owner named that tab") {
+		t.Error("Block still tells agents they may cross spaces")
 	}
 }

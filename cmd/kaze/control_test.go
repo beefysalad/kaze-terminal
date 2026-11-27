@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net"
 	"strconv"
@@ -548,7 +549,7 @@ func TestControlCrossSpaceScript(t *testing.T) {
 		if err := json.Unmarshal(raw, &req); err != nil {
 			return control.Reply{Error: &control.Error{Code: "invalid_request", Message: err.Error()}}
 		}
-		return control.Handle(host, req)
+		return control.HandleContext(context.Background(), host, req, control.Options{Enabled: true, AgentTag: true, CrossSpace: true})
 	})
 	env := func(k string) string {
 		switch k {
@@ -584,6 +585,48 @@ func TestControlCrossSpaceScript(t *testing.T) {
 		case <-time.After(time.Second):
 			t.Fatal("no submission")
 		}
+	}
+}
+
+func TestControlCrossSpaceRefusedByDefault(t *testing.T) {
+	host := &controlSpaceScriptHost{tabs: []control.TabInfo{
+		{ID: "t1", Agent: "claude", Space: "A", Status: "idle"},
+		{ID: "t7", Agent: "codex", Space: "B", Status: "idle"},
+	}, submitted: make(chan string, 1)}
+	srv, err := notify.Listen(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { srv.Close() })
+	srv.SetControl(func(raw json.RawMessage) any {
+		var req control.Request
+		if err := json.Unmarshal(raw, &req); err != nil {
+			return control.Reply{Error: &control.Error{Code: "invalid_request", Message: err.Error()}}
+		}
+		return control.Handle(host, req)
+	})
+	env := func(k string) string {
+		switch k {
+		case "KAZE_SOCKET":
+			return srv.Addr()
+		case "KAZE_NOTIFY_TOKEN":
+			return srv.Token()
+		case "KAZE_TAB_ID":
+			return "1"
+		}
+		return ""
+	}
+	var out, errs bytes.Buffer
+	if code := runControl([]string{"send", "t7", "review"}, env, nil, &out, &errs); code == 0 {
+		t.Fatalf("cross-space send succeeded: %s", &out)
+	}
+	if !strings.Contains(errs.String(), "another space") {
+		t.Fatalf("stderr: %q", &errs)
+	}
+	select {
+	case id := <-host.submitted:
+		t.Fatalf("submitted to %s", id)
+	case <-time.After(100 * time.Millisecond):
 	}
 }
 
