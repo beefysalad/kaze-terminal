@@ -353,3 +353,57 @@ func TestNameCollisionIsPerSpace(t *testing.T) {
 		t.Fatalf("same-space collision accepted: %+v", r)
 	}
 }
+
+func TestOwnerRenameChecksOnlyTargetSpace(t *testing.T) {
+	h := &scopeWorkerHost{}
+	h.tabs = []TabInfo{
+		{ID: "t1", Space: "a", Agent: "claude"},
+		{ID: "t2", Space: "b", Agent: "codex", Name: "reviewer"},
+	}
+	// The owner sees every tab, but names only have to be unique inside the target's space.
+	if r := Handle(h, Request{Op: "name", Tab: "t1", Name: "reviewer"}); !r.OK {
+		t.Fatalf("owner rename refused by another space's name: %+v", r)
+	}
+	h.tabs = append(h.tabs, TabInfo{ID: "t3", Space: "a", Agent: "codex", Name: "reviewer"})
+	if r := Handle(h, Request{Op: "name", Tab: "t1", Name: "reviewer"}); r.OK {
+		t.Fatalf("same-space collision accepted: %+v", r)
+	}
+}
+
+func TestCrossSpaceWhenOnlyOtherSpacesMatch(t *testing.T) {
+	h := &fakeHost{tabs: []TabInfo{
+		{ID: "t1", Space: "a", Agent: "claude"},
+		{ID: "t2", Space: "b", Agent: "codex", Name: "twin"},
+		{ID: "t3", Space: "c", Agent: "codex", Name: "twin"},
+	}}
+	for _, address := range []string{"codex", "twin", "t2"} {
+		requireScopeError(t, Handle(h, Request{Op: "read", From: "t1", Tab: address}), CodeCrossSpace)
+	}
+	if r := Handle(h, Request{Op: "read", From: "t1", Tab: "nothing"}); r.Error == nil || r.Error.Code != CodeUnknownTab {
+		t.Fatalf("%+v", r)
+	}
+	if h.screenCalls != 0 {
+		t.Fatal("target reached")
+	}
+}
+
+type callerHost struct {
+	scopeWorkerHost
+	from string
+}
+
+func (h *callerHost) Name(ctx context.Context, id, name string) *Error {
+	h.from = CallerFrom(ctx)
+	return nil
+}
+
+func TestRenameCarriesCallerToTheHost(t *testing.T) {
+	h := &callerHost{}
+	h.tabs = []TabInfo{{ID: "t1", Space: "a"}, {ID: "t2", Space: "a"}}
+	if r := Handle(h, Request{Op: "name", From: "t1", Tab: "t2", Name: "x"}); !r.OK || h.from != "t1" {
+		t.Fatalf("%+v from %q", r, h.from)
+	}
+	if r := Handle(h, Request{Op: "name", Tab: "t2", Name: "y"}); !r.OK || h.from != "" {
+		t.Fatalf("owner: %+v from %q", r, h.from)
+	}
+}

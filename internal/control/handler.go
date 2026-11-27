@@ -197,12 +197,51 @@ func resolveScoped(tabs []TabInfo, address, from string, cross bool) (TabInfo, [
 		return TabInfo{}, nil, scopeErr
 	}
 	tab, err := ResolveFrom(visible, address, from)
-	if err != nil && err.Code == CodeUnknownTab {
-		if _, globalErr := ResolveFrom(tabs, address, from); globalErr == nil {
-			return TabInfo{}, visible, &Error{CodeCrossSpace, "that tab is in another space; cross-space control is off"}
-		}
+	if err != nil && err.Code == CodeUnknownTab && matchesAnyTab(tabs, address) {
+		return TabInfo{}, visible, &Error{CodeCrossSpace, "that tab is in another space; cross-space control is off"}
 	}
 	return tab, visible, err
+}
+
+// matchesAnyTab reports whether an id, name or agent name addresses some tab, even
+// when several tabs in other spaces share it.
+func matchesAnyTab(tabs []TabInfo, address string) bool {
+	for _, tab := range tabs {
+		if tab.ID == address || (tab.Name != "" && tab.Name == address) || (tab.Agent != "" && strings.EqualFold(tab.Agent, address)) {
+			return true
+		}
+	}
+	return false
+}
+
+// SameSpace returns the tabs sharing a space with tab id (every tab in cross_space
+// mode). Tab names only have to be unique inside this set.
+func SameSpace(tabs []TabInfo, id string, cross bool) []TabInfo {
+	if cross {
+		return tabs
+	}
+	for _, target := range tabs {
+		if target.ID != id {
+			continue
+		}
+		same := make([]TabInfo, 0, len(tabs))
+		for _, tab := range tabs {
+			if spaceOf(tab) == spaceOf(target) {
+				same = append(same, tab)
+			}
+		}
+		return same
+	}
+	return nil
+}
+
+type callerKey struct{}
+
+// CallerFrom is the tab that made the request a host method is serving, or "" for
+// the owner. Hosts that apply a change later use it to re-check scope.
+func CallerFrom(ctx context.Context) string {
+	from, _ := ctx.Value(callerKey{}).(string)
+	return from
 }
 
 // crossSpace warns about a different project without refusing an explicit target.

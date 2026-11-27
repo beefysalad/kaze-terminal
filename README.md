@@ -719,6 +719,8 @@ By default an agent sees and reaches only tabs in its own space;
 `cross_space = true` allows other spaces. A space is one repository (two
 repositories with the same folder name are different spaces), and a worker
 always shares its parent's space. Names only have to be unique within a space.
+A tab whose repository is still being looked up sees only itself until that finishes,
+and a tab whose shell never reports its folder stays in the shared Shell space.
 This stops an agent touching another project by accident. It is not a security
 boundary: a process that removes `KAZE_TAB_ID` from its environment looks like the
 owner's own CLI use, and a refusal still tells the caller that the tab exists.
