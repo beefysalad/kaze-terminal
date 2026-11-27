@@ -50,7 +50,7 @@ func ValidateLabel(key, value string) *Error {
 }
 func metadata(ctx context.Context, host Host, req Request, opt Options) Reply {
 	tabs := host.Tabs()
-	tab, _, e := resolveScoped(tabs, req.Tab, req.From, opt.CrossSpace)
+	tab, visible, e := resolveScoped(tabs, req.Tab, req.From, opt.CrossSpace)
 	if e != nil {
 		return Reply{Error: e}
 	}
@@ -59,7 +59,7 @@ func metadata(ctx context.Context, host Host, req Request, opt Options) Reply {
 		return Reply{Error: &Error{CodeHostError, "metadata is unavailable"}}
 	}
 	if req.Op == "name" {
-		name, err := ValidateName(tabs, tab.ID, req.Name)
+		name, err := ValidateName(visible, tab.ID, req.Name)
 		if err != nil {
 			return Reply{Error: err}
 		}

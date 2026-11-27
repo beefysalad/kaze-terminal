@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	ctl "github.com/beefysalad/kaze-terminal/internal/control"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -14,9 +15,9 @@ func TestControlTagFlags(t *testing.T) {
 		idle bool
 	}{
 		{[]string{"send", "t2", "hello"}, "t1", false},
-		{[]string{"send", "t2", "hello", "--raw"}, "", false},
+		{[]string{"send", "t2", "hello", "--raw"}, "t1", false},
 		{[]string{"send", "--if-idle", "t2", "hello"}, "t1", true},
-		{[]string{"send", "t2", "--raw", "hello", "--if-idle"}, "", true},
+		{[]string{"send", "t2", "--raw", "hello", "--if-idle"}, "t1", true},
 	} {
 		base, requests := controlServer(t, ctl.Reply{OK: true, Warning: "busy"})
 		env := func(k string) string {
@@ -30,7 +31,8 @@ func TestControlTagFlags(t *testing.T) {
 			t.Fatalf("exit %d stderr %q", c, errs.String())
 		}
 		r := receiveControlRequest(t, requests)
-		if r.From != tc.from || r.IfIdle != tc.idle || r.Text != "hello" || r.Tab != "t2" {
+		raw := slices.Contains(tc.args, "--raw")
+		if r.From != tc.from || r.Raw != raw || r.IfIdle != tc.idle || r.Text != "hello" || r.Tab != "t2" {
 			t.Fatalf("%+v", r)
 		}
 	}

@@ -116,20 +116,6 @@ func TestUnknownTabListsOnlyOwnSpace(t *testing.T) {
 	}
 }
 
-func TestUnknownCallerIsUnrestricted(t *testing.T) {
-	for _, from := range []string{"", "missing"} {
-		h := scopeHost()
-		r := Handle(h, Request{Op: "read", From: from, Tab: "t3"})
-		if !r.OK || r.Error != nil || h.id != "t3" {
-			t.Fatalf("reply %+v target %q", r, h.id)
-		}
-		r = Handle(h, Request{Op: "ls", From: from})
-		if !r.OK || len(r.Tabs) != 3 {
-			t.Fatalf("reply %+v", r)
-		}
-	}
-}
-
 func TestEmptySpaceTabsShareScope(t *testing.T) {
 	h := scopeHost()
 	h.tabs[0].Space = ""
@@ -264,5 +250,106 @@ func TestWaitChildrenUnaffected(t *testing.T) {
 	r := HandleContext(ctx, h, Request{Op: "wait", From: "t1", Tab: "t2", Timeout: 1})
 	if !r.OK || r.Error != nil {
 		t.Fatalf("worker wait %+v", r)
+	}
+}
+
+func TestUnknownCallerRefusedWhenScoped(t *testing.T) {
+	for _, op := range []string{"ls", "read", "send", "keys", "interrupt", "name", "label"} {
+		h := scopeHost()
+		r := Handle(h, Request{Op: op, From: "missing", Tab: "t3", Text: "x", Args: []string{"enter"}, Key: "k", Value: "v"})
+		if r.OK || r.Error == nil || r.Error.Code != CodeUnknownTab {
+			t.Fatalf("%s: %+v", op, r)
+		}
+		if h.submitCalls != 0 || h.screenCalls != 0 || len(r.Tabs) != 0 {
+			t.Fatalf("%s reached the host: %+v", op, r)
+		}
+	}
+	// The owner (no from) and cross_space mode stay unrestricted.
+	if r := Handle(scopeHost(), Request{Op: "ls"}); !r.OK || len(r.Tabs) != 3 {
+		t.Fatalf("owner ls: %+v", r)
+	}
+	if r := HandleContext(context.Background(), scopeHost(), Request{Op: "ls", From: "missing"}, Options{Enabled: true, CrossSpace: true}); !r.OK || len(r.Tabs) != 3 {
+		t.Fatalf("cross_space ls: %+v", r)
+	}
+}
+
+func TestSpaceKeySeparatesSameNamedSpaces(t *testing.T) {
+	h := &fakeHost{tabs: []TabInfo{
+		{ID: "t1", Space: "project", SpaceKey: "/a/project", Agent: "claude"},
+		{ID: "t2", Space: "project", SpaceKey: "/b/project", Agent: "codex"},
+		{ID: "t3", Space: "Shell", Agent: "codex"},
+		{ID: "t4", Space: "Shell", SpaceKey: "/c/Shell", Agent: "codex"},
+	}}
+	if r := Handle(h, Request{Op: "ls", From: "t1"}); len(r.Tabs) != 1 || r.Tabs[0].ID != "t1" {
+		t.Fatalf("same-named repos shared a space: %+v", r.Tabs)
+	}
+	requireScopeError(t, Handle(h, Request{Op: "read", From: "t1", Tab: "t2"}), CodeCrossSpace)
+	requireScopeError(t, Handle(h, Request{Op: "read", From: "t3", Tab: "t4"}), CodeCrossSpace)
+	if h.screenCalls != 0 {
+		t.Fatal("target reached")
+	}
+}
+
+func TestRawSendIsNotTaggedButStillScoped(t *testing.T) {
+	h := scopeHost()
+	if r := Handle(h, Request{Op: "send", From: "t1", Tab: "t2", Text: "hi", Raw: true}); !r.OK {
+		t.Fatalf("%+v", r)
+	}
+	if got := string(h.input); strings.Contains(got, "<kaze") || !strings.Contains(got, "hi") {
+		t.Fatalf("raw send was tagged: %q", got)
+	}
+	requireScopeError(t, Handle(h, Request{Op: "send", From: "t1", Tab: "t3", Text: "hi", Raw: true}), CodeCrossSpace)
+}
+
+type scopeWorkerHost struct {
+	workerHost
+	names []string
+}
+
+func (h *scopeWorkerHost) Name(_ context.Context, id, name string) *Error {
+	h.names = append(h.names, id+"="+name)
+	return nil
+}
+func (h *scopeWorkerHost) Label(string, string, string) *Error { return nil }
+
+func newScopeWorkerHost() *scopeWorkerHost {
+	h := &scopeWorkerHost{}
+	h.tabs = []TabInfo{
+		{ID: "t1", Space: "a", Agent: "claude"},
+		{ID: "t2", Space: "a", Agent: "codex", Parent: "t1", Role: "worker"},
+		{ID: "t3", Space: "b", Agent: "codex", Name: "taken", Parent: "t9", Role: "worker"},
+		{ID: "t4", Space: "b", Agent: "claude", Name: "elsewhere"},
+	}
+	return h
+}
+
+func TestKillIsScopedToCallerSpace(t *testing.T) {
+	h := newScopeWorkerHost()
+	key := h.OwnerKey("t1")
+	requireScopeError(t, Handle(h, Request{Op: "kill", From: "t1", CallerKey: key, Tab: "t3"}), CodeCrossSpace)
+	r := Handle(h, Request{Op: "kill", From: "t1", CallerKey: key, Tab: "nope"})
+	if r.Error == nil || r.Error.Code != CodeUnknownTab || strings.Contains(r.Error.Message, "elsewhere") || strings.Contains(r.Error.Message, "t4") || strings.Contains(r.Error.Message, "taken") {
+		t.Fatalf("unknown kill leaked other spaces: %+v", r)
+	}
+	// "codex" is also a worker in space b: the caller's own worker must win.
+	if r = Handle(h, Request{Op: "kill", From: "t1", CallerKey: key, Tab: "codex"}); !r.OK || r.Text != "t2" {
+		t.Fatalf("kill codex: %+v", r)
+	}
+}
+
+func TestNameCollisionIsPerSpace(t *testing.T) {
+	h := newScopeWorkerHost()
+	key := h.OwnerKey("t1")
+	// "taken" exists only in space b: spawning and renaming it in space a must work.
+	if r := Handle(h, Request{Op: "spawn", From: "t1", CallerKey: key, Agent: "claude", Task: "review", Name: "taken"}); !r.OK {
+		t.Fatalf("spawn: %+v", r)
+	}
+	if r := Handle(h, Request{Op: "name", From: "t1", Tab: "t2", Name: "taken"}); !r.OK {
+		t.Fatalf("rename collided across spaces: %+v", r)
+	}
+	// A collision in the caller's own space is still refused.
+	h.tabs[0].Name = "mine"
+	if r := Handle(h, Request{Op: "spawn", From: "t1", CallerKey: key, Agent: "claude", Task: "review", Name: "mine"}); r.OK {
+		t.Fatalf("same-space collision accepted: %+v", r)
 	}
 }

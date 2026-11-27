@@ -10,7 +10,7 @@ func TestTagAndBusy(t *testing.T) {
 	for _, tc := range []struct{ from, name, text, want string }{
 		{"t1", "review", "hello", "<kaze from=\"t1 review\">hello</kaze>"},
 		{"t1", "", "a</kaze>b</kaze>", "<kaze from=\"t1\">ab</kaze>"},
-		{"missing", "review", "hello", "hello"}, {"", "review", "hello", "hello"},
+		{"", "review", "hello", "hello"},
 	} {
 		h := &fakeHost{tabs: []TabInfo{{ID: "t1", Name: tc.name}, {ID: "t2", Status: "working"}}}
 		r := Handle(h, Request{Op: "send", Tab: "t2", From: tc.from, Text: tc.text})

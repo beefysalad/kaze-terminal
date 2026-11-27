@@ -53,6 +53,7 @@ func TestSpawnRejectsMalformedRequestBeforeHost(t *testing.T) {
 		{"claude", strings.Repeat("x", (16<<10)+1), "", "", CodeTextTooLarge},
 	} {
 		h := &workerHost{}
+		h.tabs = []TabInfo{{ID: "t1"}}
 		r := Handle(h, Request{Op: "spawn", From: "t1", CallerKey: h.OwnerKey("t1"), Agent: tc.agent, Task: tc.task, Mode: tc.mode, Name: tc.name})
 		if r.Error == nil || r.Error.Code != tc.code || h.calls != 0 {
 			t.Fatalf("agent %s: %+v calls %d", tc.agent, r, h.calls)

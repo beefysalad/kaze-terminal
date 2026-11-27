@@ -71,7 +71,12 @@ func (win *window) drainControl() {
 		if r.ctx.Err() != nil {
 			continue
 		}
-		name, e := ctl.ValidateName(h.Tabs(), r.id, r.name)
+		// Names are unique per space, the same rule the handler applied.
+		visible, e := ctl.VisibleTo(h.Tabs(), r.id, win.opt.Config.Control.CrossSpace)
+		name := ""
+		if e == nil {
+			name, e = ctl.ValidateName(visible, r.id, r.name)
+		}
 		if e == nil {
 			n, err := strconv.Atoi(strings.TrimPrefix(r.id, "t"))
 			var tab *tabs.Tab

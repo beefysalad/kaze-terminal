@@ -10,7 +10,7 @@ An agent that calls the control CLI now sees and reaches only tabs in its own sp
 falls back to other spaces. `[control] cross_space = true` restores the old behavior with
 its warning. Requests with no `from` tab stay unrestricted. The peer-messaging block in
 `internal/agentdocs` changed (the 0.46.2 text is in history as `peer0462`). The UI test
-covers the adapter with both option values; the `window.go` wiring of the config value is
+covers the adapter with both option values, space identity (repository key, not display name) and workers inheriting their parent's space; the CLI sends the caller for every op and `send --raw` only skips the tag; the `window.go` wiring of the config value is
 a one-line pass-through that no test exercises, so check it by hand. Spec and plan:
 `docs/superpowers/specs/2026-11-27-control-space-isolation-design.md` and
 `docs/superpowers/plans/2026-11-27-control-space-isolation.md`. Owner check on a local

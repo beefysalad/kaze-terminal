@@ -638,3 +638,51 @@ type controlSpaceScriptHost struct {
 
 func (h *controlSpaceScriptHost) Tabs() []control.TabInfo          { return h.tabs }
 func (h *controlSpaceScriptHost) Submit(id string, _ []byte) error { h.submitted <- id; return nil }
+
+func TestControlCLISendsCallerForEveryOp(t *testing.T) {
+	srv, err := notify.Listen(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { srv.Close() })
+	got := make(chan control.Request, 1)
+	srv.SetControl(func(raw json.RawMessage) any {
+		var req control.Request
+		if err := json.Unmarshal(raw, &req); err != nil {
+			return control.Reply{Error: &control.Error{Code: "invalid_request", Message: err.Error()}}
+		}
+		got <- req
+		return control.Reply{OK: true, Tabs: []control.TabInfo{{ID: "t2", Agent: "codex", Status: "idle"}}}
+	})
+	env := func(k string) string {
+		switch k {
+		case "KAZE_SOCKET":
+			return srv.Addr()
+		case "KAZE_NOTIFY_TOKEN":
+			return srv.Token()
+		case "KAZE_TAB_ID":
+			return "1"
+		}
+		return ""
+	}
+	for _, tc := range []struct {
+		args []string
+		raw  bool
+	}{
+		{[]string{"ls"}, false},
+		{[]string{"name", "t2", "reviewer"}, false},
+		{[]string{"label", "t2", "k=v"}, false},
+		{[]string{"send", "t2", "hi", "--raw"}, true},
+	} {
+		var out, errs bytes.Buffer
+		runControl(tc.args, env, nil, &out, &errs)
+		select {
+		case req := <-got:
+			if req.From != "t1" || req.Raw != tc.raw {
+				t.Fatalf("%v: from %q raw %v", tc.args, req.From, req.Raw)
+			}
+		case <-time.After(2 * time.Second):
+			t.Fatalf("%v: no request: %s", tc.args, &errs)
+		}
+	}
+}

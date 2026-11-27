@@ -47,7 +47,7 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		return Reply{Error: &Error{CodeUnknownOp, "templates unavailable"}}
 	}
 	if req.Op == "spawn" || req.Op == "kill" {
-		return workers(ctx, host, req)
+		return workers(ctx, host, req, opt)
 	}
 	if req.Op == "name" || req.Op == "label" {
 		return metadata(ctx, host, req, opt)
@@ -89,7 +89,11 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		return report(host, req)
 	}
 	if req.Op == "ls" {
-		return Reply{OK: true, Tabs: scopedTabs(host.Tabs(), req.From, opt.CrossSpace)}
+		visible, err := VisibleTo(host.Tabs(), req.From, opt.CrossSpace)
+		if err != nil {
+			return Reply{Error: err}
+		}
+		return Reply{OK: true, Tabs: visible}
 	}
 	if req.Op == "read" {
 		if req.Lines < 0 {
@@ -122,7 +126,7 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 			return Reply{Error: &Error{CodeBusy, "target is working"}}
 		}
 		text := req.Text
-		if opt.AgentTag && req.From != "" {
+		if opt.AgentTag && req.From != "" && !req.Raw {
 			for _, sender := range tabs {
 				if sender.ID == req.From {
 					from := sender.ID
@@ -155,10 +159,21 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 	return Reply{Error: &Error{CodeUnknownOp, "unknown control operation"}}
 }
 
-// scopedTabs returns the caller's space, or all tabs for unrestricted callers.
-func scopedTabs(tabs []TabInfo, from string, cross bool) []TabInfo {
+// spaceOf is the identity of a tab's space. Names repeat (two repositories can both
+// be called "project", and a repository can be called "Shell"), so the host's key wins.
+func spaceOf(t TabInfo) string {
+	if t.SpaceKey != "" {
+		return "key:" + t.SpaceKey
+	}
+	return "name:" + t.Space
+}
+
+// VisibleTo returns the tabs the caller may see: its own space, or every tab for the
+// owner (no from) and in cross_space mode. A from that names no open tab is refused, so
+// dropping or garbling KAZE_TAB_ID does not widen what a caller can reach.
+func VisibleTo(tabs []TabInfo, from string, cross bool) ([]TabInfo, *Error) {
 	if cross || from == "" {
-		return tabs
+		return tabs, nil
 	}
 	for _, sender := range tabs {
 		if sender.ID != from {
@@ -166,18 +181,21 @@ func scopedTabs(tabs []TabInfo, from string, cross bool) []TabInfo {
 		}
 		visible := make([]TabInfo, 0, len(tabs))
 		for _, tab := range tabs {
-			if tab.Space == sender.Space {
+			if spaceOf(tab) == spaceOf(sender) {
 				visible = append(visible, tab)
 			}
 		}
-		return visible
+		return visible, nil
 	}
-	return tabs
+	return nil, &Error{CodeUnknownTab, "your tab is not known to Kaze; run this inside a Kaze tab"}
 }
 
 // resolveScoped resolves only visible tabs and refuses targets in other spaces.
 func resolveScoped(tabs []TabInfo, address, from string, cross bool) (TabInfo, []TabInfo, *Error) {
-	visible := scopedTabs(tabs, from, cross)
+	visible, scopeErr := VisibleTo(tabs, from, cross)
+	if scopeErr != nil {
+		return TabInfo{}, nil, scopeErr
+	}
 	tab, err := ResolveFrom(visible, address, from)
 	if err != nil && err.Code == CodeUnknownTab {
 		if _, globalErr := ResolveFrom(tabs, address, from); globalErr == nil {
@@ -194,7 +212,7 @@ func crossSpace(tabs []TabInfo, from string, target TabInfo, enabled bool) strin
 	}
 	for _, sender := range tabs {
 		if sender.ID == from {
-			if sender.Space == target.Space {
+			if spaceOf(sender) == spaceOf(target) {
 				return ""
 			}
 			return fmt.Sprintf("target %s is in space %s, not your space %s; use it only if the owner named that tab", target.ID, target.Space, sender.Space)
@@ -261,7 +279,7 @@ func ResolveFrom(tabs []TabInfo, address, from string) (TabInfo, *Error) {
 		}
 		var local []TabInfo
 		for _, tab := range byAgent {
-			if tab.Space == sender.Space {
+			if spaceOf(tab) == spaceOf(sender) {
 				local = append(local, tab)
 			}
 		}

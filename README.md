@@ -716,7 +716,12 @@ cross_space = false
 `agent_tag` turns off tags globally. `[control] enabled = false` refuses every
 control command while Claude Code and Codex hooks keep working.
 By default an agent sees and reaches only tabs in its own space;
-`cross_space = true` allows other spaces.
+`cross_space = true` allows other spaces. A space is one repository (two
+repositories with the same folder name are different spaces), and a worker
+always shares its parent's space. Names only have to be unique within a space.
+This stops an agent touching another project by accident. It is not a security
+boundary: a process that removes `KAZE_TAB_ID` from its environment looks like the
+owner's own CLI use, and a refusal still tells the caller that the tab exists.
 
 Every tab gets these environment variables. Keep the token private:
 

@@ -227,8 +227,8 @@ func TestOrchestratorFlagTextDoesNotChangeRawSend(t *testing.T) {
 	if code := runControl([]string{"send", "--raw", "t2", "--", "--children"}, env, nil, &out, &errs); code != 0 {
 		t.Fatal(code, errs.String())
 	}
-	if req := receiveControlRequest(t, requests); req.From != "" {
-		t.Fatal("raw sender gained caller tag", req)
+	if req := receiveControlRequest(t, requests); req.From != "t1" || !req.Raw {
+		t.Fatal("raw send must name its caller (for scoping) and ask for no tag", req)
 	}
 }
 

@@ -15,7 +15,7 @@ type WorkerHost interface {
 	Kill(context.Context, string, string) Reply
 }
 
-func workers(ctx context.Context, host Host, req Request) Reply {
+func workers(ctx context.Context, host Host, req Request, opt Options) Reply {
 	h, ok := host.(WorkerHost)
 	if !ok {
 		return Reply{Error: &Error{CodeUnknownOp, "unknown control operation"}}
@@ -34,7 +34,11 @@ func workers(ctx context.Context, host Host, req Request) Reply {
 			return Reply{Error: &Error{CodeInvalidRequest, "mode must be edit or read-only"}}
 		}
 		if req.Name != "" {
-			if _, e := ValidateName(host.Tabs(), "", req.Name); e != nil {
+			visible, scopeErr := VisibleTo(host.Tabs(), req.From, opt.CrossSpace)
+			if scopeErr != nil {
+				return Reply{Error: scopeErr}
+			}
+			if _, e := ValidateName(visible, "", req.Name); e != nil {
 				return Reply{Error: e}
 			}
 		}
@@ -49,7 +53,7 @@ func workers(ctx context.Context, host Host, req Request) Reply {
 		}
 		return h.Spawn(ctx, req)
 	}
-	tab, e := Resolve(host.Tabs(), req.Tab)
+	tab, _, e := resolveScoped(host.Tabs(), req.Tab, req.From, opt.CrossSpace)
 	if e != nil {
 		return Reply{Error: e}
 	}

@@ -76,6 +76,12 @@ func runControl(args []string, env func(string) string, stdin io.Reader, stdout,
 	if req.Op == "read" || req.Op == "keys" || req.Op == "interrupt" || (req.Op == "wait" && req.Children == "") {
 		req.From = controlCaller(env)
 	}
+	// Every op names its caller, so the server can keep it inside its own space.
+	// A raw send only skips the peer tag; it must not skip the scoping.
+	if req.From == "" {
+		req.From = controlCaller(env)
+	}
+	req.Raw = raw && req.Op == "send"
 	addr := env("KAZE_SOCKET")
 	if addr == "" {
 		addr = env("KAZE_NOTIFY")
