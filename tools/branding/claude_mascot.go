@@ -13,31 +13,30 @@ import (
 	"os"
 )
 
-// 12 columns by 8 rows; # is body, . is empty. Eyes are the two holes.
+// The mascot as Claude Code prints it with half blocks: 18 sub-pixels wide, each one
+// unit wide and two tall. The two gaps in the second row are the eyes; the single
+// pixels in the last row are the feet. # is body, . is empty.
 var grid = []string{
-	"..########..",
-	"..##.##.##..",
-	"..##.##.##..",
-	"############",
-	"############",
-	"..########..",
-	"..#.#..#.#..",
-	"..#.#..#.#..",
+	"...############...",
+	"...##.######.##...",
+	".################.",
+	"...############...",
+	"....#.#....#.#....",
 }
 
 func main() {
-	const size, cell = 96, 8
+	const size, unitW, unitH = 96, 5, 10
 	img := image.NewNRGBA(image.Rect(0, 0, size, size))
-	offY := (size - len(grid)*cell) / 2
-	offX := (size - len(grid[0])*cell) / 2
+	offX := (size - len(grid[0])*unitW) / 2
+	offY := (size - len(grid)*unitH) / 2
 	for r, row := range grid {
 		for c, ch := range row {
 			if ch != '#' {
 				continue
 			}
-			for y := 0; y < cell; y++ {
-				for x := 0; x < cell; x++ {
-					img.SetNRGBA(offX+c*cell+x, offY+r*cell+y, color.NRGBA{255, 255, 255, 255})
+			for y := 0; y < unitH; y++ {
+				for x := 0; x < unitW; x++ {
+					img.SetNRGBA(offX+c*unitW+x, offY+r*unitH+y, color.NRGBA{255, 255, 255, 255})
 				}
 			}
 		}
