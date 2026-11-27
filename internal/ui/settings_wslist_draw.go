@@ -186,7 +186,11 @@ func (p *page) wsTab(r image.Rectangle, y int, t wsListTab) int {
 	}
 	gap := g.Dp(10)
 	chipPad := g.Dp(6)
-	cmd := p.fitEndMono(t.Cmd, 11, max(room-2*chipPad, 1))
+	moreW := 0
+	if t.More != "" {
+		moreW = moreS.X + gap
+	}
+	cmd := p.fitEndMono(t.Cmd, 11, max(room-2*chipPad-moreW, 1))
 	_, cs := p.mono(cmd, 11, col.accent)
 	chipW := cs.X + 2*chipPad
 	_, fs := p.mono("M", 11.5, col.muted)
@@ -210,7 +214,7 @@ func (p *page) wsTab(r image.Rectangle, y int, t wsListTab) int {
 	}
 	folderRoom := room - chipSpan
 	if folderRoom >= g.Dp(120) {
-		fc, fsz := p.mono(p.fitStart(t.Folder, 11.5, folderRoom), 11.5, col.muted)
+		fc, fsz := p.mono(p.fitStart(t.Folder, 11.5, min(g.Dp(210), folderRoom)), 11.5, col.muted)
 		place(ops, fc, image.Pt(x, y+(lineH-fsz.Y)/2))
 		drawChip(x+min(g.Dp(210), folderRoom)+gap, y)
 		y += lineH

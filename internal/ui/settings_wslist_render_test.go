@@ -24,6 +24,9 @@ func TestWSListRenders(t *testing.T) {
 		for _, menu := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%d/menu=%v", width, menu), func(t *testing.T) {
 				f := newWSPage(t)
+				ts := f.win.wsp.doc.Workspaces[0].Tabs
+				ts[0].Folder = "~/src/a/very/long/path/that/keeps/going/and/going/forever/api"
+				ts[0].Commands = []string{"docker compose -f deploy/docker-compose.production.yml up -d --build --remove-orphans", "x"}
 				f.press("ws.toggle", 0)
 				if menu {
 					f.press("ws.menu", 0)
