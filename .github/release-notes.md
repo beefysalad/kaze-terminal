@@ -1,11 +1,7 @@
 ## What's changed
 
-- kaze ls marks your own tab with a self column. An agent name like codex resolves to a tab in your own space first.
-- Sending to, reading from or pressing keys in a tab of another space prints a warning.
-- Peer messaging and worker instructions share one rule: use a tab in your own space, never another project's tab unless you named it. If none is available, start your own worker when worker instructions are installed; otherwise tell the owner. Peer instructions now include the PowerShell form.
-- Settings shows Update available with an Update button for outdated instruction blocks, and Edited with Reset for blocks you changed. A one-time note at startup points out outdated instructions. If you already switched instructions on, press Update once in Settings > Agents.
-- Instruction blocks saved with Windows line endings no longer show as Modified.
-- Workers are told to talk only to their parent.
+- Each agent row shows its subagents again, up to 3, then "+N more, open board" for the rest.
+- Documents you open now sit under the tab that opened them instead of under the whole space.
 
 ## Download
 

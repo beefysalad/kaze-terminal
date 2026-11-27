@@ -248,8 +248,8 @@ The sidebar lists spaces, one per project plus a Shell space. The tab strip sits
   Click an agent to jump to its tab. Claude uses the Claude Code pixel mascot; Codex has its own logo.
 - **Header:** use + to open a session or the magnifier to open search. Cmd/Ctrl+K stays unchanged
   (the default Windows palette shortcut is Ctrl+Shift+K).
-- **Simpler rows:** sidebar rows no longer show line counts or a subagent tray.
-  Read subagents in the dock panel or agents board; line changes remain in the status bar.
+- **Subagents:** each agent row shows up to 3 subagents, then "+N more, open board" for the rest.
+  Click a subagent to open its dock panel. Line changes remain in the status bar.
 - **Next waiting:** Cmd+J / Ctrl+Shift+J and its palette action open the newest alert
   card's session while cards are showing. Without cards they jump to the next session
   that needs you, wrapping around. With none, the status bar says "Nothing is waiting on you."
@@ -357,8 +357,8 @@ in doubt, kaze matches each agent to its own prompt (the first message of its tr
 most 3 times and 64 KiB at a time, and only when two agents could be mixed up). A wrong early
 guess swaps; a name that has settled never moves.
 
-- **Finding subagents:** use the running-subagents text in the status bar or the agents board.
-  The sidebar tray has been removed.
+- **Finding subagents:** look under each agent row in the sidebar for up to 3 subagents.
+  Click "+N more, open board" to see the rest, or use the status bar or agents board.
 - **Agent panel:** click a subagent to open it as a tab in the panel docked under the terminal
   (click it again to hide the panel). Nothing covers the terminal; only that session's terminal gets shorter. Drag the line
   between them to any height; Kaze remembers it (`agent_panel_height` in `config.toml`). Under
@@ -438,7 +438,7 @@ checks the files the agent touched in that tab before the folder, and other tabs
   "Can't find plan.md in <folder>", naming the last folder it tried.
 - Links set with OSC 8 (hidden link targets) are not read yet.
 
-Each doc gets a temporary row under its session. Click a heading in the outline to
+Each doc gets a temporary row under the tab that opened it. Click a heading in the outline to
 jump there, or scroll with the wheel, arrows, Page Up/Down and Home/End. The outline
 hides in narrow windows. Click the session row to return to its terminal.
 
@@ -1387,7 +1387,7 @@ Done:
 - Plan 6a: the session sidebar, replacing the tab strip, with repo groups, a filter and the running workspaces.
 - Plan 6b: agent awareness, titles you can rename, line counts and the Next waiting shortcut.
 - 0.22: two-line session rows, retained sidebar drawing, a branch/worktree launcher and confirmed cleanup of Kaze-created worktrees (#101).
-- Subagents: a live pane per subagent and the agents board (replaces Plan 2's child tabs); the sidebar tray was removed in 0.44.
+- Subagents: a live pane per subagent and the agents board (replaces Plan 2's child tabs); sidebar subagent rows returned in 0.46.2.
 - 0.16: clickable links, Codex helpers alongside Claude Code subagents, and screenshot paste with Cmd+V.
 - 0.17: Claude and Codex logos on the sidebar rows as soon as an agent opens, and links drawn in blue.
 - Start folder (#77): choose where new plain tabs open in Settings > Workspaces > Startup.
