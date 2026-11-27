@@ -284,6 +284,7 @@ func Run(w *app.Window, opt Options) error {
 			win.restoreWait = true
 		}
 	}
+	win.prepareTour()
 	win.initRestore()
 	if win.restoreFatal != nil {
 		return win.restoreFatal
@@ -768,6 +769,7 @@ func (win *window) frame(gtx layout.Context) error {
 			win.bench.Start(win.w.Invalidate, privateMB)
 		}
 	}
+	win.startTour()
 	win.mgr.ResizeAll(cols, rows)
 	// The docked agent panel takes the bottom of the terminal area; only its
 	// session's PTY gets the smaller grid (spec 2026-11-03 agent dock).
@@ -1440,6 +1442,9 @@ func (win *window) runShortcut(gtx layout.Context, a action) {
 		win.nextWaiting()
 	case actPalette:
 		win.togglePalette()
+	case actTour:
+		win.hideSettings()
+		win.openTour(true)
 	case actAgentsBoard:
 		win.toggleBoard()
 	case actFind:

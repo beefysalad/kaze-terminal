@@ -7,6 +7,7 @@ import (
 	"gioui.org/layout"
 	"github.com/beefysalad/kaze-terminal/internal/tour"
 	"image"
+	"os"
 	"path/filepath"
 )
 
@@ -132,3 +133,22 @@ func tourCardRect(w, target image.Rectangle, card image.Point) image.Rectangle {
 }
 
 var _ event.Tag
+
+func (w *window) prepareTour() {
+	d := w.tourDir()
+	w.tour.pending = tour.Check(d) == tour.Show
+	if !w.tour.pending && d != "" {
+		if _, e := os.Stat(filepath.Join(d, "tour.json")); os.IsNotExist(e) {
+			_ = tour.MarkSeen(d)
+		}
+	}
+}
+func (w *window) startTour() {
+	if !w.tour.pending {
+		return
+	}
+	w.tour.pending = false
+	if w.bench == nil && w.opt.Config.StartupWorkspace == "" && w.opt.Workspace == "" && len(w.restorePlans) == 0 {
+		w.openTour(false)
+	}
+}
