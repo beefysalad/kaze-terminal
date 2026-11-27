@@ -47,7 +47,7 @@ func (c *chrome) docLines(gtx layout.Context, h *sideHits, r sideRow, st sideSta
 		call, sz := c.fitSide(gtx, d.Name, 12, max(0, cl.Min.X-tx-gtx.Dp(4)), fg)
 		place(gtx.Ops, call, image.Pt(tx, band.Min.Y+gtx.Dp(2)))
 		_ = sz
-		call, _ = c.fitSide(gtx, d.Folder, 10, max(0, x1-tx), c.sideInk().muted)
+		call, _ = c.fitSide(gtx, shortFolder(d.Folder), 10, max(0, x1-tx), c.sideInk().muted)
 		place(gtx.Ops, call, image.Pt(tx, band.Min.Y+gtx.Dp(19)))
 		if st.hoverDoc == d.ID {
 			place(gtx.Ops, closeCall, cl.Min)
