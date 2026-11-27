@@ -47,3 +47,15 @@ func TestTourHookHitsExcludeFooter(t *testing.T) {
 		}
 	}
 }
+
+func TestTourBoardPreservesDocumentSelection(t *testing.T) {
+	w := sheetWindow(t, "midnight")
+	w.hideSettings()
+	w.docs.shown = docID(42)
+	w.openTour(true)
+	w.tourMove(4)
+	w.tourBack()
+	if w.docs.shown != docID(42) {
+		t.Fatal("tour lost document selection")
+	}
+}

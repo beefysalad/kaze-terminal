@@ -12,6 +12,7 @@ import (
 )
 
 type tourState struct {
+	previousDoc               docID
 	targets                   [5]image.Rectangle
 	scroll, scrollMax         int
 	open                      bool
@@ -43,6 +44,7 @@ func (w *window) openTour(replay bool) {
 func (w *window) closeTour() {
 	if w.tour.boardOpenedByTour {
 		w.closeBoard()
+		w.docs.shown = w.tour.previousDoc
 	}
 	if !w.tour.replay && w.tourDir() != "" {
 		_ = tour.MarkSeen(w.tourDir())
@@ -53,11 +55,13 @@ func (w *window) closeTour() {
 func (w *window) tourMove(n int) {
 	if w.tour.boardOpenedByTour {
 		w.closeBoard()
+		w.docs.shown = w.tour.previousDoc
 		w.tour.boardOpenedByTour = false
 	}
 	w.tour.scroll = 0
 	w.tour.step = n
 	if tourSteps()[n].Board && !w.board.open && w.mgr != nil {
+		w.tour.previousDoc = w.docs.shown
 		w.openBoard(0)
 		w.tour.boardOpenedByTour = true
 	}
