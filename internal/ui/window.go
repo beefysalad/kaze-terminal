@@ -623,7 +623,7 @@ func (win *window) newTabIn(dir string) {
 	win.hideSettings() // the new tab is shown
 	win.closeBoard()
 	win.wantFocus = true
-	if _, err := win.mgr.NewOpts(tabs.StartOpts{Dir: dir}); err != nil {
+	if _, err := win.mgr.NewOpts(tabs.StartOpts{Dir: dir, Prefeed: seedCwd(dir)}); err != nil {
 		log.Printf("kaze: new tab: %v", err)
 		// A windowsgui build has no console, so the status bar is where this can be seen.
 		win.notice = "new tab failed: " + err.Error()
