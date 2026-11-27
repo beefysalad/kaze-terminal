@@ -25,26 +25,33 @@ const controlPasteEnterDelay = 100 * time.Millisecond
 var controlPendingGrace = 10 * time.Second
 
 type controlSession struct {
-	session *term.Session
-	send    sync.Mutex   // keep control sequences and paste/Enter pairs together
-	pending atomic.Int64 // unix nanos of the last send still awaiting its prompt hook; 0 when none
+	session     *term.Session
+	send        sync.Mutex   // keep control sequences and paste/Enter pairs together
+	lastKey     atomic.Int64 // last owner key press, retained across publications
+	noteSending atomic.Bool
+	pending     atomic.Int64 // unix nanos of the last send still awaiting its prompt hook; 0 when none
 }
 type controlSnapshot struct {
-	tabs     []ctl.TabInfo
-	sessions map[string]*controlSession
+	ownerKeys map[string]string // private immutable authentication data; never serialized
+	tabs      []ctl.TabInfo
+	sessions  map[string]*controlSession
 }
 
 // controlHost keeps socket access on immutable snapshots and synchronized sessions.
 // Renames cross a bounded inbox; its wake callback only invalidates the window.
 type controlHost struct {
-	snapshot  atomic.Pointer[controlSnapshot]
-	changesMu sync.Mutex
-	changes   chan struct{}
-	renameMu  sync.Mutex
-	renames   []*controlRename
-	wake      func() // immutable after initialization; only invalidates like onNotify
-	labelsMu  sync.Mutex
-	labels    map[string]map[string]string
+	noteQuiet      time.Duration // immutable after initialization; zero uses the default
+	snapshot       atomic.Pointer[controlSnapshot]
+	changesMu      sync.Mutex
+	changes        chan struct{}
+	spawnMu        sync.Mutex
+	workerRequests []*controlWorkerRequest
+	renameMu       sync.Mutex
+	renames        []*controlRename
+	wake           func() // immutable after initialization; only invalidates like onNotify
+	labelsMu       sync.Mutex
+	labels         map[string]map[string]string
+	inbox          map[string]*controlInbox
 }
 
 var _ ctl.Host = (*controlHost)(nil)
@@ -70,7 +77,7 @@ func (h *controlHost) Tabs() []ctl.TabInfo {
 func overlayPending(s *controlSnapshot, now int64) []ctl.TabInfo {
 	out, cloned := s.tabs, false
 	for i, tab := range s.tabs {
-		if tab.Status != "idle" && tab.Status != "needs" {
+		if tab.Status != "idle" && tab.Status != "needs" || (tab.Status == "needs" && tab.Role == "worker") {
 			continue
 		}
 		at := s.sessions[tab.ID].pending.Load()
@@ -134,6 +141,11 @@ func (h *controlHost) Submit(id string, text []byte) error {
 	}
 	target.send.Lock()
 	defer target.send.Unlock()
+	return h.submitLocked(id, text, target)
+}
+
+// submitLocked keeps the paste and Enter under the caller's send lock.
+func (h *controlHost) submitLocked(id string, text []byte, target *controlSession) error {
 	s := target.session
 	s.Lock()
 	modes := s.Applier().Modes()
@@ -141,14 +153,14 @@ func (h *controlHost) Submit(id string, text []byte) error {
 	// Hold before Enter is observable, so the prompt hook cannot clear first.
 	release := h.holdPending(target)
 	mark := s.EchoMark()
-	if result := s.Submit(input.EncodePaste(string(text), modes)); result != term.Accepted {
+	if err := h.submitInput(id, target, input.EncodePaste(string(text), modes)); err != nil {
 		release()
-		return fmt.Errorf("paste to %s: %s", id, result)
+		return err
 	}
 	s.WaitEcho(mark, controlPasteEnterDelay)
-	if result := s.Submit([]byte{'\r'}); result != term.Accepted {
+	if err := h.submitInput(id, target, []byte{'\r'}); err != nil {
 		release()
-		return fmt.Errorf("enter to %s: %s", id, result)
+		return err
 	}
 	return nil
 }
@@ -163,9 +175,12 @@ func (win *window) publishControl() {
 	defer win.control.labelsMu.Unlock()
 	old := win.control.snapshot.Load()
 	list := win.mgr.Tabs()
-	next := &controlSnapshot{tabs: make([]ctl.TabInfo, 0, len(list)), sessions: make(map[string]*controlSession, len(list))}
+	next := &controlSnapshot{ownerKeys: make(map[string]string, len(list)), tabs: make([]ctl.TabInfo, 0, len(list)), sessions: make(map[string]*controlSession, len(list))}
 	for _, t := range list {
 		id := "t" + strconv.Itoa(int(t.ID))
+		if key := win.mgr.OwnerKey(t.ID); key != "" {
+			next.ownerKeys[id] = key
+		}
 		// Discovery belongs to the existing UI model refresh. Publishing itself
 		// must not start a worker whose completion could request a frame.
 		loc := win.locs[t.ID]
@@ -186,8 +201,29 @@ func (win *window) publishControl() {
 				status = "unknown" // found by process only: no hook says idle or working
 			}
 		}
-		if win.alerts.markOf(t.ID) == markNeeds {
+		if win.alerts.markOf(t.ID) == markNeeds && t.Role != "worker" {
 			status = "needs"
+		}
+		parent, firstMessage := "", ""
+		if t.Parent != 0 {
+			parent = workerID(t.Parent)
+		}
+		if w := win.workers[t.ID]; w != nil {
+			firstMessage = w.firstMessage
+			if w.firstMessage == "pending" {
+				status = "starting"
+			} else if w.firstMessage == "failed" || w.firstMessage == "unconfirmed" {
+				status = "idle"
+			}
+			if w.needs {
+				status = "needs"
+			}
+			if a.agentName() == "" {
+				a.agent = w.agent
+			}
+		}
+		if t.Exited {
+			status = "exited"
 		}
 		name := win.names[t.ID]
 		if name == "" {
@@ -197,7 +233,8 @@ func (win *window) publishControl() {
 		if folder == "" {
 			folder = t.Dir
 		}
-		next.tabs = append(next.tabs, ctl.TabInfo{ID: id, Name: name, Space: controlSpaceName(loc), Folder: folder,
+		messages := win.control.inboxMessages(id)
+		next.tabs = append(next.tabs, ctl.TabInfo{Unread: len(messages), Inbox: messages, Parent: parent, Role: t.Role, FirstMessage: firstMessage, ID: id, Name: name, Space: controlSpaceName(loc), Folder: folder,
 			Labels: cloneLabels(win.control.labels[id]), Agent: a.agentName(), Status: status, Since: a.since, Workspace: t.Group != nil})
 		var target *controlSession
 		if old != nil {
@@ -211,6 +248,11 @@ func (win *window) publishControl() {
 	for id := range win.control.labels {
 		if next.sessions[id] == nil {
 			delete(win.control.labels, id)
+		}
+	}
+	for id := range win.control.inbox {
+		if next.sessions[id] == nil {
+			delete(win.control.inbox, id)
 		}
 	}
 	win.control.publish(next)
@@ -262,4 +304,36 @@ func (h *controlHost) OutputChanges(id string) (<-chan struct{}, func(), time.Ti
 		}
 	})
 	return wake, remove, target.session.LastOutputTime(), nil
+}
+
+// OwnerKey reads only the immutable published snapshot on socket goroutines.
+func (h *controlHost) OwnerKey(id string) string {
+	if s := h.snapshot.Load(); s != nil {
+		return s.ownerKeys[id]
+	}
+	return ""
+}
+
+// submitInput pairs the latest immutable eligibility check with the bounded
+// input enqueue. Publication uses the same lock, so a published refusal cannot
+// be bypassed by a request waiting on send or echo. No UI state is read here.
+func (h *controlHost) submitInput(id string, target *controlSession, data []byte) error {
+	h.changesMu.Lock()
+	defer h.changesMu.Unlock()
+	snapshot := h.snapshot.Load()
+	if snapshot == nil || snapshot.sessions[id] != target {
+		return fmt.Errorf("tab %s is closed or unknown", id)
+	}
+	for _, tab := range snapshot.tabs {
+		if tab.ID == id {
+			if err := ctl.WorkerInputGuard(tab); err != nil {
+				return err
+			}
+			if result := target.session.Submit(data); result != term.Accepted {
+				return fmt.Errorf("input to %s: %s", id, result)
+			}
+			return nil
+		}
+	}
+	return fmt.Errorf("tab %s is closed or unknown", id)
 }

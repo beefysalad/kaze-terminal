@@ -29,6 +29,7 @@ func (win *window) loadAgents() {
 	win.loadClaude()
 	win.loadCodex()
 	win.loadPeerDocs()
+	win.loadTemplates()
 	if win.system != nil && win.opt.Config.SystemNotifications {
 		win.system.backend.CheckPermission()
 	}
@@ -139,6 +140,30 @@ func (win *window) codexRows() []settingRow {
 }
 func agentsAct(win *window, id string, arg int) {
 	switch id {
+	case "claude_worker_docs_update", "claude_worker_docs_reset":
+		win.claudeDocs.workers.set(true)
+		return
+	case "codex_worker_docs_update", "codex_worker_docs_reset":
+		win.codexDocs.workers.set(true)
+		return
+	case "claude_peer_docs_update", "claude_peer_docs_reset":
+		win.claudeDocs.set(true)
+		return
+	case "codex_peer_docs_update", "codex_peer_docs_reset":
+		win.codexDocs.set(true)
+		return
+	case "templates_open":
+		win.openTemplates()
+		return
+	case "orchestrator_enabled":
+		win.setOrchestratorEnabled(arg == 1)
+		return
+	case "claude_worker_docs":
+		win.claudeDocs.workers.set(arg == 1)
+		return
+	case "codex_worker_docs":
+		win.codexDocs.workers.set(arg == 1)
+		return
 	case "claude_peer_docs":
 		win.claudeDocs.set(arg == 1)
 		return
@@ -221,10 +246,14 @@ func (win *window) writeCodex() {
 // agentsRows keeps the alert configuration shared while setup is per agent.
 func agentsRows(win *window) []settingRow {
 	rows := sharedAgentRows(win)
+	rows = append(rows, settingRow{heading: "Workers"}, win.orchestratorSettingRow())
+	rows = append(rows, win.templateRows()...)
 	rows = append(rows, settingRow{heading: "Claude Code setup"})
 	rows = append(rows, win.claudeDocs.row("claude_peer_docs", tildeHome(win.claudeDocs.path, win.home)))
+	rows = append(rows, win.claudeDocs.workers.row("claude_worker_docs", tildeHome(win.claudeDocs.path, win.home)))
 	rows = append(rows, win.setupRows()...)
 	rows = append(rows, settingRow{heading: "Codex setup"})
 	rows = append(rows, win.codexDocs.row("codex_peer_docs", tildeHome(win.codexDocs.path, win.home)))
+	rows = append(rows, win.codexDocs.workers.row("codex_worker_docs", tildeHome(win.codexDocs.path, win.home)))
 	return append(rows, win.codexRows()...)
 }

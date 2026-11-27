@@ -1,0 +1,228 @@
+package ui
+
+import (
+	"fmt"
+	"image"
+	"strings"
+	"testing"
+
+	"gioui.org/font"
+	"gioui.org/io/system"
+	"gioui.org/text"
+	ctl "github.com/beefysalad/kaze-terminal/internal/control"
+	"github.com/beefysalad/kaze-terminal/internal/tabs"
+	"github.com/beefysalad/kaze-terminal/internal/theme"
+)
+
+func TestWorkerCounterAndPalette(t *testing.T) {
+	win, _ := workerWindow(t)
+	if workerCounter(0) != "" || workerCounter(1) != "1 worker" || workerCounter(2) != "2 workers" {
+		t.Fatal("counter text")
+	}
+	if shown(statusAt(win.statusModel(t0), 1200), grpWorkers) {
+		t.Fatal("empty counter visible")
+	}
+	if hasWorkerAction(win.palActions(), "Stop workers of this tab") {
+		t.Fatal("parent action without workers")
+	}
+	spawnPresentationWorker(t, win)
+	if win.statusModel(t0).Workers != 1 || !shown(statusAt(win.statusModel(t0), 1200), grpWorkers) {
+		t.Fatal("counter hidden")
+	}
+	if !hasWorkerAction(win.palActions(), "Stop all workers") || !hasWorkerAction(win.palActions(), "Stop workers of this tab") {
+		t.Fatal("missing palette actions")
+	}
+	win.statusClick(grpWorkers)
+	if !win.stat.workers.open {
+		t.Fatal("counter did not open popover")
+	}
+	win.stopWorkerTabs(0)
+	if len(win.workers) != 0 || win.mgr.Lookup(2) != nil || win.mgr.Lookup(1) == nil {
+		t.Fatal("stop all must close only workers")
+	}
+	if win.statusModel(t0).Workers != 0 {
+		t.Fatal("counter stayed visible")
+	}
+}
+
+func hasWorkerAction(as []palAction, name string) bool {
+	for _, a := range as {
+		if a.Name == name {
+			return true
+		}
+	}
+	return false
+}
+func spawnPresentationWorker(t *testing.T, win *window) {
+	t.Helper()
+	r := win.applyWorker(ctl.Request{Op: "spawn", From: "t1", Agent: "claude", Task: "review"})
+	if !r.OK {
+		t.Fatal(r)
+	}
+}
+
+func TestWorkerPaletteUpdatesWhileOpen(t *testing.T) {
+	win, _ := workerWindow(t)
+	spawnPresentationWorker(t, win)
+	win.palette.actions = win.palActions()
+	win.stopWorkerTabs(0)
+	if hasWorkerAction(win.palInput().Actions, "Stop workers of this tab") {
+		t.Fatal("stale parent action after last worker closed")
+	}
+}
+
+func TestWorkerStopOneParentAndPopoverActions(t *testing.T) {
+	win, _ := workerWindow(t)
+	spawnPresentationWorker(t, win)
+	parent := openIn(t, win, "")
+	child := openIn(t, win, "")
+	child.Role, child.Parent = "worker", parent.ID
+	win.workers[child.ID] = &worker{parent: parent.ID, agent: "codex", firstMessage: "delivered"}
+	win.mgr.SetActive(1)
+	win.palAct(pageContext(1200, 800), palItem{Kind: palKaze, Key: "act:stop_tab_workers"}, false)
+	if win.mgr.Lookup(2) != nil || win.mgr.Lookup(child.ID) == nil || win.mgr.Lookup(parent.ID) == nil {
+		t.Fatal("stop parent closed unrelated tabs")
+	}
+	win.statusClick(grpWorkers)
+	g := pageContext(1200, 800)
+	win.drawStatus(g, 768, t0)
+	win.drawWorkerPopover(g)
+	if len(win.stat.workers.rows) != 1 {
+		t.Fatal("worker popover list")
+	}
+	win.workerPopoverClick(win.stat.workers.rows[0].rect.Min.Add(image.Pt(2, 2)))
+	if activeID(win) != child.ID || win.stat.workers.open {
+		t.Fatal("worker row did not select and dismiss")
+	}
+	win.statusClick(grpWorkers)
+	win.drawWorkerPopover(g)
+	win.workerPopoverClick(win.stat.workers.stop.Min.Add(image.Pt(2, 2)))
+	if len(win.workers) != 0 || win.mgr.Lookup(parent.ID) == nil || win.mgr.Lookup(1) == nil {
+		t.Fatal("popover stop all")
+	}
+}
+
+func TestWorkerPopoverNames(t *testing.T) {
+	for _, tc := range []struct{ label, name, title, want string }{
+		{"name", "review parser", "terminal title", "review parser"},
+		{"title", "", "terminal title", "terminal title"},
+		{"id", "", "", "t2"},
+		{"long", strings.Repeat("review ", 80), "", ""},
+	} {
+		t.Run(tc.label, func(t *testing.T) {
+			win, _ := workerWindow(t)
+			spawnPresentationWorker(t, win)
+			win.names = map[tabs.TabID]string{2: tc.name}
+			shellTitle(win.mgr.Lookup(2), tc.title)
+			win.stat.workers.open = true
+			g := pageContext(560, 640)
+			win.drawStatus(g, 608, t0)
+			win.drawWorkerPopover(g)
+			row := win.stat.workers.rows[0]
+			if tc.label == "long" {
+				if row.name == tc.name || !strings.HasSuffix(row.name, "…") {
+					t.Fatalf("long name was not ellipsized: %q", row.name)
+				}
+			} else if row.name != tc.want {
+				t.Fatalf("popover name = %q, want %q", row.name, tc.want)
+			}
+			_, sz := win.ui.labelW(g, row.name, 12, win.ui.th.ToastFG, font.Bold)
+			if sz.X > row.rect.Dx() {
+				t.Fatalf("name width %d exceeds row %d", sz.X, row.rect.Dx())
+			}
+		})
+	}
+}
+
+func TestWorkerPopoverStillFrameAllocations(t *testing.T) {
+	for _, key := range []string{"midnight", "washi"} {
+		for _, name := range []string{"review", "", strings.Repeat("review ", 80)} {
+			for _, locale := range []system.Locale{{}, {Language: "ja"}} {
+				for _, warmup := range []int{1, 3, 10} {
+					t.Run(fmt.Sprintf("%s/name-%d/%s/warmup-%d", key, len(name), locale.Language, warmup), func(t *testing.T) {
+						win, _ := workerWindow(t)
+						spawnPresentationWorker(t, win)
+						th, _ := theme.ByKey(key)
+						win.applyTheme(th)
+						win.names = map[tabs.TabID]string{2: name}
+						win.stat.workers.open = true
+						g := pageContext(560, 640)
+						g.Locale = locale
+						win.drawStatus(g, 608, t0)
+						draw := func() { g.Ops.Reset(); win.drawWorkerPopover(g) }
+						for range warmup {
+							draw()
+						}
+						if n := testing.AllocsPerRun(20, draw); n != 0 {
+							t.Fatalf("worker popover allocated %g, want 0", n)
+						}
+					})
+				}
+			}
+		}
+	}
+}
+
+func TestWorkerPopoverCacheRefreshes(t *testing.T) {
+	win, _ := workerWindow(t)
+	spawnPresentationWorker(t, win)
+	win.names = map[tabs.TabID]string{2: "review"}
+	win.stat.workers.open = true
+	g := pageContext(560, 640)
+	win.drawStatus(g, 608, t0)
+	draw := func() { g.Ops.Reset(); win.drawWorkerPopover(g) }
+	draw()
+	for _, tc := range []struct {
+		name                string
+		change              func()
+		wantName, wantState string
+	}{
+		{"rename", func() { win.names[2] = "tests" }, "tests", "starting"},
+		{"title", func() { delete(win.names, 2); shellTitle(win.mgr.Lookup(2), "terminal title") }, "terminal title", "starting"},
+		{"id", func() { shellTitle(win.mgr.Lookup(2), "") }, "t2", "starting"},
+		{"first-message", func() { win.workers[2].firstMessage = "unconfirmed" }, "t2", "needs you"},
+		{"delivered", func() { win.workers[2].firstMessage = "delivered" }, "t2", "idle"},
+		{"agent", func() { win.workers[2].agent = "codex" }, "t2", "idle"},
+		{"needs", func() { win.workers[2].needs = true }, "t2", "needs you"},
+		{"exited", func() {
+			tab := win.mgr.Lookup(2)
+			tab.Session.Close()
+			waitControlCondition(t, func() bool { exited, _ := tab.Session.Exited(); return exited })
+		}, "t2", "exited"},
+		{"theme", func() { th, _ := theme.ByKey("washi"); win.applyTheme(th) }, "t2", "exited"},
+		{"locale", func() { g.Locale.Language = "ja" }, "t2", "exited"},
+		{"scale", func() { g.Metric.PxPerSp = 1.25 }, "t2", "exited"},
+		{"size", func() { g.Constraints.Max.X = 500 }, "t2", "exited"},
+		{"shaper", func() { win.ui.shaper = text.NewShaper(text.NoSystemFonts(), text.WithCollection(win.ui.faces)) }, "t2", "exited"},
+		{"spawn", func() { spawnPresentationWorker(t, win) }, "t2", "exited"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			before := win.stat.workers.draws
+			tc.change()
+			draw()
+			s := &win.stat.workers
+			if s.draws != before+1 || s.rows[0].name != tc.wantName || s.inputs[0].state != tc.wantState {
+				t.Fatalf("stale presentation: draws %d, rows %+v, inputs %+v", s.draws, s.rows, s.inputs)
+			}
+			draw()
+			if s.draws != before+1 {
+				t.Fatal("unchanged popover rebuilt")
+			}
+		})
+	}
+	if len(win.stat.workers.rows) != 2 {
+		t.Fatal("spawn missing")
+	}
+	win.closeTab(2)
+	draw()
+	if len(win.stat.workers.rows) != 1 || win.stat.workers.rows[0].id != 3 {
+		t.Fatal("stale closed worker")
+	}
+	win.stat.workers.open = false
+	draw()
+	win.stat.workers.open = true
+	draw()
+	if len(win.stat.workers.rows) != 1 {
+		t.Fatal("reopen lost rows")
+	}
+}

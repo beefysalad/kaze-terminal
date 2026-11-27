@@ -101,6 +101,8 @@ const (
 // agentRow is one session that has a known agent.
 type agentRow struct {
 	ID       tabs.TabID
+	Parent   tabs.TabID
+	Worker   bool
 	Name     string // agent name, also the logo key
 	Subtitle string // the running command, else the branch or folder
 	Since    time.Time
@@ -118,7 +120,10 @@ func buildAgents(side sideModel) agentsModel {
 	var by [3][]agentRow
 	add := func(space string, rows []sideRow) {
 		for _, r := range rows {
-			if r.Agent == "" {
+			if r.Worker {
+				continue
+			}
+			if r.Agent == "" && !hasWorkerRows(side, r.ID) {
 				continue
 			}
 			st := agentIdle
@@ -135,17 +140,55 @@ func buildAgents(side sideModel) agentsModel {
 			if sub == "" {
 				sub = r.Detail
 			}
+			label := space
+			if hasWorkerRows(side, r.ID) {
+				label = r.Title
+				if sub == label {
+					sub = ""
+				}
+			}
 			by[st] = append(by[st], agentRow{ID: r.ID, Name: r.Agent, Subtitle: sub, Since: r.Since, State: st,
-				Space: space, Mark: r.Mark, Running: r.Running})
+				Space: label, Mark: r.Mark, Running: r.Running})
 		}
 	}
 	for _, g := range side.Groups {
 		add(g.Name, g.Rows)
 	}
 	add("Shell", side.Loose)
+	var children []sideRow
+	for _, g := range side.Groups {
+		for _, r := range g.Rows {
+			if r.Worker {
+				children = append(children, r)
+			}
+		}
+	}
+	for _, r := range side.Loose {
+		if r.Worker {
+			children = append(children, r)
+		}
+	}
 	var m agentsModel
 	for _, rows := range by {
-		m.Rows = append(m.Rows, rows...)
+		if len(children) == 0 {
+			m.Rows = append(m.Rows, rows...)
+			continue
+		}
+		for _, r := range rows {
+			m.Rows = append(m.Rows, r)
+			for _, child := range children {
+				if !child.Worker || child.Parent != r.ID {
+					continue
+				}
+				st := agentIdle
+				if child.Mark == markNeeds {
+					st = agentNeeds
+				} else if child.Running {
+					st = agentWorking
+				}
+				m.Rows = append(m.Rows, agentRow{ID: child.ID, Parent: child.Parent, Worker: true, Name: child.Agent, Subtitle: child.Detail, Space: child.Title, State: st, Mark: child.Mark, Running: child.Running, Since: child.Since})
+			}
+		}
 	}
 	return m
 }
@@ -157,4 +200,20 @@ func controlSpaceName(loc locEntry) string {
 		return "Shell"
 	}
 	return loc.repoName
+}
+
+func hasWorkerRows(side sideModel, parent tabs.TabID) bool {
+	for _, g := range side.Groups {
+		for _, r := range g.Rows {
+			if r.Worker && r.Parent == parent {
+				return true
+			}
+		}
+	}
+	for _, r := range side.Loose {
+		if r.Worker && r.Parent == parent {
+			return true
+		}
+	}
+	return false
 }

@@ -181,7 +181,7 @@ func (c *chrome) layoutRail(gtx layout.Context, m sideModel, st sideState, size 
 	if !h.list.Empty() {
 		cl := clip.Rect(h.list).Push(ops)
 		top := h.list.Min.Y - scroll
-		for _, it := range items {
+		for i, it := range items {
 			at := top + it.y
 			switch it.kind {
 			case railLabel:
@@ -207,7 +207,16 @@ func (c *chrome) layoutRail(gtx layout.Context, m sideModel, st sideState, size 
 				if on {
 					fg = th.ActiveFG
 				}
-				c.railLogo(gtx, row.Agent, r, fg)
+				logoRect := r
+				if row.Worker {
+					logoRect.Min.X += gtx.Dp(16)
+					bottom := r.Max.Y + gap
+					if i+1 == len(items) || items[i+1].row == nil || !items[i+1].row.Worker || items[i+1].row.Parent != row.Parent {
+						bottom = (r.Min.Y + r.Max.Y) / 2
+					}
+					c.workerBranch(gtx, r.Min.X+gtx.Dp(6), r.Min.Y-gap, bottom, (r.Min.Y+r.Max.Y)/2, logoRect.Min.X)
+				}
+				c.railLogo(gtx, row.Agent, logoRect, fg)
 				d, dot := gtx.Dp(railDisc), gtx.Dp(railDot)
 				disc := image.Rect(r.Max.X-gtx.Dp(1)-d, r.Max.Y-gtx.Dp(1)-d, r.Max.X-gtx.Dp(1), r.Max.Y-gtx.Dp(1))
 				paint.FillShape(ops, th.Chrome, clip.Ellipse(disc).Op(ops))
@@ -223,7 +232,11 @@ func (c *chrome) layoutRail(gtx layout.Context, m sideModel, st sideState, size 
 					case markDone:
 						wcol = th.Done
 					}
-					tip = railTipFor{tile: hit.rect, mark: row.Mark, running: row.Running, title: row.Title, word: railWord(*row), wordCol: wcol, found: true}
+					word := railWord(*row)
+					if row.Worker {
+						word = row.Detail + " · " + word
+					}
+					tip = railTipFor{tile: hit.rect, mark: row.Mark, running: row.Running, title: row.Title, word: word, wordCol: wcol, found: true}
 				}
 			}
 		}
@@ -302,7 +315,12 @@ func (c *chrome) railTip(gtx layout.Context, t railTipFor, size image.Point, rig
 	var wCall op.CallOp
 	var wSize image.Point
 	if t.word != "" {
-		wCall, wSize = c.label(gtx, t.word, 12, render.Readable(t.wordCol, ink.tipBG))
+		wordRoom := gtx.Dp(railTipMaxW)
+		if room > 0 {
+			// Leave space for a short title as well as the fixed padding and dot.
+			wordRoom = min(wordRoom, max(room-2*gtx.Dp(railTipGap)-(padX+dot+gap+padX)-(gap+gap/3)-gtx.Dp(60), 0))
+		}
+		wCall, wSize = c.fitSide(gtx, t.word, 12, wordRoom, render.Readable(t.wordCol, ink.tipBG))
 	}
 	wordW := 0
 	if wSize.X > 0 {

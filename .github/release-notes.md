@@ -1,9 +1,11 @@
 ## What's changed
 
-- After a send, the target counts as working until its next prompt starts, so wait no longer returns at once on the previous turn's idle state.
-- Agents Kaze finds only by looking at the program in front of a tab, such as a Codex whose hooks did not reach Kaze, now show unknown instead of idle. Wait uses output quiet time for them.
-- A request over the 64 KiB cap now fails with a clear message and exit code 2 instead of a silent end of input.
-- A tag cannot be rebuilt out of nested pieces of a closing tag.
+- kaze ls marks your own tab with a self column. An agent name like codex resolves to a tab in your own space first.
+- Sending to, reading from or pressing keys in a tab of another space prints a warning.
+- Peer messaging and worker instructions share one rule: use a tab in your own space, never another project's tab unless you named it. If none is available, start your own worker when worker instructions are installed; otherwise tell the owner. Peer instructions now include the PowerShell form.
+- Settings shows Update available with an Update button for outdated instruction blocks, and Edited with Reset for blocks you changed. A one-time note at startup points out outdated instructions. If you already switched instructions on, press Update once in Settings > Agents.
+- Instruction blocks saved with Windows line endings no longer show as Modified.
+- Workers are told to talk only to their parent.
 
 ## Download
 

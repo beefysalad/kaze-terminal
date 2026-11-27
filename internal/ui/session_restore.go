@@ -122,6 +122,9 @@ func (win *window) captureRestoreLocked() {
 	list, active := win.mgr.State()
 	live := make([]sessionstate.Live, 0, len(list))
 	for _, t := range list {
+		if tab := win.mgr.Lookup(t.ID); tab == nil || tab.Parent != 0 || tab.Role == "worker" {
+			continue
+		}
 		dir := t.Dir
 		if dir == "" {
 			dir = win.opt.Dir

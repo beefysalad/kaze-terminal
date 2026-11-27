@@ -3,6 +3,8 @@
 package tabs
 
 import (
+	"crypto/rand"
+	"errors"
 	"os"
 	"slices"
 	"strconv"
@@ -32,7 +34,9 @@ type Tab struct {
 	Group      *Group // nil for a tab that no workspace run opened
 
 	// Set once at creation, so safe to read from any goroutine.
-	Dir string // the folder it was started in, "" for the window's default
+	Dir    string // the folder it was started in, "" for the window's default
+	Parent TabID  // zero for an owner-opened tab
+	Role   string // "worker" for workers; empty for an ordinary owner-opened tab
 }
 
 // Group says which workspace run opened a tab and which of its tabs it is.
@@ -47,6 +51,11 @@ type StartOpts struct {
 	Dir, Title, Color string // an empty Dir starts the shell in the window's default folder
 	Group             *Group
 	Prefeed           func(*term.Session) // writes into the tab before its shell's output, as NewWith does
+	Argv              []string            // explicit command; empty uses the configured shell
+	Background        bool                // leave the active tab unchanged
+	Env               []string            // extra environment entries for this tab only
+	Parent            TabID
+	Role              string
 }
 
 // entry holds what the session's notifier goroutine needs without taking the manager lock.
@@ -69,10 +78,11 @@ type entry struct {
 
 // Manager is driven from the UI goroutine; onChange may be called from any goroutine.
 type Manager struct {
-	start         func(env []string, dir string) (ptyx.Session, error)
+	start         func(argv, env []string, dir string) (ptyx.Session, error)
 	onChange      func()
 	stateObserver atomic.Pointer[func()]
 	baseEnv       []string
+	callerSecret  [32]byte // immutable per window, separate from the notify token
 
 	closing sync.WaitGroup // shells Close is still releasing in the background
 
@@ -90,16 +100,32 @@ type Manager struct {
 // NewManager starts no shell yet. start launches one shell with the given env
 // in dir, where "" means the default folder; onChange asks the window for a frame.
 func NewManager(start func(env []string, dir string) (ptyx.Session, error), cols, rows int, onChange func()) *Manager {
+	return NewManagerWithArgv(func(argv, env []string, dir string) (ptyx.Session, error) {
+		if len(argv) != 0 {
+			return nil, errors.New("tab launcher does not support explicit argv")
+		}
+		return start(env, dir)
+	}, cols, rows, onChange)
+}
+
+// NewManagerWithArgv starts no process yet. start launches argv with env in dir;
+// an empty argv requests the configured shell, and an empty dir the default folder.
+func NewManagerWithArgv(start func(argv, env []string, dir string) (ptyx.Session, error), cols, rows int, onChange func()) *Manager {
 	if onChange == nil {
 		onChange = func() {}
 	}
-	return &Manager{start: start, onChange: onChange, baseEnv: baseEnv(os.Environ()), cols: cols, rows: rows}
+	m := &Manager{start: start, onChange: onChange, baseEnv: baseEnv(os.Environ()), cols: cols, rows: rows}
+	if _, err := rand.Read(m.callerSecret[:]); err != nil {
+		panic("initialize tab caller secret: " + err.Error())
+	}
+	return m
 }
 
 // Inherited terminal identity is dropped (a kaze started from Windows Terminal or
 // VS Code must not claim to be them) and kaze's own is set. KAZE_TAB_ID is
-// dropped too so a kaze started inside a kaze tab gets clean IDs.
-var droppedEnv = []string{"KAZE_TAB_ID", "KAZE_SOCKET", "KAZE_BIN", "KAZE_NOTIFY", "KAZE_NOTIFY_TOKEN", "TERM", "COLORTERM", "TERM_PROGRAM", "TERM_PROGRAM_VERSION", "WT_SESSION", "WT_PROFILE_ID"}
+// dropped too so a kaze started inside a kaze tab gets clean IDs. Worker launch
+// metadata and caller keys must not be inherited by ordinary tabs either.
+var droppedEnv = []string{"KAZE_TAB_ID", "KAZE_SOCKET", "KAZE_BIN", "KAZE_NOTIFY", "KAZE_NOTIFY_TOKEN", "KAZE_TASK", "KAZE_PARENT", "KAZE_ROLE", "KAZE_TAB_KEY", "TERM", "COLORTERM", "TERM_PROGRAM", "TERM_PROGRAM_VERSION", "WT_SESSION", "WT_PROFILE_ID"}
 
 var identityEnv = []string{"TERM=xterm-256color", "COLORTERM=truecolor", "TERM_PROGRAM=kaze"}
 
@@ -143,7 +169,7 @@ func (m *Manager) NewWith(prefeed func(*term.Session)) (*Tab, error) {
 	return m.newTab(StartOpts{}, prefeed)
 }
 
-// NewOpts is New with its own folder, fixed title, color and group.
+// NewOpts starts a tab with its own launch and presentation settings.
 func (m *Manager) NewOpts(o StartOpts) (*Tab, error) { return m.newTab(o, o.Prefeed) }
 
 func (m *Manager) newTab(o StartOpts, prefeed func(*term.Session)) (*Tab, error) {
@@ -153,13 +179,24 @@ func (m *Manager) newTab(o StartOpts, prefeed func(*term.Session)) (*Tab, error)
 	cols, rows, sb, nenv := m.cols, m.rows, m.sbLines, m.notifyEnv
 	m.mu.Unlock()
 
-	env := append(slices.Clip(m.baseEnv), nenv...)
+	env := slices.Clone(m.baseEnv)
+	// Callers may add launch metadata, but cannot supply or override caller keys.
+	for _, e := range o.Env {
+		name, _, _ := strings.Cut(e, "=")
+		if !strings.EqualFold(name, "KAZE_TAB_KEY") {
+			env = append(env, e)
+		}
+	}
+	if o.Parent == 0 && o.Role == "" {
+		env = append(env, "KAZE_TAB_KEY="+m.deriveOwnerKey(id))
+	}
+	env = append(env, nenv...)
 	env = append(env, "KAZE_TAB_ID="+strconv.Itoa(int(id)))
-	p, err := m.start(env, o.Dir)
+	p, err := m.start(o.Argv, env, o.Dir)
 	if err != nil {
 		return nil, err
 	}
-	e := &entry{tab: &Tab{ID: id, Title: o.Title, FixedTitle: o.Title, Color: o.Color, Group: o.Group, Dir: o.Dir}}
+	e := &entry{tab: &Tab{ID: id, Title: o.Title, FixedTitle: o.Title, Color: o.Color, Group: o.Group, Dir: o.Dir, Parent: o.Parent, Role: o.Role}}
 	s := term.NewSessionOpts(p, cols, rows, term.Opts{Scrollback: sb, Prefeed: prefeed}, func() { m.notify(e) })
 	e.sess.Store(s)
 	e.tab.Session = s
@@ -167,7 +204,9 @@ func (m *Manager) newTab(o StartOpts, prefeed func(*term.Session)) (*Tab, error)
 	m.mu.Lock()
 	m.entries = append(m.entries, e)
 	m.mu.Unlock()
-	m.active.Store(int64(id))
+	if !o.Background {
+		m.active.Store(int64(id))
+	}
 	m.stateChanged()
 	return e.tab, nil
 }

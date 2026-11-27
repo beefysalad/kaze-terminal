@@ -69,7 +69,11 @@ const shots = {
   palette: 'The palette, opened with Cmd+K: waiting sessions first, then everything else',
   workspaces: 'A workspace card with its API, Web and Health members running',
   settings: 'Appearance settings with five themes and a live preview',
-  about: 'About Kaze on macOS'
+  about: 'About Kaze on macOS',
+  workers: 'Kaze 0.46: reviewer, tests and docs workers nested under their Claude parent in todo-api, with tagged reports and the worker count',
+  'workers-consent': 'Kaze asks whether to allow a Claude parent to start a Codex reviewer, with Allow and Deny controls',
+  'workers-popover': 'The worker count opens a popover naming reviewer, tests and docs, with their states and Stop all workers',
+  'workers-settings': 'Kaze 0.46 Settings, Agents: Let agents start workers, the reviewer template and Worker instructions'
 };
 const order = Object.keys(shots);
 const box = document.getElementById('lightbox');

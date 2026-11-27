@@ -3,6 +3,7 @@ package control
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -34,6 +35,20 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 	if !opt.Enabled {
 		return Reply{Error: &Error{CodeDisabled, "control is disabled"}}
 	}
+	if RequiresOwnerKey(req.Op) || (req.Op == "wait" && req.Children != "") {
+		if e := VerifyOwnerKey(host, req.From, req.CallerKey); e != nil {
+			return Reply{Error: e}
+		}
+	}
+	if req.Op == "templates" {
+		if h, ok := host.(interface{ Templates(context.Context) Reply }); ok {
+			return h.Templates(ctx)
+		}
+		return Reply{Error: &Error{CodeUnknownOp, "templates unavailable"}}
+	}
+	if req.Op == "spawn" || req.Op == "kill" {
+		return workers(ctx, host, req)
+	}
 	if req.Op == "name" || req.Op == "label" {
 		return metadata(ctx, host, req)
 	}
@@ -51,9 +66,13 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 				}
 			}
 		}
-		tab, err := Resolve(host.Tabs(), req.Tab)
+		tabs := host.Tabs()
+		tab, err := ResolveFrom(tabs, req.Tab, req.From)
 		if err != nil {
 			return Reply{Error: err}
+		}
+		if e := WorkerInputGuard(tab); e != nil {
+			return Reply{Error: e}
 		}
 		var hostErr error
 		if req.Op == "keys" {
@@ -62,9 +81,12 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 			hostErr = host.Interrupt(tab.ID, req.CtrlC)
 		}
 		if hostErr != nil {
-			return Reply{Error: &Error{CodeHostError, "could not submit to tab"}}
+			return inputError(hostErr)
 		}
-		return Reply{OK: true}
+		return Reply{OK: true, Warning: crossSpace(tabs, req.From, tab)}
+	}
+	if req.Op == "report" {
+		return report(host, req)
 	}
 	if req.Op == "ls" {
 		return Reply{OK: true, Tabs: host.Tabs()}
@@ -73,7 +95,8 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		if req.Lines < 0 {
 			return Reply{Error: &Error{CodeInvalidRequest, "lines must not be negative"}}
 		}
-		tab, err := Resolve(host.Tabs(), req.Tab)
+		tabs := host.Tabs()
+		tab, err := ResolveFrom(tabs, req.Tab, req.From)
 		if err != nil {
 			return Reply{Error: err}
 		}
@@ -81,16 +104,19 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		if hostErr != nil {
 			return Reply{Error: &Error{CodeHostError, "could not read tab"}}
 		}
-		return Reply{OK: true, Text: text}
+		return Reply{OK: true, Text: text, Warning: crossSpace(tabs, req.From, tab)}
 	}
 	if req.Op == "send" {
 		if len(req.Text) > MaxTextBytes && (!opt.AgentTag || req.From == "") {
 			return Reply{Error: &Error{CodeTextTooLarge, "text exceeds 32 KiB"}}
 		}
 		tabs := host.Tabs()
-		tab, err := Resolve(tabs, req.Tab)
+		tab, err := ResolveFrom(tabs, req.Tab, req.From)
 		if err != nil {
 			return Reply{Error: err}
+		}
+		if e := WorkerInputGuard(tab); e != nil {
+			return Reply{Error: e}
 		}
 		if tab.Status == "working" && req.IfIdle {
 			return Reply{Error: &Error{CodeBusy, "target is working"}}
@@ -112,15 +138,37 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 			return Reply{Error: &Error{CodeTextTooLarge, "text exceeds 32 KiB"}}
 		}
 		if err := host.Submit(tab.ID, []byte(text)); err != nil {
-			return Reply{Error: &Error{CodeHostError, "could not submit to tab"}}
+			return inputError(err)
 		}
 		warning := ""
 		if tab.Status == "working" {
 			warning = "busy"
 		}
+		if spaceWarning := crossSpace(tabs, req.From, tab); spaceWarning != "" {
+			if warning != "" {
+				warning += "; "
+			}
+			warning += spaceWarning
+		}
 		return Reply{OK: true, Status: tab.Status, Warning: warning, Tabs: []TabInfo{tab}}
 	}
 	return Reply{Error: &Error{CodeUnknownOp, "unknown control operation"}}
+}
+
+// crossSpace warns about a different project without refusing an explicit target.
+func crossSpace(tabs []TabInfo, from string, target TabInfo) string {
+	if from == "" {
+		return ""
+	}
+	for _, sender := range tabs {
+		if sender.ID == from {
+			if sender.Space == target.Space {
+				return ""
+			}
+			return fmt.Sprintf("target %s is in space %s, not your space %s; use it only if the owner named that tab", target.ID, target.Space, sender.Space)
+		}
+	}
+	return ""
 }
 
 // Strip while copying so removing one marker also catches a newly joined one.
@@ -140,6 +188,11 @@ func stripPeerClosingTags(text string) string {
 // Resolve finds an exact id first, otherwise an exact, unique nonempty name.
 // It does not normalize names or interpret a name as a numeric tab index.
 func Resolve(tabs []TabInfo, address string) (TabInfo, *Error) {
+	return ResolveFrom(tabs, address, "")
+}
+
+// ResolveFrom prefers a unique agent in the caller's space after exact ids and names.
+func ResolveFrom(tabs []TabInfo, address, from string) (TabInfo, *Error) {
 	if address == "" {
 		return TabInfo{}, &Error{CodeInvalidRequest, "tab address is required"}
 	}
@@ -170,6 +223,21 @@ func Resolve(tabs []TabInfo, address string) (TabInfo, *Error) {
 			byAgent = append(byAgent, tab)
 		}
 	}
+	for _, sender := range tabs {
+		if sender.ID != from {
+			continue
+		}
+		var local []TabInfo
+		for _, tab := range byAgent {
+			if tab.Space == sender.Space {
+				local = append(local, tab)
+			}
+		}
+		if len(local) == 1 {
+			return local[0], nil
+		}
+		break
+	}
 	switch len(byAgent) {
 	case 1:
 		return byAgent[0], nil
@@ -179,7 +247,7 @@ func Resolve(tabs []TabInfo, address string) (TabInfo, *Error) {
 	return TabInfo{}, &Error{CodeAmbiguousTab, fmt.Sprintf("%d tabs run %q, use an id%s", len(byAgent), address, describeTabs(byAgent))}
 }
 
-// describeTabs lists tabs as "; tabs: t1 (claude, main), t2 (codex)" so a caller
+// describeTabs lists ids, agents, names and spaces so a caller
 // that guessed wrong can correct itself without another command.
 func describeTabs(tabs []TabInfo) string {
 	if len(tabs) == 0 {
@@ -199,6 +267,9 @@ func describeTabs(tabs []TabInfo) string {
 		if tab.Name != "" {
 			detail = append(detail, tab.Name)
 		}
+		if tab.Space != "" {
+			detail = append(detail, "space "+tab.Space)
+		}
 		if len(detail) == 0 {
 			parts = append(parts, tab.ID)
 			continue
@@ -206,4 +277,20 @@ func describeTabs(tabs []TabInfo) string {
 		parts = append(parts, tab.ID+" ("+strings.Join(detail, ", ")+")")
 	}
 	return "; tabs: " + strings.Join(parts, ", ")
+}
+
+// WorkerInputGuard reserves startup trust and approval prompts for native owner input.
+func WorkerInputGuard(tab TabInfo) *Error {
+	if tab.Role == "worker" && (tab.FirstMessage != "delivered" || tab.Status == "needs") {
+		return &Error{CodeNotAllowed, "the owner has to answer worker trust or approval prompts in that tab"}
+	}
+	return nil
+}
+
+func inputError(err error) Reply {
+	var refusal *Error
+	if errors.As(err, &refusal) && refusal.Code == CodeNotAllowed {
+		return Reply{Error: refusal}
+	}
+	return Reply{Error: &Error{CodeHostError, "could not submit to tab"}}
 }

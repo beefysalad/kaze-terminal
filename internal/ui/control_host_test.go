@@ -233,3 +233,52 @@ func TestControlSnapshotFollowsDetectedAgent(t *testing.T) {
 		t.Fatalf("peers still see %+v after the program was detected", got)
 	}
 }
+
+func TestControlOwnerKeySnapshot(t *testing.T) {
+	win, st := sideWindow(t, true)
+	var envs [][]string
+	win.mgr.CloseAll()
+	win.mgr = tabs.NewManager(func(env []string, dir string) (ptyx.Session, error) {
+		envs = append(envs, env)
+		return st.start(env, dir)
+	}, 10, 2, nil)
+	t.Cleanup(win.mgr.CloseAll)
+	owner := openIn(t, win, "")
+	_, err := win.mgr.NewOpts(tabs.StartOpts{Parent: owner.ID, Role: "worker"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	win.publishControl()
+	// The fake launcher records the actual environment handed to each tab.
+	key := ""
+	for _, e := range envs[0] {
+		if strings.HasPrefix(e, "KAZE_TAB_KEY=") {
+			key = strings.TrimPrefix(e, "KAZE_TAB_KEY=")
+		}
+	}
+	if key == "" {
+		t.Fatal("owner has no key")
+	}
+	call := func(from, key string) ctl.Reply {
+		b, _ := json.Marshal(map[string]string{"op": "spawn", "from": from, "caller_key": key})
+		return controlAdapter(&win.control)(b).(ctl.Reply)
+	}
+	if r := call("t1", key); r.Error == nil || r.Error.Code != ctl.CodeUnknownAgent {
+		t.Fatalf("authenticated owner did not reach spawn validation: %+v", r)
+	}
+	if r := call("t2", key); r.Error == nil || r.Error.Code != "not_allowed" {
+		t.Fatalf("worker accepted: %+v", r)
+	}
+	wire, err := json.Marshal(ctl.Handle(&win.control, ctl.Request{Op: "ls"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(wire), key) {
+		t.Fatal("snapshot leaked key on wire")
+	}
+	win.mgr.Close(owner.ID)
+	win.publishControl()
+	if r := call("t1", key); r.Error == nil || r.Error.Code != "not_allowed" {
+		t.Fatalf("closed tab accepted: %+v", r)
+	}
+}

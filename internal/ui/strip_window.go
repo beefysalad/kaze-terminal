@@ -393,6 +393,10 @@ func (c *chrome) layoutStrip(gtx layout.Context, m sideModel, lay tabStripLayout
 			c.icon(gtx, "terminal", image.Rect(x, mid-logoPx/2, x+logoPx, mid+logoPx/2), fg)
 			x += logoPx + gap
 		}
+		if row.Worker {
+			c.workerMark(gtx, image.Rect(x, mid-gtx.Dp(6), x+gtx.Dp(12), mid+gtx.Dp(6)), fg)
+			x += gtx.Dp(16)
+		}
 		right := t.Close.Min.X - gap/2
 		if t.ID == renaming {
 			// The editor is drawn live over this frame, which only holds its field.

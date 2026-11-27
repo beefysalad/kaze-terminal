@@ -15,7 +15,7 @@ func (h *controlHost) Keys(id string, keys []string) error {
 	if err != nil {
 		return err
 	}
-	return target.keys(keys)
+	return h.keys(id, target, keys)
 }
 
 func (h *controlHost) Interrupt(id string, ctrlC bool) error {
@@ -33,17 +33,33 @@ func (h *controlHost) Interrupt(id string, ctrlC bool) error {
 			}
 		}
 	}
-	return snapshot.sessions[id].keys([]string{name})
+	return h.keys(id, snapshot.sessions[id], []string{name})
 }
 
-func (target *controlSession) keys(keys []string) error {
+func (h *controlHost) keys(id string, target *controlSession, keys []string) error {
 	target.send.Lock()
 	defer target.send.Unlock()
 	s := target.session
 	s.Lock()
 	modes := s.Applier().Modes()
 	s.Unlock()
-	return submitControlKeys(keys, modes, s.Submit)
+	for _, name := range keys {
+		var submitErr error
+		err := submitControlKeys([]string{name}, modes, func(data []byte) term.SubmitResult {
+			submitErr = h.submitInput(id, target, data)
+			if submitErr != nil {
+				return term.Closed
+			}
+			return term.Accepted
+		})
+		if submitErr != nil {
+			return submitErr
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // submitControlKeys uses the terminal's existing key encoder, one Submit per

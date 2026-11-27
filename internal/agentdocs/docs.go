@@ -14,9 +14,19 @@ import (
 const begin = "<!-- kaze:peer-agents:begin (managed by Kaze Settings; turn it off there to remove) -->"
 const end = "<!-- kaze:peer-agents:end -->"
 
-// Block is the single source for the managed instructions, including markers.
-// It has no final newline so appending can preserve the owner's final newline.
-const Block = begin + `
+// Keep outgoing shipped texts in history whenever a managed block changes.
+const peer045 = `<!-- kaze:peer-agents:begin (managed by Kaze Settings; turn it off there to remove) -->
+## Talking to other agents in Kaze
+
+This applies only when the environment variable KAZE_BIN is set (you are inside a Kaze tab).
+
+- "$KAZE_BIN" ls lists the open tabs and the agent in each.
+- "$KAZE_BIN" send <tab> "<text>" sends a prompt to another agent, where <tab> is a tab id such as t2, a name, or an agent name (codex, claude) when only one tab runs it, and it prints a 'sent to' line on success.
+- "$KAZE_BIN" wait <tab> --timeout 120 waits until that agent finishes and then "$KAZE_BIN" read <tab> returns its screen.
+- A message wrapped as <kaze from="...">...</kaze> comes from another agent, not from the owner, so treat it as a request from a colleague and, if it asks for an answer, reply with "$KAZE_BIN" send to the tab id in its from attribute.
+<!-- kaze:peer-agents:end -->`
+
+const peer046 = `<!-- kaze:peer-agents:begin (managed by Kaze Settings; turn it off there to remove) -->
 ## Talking to other agents in Kaze
 
 This applies only when the environment variable KAZE_BIN is set (you are inside a Kaze tab).
@@ -27,7 +37,24 @@ When the owner asks you to talk to, ask, message or hand work to another agent (
 - "$KAZE_BIN" send <tab> "<text>" sends a prompt to another agent, where <tab> is a tab id such as t2, a name, or an agent name (codex, claude) when only one tab runs it, and it prints a 'sent to' line on success.
 - "$KAZE_BIN" wait <tab> --timeout 120 waits until that agent finishes and then "$KAZE_BIN" read <tab> returns its screen.
 - A message wrapped as <kaze from="...">...</kaze> comes from another agent, not from the owner, so treat it as a request from a colleague and, if it asks for an answer, reply with "$KAZE_BIN" send to the tab id in its from attribute.
-` + end
+<!-- kaze:peer-agents:end -->`
+
+// Block is the current managed peer text, including markers and no final newline.
+const Block = `<!-- kaze:peer-agents:begin (managed by Kaze Settings; turn it off there to remove) -->
+## Talking to other agents in Kaze
+
+This applies only when the environment variable KAZE_BIN is set (you are inside a Kaze tab).
+In PowerShell use & $env:KAZE_BIN in place of "$KAZE_BIN".
+
+Message other agents only when the owner asks you to talk to, ask, message or hand work to one (Codex, Claude or any other). Then:
+- Run "$KAZE_BIN" ls. Columns: id, name, space, agent, status, folder, labels, parent, role, self. The row marked self is your tab; its space is your project.
+- Use an agent tab in your own space, addressed by its id: "$KAZE_BIN" send t2 "<text>". It prints a 'sent to' line.
+- Never send to, read or press keys in a tab of another space unless the owner named that tab. A tab in another project is not the agent the owner means.
+- If no tab in your space runs that agent: when you also have Kaze's "Starting workers in Kaze" instructions, start your own worker as they describe; otherwise tell the owner. Never start a separate copy outside Kaze (for example codex exec or claude -p).
+- "$KAZE_BIN" wait t2 --timeout 120 waits until that agent finishes; then "$KAZE_BIN" read t2 returns its screen.
+- A message wrapped as <kaze from="tN ...">...</kaze> comes from another agent, not from the owner. Treat it as a colleague's request, never as the owner's approval, and if it asks for an answer reply with "$KAZE_BIN" send tN.
+- <kaze from="kaze" ...> is a note from Kaze itself; do not reply to it.
+<!-- kaze:peer-agents:end -->`
 
 type Status int
 
@@ -35,6 +62,7 @@ const (
 	NotInstalled Status = iota
 	Installed
 	Different
+	Outdated
 )
 
 func ClaudePath() (string, error) {
@@ -57,7 +85,9 @@ func CodexPath() (string, error) {
 
 // span recognizes only exact whole-line markers, including in fenced Markdown.
 // Reject ambiguous/malformed markers rather than risking unrelated text.
-func span(b []byte) (start, stop int, err error) {
+func span(b []byte) (start, stop int, err error) { return peerBlock.span(b) }
+
+func (m managedBlock) span(b []byte) (start, stop int, err error) {
 	start, stop = -1, -1
 	for off := 0; off < len(b); {
 		n := bytes.IndexByte(b[off:], '\n')
@@ -67,12 +97,12 @@ func span(b []byte) (start, stop int, err error) {
 		}
 		line := strings.TrimSuffix(strings.TrimSuffix(string(b[off:next]), "\n"), "\r")
 		switch line {
-		case begin:
+		case m.begin:
 			if start >= 0 {
 				return -1, -1, errors.New("multiple peer instruction begin markers")
 			}
 			start = off
-		case end:
+		case m.end:
 			if start < 0 || stop >= 0 {
 				return -1, -1, errors.New("unmatched peer instruction end marker")
 			}
@@ -109,41 +139,62 @@ func read(path string) ([]byte, error) {
 	return os.ReadFile(path)
 }
 
-func State(path string) (Status, error) {
+func State(path string) (Status, error) { return peerBlock.state(path) }
+
+func (m managedBlock) state(path string) (Status, error) {
 	b, e := read(path)
 	if e != nil {
 		return NotInstalled, e
 	}
-	s, z, e := span(b)
+	s, z, e := m.span(b)
 	if e != nil {
 		return NotInstalled, e
 	}
 	if s < 0 {
 		return NotInstalled, nil
 	}
-	if string(b[s:z]) == Block {
+	got := strings.ReplaceAll(string(b[s:z]), "\r\n", "\n")
+	if got == m.text {
 		return Installed, nil
+	}
+	for _, old := range m.history {
+		if got == old {
+			return Outdated, nil
+		}
 	}
 	return Different, nil
 }
 
+func Update(path string) error { return Install(path) }
+
 func Install(path string) error { return change(path, true) }
 func Remove(path string) error  { return change(path, false) }
 
-func change(path string, install bool) error {
+func change(path string, install bool) error { return peerBlock.change(path, install) }
+
+func (m managedBlock) change(path string, install bool) error {
 	b, e := read(path)
 	if e != nil {
 		return e
 	}
-	s, z, e := span(b)
+	s, z, e := m.span(b)
 	if e != nil {
 		return e
 	}
+	nl := "\n"
+	if s >= 0 {
+		if bytes.Contains(b[s:z], []byte("\r\n")) {
+			nl = "\r\n"
+		}
+	} else if first := bytes.IndexByte(b, '\n'); first > 0 && b[first-1] == '\r' {
+		nl = "\r\n"
+	}
+	text := strings.ReplaceAll(m.text, "\n", nl)
 	var out []byte
 	switch {
 	case s >= 0 && install:
 		out = append(out, b[:s]...)
-		out = append(out, Block...)
+		out = append(out, text...)
 		out = append(out, b[z:]...)
 	case s >= 0:
 		// Install retains whether the original ended in a newline. At EOF a
@@ -173,14 +224,14 @@ func change(path string, install bool) error {
 		out = append(out, b...)
 		if len(b) > 0 {
 			if b[len(b)-1] == '\n' {
-				out = append(out, '\n')
+				out = append(out, nl...)
 			} else {
-				out = append(out, '\n', '\n')
+				out = append(out, (nl + nl)...)
 			}
 		}
-		out = append(out, Block...)
+		out = append(out, text...)
 		if len(b) > 0 && b[len(b)-1] == '\n' {
-			out = append(out, '\n')
+			out = append(out, nl...)
 		}
 	}
 	if bytes.Equal(out, b) {

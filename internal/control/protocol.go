@@ -1,6 +1,10 @@
 package control
 
-import "time"
+import (
+	"time"
+
+	"github.com/beefysalad/kaze-terminal/internal/orchestrate"
+)
 
 const (
 	MaxKeys      = 64
@@ -9,40 +13,61 @@ const (
 )
 
 // Request is one control operation. The transport authenticates Token before
-// calling Handle; handlers do not authenticate callers themselves.
+// calling Handle; worker management also authenticates the per-tab caller key.
 type Request struct {
-	From    string   `json:"from,omitempty"`
-	IfIdle  bool     `json:"if_idle,omitempty"`
-	Name    string   `json:"name,omitempty"`
-	Key     string   `json:"key,omitempty"`
-	Value   string   `json:"value,omitempty"`
-	For     string   `json:"for,omitempty"`
-	Timeout int      `json:"timeout,omitempty"` // seconds, zero selects 120
-	Quiet   int      `json:"quiet,omitempty"`   // milliseconds, zero selects 1500
-	Args    []string `json:"args,omitempty"`
-	CtrlC   bool     `json:"ctrl_c,omitempty"`
-	Op      string   `json:"op"`
-	Tab     string   `json:"tab,omitempty"` // stable id (t3) or an exact, unique name
-	Text    string   `json:"text,omitempty"`
-	Lines   int      `json:"lines,omitempty"`
-	Token   string   `json:"token,omitempty"`
+	Children  string            `json:"children,omitempty"`
+	Agent     string            `json:"agent,omitempty"`
+	CWD       string            `json:"cwd,omitempty"`
+	Labels    map[string]string `json:"labels,omitempty"`
+	Mode      string            `json:"mode,omitempty"`
+	WaitStart bool              `json:"wait_start,omitempty"`
+	Task      string            `json:"task,omitempty"`
+	CallerKey string            `json:"caller_key,omitempty"` // separate from label Key
+	From      string            `json:"from,omitempty"`
+	IfIdle    bool              `json:"if_idle,omitempty"`
+	Name      string            `json:"name,omitempty"`
+	Key       string            `json:"key,omitempty"`
+	Value     string            `json:"value,omitempty"`
+	For       string            `json:"for,omitempty"`
+	Timeout   int               `json:"timeout,omitempty"` // seconds, zero selects 120
+	Quiet     int               `json:"quiet,omitempty"`   // milliseconds, zero selects 1500
+	Args      []string          `json:"args,omitempty"`
+	CtrlC     bool              `json:"ctrl_c,omitempty"`
+	Op        string            `json:"op"`
+	Tab       string            `json:"tab,omitempty"` // stable id (t3) or an exact, unique name
+	Text      string            `json:"text,omitempty"`
+	Lines     int               `json:"lines,omitempty"`
+	Token     string            `json:"token,omitempty"`
+}
+
+// InboxMessage is an unread worker message in an immutable snapshot.
+type InboxMessage struct {
+	Sequence uint64 `json:"sequence"`
+	Kind     string `json:"kind"`
+	Text     string `json:"text"`
 }
 
 // TabInfo is a value in the Host's immutable tab snapshot.
 type TabInfo struct {
-	Labels    map[string]string `json:"labels"`
-	ID        string            `json:"id"`
-	Name      string            `json:"name"`
-	Space     string            `json:"space"`
-	Folder    string            `json:"folder"`
-	Agent     string            `json:"agent"`
-	Status    string            `json:"status"`
-	Since     time.Time         `json:"since"`
-	Workspace bool              `json:"workspace"` // a workspace-run member
+	Unread       int               `json:"unread,omitempty"`
+	Inbox        []InboxMessage    `json:"inbox,omitempty"`
+	Parent       string            `json:"parent,omitempty"`
+	Role         string            `json:"role,omitempty"`
+	FirstMessage string            `json:"first_message,omitempty"`
+	Labels       map[string]string `json:"labels"`
+	ID           string            `json:"id"`
+	Name         string            `json:"name"`
+	Space        string            `json:"space"`
+	Folder       string            `json:"folder"`
+	Agent        string            `json:"agent"`
+	Status       string            `json:"status"`
+	Since        time.Time         `json:"since"`
+	Workspace    bool              `json:"workspace"` // a workspace-run member
 }
 
 // Reply is the result of one operation. Error is present only on failure.
 type Reply struct {
+	Reason    string    `json:"reason,omitempty"`
 	Status    string    `json:"status,omitempty"`
 	Warning   string    `json:"warning,omitempty"`
 	OK        bool      `json:"ok"`
@@ -61,15 +86,23 @@ type Error struct {
 func (e *Error) Error() string { return e.Message }
 
 const (
-	CodeBusy           = "busy"
-	CodeDisabled       = "disabled"
-	CodeUnknownKey     = "unknown_key"
-	CodeUnknownTab     = "unknown_tab"
-	CodeAmbiguousTab   = "ambiguous_tab"
-	CodeInvalidRequest = "invalid_request"
-	CodeUnknownOp      = "unknown_op"
-	CodeTextTooLarge   = "text_too_large"
-	CodeHostError      = "host_error"
+	CodeSpawnDisabled   = "spawn_disabled"
+	CodeLimit           = orchestrate.CodeLimit
+	CodeRateLimited     = orchestrate.CodeRateLimited
+	CodeBadCWD          = orchestrate.CodeBadCWD
+	CodeUnknownTemplate = orchestrate.CodeUnknownTemplate
+	CodeUnknownAgent    = orchestrate.CodeUnknownAgent
+	CodeSpawnFailed     = orchestrate.CodeSpawnFailed
+	CodeNotAllowed      = "not_allowed"
+	CodeBusy            = "busy"
+	CodeDisabled        = "disabled"
+	CodeUnknownKey      = "unknown_key"
+	CodeUnknownTab      = "unknown_tab"
+	CodeAmbiguousTab    = "ambiguous_tab"
+	CodeInvalidRequest  = "invalid_request"
+	CodeUnknownOp       = "unknown_op"
+	CodeTextTooLarge    = orchestrate.CodeTextTooLarge
+	CodeHostError       = "host_error"
 )
 
 // Host exposes thread-safe terminal operations without UI or transport types.

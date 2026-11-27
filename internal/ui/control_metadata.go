@@ -61,6 +61,7 @@ func (h *controlHost) Name(ctx context.Context, id, name string) *ctl.Error {
 
 // drainControl runs in the frame on the UI goroutine, before models are built.
 func (win *window) drainControl() {
+	win.drainWorkers()
 	h := &win.control
 	h.renameMu.Lock()
 	pending := h.renames
@@ -131,7 +132,7 @@ func (h *controlHost) Label(id, key, value string) *ctl.Error {
 		h.labels[id] = labels
 	}
 	labels[key] = value
-	next := &controlSnapshot{tabs: slices.Clone(old.tabs), sessions: old.sessions}
+	next := &controlSnapshot{ownerKeys: old.ownerKeys, tabs: slices.Clone(old.tabs), sessions: old.sessions}
 	for i := range next.tabs {
 		if next.tabs[i].ID == id {
 			next.tabs[i].Labels = cloneLabels(labels)

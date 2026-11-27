@@ -68,6 +68,7 @@ func (win *window) isMember(t *tabs.Tab) (uint64, bool) {
 func (win *window) sideIn() sideInput {
 	in := sideInput{
 		Tabs:     win.mgr.Tabs(),
+		Worker:   win.workerPresentation,
 		Loc:      win.locOf,
 		Mark:     win.alerts.markOf,
 		Member:   win.isMember,
@@ -103,6 +104,7 @@ func (win *window) selectSession(id tabs.TabID) {
 // order (else the one before) is shown first, so closing never lands on a member
 // while a session is left; with none left, the first open member is shown.
 func (win *window) closeTab(id tabs.TabID) {
+	win.closeWorkers(id)
 	defer win.publishControl()
 	win.system.remove(id)
 	win.closeSessionDocs(id)
