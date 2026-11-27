@@ -67,7 +67,7 @@
       </div>
     </div>
   </section>
-  <div class="wrap news"><span class="tag">0.46.2</span><a href="#changelog">Subagents are back in the sidebar <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
+  <div class="wrap news"><span class="tag">0.47</span><a href="#changelog">A first-run tour, a calmer Workspaces list and a new UI font <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
 
   <section class="k-sec wrap" aria-labelledby="demo-title">
     <header class="k-head">
@@ -169,7 +169,19 @@
     </header>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.46.2</span><span class="badge">Latest</span><time datetime="2026-11-27">Nov 27, 2026</time></div>
+        <div class="release-meta"><span class="version">0.47</span><span class="badge">Latest</span><time datetime="2026-11-27">Nov 27, 2026</time></div>
+        <div class="release-body">
+          <h3>A first-run tour, a calmer Workspaces list and a new UI font</h3>
+          <ul>
+            <li>A short tour shows once on a fresh install: spaces and agents, workspaces, the bottom bar, the Agents board and turning on live status. Skip it any time; replay it from About or the command palette.</li>
+            <li>Settings, Workspaces shows one collapsed row per workspace. Click a row for its tabs and commands; search and state filters appear as the list grows.</li>
+            <li>The interface now uses Geist. The terminal, code, paths and commands stay in JetBrains Mono.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.46.2</span><time datetime="2026-11-27">Nov 27, 2026</time></div>
         <div class="release-body">
           <h3>Subagents are back in the sidebar</h3>
           <ul>
@@ -190,21 +202,6 @@
             <li>Settings shows Update available with an Update button for outdated instruction blocks, and Edited with Reset for blocks you changed. A one-time note at startup points out outdated instructions. If you already switched instructions on, press Update once in Settings &gt; Agents.</li>
             <li>Instruction blocks saved with Windows line endings no longer show as Modified.</li>
             <li>Workers are told to talk only to their parent.</li>
-          </ul>
-        </div>
-      </li>
-
-      <li class="release">
-        <div class="release-meta"><span class="version">0.46</span><time datetime="2026-11-26">Nov 26, 2026</time></div>
-        <div class="release-body">
-          <h3>Agents that start agents</h3>
-          <ul>
-            <li>An agent can start Claude Code or Codex workers in background tabs with kaze run, wait for them, read their reports and stop them.</li>
-            <li>Workers nest under their parent in the same space, with a worker mark, a status bar count and Stop all workers.</li>
-            <li>Off by default: enable Settings &gt; Agents &gt; Let agents start workers. The first time an agent asks to start workers, Kaze asks you to allow it.</li>
-            <li>Templates live in the config folder. Limits keep each agent to 4 workers and Kaze to 8 in total.</li>
-            <li>Workers close with their parent and never come back after a restart. A worker waiting on a trust or approval dialog is left for you to answer.</li>
-            <li>Only Claude Code and Codex can be workers. On Windows, Claude Code needs the native claude.exe.</li>
           </ul>
         </div>
       </li>

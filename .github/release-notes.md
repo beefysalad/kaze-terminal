@@ -1,7 +1,8 @@
 ## What's changed
 
-- Each agent row shows its subagents again, up to 3, then "+N more, open board" for the rest.
-- Documents you open now sit under the tab that opened them instead of under the whole space.
+- A short tour shows once on a fresh install: spaces and agents, workspaces, the bottom bar, the Agents board and turning on live status. Skip it any time; replay it from About or the command palette.
+- Settings, Workspaces shows one collapsed row per workspace. Click a row for its tabs and commands; search and state filters appear as the list grows.
+- The interface now uses Geist. The terminal, code, paths and commands stay in JetBrains Mono.
 
 ## Download
 

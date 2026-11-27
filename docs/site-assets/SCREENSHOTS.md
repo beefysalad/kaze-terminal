@@ -284,3 +284,14 @@ All other captures remain historical. `kaze-sessions.png`, `kaze-palette.png`,
 `kaze-moment-done.png` still predate the current title bar, project spaces,
 sidebar and top tab strip. About still shows its older version. Those shots
 need separate retakes; none was changed for 0.46.
+
+## 0.47 tour, Workspaces and Geist
+
+All 14 current product captures show chrome text in the previous UI font and
+need native retakes for Geist: `kaze-sessions.png`, `kaze-palette.png`,
+`kaze-workspaces.png`, `kaze-about.png`, `kaze-settings.png`, `kaze-agents.png`,
+`kaze-board.png`, `kaze-moment-needs.png`, `kaze-moment-servers.png`,
+`kaze-moment-done.png`, `kaze-workers.png`, `kaze-workers-popover.png`,
+`kaze-workers-consent.png` and `kaze-workers-settings.png`.
+The Workspaces capture also predates the collapsed rows. Existing captures stay
+unchanged for this release; no screenshots were retaken or fabricated.
