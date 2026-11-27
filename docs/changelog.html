@@ -25,7 +25,20 @@
     <div class="section-intro"><a class="archive-back" href="./#changelog">Back to Kaze</a><h1 id="changelog-title">Changelog.</h1><p>Features, improvements and fixes, release by release. Kaze checks for updates in Settings, Updates.</p></div>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.47</span><span class="badge">Latest</span><time datetime="2026-11-27">Nov 27, 2026</time></div>
+        <div class="release-meta"><span class="version">0.48</span><span class="badge">Latest</span><time datetime="2026-11-27">Nov 27, 2026</time></div>
+        <div class="release-body">
+          <h2>Agents stay in their own space</h2>
+          <ul>
+            <li>An agent can list and reach only tabs in its own space through the kaze command line. Other spaces are refused unless you set [control] cross_space = true in config.toml.</li>
+            <li>A space is one repository. Workers share their parent's space, and tab names only have to be unique within a space.</li>
+            <li>The Claude row icon now matches the real Claude Code mascot, with a wide body, arms, small eyes and four feet.</li>
+            <li>Settings, Appearance, Sidebar has an Animated status switch (animate_status). Turn it on to spin and pulse the working mark while an agent works. It is off by default; leaving it off keeps idle CPU at zero.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.47</span><time datetime="2026-11-27">Nov 27, 2026</time></div>
         <div class="release-body">
           <h2>A first-run tour, a calmer Workspaces list and a new UI font</h2>
           <ul>

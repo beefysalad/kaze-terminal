@@ -295,3 +295,11 @@ need native retakes for Geist: `kaze-sessions.png`, `kaze-palette.png`,
 `kaze-workers-consent.png` and `kaze-workers-settings.png`.
 The Workspaces capture also predates the collapsed rows. Existing captures stay
 unchanged for this release; no screenshots were retaken or fabricated.
+
+## 0.48 space isolation, Claude mascot and animated status
+
+Retake captures showing the Claude sidebar row to show the real Claude Code mascot,
+including the worker captures. Retake `kaze-settings.png` for the Animated status
+switch in Settings > Appearance > Sidebar. A still capture cannot show the spinning
+and pulsing working mark. Existing captures remain unchanged; no screenshots were
+retaken or fabricated for this release. The earlier Geist and chrome retakes remain due.
