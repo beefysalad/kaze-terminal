@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"github.com/beefysalad/kaze-terminal/internal/subagents"
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
 	"image"
@@ -103,5 +104,34 @@ func TestNestedTrayClicksAndFilter(t *testing.T) {
 	in.Filter = "explore"
 	if len(buildSide(in).Agents) != 1 {
 		t.Fatal("tray filter lost owning agent")
+	}
+}
+
+func TestNestedSidebarCacheAllocationsAndFold(t *testing.T) {
+	win, router, ts := spacesWindow(t)
+	tab := ts["a1"].ID
+	setAgent(win, tab, agentState{claude: true})
+	startAgent(win, tab, "nested", "one")
+	win.openDoc(tab, writeDoc(t, t.TempDir(), "nested.md", "hello"))
+	sideFrame(t, win, router)
+	var ops op.Ops
+	g := pageContext(1000, 900)
+	g.Ops = &ops
+	draw := func() { ops.Reset(); win.drawSide(g, image.Rect(0, 42, 260, 868)) }
+	for range 10 {
+		draw()
+	}
+	if n := testing.AllocsPerRun(100, draw); n != 0 {
+		t.Fatalf("unchanged nested sidebar allocates %g", n)
+	}
+	win.sidePress(centre(win.side.hits.folds[0].rect), pointer.ButtonPrimary)
+	draw()
+	if len(win.side.hits.agents) != 0 {
+		t.Fatal("fold cache still draws tray")
+	}
+	win.sidePress(centre(win.side.hits.folds[0].rect), pointer.ButtonPrimary)
+	draw()
+	if len(win.side.hits.agents) != 1 {
+		t.Fatal("unfold cache omits tray")
 	}
 }

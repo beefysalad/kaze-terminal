@@ -208,8 +208,7 @@ func (c *chrome) sideList(gtx layout.Context, h *sideHits, m sideModel, st sideS
 	}
 }
 
-// spaceLine draws one space: a badge, its name and its count, and under it the
-// documents opened from its sessions.
+// spaceLine draws a space and the documents of sessions without an agent row.
 func (c *chrome) spaceLine(gtx layout.Context, h *sideHits, s spaceEntry, st sideState, y int, closeCall op.CallOp, closeSize image.Point) {
 	ops, th := gtx.Ops, c.sideTheme()
 	pad, gap := gtx.Dp(8), gtx.Dp(8)
@@ -333,8 +332,13 @@ func (c *chrome) agentsSection(gtx layout.Context, h *sideHits, rows []agentRow,
 		lastWorker := i+1 == len(rows) || !rows[i+1].Worker || rows[i+1].Parent != r.Parent
 		c.agentLine(gtx, r, st, rect, lastWorker)
 		if r.TrayTotal > 0 {
-			fold := image.Rect(rect.Min.X, rect.Min.Y, rect.Min.X+gtx.Dp(12), rect.Max.Y)
-			c.icon(gtx, "plus", fold.Inset(gtx.Dp(2)), th.Muted)
+			fold := image.Rect(rect.Min.X, rect.Min.Y, rect.Min.X+gtx.Dp(8), rect.Max.Y)
+			icon := "down"
+			if st.trayFolded[r.ID] {
+				icon = "plus"
+			}
+			box := image.Rect(fold.Min.X, rect.Min.Y+(rect.Dy()-gtx.Dp(8))/2, fold.Max.X, rect.Min.Y+(rect.Dy()+gtx.Dp(8))/2)
+			c.icon(gtx, icon, box, th.Muted)
 			h.folds = append(h.folds, sideRowHit{id: r.ID, rect: fold.Intersect(h.list)})
 		}
 		h.rows = append(h.rows, sideRowHit{id: r.ID, rect: rect.Intersect(h.list)})
