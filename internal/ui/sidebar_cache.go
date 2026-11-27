@@ -10,6 +10,7 @@ import (
 	"gioui.org/op"
 	"gioui.org/text"
 	"gioui.org/unit"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
 	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
@@ -32,6 +33,9 @@ type sideDocInput struct {
 	doc     sideDoc
 }
 type sideDrawKey struct {
+	trayFolds uint64
+	openAgent subagents.Key
+
 	activeRepo, space    string
 	hoverSpace           string
 	hoverBtn             sideBtn

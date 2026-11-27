@@ -67,7 +67,7 @@
       </div>
     </div>
   </section>
-  <div class="wrap news"><span class="tag">0.46.1</span><a href="#changelog">Agents stay in their own project <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
+  <div class="wrap news"><span class="tag">0.46.2</span><a href="#changelog">Subagents are back in the sidebar <svg class="arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a></div>
 
   <section class="k-sec wrap" aria-labelledby="demo-title">
     <header class="k-head">
@@ -169,7 +169,18 @@
     </header>
     <ol class="releases">
       <li class="release">
-        <div class="release-meta"><span class="version">0.46.1</span><span class="badge">Latest</span><time datetime="2026-11-27">Nov 27, 2026</time></div>
+        <div class="release-meta"><span class="version">0.46.2</span><span class="badge">Latest</span><time datetime="2026-11-27">Nov 27, 2026</time></div>
+        <div class="release-body">
+          <h3>Subagents are back in the sidebar</h3>
+          <ul>
+            <li>Each agent row shows its subagents again, up to 3, then "+N more, open board" for the rest.</li>
+            <li>Documents you open now sit under the tab that opened them instead of under the whole space.</li>
+          </ul>
+        </div>
+      </li>
+
+      <li class="release">
+        <div class="release-meta"><span class="version">0.46.1</span><time datetime="2026-11-27">Nov 27, 2026</time></div>
         <div class="release-body">
           <h3>Agents stay in their own project</h3>
           <ul>
@@ -194,19 +205,6 @@
             <li>Templates live in the config folder. Limits keep each agent to 4 workers and Kaze to 8 in total.</li>
             <li>Workers close with their parent and never come back after a restart. A worker waiting on a trust or approval dialog is left for you to answer.</li>
             <li>Only Claude Code and Codex can be workers. On Windows, Claude Code needs the native claude.exe.</li>
-          </ul>
-        </div>
-      </li>
-
-      <li class="release">
-        <div class="release-meta"><span class="version">0.45.1</span><time datetime="2026-11-26">Nov 26, 2026</time></div>
-        <div class="release-body">
-          <h3>Steadier send and wait</h3>
-          <ul>
-            <li>After a send, the target counts as working until its next prompt starts, so wait no longer returns at once on the previous turn's idle state.</li>
-            <li>Agents Kaze finds only by looking at the program in front of a tab, such as a Codex whose hooks did not reach Kaze, now show unknown instead of idle. Wait uses output quiet time for them.</li>
-            <li>A request over the 64 KiB cap now fails with a clear message and exit code 2 instead of a silent end of input.</li>
-            <li>A tag cannot be rebuilt out of nested pieces of a closing tag.</li>
           </ul>
         </div>
       </li>

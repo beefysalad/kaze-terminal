@@ -17,6 +17,7 @@ import (
 	"gioui.org/widget"
 
 	"github.com/beefysalad/kaze-terminal/internal/render"
+	"github.com/beefysalad/kaze-terminal/internal/subagents"
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
 	"github.com/beefysalad/kaze-terminal/internal/theme"
 )
@@ -39,6 +40,8 @@ const maxSideText = 160
 
 // sideState is what the window knows that the model does not.
 type sideState struct {
+	trayFolded    map[tabs.TabID]bool
+	openAgent     subagents.Key
 	activeRepo    string // common repository of the selected main session
 	doc, hoverDoc docID
 	shown         tabs.TabID      // highlighted row or member
@@ -87,7 +90,17 @@ type sideRunHit struct {
 }
 
 // sideHits is where the last sidebar frame drew things, for clicks and the wheel.
+type sideAgentHit struct {
+	key  subagents.Key
+	tab  tabs.TabID
+	rect image.Rectangle
+	more bool
+}
+
 type sideHits struct {
+	agents []sideAgentHit
+	folds  []sideRowHit
+
 	docs                    []sideDocHit
 	rows                    []sideRowHit // agent rows, or the rail's tiles
 	spaces                  []sideKeyHit // space lines, by space key
