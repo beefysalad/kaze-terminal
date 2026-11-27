@@ -27,7 +27,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.46.2</span><span class="badge">Latest</span><time datetime="2026-11-27">Nov 27, 2026</time></div>
         <div class="release-body">
-          <h3>Subagents are back in the sidebar</h3>
+          <h2>Subagents are back in the sidebar</h2>
           <ul>
             <li>Each agent row shows its subagents again, up to 3, then "+N more, open board" for the rest.</li>
             <li>Documents you open now sit under the tab that opened them instead of under the whole space.</li>
@@ -38,7 +38,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.46.1</span><time datetime="2026-11-27">Nov 27, 2026</time></div>
         <div class="release-body">
-          <h3>Agents stay in their own project</h3>
+          <h2>Agents stay in their own project</h2>
           <ul>
             <li>kaze ls marks your own tab with a self column. An agent name like codex resolves to a tab in your own space first.</li>
             <li>Sending to, reading from or pressing keys in a tab of another space prints a warning.</li>
@@ -53,7 +53,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.46</span><time datetime="2026-11-26">Nov 26, 2026</time></div>
         <div class="release-body">
-          <h3>Agents that start agents</h3>
+          <h2>Agents that start agents</h2>
           <ul>
             <li>An agent can start Claude Code or Codex workers in background tabs with kaze run, wait for them, read their reports and stop them.</li>
             <li>Workers nest under their parent in the same space, with a worker mark, a status bar count and Stop all workers.</li>
@@ -68,7 +68,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.45.1</span><time datetime="2026-11-26">Nov 26, 2026</time></div>
         <div class="release-body">
-          <h3>Steadier send and wait</h3>
+          <h2>Steadier send and wait</h2>
           <ul>
             <li>After a send, the target counts as working until its next prompt starts, so wait no longer returns at once on the previous turn's idle state.</li>
             <li>Agents Kaze finds only by looking at the program in front of a tab, such as a Codex whose hooks did not reach Kaze, now show unknown instead of idle. Wait uses output quiet time for them.</li>
@@ -81,7 +81,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.45</span><time datetime="2026-11-25">Nov 25, 2026</time></div>
         <div class="release-body">
-          <h3>Agents that talk to each other</h3>
+          <h2>Agents that talk to each other</h2>
           <ul>
             <li>An agent in one tab can read and type into another through the kaze command: ls, read, send, keys, interrupt, wait, name and label. Claude Code can hand work to Codex and back.</li>
             <li>A send arrives as one paste followed by Enter, tagged &lt;kaze from=...&gt; so the receiver can tell a peer from you.</li>
@@ -97,7 +97,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.44</span><time datetime="2026-11-23">Nov 23, 2026</time></div>
         <div class="release-body">
-          <h3>Spaces, tabs on top and a floating Settings</h3>
+          <h2>Spaces, tabs on top and a floating Settings</h2>
           <ul>
             <li>Spaces in the sidebar: one per project, plus a Shell space, with search and + in the header.</li>
             <li>Agents have their own section, grouped as Needs you, Working and Idle. Click an agent to jump to its tab.</li>
@@ -113,7 +113,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.43</span><time datetime="2026-11-16">Nov 16, 2026</time></div>
         <div class="release-body">
-          <h3>The sidebar on either side, and a slim rail</h3>
+          <h2>The sidebar on either side, and a slim rail</h2>
           <ul>
             <li><b>Left or right:</b> Settings, Appearance, Sidebar puts the sidebar on the right edge of the window. The title bar's buttons above it move with it. Left stays the default.</li>
             <li><b>A slim rail:</b> <kbd>⌘</kbd> <kbd>B</kbd> (Ctrl+Shift+B on Windows) now steps through full, rail and hidden. The rail shows each session as a small tile with its agent and whether it needs you, is running or is done. Hover a tile for its name; click it to open the session.</li>
@@ -125,7 +125,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.42</span><time datetime="2026-11-16">Nov 16, 2026</time></div>
         <div class="release-body">
-          <h3>A new purple Kaze icon</h3>
+          <h2>A new purple Kaze icon</h2>
           <ul>
             <li><b>A folded K with a terminal underscore:</b> a sharper purple mark now represents Kaze in the Dock, Finder, Windows taskbar and Alt+Tab.</li>
             <li><b>One identity throughout:</b> the title bar, About, Settings footer, website and README use the new logo, with a deeper purple on light backgrounds.</li>
@@ -136,7 +136,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.41.1</span><time datetime="2026-11-12">Nov 12, 2026</time></div>
         <div class="release-body">
-          <h3>Fixes a freeze at launch on Mac</h3>
+          <h2>Fixes a freeze at launch on Mac</h2>
           <ul>
             <li><b>No more frozen window:</b> on the Mac, Kaze could open, show a loading spinner in the Dock and never respond, so macOS reported it as not responding. It happened when macOS had not yet allowed Kaze's notifications, often right after a restart or an update. It no longer does.</li>
             <li><b>Nothing lost:</b> your saved sessions and settings were not touched, and they come back as before.</li>
@@ -147,7 +147,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.41</span><time datetime="2026-11-12">Nov 12, 2026</time></div>
         <div class="release-body">
-          <h3>Kaze on your Discord profile</h3>
+          <h2>Kaze on your Discord profile</h2>
           <ul>
             <li><b>A Playing Kaze card:</b> while the Discord desktop app is open, your profile shows the project you are working on, how long Kaze has been open and how many Claude and Codex sessions are running.</li>
             <li><b>Nothing private:</b> the card names the repo or folder, never paths, branches, prompts or commands, and it goes only to the Discord app on your own computer.</li>
@@ -159,7 +159,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.40.1</span><time datetime="2026-11-10">Nov 10, 2026</time></div>
         <div class="release-body">
-          <h3>Cleaner subagent panels</h3>
+          <h2>Cleaner subagent panels</h2>
           <ul>
             <li><b>Plain error messages:</b> a refused or failed step in a subagent's panel shows just its message, without the <code>&lt;tool_use_error&gt;</code> tags around it.</li>
             <li><b>Right colours for paths:</b> a Go raw string or a shell single-quoted string that ends in a backslash, like a Windows path, no longer colours the rest of the line as a string.</li>
@@ -171,7 +171,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.40</span><time datetime="2026-11-09">Nov 9, 2026</time></div>
         <div class="release-body">
-          <h3>A simpler Settings menu</h3>
+          <h2>A simpler Settings menu</h2>
           <ul>
             <li><b>Devbox removed:</b> the unused experimental Settings page and its pairing and network integration are gone. Existing external pairing files are left untouched.</li>
           </ul>
@@ -181,7 +181,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.39.1</span><time datetime="2026-11-09">Nov 9, 2026</time></div>
         <div class="release-body">
-          <h3>A clearer RAM reading in the status bar</h3>
+          <h2>A clearer RAM reading in the status bar</h2>
           <ul>
             <li><b>RAM has its own label:</b> the status bar now shows CPU and RAM side by side, each with its name, so the memory figure no longer looks like part of the CPU reading. In a narrow window the labels step aside and the numbers stay.</li>
           </ul>
@@ -191,7 +191,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.38</span><time datetime="2026-11-09">Nov 9, 2026</time></div>
         <div class="release-body">
-          <h3>Read subagent edits right in the panel</h3>
+          <h2>Read subagent edits right in the panel</h2>
           <ul>
             <li><b>Edits open inline:</b> in a subagent’s Readable view, each edit opens by itself with its real line numbers and its added and removed counts.</li>
             <li><b>Code colours:</b> diffs are coloured for common languages, in every theme.</li>
@@ -203,7 +203,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.37</span><time datetime="2026-11-09">Nov 9, 2026</time></div>
         <div class="release-body">
-          <h3>See which model is running</h3>
+          <h2>See which model is running</h2>
           <ul>
             <li><b>The model in the status bar:</b> the status bar now shows the model of the session in front, such as Opus 5.5, just before the usage numbers. It follows the tab you’re on and hides when Claude exits. It appears when usage is switched on.</li>
             <li><b>Each subagent’s model:</b> a subagent’s panel shows that agent’s own model after the elapsed time, once its first reply is recorded.</li>
@@ -214,7 +214,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.36</span><time datetime="2026-11-09">Nov 9, 2026</time></div>
         <div class="release-body">
-          <h3>System notifications and separate Codex tabs</h3>
+          <h2>System notifications and separate Codex tabs</h2>
           <ul>
             <li><b>System notifications:</b> while Kaze is in the background, agent alerts also appear as macOS and Windows notifications. The newest alert replaces the older one for that session, and clicking it takes you to the session. Turn it off in Settings, Agents.</li>
             <li><b>Codex tabs stay separate:</b> Codex started in a Kaze tab now runs on its own, so its helpers and alerts stay with the right session. This needs a Codex version with <code>--no-daemon</code>; older versions start as before, without the separation.</li>
@@ -226,7 +226,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.35</span><time datetime="2026-11-07">Nov 7, 2026</time></div>
         <div class="release-body">
-          <h3>A new app icon and logo</h3>
+          <h2>A new app icon and logo</h2>
           <ul>
             <li><b>A new app icon:</b> Kaze’s icon is now the refreshed wind K in soft lilac on a dark tile, in the Dock, Finder, the Windows taskbar and Alt+Tab. On macOS it follows Apple’s icon shape, so it sits the same size as your other apps. macOS may keep the old icon in the Dock until Kaze restarts after the update.</li>
             <li><b>The same K everywhere:</b> the settings sidebar now shows the new K too, matching the title bar and the About page.</li>
@@ -237,7 +237,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.34</span><time datetime="2026-11-06">Nov 6, 2026</time></div>
         <div class="release-body">
-          <h3>A simpler sidebar</h3>
+          <h2>A simpler sidebar</h2>
           <ul>
             <li><b>A simpler sidebar:</b> the “New session on a branch” launcher is gone, with its shortcut and its worktree cleanup. Claude and Codex make branches and worktrees themselves, and the + in the title bar still opens a new session. The session list now runs down to your workspaces. Your existing worktrees and config are left as they are.</li>
           </ul>
@@ -247,7 +247,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.33</span><time datetime="2026-11-06">Nov 6, 2026</time></div>
         <div class="release-body">
-          <h3>The Kaze name in the title bar, and correct app details on Windows</h3>
+          <h2>The Kaze name in the title bar, and correct app details on Windows</h2>
           <ul>
             <li><b>Kaze in the title bar:</b> the lilac K and the name Kaze now sit at the top left of the window, the way Windows apps show their icon and name. On a Mac they follow the traffic lights, which had no mark before. In a narrow window the name steps aside first.</li>
             <li><b>Correct app details on Windows:</b> kaze.exe's Properties, Task Manager and security tools now show Kaze 0.33 with its name and publisher, instead of an old 0.6.</li>
@@ -258,7 +258,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.32</span><time datetime="2026-11-05">Nov 5, 2026</time></div>
         <div class="release-body">
-          <h3>Five more themes, and one font everywhere</h3>
+          <h2>Five more themes, and one font everywhere</h2>
           <ul>
             <li><b>Five more themes:</b> Matcha, Kōyō, Hai and Fuji are dark, Kiri is light, so there are ten in all. Pick one in Settings, Appearance; the cards sit five to a row, fewer in a narrow window.</li>
             <li><b>One font everywhere:</b> Settings, the palette, alert cards, the Agents board, docs and the title and status bars now use JetBrains Mono, the same font as the terminal, so the whole window reads as one. Kaze is a little smaller too.</li>
@@ -269,7 +269,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.31</span><time datetime="2026-11-05">Nov 5, 2026</time></div>
         <div class="release-body">
-          <h3>A cleaner palette, and shortcuts you can change</h3>
+          <h2>A cleaner palette, and shortcuts you can change</h2>
           <ul>
             <li><b>A cleaner palette:</b> it opens on what’s waiting on you, your sessions and the 3 skills you used last, with one row to browse the rest. Servers are no longer listed (they’re in the status bar and sidebar), and Kaze actions show up as you type their name.</li>
             <li><b>Skills behind /:</b> press / or Tab, or click Skills, to see every skill grouped as Yours, This project and one group per plugin. Type after the / to search by name or by what a skill does.</li>
@@ -281,7 +281,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.30</span><time datetime="2026-11-05">Nov 5, 2026</time></div>
         <div class="release-body">
-          <h3>Find in the terminal</h3>
+          <h2>Find in the terminal</h2>
           <ul>
             <li><b>Find in the terminal:</b> press Ctrl+Shift+F on Windows or Cmd+F on a Mac to search the whole scrollback of Claude’s terminal or a server tab in the panel. Every match is highlighted and marked on the right edge. Enter and Shift+Enter step through them, Aa matches case, and Esc closes the bar and puts the view back where it was.</li>
             <li><b>Built to stay out of the way:</b> new output updates the count without moving what you’re reading, a click in the terminal gives you the keyboard back, plain Ctrl+F still goes to the shell, and nothing runs while the bar is closed.</li>
@@ -292,7 +292,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.29</span><time datetime="2026-11-04">Nov 4, 2026</time></div>
         <div class="release-body">
-          <h3>The battery on macOS, and a new About page</h3>
+          <h2>The battery on macOS, and a new About page</h2>
           <ul>
             <li><b>Battery on macOS:</b> MacBooks now show the battery at the far right of the status bar too, just like Windows laptops: the level and percent, a bolt while charging, amber at 20% and red at 10%. It updates when macOS says the level or the charger changed, so it costs nothing while idle. Mac desktops show nothing.</li>
             <li><b>A new About page:</b> Settings, About is now a compact page built around the refreshed logo, with the tagline, what the name means, and one card for the version, update status, platform and license. Copy build info, View on GitHub and Report an issue sit right under them, and stack neatly in a narrow window.</li>
@@ -303,7 +303,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.28.2</span><time datetime="2026-11-04">Nov 4, 2026</time></div>
         <div class="release-body">
-          <h3>Markdown links that find their file</h3>
+          <h2>Markdown links that find their file</h2>
           <ul>
             <li><b>Fixed: links to files Claude wrote elsewhere:</b> clicking a .md link that Claude printed now opens the file Claude actually wrote or read, even when it lives outside the tab's folder, like a note in your Obsidian vault or a file in another repo. Before, Kaze only looked in the tab's folder and said it couldn't find the file.</li>
           </ul>
@@ -313,7 +313,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.28.1</span><time datetime="2026-11-04">Nov 4, 2026</time></div>
         <div class="release-body">
-          <h3>A new home for Kaze</h3>
+          <h2>A new home for Kaze</h2>
           <ul>
             <li><b>Kaze has a new home:</b> the project moved to beefysalad/kaze-terminal on GitHub. Kaze now checks there for updates, and the website is at beefysalad.github.io/kaze-terminal. Nothing else changes.</li>
           </ul>
@@ -323,7 +323,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.28</span><time datetime="2026-11-04">Nov 4, 2026</time></div>
         <div class="release-body">
-          <h3>Readable agent steps, and the battery on Windows</h3>
+          <h2>Readable agent steps, and the battery on Windows</h2>
           <ul>
             <li><b>Read what your agents are doing:</b> a subagent’s panel and the agents board now read like Claude’s own transcript: the agent’s words first, then one sentence per step, like “Edited routes.ts +8 −5”, “Read 3 files” or “Ran the tests · failed · 1 test”. Click a step to see its diff or output. “Every step” brings back the full list.</li>
             <li><b>Battery in the status bar:</b> on Windows laptops, the battery level sits at the far right of the status bar, with a bolt while charging, amber at 20% and red at 10%. It updates when Windows says it changed, so it costs nothing while idle. Desktops show nothing. macOS comes later.</li>
@@ -335,7 +335,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.27</span><time datetime="2026-11-04">Nov 4, 2026</time></div>
         <div class="release-body">
-          <h3>Servers docked under the terminal, and alerts you can read</h3>
+          <h2>Servers docked under the terminal, and alerts you can read</h2>
           <ul>
             <li><b>Servers in the panel:</b> workspace members open as tabs in the panel under the terminal, next to your subagents, instead of floating over Claude. Click a member’s tab to type in it, click the terminal to take the keyboard back, and use Expand to make it the main view.</li>
             <li><b>Richer alert cards:</b> a card at the bottom right names the session the way the sidebar does, shows its branch and slash command, Claude’s message or the start of its last reply, and how long the turn ran. Ctrl+Shift+J (⌘ J on macOS) opens the newest one.</li>
@@ -348,7 +348,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.26</span><time datetime="2026-11-03">Nov 3, 2026</time></div>
         <div class="release-body">
-          <h3>An agents board you can work from</h3>
+          <h2>An agents board you can work from</h2>
           <ul>
             <li><b>A new agents board:</b> filter by All, Needs you, Running or Done, and search by type, task, session or repo (press /). Waiting agents sit in a pinned Needs you card; the rest are grouped under their session, with a bar showing what’s waiting, running and done. Finished agents fold away.</li>
             <li><b>Preview without leaving:</b> pick an agent to see its steps and messages, or its formatted report, beside the list. Double-click it, press Enter or use Open in session to jump to it.</li>
@@ -362,7 +362,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.25</span><time datetime="2026-11-03">Nov 3, 2026</time></div>
         <div class="release-body">
-          <h3>A calmer sidebar and colour emoji</h3>
+          <h2>A calmer sidebar and colour emoji</h2>
           <ul>
             <li><b>A tidier agent tray:</b> each subagent takes one line under its session. At most three show, waiting first; the rest sit behind “+N more”, and “N agents” folds the whole tray. Hover a line to see what the agent is doing.</li>
             <li><b>Safe clicks:</b> clicking an agent line shows its session, so a stray click lands on your terminal. Open an agent’s panel with the › at the end of the line, or a double-click.</li>
@@ -376,7 +376,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.24</span><time datetime="2026-11-03">Nov 3, 2026</time></div>
         <div class="release-body">
-          <h3>Follow every subagent, copy and paste on Windows</h3>
+          <h2>Follow every subagent, copy and paste on Windows</h2>
           <ul>
             <li><b>Agent panel:</b> click a subagent to open its panel under the terminal instead of a floating card. Activity lists each step with the agent’s own messages between them; Report shows the finished report. Drag the edge to any height, and each session remembers its panel.</li>
             <li><b>Formatted reports:</b> bold, code, lists, headings and tables render in the panel. Copy report copies the original markdown, and Open in reader shows it in the doc reader.</li>
@@ -389,7 +389,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.23</span><time datetime="2026-11-03">Nov 3, 2026</time></div>
         <div class="release-body">
-          <h3>Keep your place, start another session</h3>
+          <h2>Keep your place, start another session</h2>
           <ul>
             <li><b>Active project:</b> a soft accent tint highlights the current repo header alongside its selected session. It stays visible through Settings, documents, floating panes and folded groups.</li>
             <li><b>Clear running marks:</b> a still dot inside a closed ring replaces the frozen-looking spinner in session rows, subagents, the title bar and the agents pill. No animation frames.</li>
@@ -402,7 +402,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.22</span><time datetime="2026-11-02">Nov 2, 2026</time></div>
         <div class="release-body">
-          <h3>A clearer sidebar, a session for every branch</h3>
+          <h2>A clearer sidebar, a session for every branch</h2>
           <ul>
             <li><b>Two-line session rows:</b> agent logos, useful names and status above the branch or worktree and line counts. Repo headers keep the count without repeating state dots.</li>
             <li><b>Start on a branch:</b> choose a repo, branch and Claude, Codex or Shell. Kaze reuses the branch’s worktree or creates a sibling folder, then waits for the shell before starting the agent. Open with Cmd+Shift+N on macOS or Ctrl+Shift+N on Windows; tuck the launcher away with one click.</li>
@@ -415,7 +415,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.21</span><time datetime="2026-11-02">Nov 2, 2026</time></div>
         <div class="release-body">
-          <h3>Read docs and follow subagent conversations</h3>
+          <h2>Read docs and follow subagent conversations</h2>
           <ul>
             <li><b>Markdown reader:</b> Cmd+click an .md path (Ctrl+click on Windows) to read it in Kaze, with an outline, links and automatic reloads. Each doc gets a temporary row under its session.</li>
             <li><b>Live Claude subagent messages:</b> panes show assistant messages as they arrive, with tool calls folded into count summaries. Scroll up to keep your place, or follow new output at the bottom.</li>
@@ -428,7 +428,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.20</span><time datetime="2026-11-02">Nov 2, 2026</time></div>
         <div class="release-body">
-          <h3>Resource usage in the status bar</h3>
+          <h2>Resource usage in the status bar</h2>
           <ul>
             <li><b>CPU and RAM in the status bar:</b> the status bar shows how much CPU and memory Kaze and the shells, agents and servers it runs are using. Hover it for a breakdown by session. It refreshes on activity, at most every 2 seconds, and pauses while Kaze is minimized.</li>
             <li><b>Fixed: resumed conversations:</b> after an update or a launch from Finder, restored tabs resume their Claude Code or Codex conversation again, including when the agent is installed as a shell alias.</li>
@@ -441,7 +441,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.19.1</span><time datetime="2026-11-01">Nov 1, 2026</time></div>
         <div class="release-body">
-          <h3>Session shortcuts and smoother subagent panes</h3>
+          <h2>Session shortcuts and smoother subagent panes</h2>
           <ul>
             <li><b>macOS session switching:</b> Ctrl+Tab and Ctrl+Shift+Tab now reach Kaze and switch sessions again, including while a scratch pane is focused. Custom bindings still work.</li>
             <li><b>Smoother subagent panes:</b> long prompts and reports wrap with much less work. Reopened helpers start a fresh turn, and panes show the latest report even when it is the same length as the previous one.</li>
@@ -453,7 +453,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.19</span><time datetime="2026-11-01">Nov 1, 2026</time></div>
         <div class="release-body">
-          <h3>Subagent conversations and a start folder</h3>
+          <h2>Subagent conversations and a start folder</h2>
           <ul>
             <li><b>Subagents read like a conversation:</b> click a subagent to see the prompt it was given, one line on what it has done so far ("Searched for 13 patterns, ran 15 shell commands") and, when it finishes, its report. Individual tool calls are no longer listed. Works for Claude Code subagents and Codex helpers.</li>
             <li><b>Start folder:</b> choose where new tabs open in Settings, Workspaces, Startup (<b>Choose…</b> or <b>Use home</b>), or set <code>start_dir</code> in the config. Workspaces and restored sessions keep their own folders, and a folder that has gone missing falls back to home with a warning.</li>
@@ -464,7 +464,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.18</span><time datetime="2026-11-01">Nov 1, 2026</time></div>
         <div class="release-body">
-          <h3>Your sessions come back</h3>
+          <h2>Your sessions come back</h2>
           <ul>
             <li><b>Automatic restoration:</b> reopen Kaze and your sessions return with their folders, names, order and selected session, including after an update.</li>
             <li><b>Resume the same conversation:</b> configured Claude Code and Codex hooks identify each chat, so conversations in the same project stay separate. Resuming waits for shell readiness and never resubmits your prompt.</li>
@@ -476,7 +476,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.17.1</span><time datetime="2026-11-01">Nov 1, 2026</time></div>
         <div class="release-body">
-          <h3>Codex logo, no setup</h3>
+          <h2>Codex logo, no setup</h2>
           <ul>
             <li><b>Fixed:</b> the Codex logo now shows for interactive Codex. Kaze sees Claude Code or Codex running in a tab by itself and shows its logo within about a second, before your first prompt, with no hooks needed (macOS).</li>
           </ul>
@@ -486,7 +486,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.17</span><time datetime="2026-11-01">Nov 1, 2026</time></div>
         <div class="release-body">
-          <h3>Agent logos and colored links</h3>
+          <h2>Agent logos and colored links</h2>
           <ul>
             <li><b>Agent logos in the sidebar:</b> a session running Claude Code shows the Claude logo, and one running Codex shows the OpenAI logo, next to the agent's name.</li>
             <li><b>Named as soon as it opens:</b> the logo and name appear the moment Claude Code or Codex starts, before your first prompt. Settings, Agents offers the new SessionStart hook for each; in Codex, run <code>/hooks</code> to trust it.</li>
@@ -498,7 +498,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.16</span><time datetime="2026-11-01">Nov 1, 2026</time></div>
         <div class="release-body">
-          <h3>Clickable links and Codex helpers</h3>
+          <h2>Clickable links and Codex helpers</h2>
           <ul>
             <li><b>Clickable links:</b> web links in the terminal show a hand cursor. <kbd>⌘</kbd>-click them (<kbd>Ctrl</kbd>-click on Windows) to open them in your browser, even while Claude Code is running. A plain click still selects text.</li>
             <li><b>Codex helpers:</b> the helpers Codex starts now show in the sidebar, the live panes and the agents board, just like Claude Code subagents. Settings, Agents, Codex offers the three new hooks; then run <code>/hooks</code> in Codex to trust them.</li>
@@ -514,7 +514,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.15.1</span><time datetime="2026-11-01">Nov 1, 2026</time></div>
         <div class="release-body">
-          <h3>Smoother sessions, less overhead</h3>
+          <h2>Smoother sessions, less overhead</h2>
           <ul>
             <li><b>Sidebar fixes:</b> toggling the sidebar no longer flashes, and finished subagents leave its tree once none remain running. Their reports stay on the agents board.</li>
             <li><b>Shorter title-bar commands:</b> long plugin commands show a compact name, while the sidebar and palette keep the full name.</li>
@@ -528,7 +528,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.15</span><time datetime="2026-11-01">Nov 1, 2026</time></div>
         <div class="release-body">
-          <h3>A new title bar and status bar</h3>
+          <h2>A new title bar and status bar</h2>
           <ul>
             <li><b>One title bar on Mac and Windows:</b> the sidebar toggle, a new-session button, the session you're in with its command and state, a search field that opens the palette, and the scratch shell, Agents and Settings buttons, laid out the same on both.</li>
             <li><b>Real Mac window buttons:</b> the native traffic lights sit inside Kaze's own bar. Drag the bar to move the window; double-click it to zoom, as your Mac is set.</li>
@@ -542,7 +542,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.14</span><time datetime="2026-10-31">Oct 31, 2026</time></div>
         <div class="release-body">
-          <h3>See what your subagents are doing</h3>
+          <h2>See what your subagents are doing</h2>
           <ul>
             <li><b>Subagents in the sidebar:</b> each session lists its subagents with their task, how long they’ve run and the step they’re on.</li>
             <li><b>A live pane per subagent:</b> click one to follow its steps as they happen and read its report when it finishes, with a Copy report button.</li>
@@ -556,7 +556,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.13</span><time datetime="2026-10-31">Oct 31, 2026</time></div>
         <div class="release-body">
-          <h3>Claude Code and Codex, side by side</h3>
+          <h2>Claude Code and Codex, side by side</h2>
           <ul>
             <li><b>Agents settings:</b> shared alert controls, with separate setup checks for Claude Code and Codex.</li>
             <li><b>Codex hooks:</b> see when Codex needs you, is running or is done. Interrupting Codex clears its running state without a done alert.</li>
@@ -570,7 +570,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.12</span><time datetime="2026-10-31">Oct 31, 2026</time></div>
         <div class="release-body">
-          <h3>A redesigned settings page</h3>
+          <h2>A redesigned settings page</h2>
           <ul>
             <li><b>A new look:</b> settings sit in cards, with a clean UI font and new controls. Monospace is kept for keys, paths and commands.</li>
             <li><b>Appearance:</b> theme cards that preview each theme, a live preview of your theme, font size and cursor, and cursor shapes you can see.</li>
@@ -587,7 +587,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.11</span><time datetime="2026-10-31">Oct 31, 2026</time></div>
         <div class="release-body">
-          <h3>Downloads and updates</h3>
+          <h2>Downloads and updates</h2>
           <ul>
             <li><b>Download Kaze</b> for macOS (Apple Silicon and Intel) and Windows, no Go needed.</li>
             <li><b>Updates in place:</b> Kaze checks GitHub once a day, shows “Update” in the status bar, and installs a new version with one click after asking. Each download is checked against the release’s checksums.</li>
@@ -598,7 +598,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.10</span></div>
         <div class="release-body">
-          <h3>Floating panes and the scratch shell</h3>
+          <h2>Floating panes and the scratch shell</h2>
           <ul>
             <li><b>Floating panes:</b> a workspace’s servers float over your Claude session. Drag, resize, type into them, or expand one to the main view.</li>
             <li><b>Scratch shell:</b> <kbd>Ctrl</kbd> <kbd>`</kbd> opens a quick shell in the session’s folder; press it again to hide it.</li>
@@ -609,7 +609,7 @@
       <li class="release">
         <div class="release-meta"><span class="version">0.9</span></div>
         <div class="release-body">
-          <h3>The palette</h3>
+          <h2>The palette</h2>
           <ul>
             <li><b>One key finds everything:</b> <kbd>⌘</kbd> <kbd>K</kbd> lists waiting sessions, every session and server, your Claude Code skills and Kaze’s own actions.</li>
           </ul>
