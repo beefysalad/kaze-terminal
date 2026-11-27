@@ -50,10 +50,10 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		return workers(ctx, host, req)
 	}
 	if req.Op == "name" || req.Op == "label" {
-		return metadata(ctx, host, req)
+		return metadata(ctx, host, req, opt)
 	}
 	if req.Op == "wait" {
-		return wait(ctx, host, req)
+		return wait(ctx, host, req, opt)
 	}
 	if req.Op == "keys" || req.Op == "interrupt" {
 		if req.Op == "keys" {

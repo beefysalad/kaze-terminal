@@ -48,9 +48,9 @@ func ValidateLabel(key, value string) *Error {
 	}
 	return nil
 }
-func metadata(ctx context.Context, host Host, req Request) Reply {
+func metadata(ctx context.Context, host Host, req Request, opt Options) Reply {
 	tabs := host.Tabs()
-	tab, e := Resolve(tabs, req.Tab)
+	tab, _, e := resolveScoped(tabs, req.Tab, req.From, opt.CrossSpace)
 	if e != nil {
 		return Reply{Error: e}
 	}

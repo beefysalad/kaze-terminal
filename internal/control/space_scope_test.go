@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func scopeHost() *fakeHost {
@@ -148,5 +149,120 @@ func TestCrossSpaceOnKeepsWarning(t *testing.T) {
 	r := HandleContext(context.Background(), h, Request{Op: "send", From: "t1", Tab: "t3", Text: "hello"}, Options{Enabled: true, AgentTag: true, CrossSpace: true})
 	if !r.OK || r.Error != nil || h.id != "t3" || !strings.Contains(r.Warning, "not your space") {
 		t.Fatalf("reply %+v target %q", r, h.id)
+	}
+}
+
+func TestWaitAcrossSpacesRefused(t *testing.T) {
+	h := &spaceHost{fakeHost: *scopeHost()}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	r := HandleContext(ctx, h, Request{Op: "wait", From: "t1", Tab: "t3", Timeout: 1})
+	requireScopeError(t, r, CodeCrossSpace)
+	if h.screenCalls != 0 {
+		t.Fatal("read another space")
+	}
+}
+
+func TestWaitSameSpaceUnchanged(t *testing.T) {
+	h := &spaceHost{fakeHost: *scopeHost()}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	r := HandleContext(ctx, h, Request{Op: "wait", From: "t1", Tab: "codex", Timeout: 1})
+	if !r.OK || r.Error != nil {
+		t.Fatalf("reply %+v", r)
+	}
+}
+
+type scopeMetadataHost struct {
+	fakeHost
+	names, labels int
+}
+
+func (h *scopeMetadataHost) Name(context.Context, string, string) *Error { h.names++; return nil }
+func (h *scopeMetadataHost) Label(string, string, string) *Error         { h.labels++; return nil }
+
+func TestNameAndLabelAcrossSpacesRefused(t *testing.T) {
+	for _, op := range []string{"name", "label"} {
+		for _, address := range []string{"t3", "other"} {
+			t.Run(op+"/"+address, func(t *testing.T) {
+				h := &scopeMetadataHost{fakeHost: *scopeHost()}
+				r := Handle(h, Request{Op: op, From: "t1", Tab: address, Name: "renamed", Key: "topic", Value: "review"})
+				requireScopeError(t, r, CodeCrossSpace)
+				if h.names+h.labels != 0 {
+					t.Fatal("metadata changed in another space")
+				}
+			})
+		}
+	}
+}
+
+type scopeChangingHost struct {
+	fakeHost
+	snapshots int
+	move      bool
+}
+
+func (h *scopeChangingHost) StatusChanges() ([]TabInfo, <-chan struct{}) {
+	h.snapshots++
+	if h.snapshots == 2 {
+		if h.move {
+			h.tabs[1].Space = "b"
+			h.tabs[1].Status = "idle"
+		} else {
+			h.tabs = h.tabs[:1]
+		}
+	}
+	changed := make(chan struct{})
+	// Exactly one immediate wakeup. A regression must then end by its deadline.
+	if h.snapshots == 1 {
+		close(changed)
+	}
+	return h.tabs, changed
+}
+func (h *scopeChangingHost) OutputChanges(string) (<-chan struct{}, func(), time.Time, error) {
+	panic("working agent must not observe output")
+}
+
+func TestWaitTargetClosesMidWait(t *testing.T) {
+	testWaitTargetChange(t, false, CodeUnknownTab)
+}
+func TestWaitTargetMovesAcrossSpacesMidWait(t *testing.T) {
+	testWaitTargetChange(t, true, CodeCrossSpace)
+}
+func testWaitTargetChange(t *testing.T, move bool, code string) {
+	t.Helper()
+	h := &scopeChangingHost{fakeHost: *scopeHost(), move: move}
+	h.tabs[1].Status = "working"
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	r := HandleContext(ctx, h, Request{Op: "wait", From: "t1", Tab: "t2", Timeout: 1})
+	requireScopeError(t, r, code)
+	if h.snapshots != 2 {
+		t.Fatalf("snapshots %d", h.snapshots)
+	}
+}
+
+func TestWaitChildrenUnaffected(t *testing.T) {
+	for _, mode := range []string{"all", "any"} {
+		h := &childrenHost{tabs: []TabInfo{
+			{ID: "t1", Space: "a"},
+			{ID: "t2", Space: "a", Parent: "t1", Role: "worker", Status: "idle"},
+			{ID: "t3", Space: "b", Parent: "t9", Role: "worker", Status: "working"},
+		}, changed: make(chan struct{})}
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		r := HandleContext(ctx, h, Request{Op: "wait", From: "t1", Children: mode, CallerKey: "secret", Timeout: 1})
+		cancel()
+		if !r.OK || r.Error != nil || len(r.Tabs) != 1 || r.Tabs[0].ID != "t2" {
+			t.Fatalf("%s: %+v", mode, r)
+		}
+	}
+	h := &spaceHost{fakeHost: *scopeHost()}
+	h.tabs[1].Parent = "t1"
+	h.tabs[1].Role = "worker"
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	r := HandleContext(ctx, h, Request{Op: "wait", From: "t1", Tab: "t2", Timeout: 1})
+	if !r.OK || r.Error != nil {
+		t.Fatalf("worker wait %+v", r)
 	}
 }
