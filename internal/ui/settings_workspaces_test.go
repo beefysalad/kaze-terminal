@@ -1079,3 +1079,15 @@ func TestDeleteAcrossWorkspaceControlThresholds(t *testing.T) {
 		})
 	}
 }
+
+func TestNarrowWorkspaceActionsStayInPane(t *testing.T) {
+	f := newWSPage(t)
+	f.win.drawSettings(pageContext(320, 640), image.Rect(0, 0, 320, 640))
+	for _, c := range f.win.set.controls {
+		if c.id == "ws.run" || c.id == "ws.menu" {
+			if c.rect.Min.X < f.win.set.pane.Min.X || c.rect.Max.X > f.win.set.pane.Max.X {
+				t.Fatalf("%s %v outside %v", c.id, c.rect, f.win.set.pane)
+			}
+		}
+	}
+}

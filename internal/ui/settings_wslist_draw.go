@@ -41,7 +41,7 @@ func (p *page) wsList(r image.Rectangle, y int, w *window) int {
 		h := g.Dp(52)
 		narrow := r.Dx() < g.Dp(480)
 		if narrow {
-			h = g.Dp(86)
+			h = g.Dp(158)
 		}
 		bg := image.Rect(r.Min.X, top, r.Max.X, top+h)
 		paint.FillShape(ops, col.card, clip.UniformRRect(bg, g.Dp(7)).Op(ops))
@@ -73,7 +73,11 @@ func (p *page) wsList(r image.Rectangle, y int, w *window) int {
 			call, sz, from := p.ctrl(k, 0)
 			at := image.Pt(right-sz.X, top+(g.Dp(52)-sz.Y)/2)
 			if narrow {
+				at.X = r.Min.X + g.Dp(10)
 				at.Y = top + g.Dp(48)
+				if k.id == "ws.run" {
+					at.Y += g.Dp(36)
+				}
 			}
 			p.st.shift(from, len(p.st.controls), at)
 			place(ops, call, at)
@@ -84,7 +88,8 @@ func (p *page) wsList(r image.Rectangle, y int, w *window) int {
 		pc, ps := p.pill(row.State, row.Tone)
 		py := top + (g.Dp(52)-ps.Y)/2
 		if narrow {
-			py = top + g.Dp(50)
+			py = top + g.Dp(122)
+			right = r.Max.X - g.Dp(10)
 		}
 		place(ops, pc, image.Pt(right-ps.X, py))
 		right -= ps.X + g.Dp(10)

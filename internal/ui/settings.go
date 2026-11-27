@@ -530,10 +530,17 @@ func (win *window) drawSettings(gtx layout.Context, r image.Rectangle) {
 
 	secs := win.sections()
 	navW := min(gtx.Dp(220), r.Dx())
+	if r.Dx() < gtx.Dp(480) {
+		navW = r.Dx() / 3
+	}
 	p.nav(image.Rect(r.Min.X, r.Min.Y, r.Min.X+navW, r.Max.Y), secs)
 	// The content is a column up to 760 dp wide, centered in what the menu leaves.
 	content := image.Rect(r.Min.X+navW, r.Min.Y, r.Max.X, r.Max.Y)
-	colW := max(min(content.Dx()-2*gtx.Dp(36), gtx.Dp(760)), 0)
+	pad := gtx.Dp(36)
+	if r.Dx() < gtx.Dp(480) {
+		pad = min(pad, content.Dx()/12)
+	}
+	colW := max(min(content.Dx()-2*pad, gtx.Dp(760)), 0)
 	x := content.Min.X + (content.Dx()-colW)/2
 	pane := image.Rect(x, r.Min.Y+gtx.Dp(30), x+colW, r.Max.Y)
 	s.pane = image.Rect(content.Min.X, pane.Min.Y, content.Max.X, content.Max.Y)
