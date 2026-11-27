@@ -471,3 +471,23 @@ func TestSetKeysFollowsASymlink(t *testing.T) {
 		t.Fatalf("target %q", b)
 	}
 }
+
+func TestControlCrossSpaceDefaultsOff(t *testing.T) {
+	if Default().Control.CrossSpace {
+		t.Fatal("cross-space control defaults on")
+	}
+}
+
+func TestControlCrossSpaceParses(t *testing.T) {
+	cfg, warns, err := Load(write(t, "[control]\ncross_space = true\n"))
+	if err != nil || len(warns) != 0 || !cfg.Control.CrossSpace {
+		t.Fatalf("control %+v warnings %v error %v", cfg.Control, warns, err)
+	}
+}
+
+func TestControlCrossSpaceRejectsNonBool(t *testing.T) {
+	cfg, warns, err := Load(write(t, "[control]\ncross_space = 3\n"))
+	if err != nil || cfg.Control.CrossSpace || len(warns) != 1 || !strings.Contains(warns[0], "control.cross_space") || !strings.Contains(warns[0], "must be true or false") {
+		t.Fatalf("control %+v warnings %v error %v", cfg.Control, warns, err)
+	}
+}

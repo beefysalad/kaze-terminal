@@ -710,10 +710,13 @@ agent_tag = false
 
 [control]
 enabled = false
+cross_space = false
 ```
 
 `agent_tag` turns off tags globally. `[control] enabled = false` refuses every
 control command while Claude Code and Codex hooks keep working.
+By default an agent sees and reaches only tabs in its own space;
+`cross_space = true` allows other spaces.
 
 Every tab gets these environment variables. Keep the token private:
 
@@ -777,6 +780,7 @@ or set the following in `config.toml` and restart. Control must also be enabled:
 ```toml
 [control]
 enabled = true
+cross_space = false
 
 [orchestrator]
 enabled = true

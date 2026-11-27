@@ -24,7 +24,8 @@ const (
 )
 
 type Control struct {
-	Enabled bool `toml:"enabled"`
+	Enabled    bool `toml:"enabled"`
+	CrossSpace bool `toml:"cross_space"`
 }
 
 type Orchestrator struct {
@@ -296,6 +297,8 @@ func Load(path string) (Config, []string, error) {
 			for _, key := range sortedKeys(table) {
 				if key == "enabled" {
 					loadBool(table[key], "control.enabled", &cfg.Control.Enabled, warn)
+				} else if key == "cross_space" {
+					loadBool(table[key], "control.cross_space", &cfg.Control.CrossSpace, warn)
 				} else {
 					warn("unknown setting %q ignored", "control."+key)
 				}
