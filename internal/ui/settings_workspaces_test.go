@@ -120,14 +120,16 @@ func TestWorkspacesIsASection(t *testing.T) {
 	if defaultSections()[wsIndex(t)].later {
 		t.Fatal("Workspaces is still greyed")
 	}
-	for _, s := range []string{"samurai", "Closed", "4 tabs", "Run", "Edit", "Delete", "+ New workspace", "Run a workspace when kaze starts"} {
+	for _, s := range []string{"samurai", "Closed", "4 tabs", "Run", "...", "+ New workspace", "Run a workspace when kaze starts"} {
 		f.wantText(s)
 	}
 	if f.has("coming next") {
 		t.Fatal("the nav still says coming next")
 	}
-	// The chain shows; its tail may be cut with "…" in the card.
-	f.wantText("docker compose up -d → " + `.\venv\Scripts\Activate.`)
+	// Expanding shows the first command and the count of the remaining ones.
+	f.win.activate("ws.toggle", 0)
+	f.draw()
+	f.wantText("docker compose up -d")
 	f.wantText("after port 8000")
 }
 

@@ -207,13 +207,13 @@ func (p *page) chain(cmds []string, sz unit.Sp, w int) []string {
 
 // fitStart shortens s at its start with "…", keeping the end of a path, which tells folders apart.
 func (p *page) fitStart(s string, sz unit.Sp, w int) string {
-	if _, size := p.c.label(p.gtx, s, sz, p.col.fg); size.X <= w {
+	if _, size := p.c.labelMono(p.gtx, s, sz, p.col.fg); size.X <= w {
 		return s
 	}
 	r := []rune(s)
 	for len(r) > 1 {
 		r = r[1:]
-		if _, size := p.c.label(p.gtx, "…"+string(r), sz, p.col.fg); size.X <= w {
+		if _, size := p.c.labelMono(p.gtx, "…"+string(r), sz, p.col.fg); size.X <= w {
 			break
 		}
 	}

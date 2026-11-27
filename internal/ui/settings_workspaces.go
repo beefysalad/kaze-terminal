@@ -30,12 +30,14 @@ var wsWaits = []workspaces.Wait{workspaces.WaitNone, workspaces.WaitDocker, work
 // wsPage is the Workspaces section: the list as read when it showed, and the
 // draft being edited. UI goroutine only.
 type wsPage struct {
-	doc     workspaces.Document
-	loadErr string // why the file could not be read; the list is hidden
-	draft   *wsDraft
-	dialog  wsDialog
-	del     string // the workspace the delete dialog is about
-	then    func() // what leaving was going to do, once the unsaved-changes question is answered
+	filter            wsFilter
+	query, open, menu string
+	doc               workspaces.Document
+	loadErr           string // why the file could not be read; the list is hidden
+	draft             *wsDraft
+	dialog            wsDialog
+	del               string // the workspace the delete dialog is about
+	then              func() // what leaving was going to do, once the unsaved-changes question is answered
 
 	picking bool          // a folder picker is open; only one at a time
 	picked  chan wsPicked // its answer, sent from the picker's goroutine
@@ -568,6 +570,34 @@ func wsAct(win *window, id string, arg int) {
 		return p.doc.Workspaces[arg], true
 	}
 	switch id {
+	case "ws.toggle":
+		if w, ok := at(); ok {
+			if p.open == w.ID {
+				p.open = ""
+			} else {
+				p.open = w.ID
+			}
+			p.menu = ""
+		}
+	case "ws.menu":
+		if w, ok := at(); ok {
+			if p.menu == w.ID {
+				p.menu = ""
+			} else {
+				p.menu = w.ID
+			}
+		}
+	case "ws.filter":
+		p.filter = wsFilter(arg)
+	case "ws.row.startup":
+		if w, ok := at(); ok {
+			v := w.ID
+			if win.opt.Config.StartupWorkspace == v {
+				v = ""
+			}
+			win.opt.Config.StartupWorkspace = v
+			win.saveSetting("startup_workspace", v)
+		}
 	case "ws.start.pick":
 		win.pickStartDir()
 	case "ws.start.home":
