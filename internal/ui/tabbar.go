@@ -28,9 +28,8 @@ func rgb(v uint32) color.NRGBA {
 	return color.NRGBA{R: uint8(v >> 16), G: uint8(v >> 8), B: uint8(v), A: 0xff}
 }
 
-// chromeFace is kaze's one UI font: the terminal and every piece of chrome draw
-// in JetBrains Mono. Don't add a second UI font (see CLAUDE.md).
-const chromeFace = "JetBrains Mono"
+const chromeFace = "Geist"
+const monoFace = "JetBrains Mono"
 
 // chrome draws the title bar, sidebar and status bar with Gio's shaper over the bundled fonts.
 type chrome struct {
@@ -56,14 +55,14 @@ func newChrome() *chrome {
 		name   string
 		weight font.Weight
 	}{
-		{fonts.MonoRegular, chromeFace, font.Normal}, {fonts.MonoBold, chromeFace, font.Bold}, {fonts.CJK, "Noto Sans JP", font.Normal},
+		{fonts.SansRegular, chromeFace, font.Normal}, {fonts.SansSemiBold, chromeFace, font.SemiBold}, {fonts.SansBold, chromeFace, font.Bold}, {fonts.MonoRegular, monoFace, font.Normal}, {fonts.MonoBold, monoFace, font.Bold}, {fonts.CJK, "Noto Sans JP", font.Normal},
 	} {
 		f, err := opentype.Parse(src.data)
 		if err != nil {
 			panic("ui: bundled font does not parse: " + err.Error()) // embedded at build time
 		}
 		ff := font.FontFace{Font: font.Font{Typeface: font.Typeface(src.name), Weight: src.weight}, Face: f}
-		if src.name == chromeFace {
+		if src.name != "Noto Sans JP" {
 			faces = append(faces, ff)
 		} else {
 			faces = append(faces, atChromeWeights(ff)...)
@@ -205,6 +204,10 @@ func (c *chrome) labelW(gtx layout.Context, s string, size unit.Sp, col color.NR
 
 // labelDims is labelW with the full dimensions, baseline included.
 func (c *chrome) labelDims(gtx layout.Context, s string, size unit.Sp, col color.NRGBA, w font.Weight) (op.CallOp, layout.Dimensions) {
+	return c.labelFaceDims(gtx, s, size, col, w, chromeFace)
+}
+
+func (c *chrome) labelFaceDims(gtx layout.Context, s string, size unit.Sp, col color.NRGBA, w font.Weight, face font.Typeface) (op.CallOp, layout.Dimensions) {
 	s = c.fit(s)
 	m := op.Record(gtx.Ops)
 	mat := op.Record(gtx.Ops)
@@ -212,7 +215,7 @@ func (c *chrome) labelDims(gtx layout.Context, s string, size unit.Sp, col color
 	matc := mat.Stop()
 	lg := gtx
 	lg.Constraints = layout.Constraints{Max: image.Pt(1<<16, 1<<16)}
-	d := widget.Label{MaxLines: 1}.Layout(lg, c.shaper, font.Font{Typeface: chromeFace, Weight: w}, size, s, matc)
+	d := widget.Label{MaxLines: 1}.Layout(lg, c.shaper, font.Font{Typeface: face, Weight: w}, size, s, matc)
 	return m.Stop(), d
 }
 
@@ -308,4 +311,12 @@ func (c *chrome) faceText(gtx layout.Context, s string, size unit.Sp, f font.Fon
 	lg.Constraints = layout.Constraints{Max: image.Pt(1<<20, 1<<20)}
 	d := widget.Label{MaxLines: 1}.Layout(lg, c.shaper, f, size, s, mc)
 	return m.Stop(), d.Size
+}
+
+func (c *chrome) labelMono(g layout.Context, s string, z unit.Sp, col color.NRGBA) (op.CallOp, image.Point) {
+	return c.labelMonoW(g, s, z, col, font.Normal)
+}
+func (c *chrome) labelMonoW(g layout.Context, s string, z unit.Sp, col color.NRGBA, w font.Weight) (op.CallOp, image.Point) {
+	a, d := c.labelFaceDims(g, s, z, col, w, monoFace)
+	return a, d.Size
 }
