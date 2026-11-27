@@ -47,6 +47,9 @@ type chrome struct {
 	palBadges []image.Rectangle // the palette's badge rects, reused across frames
 	covered   map[rune]bool     // rune -> some face has it
 	loaded    map[string]bool   // system font files already added
+
+	animate   bool // this frame draws the running mark spinning (set by beginStatusFrame)
+	animDrawn bool // an animated mark was drawn this frame, so the next phase needs a frame
 }
 
 func newChrome() *chrome {

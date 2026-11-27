@@ -17,6 +17,17 @@ a one-line pass-through that no test exercises, so check it by hand. Spec and pl
 build: two spaces each with an agent, confirm `"$KAZE_BIN" ls` shows only its own space
 and a send to the other space is refused. Release (minor) follows the merge.
 
+## Claude logo and animated status (same branch as control space isolation)
+
+The Claude row icon is now the real Claude Code mascot (wide body, side arms, two small
+eyes, four feet), redrawn from the half-block art the CLI prints by
+`tools/branding/claude_mascot.go`; the old 12x8 grid was a guess. Settings, Appearance,
+Sidebar has an "Animated status" switch (`animate_status`, off by default). On, the
+working mark gets a bright arc running around its ring and a breathing core, drawn about
+30 frames a second only while a working mark is on screen and the window is focused
+(`beginStatusFrame` and `statusWake` in `window.go`); off, nothing wakes. Checked with a
+headless render of four phases, not in the live app: look at it on a local build.
+
 ## Release 0.46 prepared locally
 
 `release/0.46` prepares the worker feature for a later release. Version 0.46,

@@ -58,6 +58,7 @@ type Config struct {
 	LineSpacing         string            `toml:"line_spacing"`         // tight|normal|roomy
 	CursorStyle         string            `toml:"cursor_style"`         // block|bar|underline
 	CursorBlink         bool              `toml:"cursor_blink"`         // default false
+	AnimateStatus       bool              `toml:"animate_status"`       // spin and pulse the working mark in the sidebar; default false (off keeps idle CPU at zero)
 	TaskbarFlash        bool              `toml:"taskbar_flash"`        // flash the taskbar button on alerts; default true
 	SystemNotifications bool              `toml:"system_notifications"` // native alerts while Kaze is in the background; default true
 	DoneToast           string            `toml:"done_toast"`           // 3s|6s|10s|until_seen
@@ -251,6 +252,8 @@ func Load(path string) (Config, []string, error) {
 			loadChoice(v, k, &cfg.DoneToast, []string{"3s", "6s", "10s", "until_seen"}, warn)
 		case "cursor_blink":
 			loadBool(v, k, &cfg.CursorBlink, warn)
+		case "animate_status":
+			loadBool(v, k, &cfg.AnimateStatus, warn)
 		case "taskbar_flash":
 			loadBool(v, k, &cfg.TaskbarFlash, warn)
 		case "system_notifications":

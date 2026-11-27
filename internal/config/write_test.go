@@ -491,3 +491,15 @@ func TestControlCrossSpaceRejectsNonBool(t *testing.T) {
 		t.Fatalf("control %+v warnings %v error %v", cfg.Control, warns, err)
 	}
 }
+
+func TestAnimateStatusKey(t *testing.T) {
+	if cfg, warns, err := Load(write(t, "")); err != nil || len(warns) != 0 || cfg.AnimateStatus {
+		t.Fatalf("default must be off: %+v %v %v", cfg, warns, err)
+	}
+	if cfg, warns, _ := Load(write(t, "animate_status = true")); len(warns) != 0 || !cfg.AnimateStatus {
+		t.Fatalf("true: %+v %v", cfg, warns)
+	}
+	if cfg, warns, _ := Load(write(t, "animate_status = \"yes\"")); len(warns) != 1 || cfg.AnimateStatus {
+		t.Fatalf("non-bool: %+v %v", cfg, warns)
+	}
+}

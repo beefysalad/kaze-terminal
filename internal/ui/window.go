@@ -76,6 +76,10 @@ const (
 	shutdownWait = 2 * time.Second
 	// blinkEvery is one blink phase, shown or hidden.
 	blinkEvery = 530 * time.Millisecond
+	// statusAnimPeriod is one turn of the working mark; statusAnimEvery is the gap
+	// between its frames (about 30 a second), only while one is on screen.
+	statusAnimPeriod = 1200 * time.Millisecond
+	statusAnimEvery  = 33 * time.Millisecond
 )
 
 type window struct {
@@ -664,6 +668,24 @@ func (win *window) blinks() bool {
 	return win.opt.Config.CursorBlink && win.focused && !win.set.shown && !win.board.open && win.docs.shown == 0 && win.mgr != nil && !win.mgr.Empty()
 }
 
+// beginStatusFrame decides whether this frame draws the working mark animated:
+// only when the setting is on and the window is in front of the user.
+func (win *window) beginStatusFrame() {
+	win.ui.animate = win.opt.Config.AnimateStatus && win.focused
+	win.ui.animDrawn = false
+}
+
+// statusWake returns when the next animation frame is due. ok is false unless an
+// animated mark was drawn this frame, so a window with nothing running never wakes.
+func (win *window) statusWake(now time.Time) (next time.Time, ok bool) {
+	drew := win.ui.animDrawn
+	win.ui.animDrawn = false
+	if !drew || !win.opt.Config.AnimateStatus || !win.focused {
+		return time.Time{}, false
+	}
+	return now.Add(statusAnimEvery), true
+}
+
 // blink sets the cursor's phase for now and returns when the next phase starts;
 // ok is false when the cursor is steady, so an idle window never wakes for it.
 func (win *window) blink(now time.Time) (next time.Time, ok bool) {
@@ -708,6 +730,7 @@ func (win *window) frame(gtx layout.Context) error {
 		}
 	}
 	win.updatePresence()
+	win.beginStatusFrame()
 	barH, statusH, pad := gtx.Dp(42), gtx.Dp(32), gtx.Dp(8)
 	px := gtx.Metric.PxPerSp * win.opt.Config.FontSize
 	if win.rend == nil || win.rendStale || px != win.rendPx {
@@ -959,6 +982,9 @@ func (win *window) frame(gtx layout.Context) error {
 	if win.set.shown {
 		win.drawSettingsSheet(gtx, image.Rectangle{Max: size})
 		win.wsr.hits = win.wsr.hits[:0]
+	}
+	if at, ok := win.statusWake(gtx.Now); ok {
+		gtx.Execute(op.InvalidateCmd{At: at}) // the next phase of a working mark; none when nothing runs on screen
 	}
 	win.drawPalette(gtx, termRect) // last: it sits over everything, toasts included
 

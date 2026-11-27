@@ -1082,6 +1082,7 @@ error makes kaze use all defaults.
 | `line_spacing` | `tight`, `normal` or `roomy` | `normal` |
 | `cursor_style` | `block`, `bar` or `underline` | `block` |
 | `cursor_blink` | Blink the cursor (off keeps idle CPU at zero) | `false` |
+| `animate_status` | Spin and pulse the working mark in the sidebar while an agent runs (off keeps idle CPU at zero; about 30 frames a second only while one is on screen and the window is in front) | `false` |
 | `taskbar_flash` | Flash the taskbar button on alerts (Windows) | `true` |
 | `system_notifications` | Show native notifications while Kaze is in the background | `true` |
 | `done_toast` | How long a "done" alert card stays: `3s`, `6s`, `10s` or `until_seen` | `6s` |
