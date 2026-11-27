@@ -471,3 +471,35 @@ func TestSetKeysFollowsASymlink(t *testing.T) {
 		t.Fatalf("target %q", b)
 	}
 }
+
+func TestControlCrossSpaceDefaultsOff(t *testing.T) {
+	if Default().Control.CrossSpace {
+		t.Fatal("cross-space control defaults on")
+	}
+}
+
+func TestControlCrossSpaceParses(t *testing.T) {
+	cfg, warns, err := Load(write(t, "[control]\ncross_space = true\n"))
+	if err != nil || len(warns) != 0 || !cfg.Control.CrossSpace {
+		t.Fatalf("control %+v warnings %v error %v", cfg.Control, warns, err)
+	}
+}
+
+func TestControlCrossSpaceRejectsNonBool(t *testing.T) {
+	cfg, warns, err := Load(write(t, "[control]\ncross_space = 3\n"))
+	if err != nil || cfg.Control.CrossSpace || len(warns) != 1 || !strings.Contains(warns[0], "control.cross_space") || !strings.Contains(warns[0], "must be true or false") {
+		t.Fatalf("control %+v warnings %v error %v", cfg.Control, warns, err)
+	}
+}
+
+func TestAnimateStatusKey(t *testing.T) {
+	if cfg, warns, err := Load(write(t, "")); err != nil || len(warns) != 0 || cfg.AnimateStatus {
+		t.Fatalf("default must be off: %+v %v %v", cfg, warns, err)
+	}
+	if cfg, warns, _ := Load(write(t, "animate_status = true")); len(warns) != 0 || !cfg.AnimateStatus {
+		t.Fatalf("true: %+v %v", cfg, warns)
+	}
+	if cfg, warns, _ := Load(write(t, "animate_status = \"yes\"")); len(warns) != 1 || cfg.AnimateStatus {
+		t.Fatalf("non-bool: %+v %v", cfg, warns)
+	}
+}

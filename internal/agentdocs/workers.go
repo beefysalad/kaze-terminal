@@ -47,7 +47,7 @@ type managedBlock struct {
 	history          []string
 }
 
-var peerBlock = managedBlock{begin, end, Block, []string{peer045, peer046}}
+var peerBlock = managedBlock{begin, end, Block, []string{peer045, peer046, peer0462}}
 var workersBlock = managedBlock{workerBegin, workerEnd, WorkerBlock, []string{worker046}}
 
 func WorkersState(path string) (Status, error) { return workersBlock.state(path) }

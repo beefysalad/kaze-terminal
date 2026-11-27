@@ -47,13 +47,13 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		return Reply{Error: &Error{CodeUnknownOp, "templates unavailable"}}
 	}
 	if req.Op == "spawn" || req.Op == "kill" {
-		return workers(ctx, host, req)
+		return workers(ctx, host, req, opt)
 	}
 	if req.Op == "name" || req.Op == "label" {
-		return metadata(ctx, host, req)
+		return metadata(ctx, host, req, opt)
 	}
 	if req.Op == "wait" {
-		return wait(ctx, host, req)
+		return wait(ctx, host, req, opt)
 	}
 	if req.Op == "keys" || req.Op == "interrupt" {
 		if req.Op == "keys" {
@@ -67,7 +67,7 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 			}
 		}
 		tabs := host.Tabs()
-		tab, err := ResolveFrom(tabs, req.Tab, req.From)
+		tab, _, err := resolveScoped(tabs, req.Tab, req.From, opt.CrossSpace)
 		if err != nil {
 			return Reply{Error: err}
 		}
@@ -83,20 +83,24 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		if hostErr != nil {
 			return inputError(hostErr)
 		}
-		return Reply{OK: true, Warning: crossSpace(tabs, req.From, tab)}
+		return Reply{OK: true, Warning: crossSpace(tabs, req.From, tab, opt.CrossSpace)}
 	}
 	if req.Op == "report" {
 		return report(host, req)
 	}
 	if req.Op == "ls" {
-		return Reply{OK: true, Tabs: host.Tabs()}
+		visible, err := VisibleTo(host.Tabs(), req.From, opt.CrossSpace)
+		if err != nil {
+			return Reply{Error: err}
+		}
+		return Reply{OK: true, Tabs: visible}
 	}
 	if req.Op == "read" {
 		if req.Lines < 0 {
 			return Reply{Error: &Error{CodeInvalidRequest, "lines must not be negative"}}
 		}
 		tabs := host.Tabs()
-		tab, err := ResolveFrom(tabs, req.Tab, req.From)
+		tab, _, err := resolveScoped(tabs, req.Tab, req.From, opt.CrossSpace)
 		if err != nil {
 			return Reply{Error: err}
 		}
@@ -104,14 +108,14 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		if hostErr != nil {
 			return Reply{Error: &Error{CodeHostError, "could not read tab"}}
 		}
-		return Reply{OK: true, Text: text, Warning: crossSpace(tabs, req.From, tab)}
+		return Reply{OK: true, Text: text, Warning: crossSpace(tabs, req.From, tab, opt.CrossSpace)}
 	}
 	if req.Op == "send" {
 		if len(req.Text) > MaxTextBytes && (!opt.AgentTag || req.From == "") {
 			return Reply{Error: &Error{CodeTextTooLarge, "text exceeds 32 KiB"}}
 		}
 		tabs := host.Tabs()
-		tab, err := ResolveFrom(tabs, req.Tab, req.From)
+		tab, _, err := resolveScoped(tabs, req.Tab, req.From, opt.CrossSpace)
 		if err != nil {
 			return Reply{Error: err}
 		}
@@ -122,7 +126,7 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 			return Reply{Error: &Error{CodeBusy, "target is working"}}
 		}
 		text := req.Text
-		if opt.AgentTag && req.From != "" {
+		if opt.AgentTag && req.From != "" && !req.Raw {
 			for _, sender := range tabs {
 				if sender.ID == req.From {
 					from := sender.ID
@@ -144,7 +148,7 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 		if tab.Status == "working" {
 			warning = "busy"
 		}
-		if spaceWarning := crossSpace(tabs, req.From, tab); spaceWarning != "" {
+		if spaceWarning := crossSpace(tabs, req.From, tab, opt.CrossSpace); spaceWarning != "" {
 			if warning != "" {
 				warning += "; "
 			}
@@ -155,14 +159,99 @@ func HandleContext(ctx context.Context, host Host, req Request, options ...Optio
 	return Reply{Error: &Error{CodeUnknownOp, "unknown control operation"}}
 }
 
+// spaceOf is the identity of a tab's space. Names repeat (two repositories can both
+// be called "project", and a repository can be called "Shell"), so the host's key wins.
+func spaceOf(t TabInfo) string {
+	if t.SpaceKey != "" {
+		return "key:" + t.SpaceKey
+	}
+	return "name:" + t.Space
+}
+
+// VisibleTo returns the tabs the caller may see: its own space, or every tab for the
+// owner (no from) and in cross_space mode. A from that names no open tab is refused, so
+// dropping or garbling KAZE_TAB_ID does not widen what a caller can reach.
+func VisibleTo(tabs []TabInfo, from string, cross bool) ([]TabInfo, *Error) {
+	if cross || from == "" {
+		return tabs, nil
+	}
+	for _, sender := range tabs {
+		if sender.ID != from {
+			continue
+		}
+		visible := make([]TabInfo, 0, len(tabs))
+		for _, tab := range tabs {
+			if spaceOf(tab) == spaceOf(sender) {
+				visible = append(visible, tab)
+			}
+		}
+		return visible, nil
+	}
+	return nil, &Error{CodeUnknownTab, "your tab is not known to Kaze; run this inside a Kaze tab"}
+}
+
+// resolveScoped resolves only visible tabs and refuses targets in other spaces.
+func resolveScoped(tabs []TabInfo, address, from string, cross bool) (TabInfo, []TabInfo, *Error) {
+	visible, scopeErr := VisibleTo(tabs, from, cross)
+	if scopeErr != nil {
+		return TabInfo{}, nil, scopeErr
+	}
+	tab, err := ResolveFrom(visible, address, from)
+	if err != nil && err.Code == CodeUnknownTab && matchesAnyTab(tabs, address) {
+		return TabInfo{}, visible, &Error{CodeCrossSpace, "that tab is in another space; cross-space control is off"}
+	}
+	return tab, visible, err
+}
+
+// matchesAnyTab reports whether an id, name or agent name addresses some tab, even
+// when several tabs in other spaces share it.
+func matchesAnyTab(tabs []TabInfo, address string) bool {
+	for _, tab := range tabs {
+		if tab.ID == address || (tab.Name != "" && tab.Name == address) || (tab.Agent != "" && strings.EqualFold(tab.Agent, address)) {
+			return true
+		}
+	}
+	return false
+}
+
+// SameSpace returns the tabs sharing a space with tab id (every tab in cross_space
+// mode). Tab names only have to be unique inside this set.
+func SameSpace(tabs []TabInfo, id string, cross bool) []TabInfo {
+	if cross {
+		return tabs
+	}
+	for _, target := range tabs {
+		if target.ID != id {
+			continue
+		}
+		same := make([]TabInfo, 0, len(tabs))
+		for _, tab := range tabs {
+			if spaceOf(tab) == spaceOf(target) {
+				same = append(same, tab)
+			}
+		}
+		return same
+	}
+	return nil
+}
+
+type callerKey struct{}
+
+// CallerFrom is the tab that made the request a host method is serving, or "" for
+// the owner. Hosts that apply a change later use it to re-check scope.
+func CallerFrom(ctx context.Context) string {
+	from, _ := ctx.Value(callerKey{}).(string)
+	return from
+}
+
 // crossSpace warns about a different project without refusing an explicit target.
-func crossSpace(tabs []TabInfo, from string, target TabInfo) string {
-	if from == "" {
+func crossSpace(tabs []TabInfo, from string, target TabInfo, enabled bool) string {
+	if !enabled || from == "" {
 		return ""
 	}
 	for _, sender := range tabs {
 		if sender.ID == from {
-			if sender.Space == target.Space {
+			if spaceOf(sender) == spaceOf(target) {
 				return ""
 			}
 			return fmt.Sprintf("target %s is in space %s, not your space %s; use it only if the owner named that tab", target.ID, target.Space, sender.Space)
@@ -229,7 +318,7 @@ func ResolveFrom(tabs []TabInfo, address, from string) (TabInfo, *Error) {
 		}
 		var local []TabInfo
 		for _, tab := range byAgent {
-			if tab.Space == sender.Space {
+			if spaceOf(tab) == spaceOf(sender) {
 				local = append(local, tab)
 			}
 		}

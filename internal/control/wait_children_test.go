@@ -115,7 +115,7 @@ func TestNeedsWorkerInputGuard(t *testing.T) {
 	for _, op := range []string{"keys", "send", "interrupt"} {
 		for _, status := range []string{"needs", "idle", "working"} {
 			for _, role := range []string{"worker", ""} {
-				h := &fakeHost{tabs: []TabInfo{{ID: "t2", Parent: "t1", Role: role, Status: status, FirstMessage: "delivered"}}}
+				h := &fakeHost{tabs: []TabInfo{{ID: "t1"}, {ID: "t2", Parent: "t1", Role: role, Status: status, FirstMessage: "delivered"}}}
 				r := Handle(h, Request{Op: op, Tab: "t2", From: "t1", Text: "text", Args: []string{"enter"}})
 				if status == "needs" && role == "worker" {
 					if r.Error == nil || r.Error.Code != CodeNotAllowed || h.submitCalls != 0 || h.id != "" {

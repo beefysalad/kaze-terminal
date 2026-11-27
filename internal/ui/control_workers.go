@@ -244,7 +244,11 @@ func (win *window) applyWorkerContext(ctx context.Context, req ctl.Request) ctl.
 		}
 	}
 	if r.Name != "" {
-		if _, e := ctl.ValidateName(win.control.Tabs(), "", r.Name); e != nil {
+		visible, e := ctl.VisibleTo(win.control.Tabs(), req.From, win.opt.Config.Control.CrossSpace)
+		if e == nil {
+			_, e = ctl.ValidateName(visible, "", r.Name)
+		}
+		if e != nil {
 			return ctl.Reply{Error: e}
 		}
 	}

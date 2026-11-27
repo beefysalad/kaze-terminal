@@ -18,7 +18,7 @@ type WaitHost interface {
 	OutputChanges(id string) (<-chan struct{}, func(), time.Time, error)
 }
 
-func wait(ctx context.Context, host Host, req Request) Reply {
+func wait(ctx context.Context, host Host, req Request, opt Options) Reply {
 	if req.Timeout < 0 || req.Timeout > MaxWaitTimeout || req.Quiet < 0 || req.Quiet > int((1<<63-1)/int64(time.Millisecond)) || len(req.For) > MaxTextBytes {
 		return Reply{Error: &Error{CodeInvalidRequest, "invalid wait limits"}}
 	}
@@ -62,7 +62,7 @@ func wait(ctx context.Context, host Host, req Request) Reply {
 		if address == "" {
 			address = req.Tab
 		}
-		tab, err := ResolveFrom(tabs, address, req.From)
+		tab, _, err := resolveScoped(tabs, address, req.From, opt.CrossSpace)
 		if err != nil {
 			return Reply{Error: err}
 		}

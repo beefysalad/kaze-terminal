@@ -187,8 +187,16 @@ func (win *window) publishControl() {
 		t.Session.Lock()
 		cwd := t.Session.Applier().Cwd()
 		t.Session.Unlock()
+		// A repository still being looked up is not "no repository": until it resolves the
+		// tab has a space of its own, so two tabs in different projects never share Shell.
+		unresolved := loc.repo == "" && (loc.pending || loc.stale)
 		if cwd != "" && cwd != loc.cwd {
 			loc = locEntry{cwd: cwd}
+			unresolved = true
+		}
+		spaceKey := loc.repo
+		if unresolved {
+			spaceKey = "unresolved:" + id
 		}
 		a := win.rowAgent(t.ID)
 		status := "shell"
@@ -234,7 +242,7 @@ func (win *window) publishControl() {
 			folder = t.Dir
 		}
 		messages := win.control.inboxMessages(id)
-		next.tabs = append(next.tabs, ctl.TabInfo{Unread: len(messages), Inbox: messages, Parent: parent, Role: t.Role, FirstMessage: firstMessage, ID: id, Name: name, Space: controlSpaceName(loc), Folder: folder,
+		next.tabs = append(next.tabs, ctl.TabInfo{Unread: len(messages), Inbox: messages, Parent: parent, Role: t.Role, FirstMessage: firstMessage, ID: id, Name: name, Space: controlSpaceName(loc), SpaceKey: spaceKey, Folder: folder,
 			Labels: cloneLabels(win.control.labels[id]), Agent: a.agentName(), Status: status, Since: a.since, Workspace: t.Group != nil})
 		var target *controlSession
 		if old != nil {
@@ -245,6 +253,7 @@ func (win *window) publishControl() {
 		}
 		next.sessions[id] = target
 	}
+	inheritWorkerSpaces(next.tabs)
 	for id := range win.control.labels {
 		if next.sessions[id] == nil {
 			delete(win.control.labels, id)
@@ -336,4 +345,25 @@ func (h *controlHost) submitInput(id string, target *controlSession, data []byte
 		}
 	}
 	return fmt.Errorf("tab %s is closed or unknown", id)
+}
+
+// inheritWorkerSpaces gives every worker its parent's space, as the sidebar does. A
+// worker's own location lags (a fresh one has none and would read as "Shell"), and
+// parent and worker must always share a space or they could not reach each other.
+func inheritWorkerSpaces(list []ctl.TabInfo) {
+	index := make(map[string]int, len(list))
+	for i, tab := range list {
+		index[tab.ID] = i
+	}
+	for i := range list {
+		root, hops := i, 0
+		for list[root].Role == "worker" && list[root].Parent != "" && hops < 8 {
+			parent, ok := index[list[root].Parent]
+			if !ok {
+				break
+			}
+			root, hops = parent, hops+1
+		}
+		list[i].Space, list[i].SpaceKey = list[root].Space, list[root].SpaceKey
+	}
 }

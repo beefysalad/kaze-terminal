@@ -16,6 +16,7 @@ const controlRenameTimeout = 2 * time.Second
 type controlRename struct {
 	ctx      context.Context
 	id, name string
+	from     string // the tab that asked, "" for the owner; re-checked when applied
 	done     chan *ctl.Error
 }
 
@@ -33,7 +34,7 @@ func (win *window) initControl() {
 func (h *controlHost) Name(ctx context.Context, id, name string) *ctl.Error {
 	ctx, cancel := context.WithTimeout(ctx, controlRenameTimeout)
 	defer cancel()
-	r := &controlRename{ctx: ctx, id: id, name: name, done: make(chan *ctl.Error, 1)}
+	r := &controlRename{ctx: ctx, id: id, name: name, from: ctl.CallerFrom(ctx), done: make(chan *ctl.Error, 1)}
 	h.renameMu.Lock()
 	if len(h.renames) >= 32 {
 		h.renameMu.Unlock()
@@ -71,7 +72,23 @@ func (win *window) drainControl() {
 		if r.ctx.Err() != nil {
 			continue
 		}
-		name, e := ctl.ValidateName(h.Tabs(), r.id, r.name)
+		// The handler approved this rename a frame ago; the caller or the target may have
+		// moved to another project since, so check scope again, then name uniqueness
+		// inside the target's space.
+		now := h.Tabs()
+		cross := win.opt.Config.Control.CrossSpace
+		name := ""
+		var e *ctl.Error
+		if r.from != "" {
+			visible, scopeErr := ctl.VisibleTo(now, r.from, cross)
+			e = scopeErr
+			if e == nil && !slices.ContainsFunc(visible, func(tab ctl.TabInfo) bool { return tab.ID == r.id }) {
+				e = &ctl.Error{Code: ctl.CodeCrossSpace, Message: "that tab is in another space; cross-space control is off"}
+			}
+		}
+		if e == nil {
+			name, e = ctl.ValidateName(ctl.SameSpace(now, r.id, cross), r.id, r.name)
+		}
 		if e == nil {
 			n, err := strconv.Atoi(strings.TrimPrefix(r.id, "t"))
 			var tab *tabs.Tab

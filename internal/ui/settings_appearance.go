@@ -49,6 +49,7 @@ func appearanceRows(win *window) []settingRow {
 		}}},
 		{label: "Blinking cursor", hint: "Off keeps idle CPU at zero", ctrls: []ctrl{{kind: ctlToggle, id: "blink", on: c.CursorBlink}}},
 		{heading: "Sidebar"},
+		{label: "Animated status", hint: "Spin and pulse the working mark. Off keeps idle CPU at zero", ctrls: []ctrl{{kind: ctlToggle, id: "animate", on: c.AnimateStatus}}},
 		{label: "Side", hint: "Which edge of the window the sidebar sits on.", ctrls: []ctrl{{
 			kind: ctlSegmented, id: "sideside", options: []string{"Left", "Right"},
 			selected: choiceIndex([]string{"left", "right"}, c.SidebarSide, 0),
@@ -96,6 +97,8 @@ func appearanceAct(win *window, id string, arg int) {
 		}
 	case "blink":
 		win.setBlink(arg == 1)
+	case "animate":
+		win.setAnimateStatus(arg == 1)
 	case "sideside":
 		if arg == 0 || arg == 1 {
 			win.setSideRight(arg == 1)
@@ -143,6 +146,11 @@ func (win *window) setCursorStyle(v string) {
 func (win *window) setBlink(on bool) {
 	win.opt.Config.CursorBlink = on // frame reads it through blinks
 	win.saveSetting("cursor_blink", on)
+}
+
+func (win *window) setAnimateStatus(on bool) {
+	win.opt.Config.AnimateStatus = on // each frame reads it through beginStatusFrame
+	win.saveSetting("animate_status", on)
 }
 
 // saveSetting writes one key; a failure shows in the status bar and the live change stays.

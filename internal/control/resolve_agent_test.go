@@ -108,7 +108,7 @@ func TestHandleSpaceSafety(t *testing.T) {
 		} {
 			h := &spaceHost{fakeHost: fakeHost{tabs: tabs}}
 			ctx, cancel := context.WithTimeout(context.Background(), 100000000)
-			r := HandleContext(ctx, h, Request{Op: op, Tab: tc.target, From: tc.from, Text: "review", Args: []string{"enter"}})
+			r := HandleContext(ctx, h, Request{Op: op, Tab: tc.target, From: tc.from, Text: "review", Args: []string{"enter"}}, Options{Enabled: true, AgentTag: true, CrossSpace: true})
 			cancel()
 			wantWarning := tc.wantWarning
 			if op == "wait" {
@@ -124,11 +124,11 @@ func TestHandleSpaceSafety(t *testing.T) {
 	}
 	h := &fakeHost{tabs: append([]TabInfo(nil), tabs...)}
 	h.tabs[2].Status = "working"
-	r := Handle(h, Request{Op: "send", Tab: "t7", From: "t1", Text: "review"})
+	r := HandleContext(context.Background(), h, Request{Op: "send", Tab: "t7", From: "t1", Text: "review"}, Options{Enabled: true, AgentTag: true, CrossSpace: true})
 	if !r.OK || r.Warning != "busy; "+warning {
 		t.Fatalf("busy warning: %+v", r)
 	}
-	if r = Handle(h, Request{Op: "send", Tab: "t7", From: "t1", Text: "review", IfIdle: true}); r.Error == nil || r.Error.Code != CodeBusy {
+	if r = HandleContext(context.Background(), h, Request{Op: "send", Tab: "t7", From: "t1", Text: "review", IfIdle: true}, Options{Enabled: true, AgentTag: true, CrossSpace: true}); r.Error == nil || r.Error.Code != CodeBusy {
 		t.Fatalf("busy guard: %+v", r)
 	}
 }

@@ -24,6 +24,7 @@ type Request struct {
 	Task      string            `json:"task,omitempty"`
 	CallerKey string            `json:"caller_key,omitempty"` // separate from label Key
 	From      string            `json:"from,omitempty"`
+	Raw       bool              `json:"raw,omitempty"` // send without the peer tag
 	IfIdle    bool              `json:"if_idle,omitempty"`
 	Name      string            `json:"name,omitempty"`
 	Key       string            `json:"key,omitempty"`
@@ -58,6 +59,7 @@ type TabInfo struct {
 	ID           string            `json:"id"`
 	Name         string            `json:"name"`
 	Space        string            `json:"space"`
+	SpaceKey     string            `json:"-"` // identity behind Space (the repository), set by the host; names can repeat
 	Folder       string            `json:"folder"`
 	Agent        string            `json:"agent"`
 	Status       string            `json:"status"`
@@ -98,6 +100,7 @@ const (
 	CodeDisabled        = "disabled"
 	CodeUnknownKey      = "unknown_key"
 	CodeUnknownTab      = "unknown_tab"
+	CodeCrossSpace      = "cross_space"
 	CodeAmbiguousTab    = "ambiguous_tab"
 	CodeInvalidRequest  = "invalid_request"
 	CodeUnknownOp       = "unknown_op"

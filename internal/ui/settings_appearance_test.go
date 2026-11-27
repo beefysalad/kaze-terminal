@@ -75,13 +75,13 @@ func TestAppearanceRows(t *testing.T) {
 	if n := len(controlsOf(win, "theme")); n != 10 {
 		t.Fatalf("%d theme swatches, want 10", n)
 	}
-	for id, n := range map[string]int{"font": 2, "spacing": 3, "cursor": 3, "blink": 1} {
+	for id, n := range map[string]int{"font": 2, "spacing": 3, "cursor": 3, "blink": 1, "animate": 1} {
 		if got := len(controlsOf(win, id)); got != n {
 			t.Fatalf("%d %s hit areas, want %d", got, id, n)
 		}
 	}
 	// The rows come in the spec's order.
-	order := []string{"theme", "font", "spacing", "cursor", "blink", "sideside", "sidemode"}
+	order := []string{"theme", "font", "spacing", "cursor", "blink", "animate", "sideside", "sidemode"}
 	var seen []string
 	for _, c := range win.set.controls {
 		if len(seen) == 0 || seen[len(seen)-1] != c.id {
@@ -202,6 +202,14 @@ func TestAppearanceChoicesApplyAndSave(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Fatalf("saved file %q lacks %s", got, want)
 		}
+	}
+	press(t, win, "animate", 1)
+	if !win.opt.Config.AnimateStatus || !strings.Contains(readFile(t, path), "animate_status = true") {
+		t.Fatal("the animation toggle did not turn on and save")
+	}
+	press(t, win, "animate", 0)
+	if win.opt.Config.AnimateStatus || !strings.Contains(readFile(t, path), "animate_status = false") {
+		t.Fatal("the animation toggle did not turn off and save")
 	}
 	press(t, win, "blink", 0)
 	if win.opt.Config.CursorBlink || !strings.Contains(readFile(t, path), "cursor_blink = false") {

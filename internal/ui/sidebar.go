@@ -3,6 +3,7 @@ package ui
 import (
 	"image"
 	"image/color"
+	"math"
 	"path/filepath"
 	"strconv"
 	"unicode/utf8"
@@ -183,7 +184,7 @@ func centeredMarkBox(dot image.Rectangle, size int) image.Rectangle {
 
 // runningMark is the approved still closed ring with a bright core. At 14px,
 // the ring radius is 5.6px, its stroke 1.3px and the core radius 2.6px. All
-// geometry stays inside slot; painting this mark never requests a frame.
+// geometry stays inside slot; painting the still mark never requests a frame.
 func (c *chrome) runningMark(gtx layout.Context, slot image.Rectangle) {
 	if slot.Empty() {
 		return
@@ -212,6 +213,22 @@ func (c *chrome) runningMark(gtx layout.Context, slot image.Rectangle) {
 	if core == c.th.Accent {
 		core = mix(c.th.Accent, c.th.ActiveFG, 0.2)
 	}
+	if !c.animate {
+		paint.FillShape(ops, core, clip.Outline{Path: circle(size * 2.6 / 14)}.Op())
+		return
+	}
+	// Animated (Settings, Appearance, Animated status): a bright arc runs around the ring
+	// and the core breathes, once per statusAnimPeriod. The window wakes for each phase.
+	c.animDrawn = true
+	phase := float64(gtx.Now.UnixNano()%int64(statusAnimPeriod)) / float64(statusAnimPeriod)
+	radius := size * 5.6 / 14
+	start := phase*2*math.Pi - math.Pi/2
+	var arc clip.Path
+	arc.Begin(ops)
+	arc.MoveTo(f32.Pt(cx+radius*float32(math.Cos(start)), cy+radius*float32(math.Sin(start))))
+	arc.ArcTo(f32.Pt(cx, cy), f32.Pt(cx, cy), 1.9)
+	paint.FillShape(ops, c.th.Accent, clip.Stroke{Path: arc.End(), Width: size * 1.6 / 14}.Op())
+	core.A = uint8(float64(core.A) * (0.65 + 0.35*(0.5+0.5*math.Sin(phase*2*math.Pi-math.Pi/2))))
 	paint.FillShape(ops, core, clip.Outline{Path: circle(size * 2.6 / 14)}.Op())
 }
 

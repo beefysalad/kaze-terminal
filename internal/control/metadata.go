@@ -10,7 +10,7 @@ import (
 )
 
 // Options is the per-handler configuration. Omitted options use enabled defaults.
-type Options struct{ Enabled, AgentTag bool }
+type Options struct{ Enabled, AgentTag, CrossSpace bool }
 
 type MetadataHost interface {
 	Name(context.Context, string, string) *Error
@@ -48,9 +48,9 @@ func ValidateLabel(key, value string) *Error {
 	}
 	return nil
 }
-func metadata(ctx context.Context, host Host, req Request) Reply {
+func metadata(ctx context.Context, host Host, req Request, opt Options) Reply {
 	tabs := host.Tabs()
-	tab, e := Resolve(tabs, req.Tab)
+	tab, _, e := resolveScoped(tabs, req.Tab, req.From, opt.CrossSpace)
 	if e != nil {
 		return Reply{Error: e}
 	}
@@ -59,11 +59,11 @@ func metadata(ctx context.Context, host Host, req Request) Reply {
 		return Reply{Error: &Error{CodeHostError, "metadata is unavailable"}}
 	}
 	if req.Op == "name" {
-		name, err := ValidateName(tabs, tab.ID, req.Name)
+		name, err := ValidateName(SameSpace(tabs, tab.ID, opt.CrossSpace), tab.ID, req.Name)
 		if err != nil {
 			return Reply{Error: err}
 		}
-		e = mh.Name(ctx, tab.ID, name)
+		e = mh.Name(context.WithValue(ctx, callerKey{}, req.From), tab.ID, name)
 	} else {
 		if e = ValidateLabel(req.Key, req.Value); e == nil {
 			e = mh.Label(tab.ID, req.Key, req.Value)

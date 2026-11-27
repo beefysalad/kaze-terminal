@@ -1,7 +1,7 @@
 Agent logos shown next to a session in the sidebar.
 
 claude.svg  The Claude logo (Anthropic). Path from simple-icons 13.21.0. Not shown in the app any more.
-claude-96.png  The Claude Code pixel mascot, drawn by tools/branding/claude_mascot.go (the owner chose it on 2026-11-23).
+claude-96.png  The Claude Code pixel mascot, drawn by tools/branding/claude_mascot.go from the half-block art Claude Code prints (chosen 2026-11-23, redrawn to its real proportions 2026-11-27).
 openai.svg  The OpenAI logo, shown for Codex. Path from simple-icons 13.21.0.
 
 Both are trademarks of their owners and are used only to say which agent runs in a tab.
