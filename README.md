@@ -1356,6 +1356,7 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 Done:
 
+- 0.47: a first-run tour, a collapsed Workspaces list with search and state filters as it grows, and Geist for interface text. Terminal text, code, paths and commands stay in JetBrains Mono.
 - 0.46.1: agents resolve names within their own project first, cross-space commands warn, and Settings can update outdated instructions or reset edited blocks. If instructions are already on, press Update once in Settings > Agents.
 - 0.46: [agents starting agents](#agents-starting-agents-workers), with background worker tabs, consent, reports, child waits, limits and owner templates. Windows runtime and native owner checks remain open.
 - Editable shortcuts: change any of them in Settings > Shortcuts, or write `none` to drop one (built on `feat/shortcuts-edit`, ships in 0.31 with the palette redesign).
