@@ -214,7 +214,8 @@ type window struct {
 	restoreFatal       error
 	restoreLastWarning string
 	set                settingsState // the Settings page; UI goroutine only
-	cfgPath            string        // where the page saves; "" applies changes without saving
+	tour               tourState
+	cfgPath            string // where the page saves; "" applies changes without saving
 
 	claudeDocs, codexDocs peerDocsState
 	codexDocsDir          string // CODEX_HOME override for the global instructions
@@ -779,31 +780,35 @@ func (win *window) frame(gtx layout.Context) error {
 
 	var active *tabs.Tab
 	{
-		win.paletteEvents(gtx) // first: while open it takes every click
-		win.barEvents(gtx)
-		win.statusEvents(gtx)
-		win.sideEvents(gtx)
-		win.stripEvents(gtx)
-		win.filterEvents(gtx)
-		win.renameEvents(gtx)
-		win.toastEvents(gtx)
-		win.bannerEvents(gtx)
-		win.consentEvents(gtx)
-		win.findEvents(gtx) // before the panel and the terminal
-		active = win.mgr.Active()
-		if win.set.shown {
-			win.settingsEvents(gtx) // the terminal gets no input; its shell keeps running
-		} else if win.board.open {
-			win.boardEvents(gtx) // likewise
-		} else if win.docs.shown != 0 {
-			win.docEvents(gtx)
-		} else if active != nil {
-			win.dockEvents(gtx, cw, ch)
-			if win.docs.shown == 0 {
-				win.termEvents(gtx, win.mainView(active), cw, ch)
-			}
+		if win.tour.open {
+			win.tourEvents(gtx)
 		} else {
-			win.emptyEvents(gtx, cw, ch)
+			win.paletteEvents(gtx) // first: while open it takes every click
+			win.barEvents(gtx)
+			win.statusEvents(gtx)
+			win.sideEvents(gtx)
+			win.stripEvents(gtx)
+			win.filterEvents(gtx)
+			win.renameEvents(gtx)
+			win.toastEvents(gtx)
+			win.bannerEvents(gtx)
+			win.consentEvents(gtx)
+			win.findEvents(gtx) // before the panel and the terminal
+			active = win.mgr.Active()
+			if win.set.shown {
+				win.settingsEvents(gtx) // the terminal gets no input; its shell keeps running
+			} else if win.board.open {
+				win.boardEvents(gtx) // likewise
+			} else if win.docs.shown != 0 {
+				win.docEvents(gtx)
+			} else if active != nil {
+				win.dockEvents(gtx, cw, ch)
+				if win.docs.shown == 0 {
+					win.termEvents(gtx, win.mainView(active), cw, ch)
+				}
+			} else {
+				win.emptyEvents(gtx, cw, ch)
+			}
 		}
 	}
 	active = win.mgr.Active()
@@ -962,6 +967,7 @@ func (win *window) frame(gtx layout.Context) error {
 	}
 	win.drawPalette(gtx, termRect) // last: it sits over everything, toasts included
 
+	win.drawTour(gtx)
 	if win.wantFocus {
 		gtx.Execute(key.FocusCmd{Tag: win.focusTarget()})
 		win.wantFocus = false
@@ -1140,6 +1146,9 @@ func (win *window) barEvents(gtx layout.Context) {
 // focusTarget is who gets the keyboard: the sidebar's rename or filter field, a settings
 // text field, the settings page or the terminal.
 func (win *window) focusTarget() event.Tag {
+	if win.tour.open {
+		return &win.tour.tag
+	}
 	if win.palette.open {
 		return &win.palette.ed
 	}
