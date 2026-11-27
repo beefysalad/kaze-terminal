@@ -493,7 +493,7 @@ return focus to your terminal. In a small window it fills the window. Its menu o
 
 - **Appearance:** theme cards (each a small terminal in that theme's colors), a live preview,
   font size, line spacing, cursor shape and blinking.
-- **Workspaces:** saved launch recipes, one card each with its state, plus Start folder, startup and session restoration choices (see Workspaces below).
+- **Workspaces:** saved launch recipes, collapsed rows with their state, plus Start folder, startup and session restoration choices (see Workspaces below).
 - **Agents:** shared alert choices (chimes, taskbar flash and done-toast duration), Claude usage,
   the Discord card (see Discord below), and separate setup checks for Claude Code and Codex.
 - **Shortcuts:** every shortcut with its keys and config name, grouped and searchable, and kaze's
@@ -886,6 +886,15 @@ no request at all.
   in a folder kaze can write to. A kaze built from a clone shows **Download**, which opens the
   release page, and the reason it can't update in place.
 
+## First launch
+
+On a fresh install, a short, skippable tour introduces spaces, agents, workspaces and live status.
+Replay it from Settings > About > Replay the tour, or choose Show the tour in the palette.
+Hook setup always asks for confirmation before changing files. Existing installs skip the tour.
+
+UI chrome uses Geist. Terminal text, paths, commands and code use JetBrains Mono, with Noto Sans JP
+as the Japanese fallback.
+
 ## Workspaces
 
 A workspace is a saved launch recipe: a name and a list of tabs. Each tab has a title, a folder,
@@ -906,8 +915,10 @@ color. For each tab:
 - **Wait for:** Nothing, Docker, or a port. The tab's commands are held until Docker is up, or
   until something answers on that port on this machine.
 
-The Workspaces list shows each workspace's tabs with their color, folder, commands in order and
-what they wait for. Nothing is saved until you press Save, and Cancel drops the draft. **Run** opens the tabs after
+The Workspaces list starts with compact, collapsed rows. Expand one to see its tabs, folders,
+first command, remaining command count and wait conditions. Filter by All, Open or Closed; lists
+with more than five workspaces also offer search by workspace or tab name. The row menu offers
+Edit, Delete and Run at startup. Nothing is saved until you press Save, and Cancel drops the draft. **Run** opens the tabs after
 the ones you already have. If any of the workspace's tabs is still open, the button reads
 **Go to tabs** and switches to the first one instead of opening copies.
 
@@ -1415,6 +1426,6 @@ Later:
 ## License
 
 kaze's code is under the [MIT License](LICENSE). The bundled fonts in `assets/fonts`
-(JetBrains Mono and a subset of Noto Sans JP) are not covered by it: each keeps its own
-SIL Open Font License 1.1, in `assets/fonts/OFL-JetBrainsMono.txt` and
+(Geist, JetBrains Mono and a subset of Noto Sans JP) are not covered by it: each keeps its own
+SIL Open Font License 1.1, in `assets/fonts/OFL-Geist.txt`, `assets/fonts/OFL-JetBrainsMono.txt` and
 `assets/fonts/OFL-NotoSansJP.txt`, with sources in `assets/fonts/SOURCES.txt`.

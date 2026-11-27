@@ -461,7 +461,7 @@ func (win *window) drawReadStep(gtx layout.Context, s *dockSession, it *readItem
 		var call op.CallOp
 		var sz image.Point
 		if it.objMono {
-			call, sz = c.fitSide(gtx, it.obj, 12, room, ink.mono)
+			call, sz = c.fitMono(gtx, it.obj, 12, room, ink.mono)
 		} else {
 			call, sz = c.fitSans(gtx, it.obj, 13, room, ink.strong, font.SemiBold)
 		}
@@ -514,7 +514,7 @@ func (win *window) drawReadStep(gtx layout.Context, s *dockSession, it *readItem
 			x += sz.X
 			w -= sz.X
 		}
-		call, sz := c.fitSide(gtx, ln.Text, 12, max(w, 0), col)
+		call, sz := c.fitMono(gtx, ln.Text, 12, max(w, 0), col)
 		place(ops, call, image.Pt(x, lmid-sz.Y/2))
 		*texts = append(*texts, ln.Text)
 	}

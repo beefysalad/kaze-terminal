@@ -214,7 +214,8 @@ type window struct {
 	restoreFatal       error
 	restoreLastWarning string
 	set                settingsState // the Settings page; UI goroutine only
-	cfgPath            string        // where the page saves; "" applies changes without saving
+	tour               tourState
+	cfgPath            string // where the page saves; "" applies changes without saving
 
 	claudeDocs, codexDocs peerDocsState
 	codexDocsDir          string // CODEX_HOME override for the global instructions
@@ -283,6 +284,7 @@ func Run(w *app.Window, opt Options) error {
 			win.restoreWait = true
 		}
 	}
+	win.prepareTour()
 	win.initRestore()
 	if win.restoreFatal != nil {
 		return win.restoreFatal
@@ -767,6 +769,7 @@ func (win *window) frame(gtx layout.Context) error {
 			win.bench.Start(win.w.Invalidate, privateMB)
 		}
 	}
+	win.startTour()
 	win.mgr.ResizeAll(cols, rows)
 	// The docked agent panel takes the bottom of the terminal area; only its
 	// session's PTY gets the smaller grid (spec 2026-11-03 agent dock).
@@ -779,31 +782,35 @@ func (win *window) frame(gtx layout.Context) error {
 
 	var active *tabs.Tab
 	{
-		win.paletteEvents(gtx) // first: while open it takes every click
-		win.barEvents(gtx)
-		win.statusEvents(gtx)
-		win.sideEvents(gtx)
-		win.stripEvents(gtx)
-		win.filterEvents(gtx)
-		win.renameEvents(gtx)
-		win.toastEvents(gtx)
-		win.bannerEvents(gtx)
-		win.consentEvents(gtx)
-		win.findEvents(gtx) // before the panel and the terminal
-		active = win.mgr.Active()
-		if win.set.shown {
-			win.settingsEvents(gtx) // the terminal gets no input; its shell keeps running
-		} else if win.board.open {
-			win.boardEvents(gtx) // likewise
-		} else if win.docs.shown != 0 {
-			win.docEvents(gtx)
-		} else if active != nil {
-			win.dockEvents(gtx, cw, ch)
-			if win.docs.shown == 0 {
-				win.termEvents(gtx, win.mainView(active), cw, ch)
-			}
+		if win.tour.open {
+			win.tourEvents(gtx)
 		} else {
-			win.emptyEvents(gtx, cw, ch)
+			win.paletteEvents(gtx) // first: while open it takes every click
+			win.barEvents(gtx)
+			win.statusEvents(gtx)
+			win.sideEvents(gtx)
+			win.stripEvents(gtx)
+			win.filterEvents(gtx)
+			win.renameEvents(gtx)
+			win.toastEvents(gtx)
+			win.bannerEvents(gtx)
+			win.consentEvents(gtx)
+			win.findEvents(gtx) // before the panel and the terminal
+			active = win.mgr.Active()
+			if win.set.shown {
+				win.settingsEvents(gtx) // the terminal gets no input; its shell keeps running
+			} else if win.board.open {
+				win.boardEvents(gtx) // likewise
+			} else if win.docs.shown != 0 {
+				win.docEvents(gtx)
+			} else if active != nil {
+				win.dockEvents(gtx, cw, ch)
+				if win.docs.shown == 0 {
+					win.termEvents(gtx, win.mainView(active), cw, ch)
+				}
+			} else {
+				win.emptyEvents(gtx, cw, ch)
+			}
 		}
 	}
 	active = win.mgr.Active()
@@ -897,6 +904,11 @@ func (win *window) frame(gtx layout.Context) error {
 	runs := win.reuseSideRuns()
 	win.frameRuns = &runs
 	win.drawSide(gtx, sideRect)
+	win.tour.targets[tourSidebar] = sideRect
+	win.tour.targets[tourWorkspaces] = image.Rectangle{}
+	if len(win.side.hits.runs) > 0 {
+		win.tour.targets[tourWorkspaces] = image.Rect(sideRect.Min.X, sideRect.Min.Y+win.side.hits.list.Max.Y, sideRect.Max.X, sideRect.Max.Y)
+	}
 	win.drawStrip(gtx, stripRect)
 
 	if at, ok := win.docTick(gtx.Now); ok {
@@ -962,6 +974,7 @@ func (win *window) frame(gtx layout.Context) error {
 	}
 	win.drawPalette(gtx, termRect) // last: it sits over everything, toasts included
 
+	win.drawTour(gtx)
 	if win.wantFocus {
 		gtx.Execute(key.FocusCmd{Tag: win.focusTarget()})
 		win.wantFocus = false
@@ -1140,6 +1153,9 @@ func (win *window) barEvents(gtx layout.Context) {
 // focusTarget is who gets the keyboard: the sidebar's rename or filter field, a settings
 // text field, the settings page or the terminal.
 func (win *window) focusTarget() event.Tag {
+	if win.tour.open {
+		return &win.tour.tag
+	}
 	if win.palette.open {
 		return &win.palette.ed
 	}
@@ -1431,6 +1447,9 @@ func (win *window) runShortcut(gtx layout.Context, a action) {
 		win.nextWaiting()
 	case actPalette:
 		win.togglePalette()
+	case actTour:
+		win.hideSettings()
+		win.openTour(true)
 	case actAgentsBoard:
 		win.toggleBoard()
 	case actFind:

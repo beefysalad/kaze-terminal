@@ -21,7 +21,11 @@ func wsDraw(p *page, r image.Rectangle, win *window) int {
 		if win.wsp.loadErr == "" && len(win.wsp.doc.Workspaces) > 0 {
 			y = p.headerActions(r, []ctrl{wsNewButton()}, y)
 		}
-		return p.rows(r, y, rows)
+		if win.wsp.loadErr != "" || len(win.wsp.doc.Workspaces) == 0 {
+			return p.rows(r, y, rows)
+		}
+		y = p.wsList(r, y, win)
+		return p.rows(r, y, rows[len(rows)-4:])
 	}
 	gtx := p.gtx
 	ed := win.editorParts(d)

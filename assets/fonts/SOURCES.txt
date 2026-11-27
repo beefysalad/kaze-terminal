@@ -13,3 +13,5 @@ NotoSansJP-Regular-subset.ttf
       --output-file=NotoSansJP-Regular-subset.ttf
   unicodes.txt = every code point U+0080..U+FFFF that Python's cp932 codec can encode,
   plus U+3000..U+30FF, U+31F0..U+31FF and U+FF00..U+FFEF (9428 code points).
+
+Geist 1.x static: https://github.com/vercel/geist-font, fetched 2026-11-26, SIL OFL 1.1.

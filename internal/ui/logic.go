@@ -36,6 +36,7 @@ const (
 	actFind
 	actSidebarLeft
 	actSidebarRight
+	actTour
 )
 
 // actionByName maps config [keys] names to actions; it must match config.KnownActions.

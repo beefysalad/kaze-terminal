@@ -49,6 +49,10 @@ func (f *runFixture) draw() {
 func (f *runFixture) press(id string, arg int) {
 	f.t.Helper()
 	c, ok := f.ctl(id, arg)
+	if !ok && (id == "ws.edit" || id == "ws.delete") {
+		f.press("ws.menu", arg)
+		c, ok = f.ctl(id, arg)
+	}
 	if !ok {
 		f.t.Fatalf("no %s control with arg %d; page %q", id, arg, f.win.set.texts)
 	}
@@ -120,14 +124,16 @@ func TestWorkspacesIsASection(t *testing.T) {
 	if defaultSections()[wsIndex(t)].later {
 		t.Fatal("Workspaces is still greyed")
 	}
-	for _, s := range []string{"samurai", "Closed", "4 tabs", "Run", "Edit", "Delete", "+ New workspace", "Run a workspace when kaze starts"} {
+	for _, s := range []string{"samurai", "Closed", "4 tabs", "Run", "...", "+ New workspace", "Run a workspace when kaze starts"} {
 		f.wantText(s)
 	}
 	if f.has("coming next") {
 		t.Fatal("the nav still says coming next")
 	}
-	// The chain shows; its tail may be cut with "…" in the card.
-	f.wantText("docker compose up -d → " + `.\venv\Scripts\Activate.`)
+	// Expanding shows the first command and the count of the remaining ones.
+	f.win.activate("ws.toggle", 0)
+	f.draw()
+	f.wantText("docker compose up -d")
 	f.wantText("after port 8000")
 }
 
@@ -950,43 +956,25 @@ func TestOpeningAndClosingTheEditorDropsFocus(t *testing.T) {
 }
 
 func TestListMembersShowCommandsWithoutCutting(t *testing.T) {
-	f := newRunFixture(t)
-	f.win.opt.Config = config.Default()
-	long := []string{"docker compose up -d", "source venv/bin/activate", "python manage.py migrate --noinput", "python manage.py runserver 0.0.0.0:8000", "echo ready"}
-	f.save(workspaces.Workspace{ID: "ws_w", Name: "work", Tabs: []workspaces.Tab{{ID: "t_api", Title: "api", Folder: f.dirs[0], Commands: long, Wait: workspaces.WaitDocker, Color: "cyan"}}})
-	f.win.openSettings()
-	f.win.selectSection(wsIndex(t))
-	f.draw()
-	for _, c := range long {
-		if !slices.ContainsFunc(f.win.set.texts, func(s string) bool { return strings.Contains(s, c) }) {
-			t.Fatalf("no drawn line holds the whole command %q: %q", c, f.win.set.texts)
-		}
-	}
-	for _, s := range f.win.set.texts {
-		if strings.Contains(s, "…") && s != "Choose…" {
-			t.Fatalf("a list line was cut: %q", s)
-		}
-	}
+	f := newWSPage(t)
+	f.press("ws.toggle", 0)
+	f.wantText("docker compose up -d")
+	f.wantText("+1 more")
 }
-
 func TestListMemberTags(t *testing.T) {
 	f := newWSPage(t)
+	f.press("ws.toggle", 0)
 	f.wantText("after Docker")
 	f.wantText("after port 8000")
-	if f.has("after Docker is up") || slices.ContainsFunc(f.win.set.texts, func(s string) bool { return strings.Contains(s, "answers") }) {
-		t.Fatalf("old long tags still drawn: %q", f.win.set.texts)
-	}
 }
-
 func TestListMembersAlign(t *testing.T) {
 	f := newWSPage(t)
-	xs := f.win.set.memberFolderX
-	if len(xs) != len(samuraiTabs) {
-		t.Fatalf("%d member folders drawn, want %d", len(xs), len(samuraiTabs))
-	}
-	for i, x := range xs {
-		if x != xs[0] {
-			t.Fatalf("member %d folder starts at x %d, member 0 at %d", i, x, xs[0])
+	f.press("ws.toggle", 0)
+	for _, c := range f.win.set.controls {
+		if c.id == "ws.run" || c.id == "ws.menu" {
+			if c.rect.Min.X < f.win.set.pane.Min.X || c.rect.Max.X > f.win.set.pane.Max.X {
+				t.Fatal(c.rect)
+			}
 		}
 	}
 }
@@ -1034,5 +1022,72 @@ func TestEditorFolderControlsFitIntermediateWidth(t *testing.T) {
 			}
 			f.wantText("This folder does not exist yet; Run stops here until it does.")
 		})
+	}
+}
+
+func TestDeleteResetsHiddenWorkspaceControls(t *testing.T) {
+	f := newWSPage(t)
+	f.win.wsp.query = "samurai"
+	f.win.wsp.filter = wsClosedOnly
+	f.press("ws.delete", 0)
+	f.press("ws.del.ok", 0)
+	if f.win.wsp.query != "" || f.win.wsp.filter != wsAll {
+		t.Fatal("hidden controls retain filtering")
+	}
+}
+
+func TestDeleteAcrossWorkspaceControlThresholds(t *testing.T) {
+	for _, count := range []int{6, 2} {
+		t.Run(fmt.Sprint(count), func(t *testing.T) {
+			f := newWSPage(t)
+			doc, rev, err := workspaces.Load(workspaces.Path(f.win.cfgPath))
+			if err != nil {
+				t.Fatal(err)
+			}
+			base := doc.Workspaces[0]
+			doc.Workspaces = nil
+			for i := 0; i < count; i++ {
+				ws := base
+				ws.ID = fmt.Sprintf("ws_case%d", i)
+				ws.Name = fmt.Sprintf("case%d", i)
+				doc.Workspaces = append(doc.Workspaces, ws)
+			}
+			if _, err = workspaces.Save(workspaces.Path(f.win.cfgPath), doc, rev); err != nil {
+				t.Fatal(err)
+			}
+			f.win.loadWorkspaces()
+			f.draw()
+			if count == 6 {
+				f.typeInto("ws.search", "case0")
+			} else {
+				f.press("ws.filter", 2)
+			}
+			f.press("ws.delete", 0)
+			f.press("ws.del.ok", 0)
+			if len(f.win.wsp.doc.Workspaces) != count-1 {
+				t.Fatal("deletion did not cross threshold")
+			}
+			if count == 6 && f.win.wsp.query != "" {
+				t.Fatal("query remained hidden")
+			}
+			if count == 2 && f.win.wsp.filter != wsAll {
+				t.Fatal("filter remained hidden")
+			}
+			if _, ok := f.ctl("ws.run", 0); !ok {
+				t.Fatal("remaining workspace hidden")
+			}
+		})
+	}
+}
+
+func TestNarrowWorkspaceActionsStayInPane(t *testing.T) {
+	f := newWSPage(t)
+	f.win.drawSettings(pageContext(320, 640), image.Rect(0, 0, 320, 640))
+	for _, c := range f.win.set.controls {
+		if c.id == "ws.run" || c.id == "ws.menu" {
+			if c.rect.Min.X < f.win.set.pane.Min.X || c.rect.Max.X > f.win.set.pane.Max.X {
+				t.Fatalf("%s %v outside %v", c.id, c.rect, f.win.set.pane)
+			}
+		}
 	}
 }

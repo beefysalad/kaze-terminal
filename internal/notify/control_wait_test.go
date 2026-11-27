@@ -21,7 +21,7 @@ func TestControlWaitDisconnect(t *testing.T) {
 		return controlError("cancelled", "cancelled")
 	})
 	c := controlConn(t, s)
-	if _, err := c.Write([]byte(`{"op":"wait","timeout":1,"token":"test-control-token"}`+"\n")); err != nil {
+	if _, err := c.Write([]byte(`{"op":"wait","timeout":1,"token":"test-control-token"}` + "\n")); err != nil {
 		t.Fatal(err)
 	}
 	select {
@@ -58,6 +58,8 @@ func TestControlWaitLongReply(t *testing.T) {
 	}
 }
 func TestControlWaitImmediateReply(t *testing.T) {
- s:=controlServer(t,func(json.RawMessage)any{return map[string]any{"ok":true}})
- for i:=0;i<10;i++ {controlExchange(t,s,`{"for":"finished","timeout":1,"op":"wait","tab":"t2","token":"test-control-token"}`+"\n")}
+	s := controlServer(t, func(json.RawMessage) any { return map[string]any{"ok": true} })
+	for i := 0; i < 10; i++ {
+		controlExchange(t, s, `{"for":"finished","timeout":1,"op":"wait","tab":"t2","token":"test-control-token"}`+"\n")
+	}
 }

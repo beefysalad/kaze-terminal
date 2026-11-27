@@ -5,9 +5,12 @@ import (
 	"image/color"
 
 	"gioui.org/f32"
+	"gioui.org/font"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"gioui.org/unit"
 
 	"github.com/beefysalad/kaze-terminal/internal/tabs"
 )
@@ -46,4 +49,23 @@ func (c *chrome) workerBranch(gtx layout.Context, x, top, bottom, mid, end int) 
 	col := c.sideTheme().Border
 	paint.FillShape(gtx.Ops, col, clip.Rect(image.Rect(x, top, x+1, bottom+1)).Op())
 	paint.FillShape(gtx.Ops, col, clip.Rect(image.Rect(x, mid, end, mid+1)).Op())
+}
+
+// fitWorkerName keeps worker identifiers in the terminal face.
+func (c *chrome) fitWorkerName(g layout.Context, s string, z unit.Sp, room int, col color.NRGBA) (op.CallOp, image.Point, string) {
+	s = cutRunes(c.fit(s), maxSideText)
+	r := []rune(s)
+	for len(r) > 0 {
+		shown := string(r)
+		if len(r) < len([]rune(s)) {
+			shown += "…"
+		}
+		call, sz := c.labelMonoW(g, shown, z, col, font.Bold)
+		if sz.X <= room {
+			return call, sz, shown
+		}
+		r = r[:len(r)-1]
+	}
+	call, sz := c.labelMono(g, "", z, col)
+	return call, sz, ""
 }

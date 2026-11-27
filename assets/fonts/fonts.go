@@ -17,3 +17,18 @@ var (
 //
 //go:embed NotoSansJP-Regular-subset.ttf
 var CJK []byte
+
+// Geist from vercel/geist-font, SIL OFL 1.1 (OFL-Geist.txt).
+//
+//go:embed Geist-Regular.ttf
+var SansRegular []byte
+
+// Geist from vercel/geist-font, SIL OFL 1.1 (OFL-Geist.txt).
+//
+//go:embed Geist-SemiBold.ttf
+var SansSemiBold []byte
+
+// Geist from vercel/geist-font, SIL OFL 1.1 (OFL-Geist.txt).
+//
+//go:embed Geist-Bold.ttf
+var SansBold []byte

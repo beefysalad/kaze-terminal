@@ -38,6 +38,7 @@ var kazeCommands = []kazeCommand{
 	{"next_waiting", "Go to the next session that needs you", actNextWaiting},
 	{"find", "Find in the terminal", actFind},
 	{"agents_board", "Show agents", actAgentsBoard},
+	{"show_tour", "Show the tour", actTour},
 	{"palette", "Open the palette", actPalette},
 }
 

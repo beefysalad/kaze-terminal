@@ -49,6 +49,9 @@ func aboutSection() settingsSection {
 
 func aboutAct(win *window, id string, _ int) {
 	switch id {
+	case "about_tour":
+		win.hideSettings()
+		win.openTour(true)
 	case "about_copy":
 		win.set.aboutCopy = "kaze " + version.Number + "\n" + win.set.build + "\n" + runtime.GOOS + "/" + runtime.GOARCH
 	case "about_github":
@@ -230,6 +233,10 @@ func drawAbout(p *page, r image.Rectangle, win *window) int {
 		put(issueB, 0, func(s image.Point) image.Point { return image.Pt(right-s.X, fy) })
 		fy += max(sz.Y, gs.Y)
 	}
+
+	fy += gtx.Dp(10)
+	tsz := put(ctrl{kind: ctlButton, id: "about_tour", text: "Replay the tour", ghost: true}, 0, func(image.Point) image.Point { return image.Pt(fx0, fy) })
+	fy += tsz.Y
 	y = fy + gtx.Dp(12)
 	call := rec.Stop()
 

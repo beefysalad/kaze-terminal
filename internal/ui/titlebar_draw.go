@@ -80,7 +80,7 @@ func (win *window) drawBar(gtx layout.Context, barH int) {
 		face := font.Font{Typeface: chromeFace, Weight: font.SemiBold}
 		size := unit.Sp(12.5)
 		if mono {
-			face, size = font.Font{Typeface: chromeFace}, 11.5
+			face, size = font.Font{Typeface: monoFace}, 11.5
 		}
 		return c.textWidth(gtx, s, size, face)
 	}
@@ -235,7 +235,7 @@ func (win *window) drawCrumb(gtx layout.Context, b titleLayout) {
 	}
 	cmdW := 0
 	if cp.Cmd != "" {
-		_, sz := c.label(gtx, cp.Cmd, 11.5, th.Muted)
+		_, sz := c.labelMono(gtx, cp.Cmd, 11.5, th.Muted)
 		cmdW = sz.X + gap
 	}
 	if cp.Title != "" {
@@ -246,7 +246,7 @@ func (win *window) drawCrumb(gtx layout.Context, b titleLayout) {
 	}
 	if cp.Cmd != "" {
 		x += gap
-		call, sz := c.label(gtx, cp.Cmd, 11.5, c.memberColor("magenta"))
+		call, sz := c.labelMono(gtx, cp.Cmd, 11.5, c.memberColor("magenta"))
 		place(ops, call, image.Pt(x, mid-sz.Y/2))
 		x += sz.X
 	}

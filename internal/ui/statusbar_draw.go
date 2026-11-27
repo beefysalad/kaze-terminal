@@ -63,7 +63,7 @@ func (c *chrome) statusMeasure(gtx layout.Context) func(string, bool) int {
 	return func(s string, mono bool) int {
 		face := font.Font{Typeface: chromeFace, Weight: font.SemiBold}
 		if mono {
-			face = font.Font{Typeface: chromeFace}
+			face = font.Font{Typeface: monoFace}
 		}
 		return c.textWidth(gtx, s, 11, face)
 	}
@@ -103,7 +103,7 @@ func (win *window) drawStatus(gtx layout.Context, y int, now time.Time) {
 		var call op.CallOp
 		var sz image.Point
 		if mono {
-			call, sz = c.label(gtx, s, 11, col)
+			call, sz = c.labelMono(gtx, s, 11, col)
 		} else {
 			call, sz = c.labelW(gtx, s, 11, col, font.SemiBold)
 		}

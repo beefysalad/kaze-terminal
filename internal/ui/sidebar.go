@@ -477,3 +477,28 @@ func runHeaderState(run sideRun, th theme.Chrome) (string, color.NRGBA) {
 	}
 	return "all up", th.Done
 }
+
+func (c *chrome) fitMonoText(gtx layout.Context, s string, size unit.Sp, room int, col color.NRGBA, w font.Weight) (op.CallOp, image.Point, string) {
+	s = cutRunes(c.fit(s), maxSideText)
+	call, sz := c.labelMonoW(gtx, s, size, col, w)
+	for i := 0; i < 6 && sz.X > room && s != ""; i++ {
+		n := utf8.RuneCountInString(s)
+		keep := min(n*max(room, 0)/max(sz.X, 1), n-1)
+		if keep < 2 {
+			s = ""
+		} else {
+			s = cutRunes(s, keep)
+		}
+		call, sz = c.labelMonoW(gtx, s, size, col, w)
+	}
+	if sz.X > room {
+		call, sz = c.labelMonoW(gtx, "", size, col, w)
+		sz.X, s = 0, ""
+	}
+	return call, sz, s
+}
+
+func (c *chrome) fitMono(g layout.Context, s string, z unit.Sp, room int, col color.NRGBA) (op.CallOp, image.Point) {
+	a, b, _ := c.fitMonoText(g, s, z, room, col, font.Normal)
+	return a, b
+}

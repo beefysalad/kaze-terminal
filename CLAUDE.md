@@ -31,11 +31,12 @@ checklist and what's next. The authority for behaviour is the spec
 - **Strict TDD:** write the test, watch it fail (RED), then make it pass (GREEN).
 - **RED tests must fail safely.** A failing test must never allocate unbounded memory or loop forever:
   bounded sizes, timeouts. (An unbounded RED test once crashed the machine.)
-- **One font: JetBrains Mono.** The terminal and every piece of the UI (settings, palette, title and
-  status bars, cards, docs) draw in JetBrains Mono (`chromeFace` in `internal/ui/tabbar.go`), Regular and
-  Bold only. Don't add, bundle or switch to another font, and don't mix fonts within a screen. Noto Sans JP
-  stays only as the fallback for Japanese characters. (Set by the owner on 2026-11-05; the website lander is
-  separate.)
+- **Two fonts: Geist for the UI, JetBrains Mono for the terminal.** The terminal grid and anything that is code
+  (folders, branch names, commands, columns that must line up) draw in JetBrains Mono; the rest of the chrome
+  (settings, palette, title and status bars, cards, docs) draws in Geist. Regular and Bold only (plus Medium or
+  SemiBold where the chrome already uses them). Don't add, bundle or switch to another font, and don't mix two fonts
+  within one run of text. Noto Sans JP stays only as the fallback for Japanese characters. (One font until
+  2026-11-05; Geist added for the chrome by the owner on 2026-11-26. The website lander is separate.)
 - **No emojis, ever.** Not in the app, the website, docs, commits, PRs or messages to the owner. Don't use
   Unicode symbols (◆ ✦ ⟡ ▤ ¶ and the like) as icons either: draw a real icon (an SVG on the website, a
   vector path in the app) or use a word. Key labels like ⌘ ⇧ in shortcuts are fine. (Set by the owner on
