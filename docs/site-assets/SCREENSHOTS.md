@@ -303,3 +303,7 @@ including the worker captures. Retake `kaze-settings.png` for the Animated statu
 switch in Settings > Appearance > Sidebar. A still capture cannot show the spinning
 and pulsing working mark. Existing captures remain unchanged; no screenshots were
 retaken or fabricated for this release. The earlier Geist and chrome retakes remain due.
+
+## 0.49 Workspaces cards
+
+Retake the Workspaces capture (`kaze-workspaces.png` if present) to show the card layout with an open workspace. Existing captures remain unchanged; none were retaken or fabricated for this release.
