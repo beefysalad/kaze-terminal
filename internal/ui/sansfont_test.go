@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -41,4 +42,23 @@ func TestSettingsNavSubtitleFits(t *testing.T) {
 		}
 	}
 	t.Fatalf("no subtitle in %q", win.set.texts)
+}
+
+func TestCodeDrawPathsSelectMono(t *testing.T) {
+	for file, want := range map[string]string{
+		"dock_readable_draw.go": "c.fitMono(gtx, it.obj",
+		"doc_draw.go":           "face = monoFace",
+	} {
+		b, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(b), want) {
+			t.Fatalf("%s does not select mono for code", file)
+		}
+	}
+	b, _ := os.ReadFile("dock_readable_draw.go")
+	if !strings.Contains(string(b), "c.fitMono(gtx, ln.Text") {
+		t.Fatal("command/output is not mono")
+	}
 }

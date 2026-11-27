@@ -34,7 +34,11 @@ func (win *window) drawDoc(gtx layout.Context, d *docView, r image.Rectangle) {
 		if notice {
 			col = win.ui.th.Needs
 		}
-		call, sz := win.ui.faceText(gtx, s, size, font.Font{Typeface: chromeFace}, col)
+		face := font.Typeface(chromeFace)
+		if d.path != "" && s == tildeHome(d.path, win.home) {
+			face = monoFace
+		}
+		call, sz := win.ui.faceText(gtx, s, size, font.Font{Typeface: face}, col)
 		place(ops, call, image.Pt(x, y))
 		win.docs.texts = append(win.docs.texts, s)
 		y += sz.Y + gtx.Dp(8)
