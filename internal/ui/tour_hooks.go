@@ -25,7 +25,7 @@ func (w *window) tourHookStates() []tourHook {
 		w.loadClaude()
 		out[0].State = hookNeedsFix
 		r := w.claude.report
-		if w.claude.readErr == "" && r.Needs.State == claudesetup.OK && r.Stop.State == claudesetup.OK && r.StatusLine.State == claudesetup.OK {
+		if w.claude.readErr == "" && r.Needs.State == claudesetup.OK && r.Stop.State == claudesetup.OK && r.StatusLine.State == claudesetup.OK && r.Prompt.State == claudesetup.OK && r.AgentStart.State == claudesetup.OK && r.AgentStop.State == claudesetup.OK && r.Tools.State == claudesetup.OK && r.Session.State == claudesetup.OK {
 			out[0].State = hookReady
 		}
 	}

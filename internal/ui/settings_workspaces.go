@@ -892,6 +892,7 @@ func (win *window) saveDraft() bool {
 		win.note("Workspace not saved: " + err.Error())
 		return false
 	}
+	p.open = d.id
 	p.draft = nil
 	win.set.focus = -1
 	win.loadWorkspaces()

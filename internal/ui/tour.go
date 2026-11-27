@@ -13,7 +13,7 @@ import (
 
 type tourState struct {
 	targets                   [5]image.Rectangle
-	scroll                    int
+	scroll, scrollMax         int
 	open                      bool
 	step                      int
 	replay, boardOpenedByTour bool
@@ -99,7 +99,7 @@ func (w *window) tourEvents(g layout.Context) {
 			}
 		case pointer.Event:
 			if e.Kind == pointer.Scroll {
-				w.tour.scroll = max(0, w.tour.scroll+int(e.Scroll.Y))
+				w.tour.scroll = min(w.tour.scrollMax, max(0, w.tour.scroll+int(e.Scroll.Y)))
 			}
 			if e.Kind == pointer.Release {
 				pt := image.Pt(int(e.Position.X), int(e.Position.Y))

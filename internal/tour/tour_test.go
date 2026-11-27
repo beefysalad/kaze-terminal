@@ -3,6 +3,7 @@ package tour
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -39,5 +40,18 @@ func TestMarkSeenWriteFailure(t *testing.T) {
 	os.WriteFile(p, []byte("x"), 0600)
 	if MarkSeen(p) == nil {
 		t.Fatal("expected failure")
+	}
+}
+func TestMarkSeenReadOnlyDirReturnsError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix permissions")
+	}
+	d := t.TempDir()
+	if e := os.Chmod(d, 0500); e != nil {
+		t.Fatal(e)
+	}
+	defer os.Chmod(d, 0700)
+	if e := MarkSeen(d); e == nil {
+		t.Fatal("expected permission error")
 	}
 }

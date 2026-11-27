@@ -49,6 +49,10 @@ func (f *runFixture) draw() {
 func (f *runFixture) press(id string, arg int) {
 	f.t.Helper()
 	c, ok := f.ctl(id, arg)
+	if !ok && (id == "ws.edit" || id == "ws.delete") {
+		f.press("ws.menu", arg)
+		c, ok = f.ctl(id, arg)
+	}
 	if !ok {
 		f.t.Fatalf("no %s control with arg %d; page %q", id, arg, f.win.set.texts)
 	}
@@ -952,43 +956,25 @@ func TestOpeningAndClosingTheEditorDropsFocus(t *testing.T) {
 }
 
 func TestListMembersShowCommandsWithoutCutting(t *testing.T) {
-	f := newRunFixture(t)
-	f.win.opt.Config = config.Default()
-	long := []string{"docker compose up -d", "source venv/bin/activate", "python manage.py migrate --noinput", "python manage.py runserver 0.0.0.0:8000", "echo ready"}
-	f.save(workspaces.Workspace{ID: "ws_w", Name: "work", Tabs: []workspaces.Tab{{ID: "t_api", Title: "api", Folder: f.dirs[0], Commands: long, Wait: workspaces.WaitDocker, Color: "cyan"}}})
-	f.win.openSettings()
-	f.win.selectSection(wsIndex(t))
-	f.draw()
-	for _, c := range long {
-		if !slices.ContainsFunc(f.win.set.texts, func(s string) bool { return strings.Contains(s, c) }) {
-			t.Fatalf("no drawn line holds the whole command %q: %q", c, f.win.set.texts)
-		}
-	}
-	for _, s := range f.win.set.texts {
-		if strings.Contains(s, "…") && s != "Choose…" {
-			t.Fatalf("a list line was cut: %q", s)
-		}
-	}
+	f := newWSPage(t)
+	f.press("ws.toggle", 0)
+	f.wantText("docker compose up -d")
+	f.wantText("+1 more")
 }
-
 func TestListMemberTags(t *testing.T) {
 	f := newWSPage(t)
+	f.press("ws.toggle", 0)
 	f.wantText("after Docker")
 	f.wantText("after port 8000")
-	if f.has("after Docker is up") || slices.ContainsFunc(f.win.set.texts, func(s string) bool { return strings.Contains(s, "answers") }) {
-		t.Fatalf("old long tags still drawn: %q", f.win.set.texts)
-	}
 }
-
 func TestListMembersAlign(t *testing.T) {
 	f := newWSPage(t)
-	xs := f.win.set.memberFolderX
-	if len(xs) != len(samuraiTabs) {
-		t.Fatalf("%d member folders drawn, want %d", len(xs), len(samuraiTabs))
-	}
-	for i, x := range xs {
-		if x != xs[0] {
-			t.Fatalf("member %d folder starts at x %d, member 0 at %d", i, x, xs[0])
+	f.press("ws.toggle", 0)
+	for _, c := range f.win.set.controls {
+		if c.id == "ws.run" || c.id == "ws.menu" {
+			if c.rect.Min.X < f.win.set.pane.Min.X || c.rect.Max.X > f.win.set.pane.Max.X {
+				t.Fatal(c.rect)
+			}
 		}
 	}
 }

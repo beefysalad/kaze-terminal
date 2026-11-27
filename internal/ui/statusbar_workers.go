@@ -145,7 +145,7 @@ func (win *window) buildWorkerPopover(gtx layout.Context) {
 		if state == "needs you" {
 			col = th.Needs
 		}
-		call, sz, shownName := c.fitSideText(gtx, name, 12, rect.Dx(), col, font.Bold)
+		call, sz, shownName := c.fitWorkerName(gtx, name, 12, rect.Dx(), col)
 		place(ops, call, rect.Min)
 		call, _ = c.fitSide(gtx, agent+" · "+state, 11, rect.Dx(), th.Muted)
 		place(ops, call, image.Pt(rect.Min.X, y+sz.Y+gtx.Dp(3)))

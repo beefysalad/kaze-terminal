@@ -136,7 +136,7 @@ func (win *window) recordDiff(gtx layout.Context, it *readItem, width int, ink *
 		add := func(s string) { row.s[row.n] = s; row.n++ }
 		if n := diffLineNumber(ln); n > 0 {
 			s := strconv.Itoa(n)
-			call, sz := c.label(g, s, 12, ink.num[tone])
+			call, sz := c.labelMono(g, s, 12, ink.num[tone])
 			place(g.Ops, call, image.Pt(numEnd-sz.X, mid-sz.Y/2))
 			add(s)
 		}
@@ -145,7 +145,7 @@ func (win *window) recordDiff(gtx layout.Context, it *readItem, width int, ink *
 			if tone == diffToneDel {
 				col = ink.delFG
 			}
-			call, sz := c.label(g, marker, 12, col)
+			call, sz := c.labelMono(g, marker, 12, col)
 			place(g.Ops, call, image.Pt(markX, mid-sz.Y/2))
 			add(marker)
 		}
@@ -159,7 +159,7 @@ func (win *window) recordDiff(gtx layout.Context, it *readItem, width int, ink *
 	}
 	if d.more > 0 {
 		s := plural(d.more, "more line")
-		call, sz := c.label(g, s, 12, ink.meta)
+		call, sz := c.labelMono(g, s, 12, ink.meta)
 		place(g.Ops, call, image.Pt(codeX, len(d.lines)*lineH+lineH/2-sz.Y/2))
 		rec.rows = append(rec.rows, diffRowTexts{s: [3]string{s}, n: 1})
 	}
@@ -173,7 +173,7 @@ func (win *window) recordDiff(gtx layout.Context, it *readItem, width int, ink *
 // of its own: nothing of the measuring is kept with the rows.
 func (win *window) codeAdvance(g layout.Context) int {
 	g.Ops = new(op.Ops)
-	_, sz := win.ui.label(g, strings.Repeat("0", diffAdvanceRunes), 12, color.NRGBA{})
+	_, sz := win.ui.labelMono(g, strings.Repeat("0", diffAdvanceRunes), 12, color.NRGBA{})
 	return sz.X
 }
 
@@ -199,7 +199,7 @@ func (win *window) recordCode(g layout.Context, text string, spans []codecolor.S
 		}
 		part := text[pos:end]
 		pos = end
-		call, sz := c.label(g, part, 12, ink.code[tone][kind])
+		call, sz := c.labelMono(g, part, 12, ink.code[tone][kind])
 		place(g.Ops, call, image.Pt(at.X+wide+col(runes), at.Y-sz.Y/2))
 		n := utf8.RuneCountInString(part)
 		runes += n

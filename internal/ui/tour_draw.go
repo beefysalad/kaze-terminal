@@ -42,6 +42,15 @@ func (w *window) drawTour(g layout.Context) {
 		y += sz.Y + g.Dp(7)
 	}
 	put(s.Label, 11, th.Muted)
+	for i := 0; i < 6; i++ {
+		dot := th.Muted
+		if i == w.tour.step {
+			dot = th.Accent
+		}
+		dx := r.Max.X - g.Dp(unit.Dp(18+(5-i)*10))
+		dy := r.Min.Y + g.Dp(22)
+		paint.FillShape(ops, dot, clip.Ellipse(image.Rect(dx, dy, dx+g.Dp(4), dy+g.Dp(4))).Op(ops))
+	}
 	call, sz := c.labelW(g, s.Title, 20, th.ToastTitle, font.Bold)
 	place(ops, call, image.Pt(x, y))
 	y += sz.Y + g.Dp(12)
@@ -75,7 +84,16 @@ func (w *window) drawTour(g layout.Context) {
 			}
 		}
 	}
+	w.tour.scrollMax = max(0, y+w.tour.scroll-(r.Max.Y-g.Dp(48)))
 	bodyClip.Pop()
+	if w.tour.scrollMax > 0 {
+		track := image.Rect(r.Max.X-g.Dp(8), r.Min.Y+g.Dp(85), r.Max.X-g.Dp(5), r.Max.Y-g.Dp(52))
+		paint.FillShape(ops, th.Border, clip.Rect(track).Op())
+		thumb := track
+		thumb.Min.Y += w.tour.scroll * max(0, track.Dy()-g.Dp(20)) / w.tour.scrollMax
+		thumb.Max.Y = min(track.Max.Y, thumb.Min.Y+g.Dp(20))
+		paint.FillShape(ops, th.Muted, clip.Rect(thumb).Op())
+	}
 	y = r.Max.Y - g.Dp(36)
 	button(s.SkipLabel, -1, image.Pt(x, y))
 	if w.tour.step > 0 {
