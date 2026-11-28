@@ -100,23 +100,35 @@ func (win *window) docPointer(gtx layout.Context, e pointer.Event) {
 		if !e.Buttons.Contain(pointer.ButtonPrimary) {
 			return
 		}
-		for _, lh := range h.links {
-			if p.In(lh.rect) && lh.link >= 0 && lh.link < len(d.lay.links) {
-				win.followDocLink(d, d.lay.links[lh.link])
-				return
-			}
-		}
 		for _, hh := range h.heads {
 			if p.In(hh.rect) {
+				win.clearDocSel()
 				win.docScrollTo(d, d.lay.headY[hh.i]-gtx.Dp(12))
 				return
 			}
 		}
 		win.docSelPress(gtx, d, p)
+		for _, lh := range h.links {
+			if win.docs.sel.drag && p.In(lh.rect) && lh.link >= 0 && lh.link < len(d.lay.links) {
+				win.docs.sel.link = d.lay.links[lh.link]
+				break
+			}
+		}
 	case pointer.Drag:
 		win.docSelDrag(gtx, d, p)
 	case pointer.Release:
+		s := win.docs.sel
 		win.docSelRelease()
+		if s.drag && !s.moved && s.link != "" && s.doc == d.id && s.key == d.lay.key && s.key.doc == d.doc {
+			for _, lh := range h.links {
+				if p.In(lh.rect) && d.lay.links[lh.link] == s.link {
+					win.followDocLink(d, s.link)
+					break
+				}
+			}
+		}
+	case pointer.Cancel:
+		win.clearDocSel()
 	}
 }
 func (win *window) drawDocOutline(gtx layout.Context, d *docView, r image.Rectangle) {

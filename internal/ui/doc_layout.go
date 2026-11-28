@@ -45,11 +45,14 @@ type docRun struct {
 	link          int
 	under, strike bool
 	code          bool
+	spacer        bool // selectable gap between columns or a list marker and its text
 }
 type docLine struct {
-	y, h int
-	runs []docRun
-	soft bool // ends because the paragraph wrapped, not at a line break
+	y, h      int
+	runs      []docRun
+	soft      bool // ends because the paragraph wrapped, not at a line break
+	softSpace bool // wrapping removed a space between words
+	table     bool
 }
 type docBoxKind uint8
 
@@ -174,6 +177,7 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 		line := docLine{y: ly, h: h}
 		flush := func(soft ...bool) {
 			line.soft = len(soft) > 0 && soft[0]
+			line.softSpace = len(soft) > 1 && soft[1]
 			l.lines = append(l.lines, line)
 			ly += h
 			x = x0
@@ -262,7 +266,7 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 				w := total.Ceil()
 				if w <= x1-x0 {
 					if x+w > x1 {
-						flush(!preserve)
+						flush(true, !preserve)
 					}
 					if st.paths && link < 0 && !preserve {
 						if found := render.LinksIn(word); len(found) > 0 {
@@ -280,7 +284,7 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 						if i > start {
 							emit(word[start:i], used.Ceil())
 						}
-						flush(!preserve)
+						flush(true)
 						start = i
 						used = 0
 					}
@@ -384,6 +388,7 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 					bottom = max(bottom, cy+dp(8))
 					for li := before; li < len(l.lines); li++ {
 						ln := &l.lines[li]
+						ln.table = true
 						if len(ln.runs) == 0 {
 							continue
 						}
@@ -443,6 +448,28 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 		}
 	}
 	sort.SliceStable(l.lines, func(i, j int) bool { return l.lines[i].y < l.lines[j].y })
+	// A visual row must have one selection coordinate space, including list
+	// markers and table columns, which are laid out independently above.
+	rows := l.lines[:0]
+	for _, line := range l.lines {
+		if len(rows) > 0 && rows[len(rows)-1].y == line.y {
+			row := &rows[len(rows)-1]
+			if len(row.runs) > 0 && len(line.runs) > 0 {
+				last := row.runs[len(row.runs)-1]
+				sep := " "
+				if line.table {
+					sep = "\t"
+				}
+				row.runs = append(row.runs, docRun{text: sep, x: last.x + last.w, w: max(0, line.runs[0].x-last.x-last.w), spacer: true, link: -1})
+			}
+			row.runs = append(row.runs, line.runs...)
+			row.h = max(row.h, line.h)
+			row.soft, row.softSpace = false, false
+		} else {
+			rows = append(rows, line)
+		}
+	}
+	l.lines = rows
 	sort.SliceStable(l.boxes, func(i, j int) bool { return l.boxes[i].r.Min.Y < l.boxes[j].r.Min.Y })
 	l.height = y
 	return l

@@ -95,6 +95,9 @@ func (win *window) showDoc(id docID) {
 	win.hideSettings()
 	win.closeBoard()
 	win.mgr.SetActive(d.session)
+	if win.docs.shown != id {
+		win.clearDocSel()
+	}
 	win.docs.shown = id
 	win.docs.checked = time.Now()
 	win.refreshDoc(d, win.docs.checked)
@@ -107,6 +110,7 @@ func (win *window) hideDoc() {
 	if win.docs.shown == 0 {
 		return
 	}
+	win.clearDocSel()
 	win.docs.shown = 0
 	win.wantFocus = true
 	win.w.Invalidate()
@@ -168,7 +172,7 @@ func (win *window) sessionDocs(id tabs.TabID) []*docView {
 func (win *window) docEvents(gtx layout.Context) {
 	tag := &win.docs.tag
 	for {
-		ev, ok := gtx.Event(key.FocusFilter{Target: tag}, key.Filter{Focus: tag, Optional: allMods}, pointer.Filter{Target: tag, Kinds: pointer.Press | pointer.Drag | pointer.Release | pointer.Scroll, ScrollY: pointer.ScrollRange{Min: -1 << 20, Max: 1 << 20}})
+		ev, ok := gtx.Event(key.FocusFilter{Target: tag}, key.Filter{Focus: tag, Optional: allMods}, pointer.Filter{Target: tag, Kinds: pointer.Press | pointer.Drag | pointer.Release | pointer.Cancel | pointer.Scroll, ScrollY: pointer.ScrollRange{Min: -1 << 20, Max: 1 << 20}})
 		if !ok {
 			return
 		}

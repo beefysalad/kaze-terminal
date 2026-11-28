@@ -24,6 +24,8 @@ func TestDocLinks(t *testing.T) {
 	e.Position.X = float32(hit.rect.Min.X + 1)
 	e.Position.Y = float32(hit.rect.Min.Y + 1)
 	win.docPointer(gtx, e)
+	e.Kind = pointer.Release
+	win.docPointer(gtx, e)
 	if opened != "https://example.com/x" {
 		t.Fatal(opened)
 	}

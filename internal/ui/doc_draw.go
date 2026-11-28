@@ -123,6 +123,9 @@ func (win *window) drawMarkdown(gtx layout.Context, l *docLayout, view image.Rec
 			break
 		}
 		for _, run := range line.runs {
+			if run.spacer {
+				continue
+			}
 			at := offset.Add(image.Pt(run.x, line.y))
 			if run.link >= 0 {
 				hit := image.Rect(at.X, at.Y, at.X+run.w, at.Y+line.h).Intersect(view)

@@ -25,6 +25,9 @@ type docSel struct {
 	doc          docID
 	anchor, head docPos
 	on, drag     bool
+	press        image.Point
+	link         string
+	moved        bool
 	key          docLayKey // the layout it was made on; a new layout drops it
 }
 
@@ -72,7 +75,7 @@ func selectedDocText(l *docLayout, from, to docPos) string {
 		}
 		switch next := l.lines[i+1]; {
 		case line.soft:
-			if !strings.HasSuffix(b.String(), " ") {
+			if line.softSpace && !strings.HasSuffix(b.String(), " ") {
 				b.WriteByte(' ')
 			}
 		case next.y-(line.y+line.h) > 0:
@@ -86,6 +89,9 @@ func selectedDocText(l *docLayout, from, to docPos) string {
 
 // runAdv is the width of the first n runes of a run.
 func (win *window) runAdv(gtx layout.Context, r docRun, n int) int {
+	if r.spacer {
+		return min(max(n, 0), 1) * r.w
+	}
 	var w fixed.Int26_6
 	for _, q := range r.text {
 		if n <= 0 {
@@ -182,7 +188,7 @@ func (win *window) docSelPress(gtx layout.Context, d *docView, p image.Point) {
 	if !ok {
 		return
 	}
-	win.docs.sel = docSel{doc: d.id, anchor: pos, head: pos, drag: true, key: d.lay.key}
+	win.docs.sel = docSel{doc: d.id, anchor: pos, head: pos, drag: true, key: d.lay.key, press: p}
 }
 
 // docSelDrag extends the selection to p, scrolling when p is past the top or bottom.
@@ -190,6 +196,13 @@ func (win *window) docSelDrag(gtx layout.Context, d *docView, p image.Point) {
 	s := &win.docs.sel
 	if !s.drag || s.doc != d.id {
 		return
+	}
+	if s.key != d.lay.key || s.key.doc != d.doc {
+		win.clearDocSel()
+		return
+	}
+	if delta := p.Sub(s.press); delta.X*delta.X+delta.Y*delta.Y >= gtx.Dp(3)*gtx.Dp(3) {
+		s.moved = true
 	}
 	v := win.docs.hits.view
 	switch {
@@ -218,7 +231,7 @@ func (win *window) docSelRelease() {
 // docSelText is the selected text of d, "" when nothing is selected.
 func (win *window) docSelText(d *docView) string {
 	s := win.docs.sel
-	if s.doc != d.id || s.key != d.lay.key {
+	if s.doc != d.id || s.key != d.lay.key || s.key.doc != d.doc {
 		return ""
 	}
 	from, to, ok := s.span()
