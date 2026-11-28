@@ -112,12 +112,24 @@ func (win *window) drawMarkdown(gtx layout.Context, l *docLayout, view image.Rec
 		}
 		paint.FillShape(ops, col, clip.Rect(rr).Op())
 	}
+	start := sort.Search(len(l.lines), func(i int) bool { return l.lines[i].y+l.lines[i].h > scroll })
+	// Inline backgrounds, like block backgrounds, belong below the highlight.
+	for _, line := range l.lines[start:] {
+		if line.y+offset.Y >= view.Max.Y {
+			break
+		}
+		for _, run := range line.runs {
+			at := offset.Add(image.Pt(run.x, line.y))
+			if run.code {
+				paint.FillShape(ops, mix(win.pal.BG, win.pal.FG, .07), clip.Rect(image.Rect(at.X, at.Y, at.X+run.w, at.Y+line.h)).Op())
+			}
+		}
+	}
 	if sel != nil {
 		if from, to, ok := sel.span(); ok {
 			win.paintDocSel(gtx, l, from, to, offset, view)
 		}
 	}
-	start := sort.Search(len(l.lines), func(i int) bool { return l.lines[i].y+l.lines[i].h > scroll })
 	for _, line := range l.lines[start:] {
 		if line.y+offset.Y >= view.Max.Y {
 			break
@@ -135,9 +147,6 @@ func (win *window) drawMarkdown(gtx layout.Context, l *docLayout, view image.Rec
 					pointer.CursorPointer.Add(ops)
 					a.Pop()
 				}
-			}
-			if run.code {
-				paint.FillShape(ops, mix(win.pal.BG, win.pal.FG, .07), clip.Rect(image.Rect(at.X, at.Y, at.X+run.w, at.Y+line.h)).Op())
 			}
 			call, _ := win.ui.faceText(gtx, run.text, run.size, run.face, win.docColor(run.role))
 			place(ops, call, at)

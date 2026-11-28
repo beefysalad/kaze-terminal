@@ -52,3 +52,40 @@ func TestDocSelectionRenders(t *testing.T) {
 		t.Fatal(e)
 	}
 }
+
+// Inline code's background must not cover the selection beneath it.
+func TestDocSelectionInlineCodePaintOrder(t *testing.T) {
+	if os.Getenv("KAZE_DOCSEL_RENDER_DIR") == "" {
+		t.Skip("opt-in GPU check")
+	}
+	win, d := layoutTestDoc(t, "`selected code`")
+	size := image.Pt(900, 600)
+	g := pageContext(size.X, size.Y)
+	win.drawDoc(g, d, image.Rectangle{Max: size})
+	gpu, err := headless.NewWindow(size.X, size.Y)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer gpu.Release()
+	render := func(selected bool) *image.RGBA {
+		g = pageContext(size.X, size.Y)
+		if selected {
+			win.docs.sel = docSel{doc: d.id, key: d.lay.key, on: true, head: docPos{0, lineRunes(d.lay.lines[0])}}
+		}
+		win.drawDoc(g, d, image.Rectangle{Max: size})
+		if err := gpu.Frame(g.Ops); err != nil {
+			t.Fatal(err)
+		}
+		img := image.NewRGBA(image.Rectangle{Max: size})
+		if err := gpu.Screenshot(img); err != nil {
+			t.Fatal(err)
+		}
+		return img
+	}
+	before, after := render(false), render(true)
+	run := d.lay.lines[0].runs[0]
+	p := win.docs.hits.view.Min.Add(image.Pt(run.x+2, d.lay.lines[0].y+1))
+	if before.RGBAAt(p.X, p.Y) == after.RGBAAt(p.X, p.Y) {
+		t.Fatal("inline code hides selection")
+	}
+}
