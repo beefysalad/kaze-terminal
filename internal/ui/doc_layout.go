@@ -49,6 +49,7 @@ type docRun struct {
 type docLine struct {
 	y, h int
 	runs []docRun
+	soft bool // ends because the paragraph wrapped, not at a line break
 }
 type docBoxKind uint8
 
@@ -171,7 +172,13 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 	wrap := func(spans []mdoc.Span, x0, x1, y0, h int, size unit.Sp, base font.Font, role docRole, preserve bool) int {
 		x, ly := x0, y0
 		line := docLine{y: ly, h: h}
-		flush := func() { l.lines = append(l.lines, line); ly += h; x = x0; line = docLine{y: ly, h: h} }
+		flush := func(soft ...bool) {
+			line.soft = len(soft) > 0 && soft[0]
+			l.lines = append(l.lines, line)
+			ly += h
+			x = x0
+			line = docLine{y: ly, h: h}
+		}
 		for _, sp := range spans {
 			face := base
 			rr := role
@@ -255,7 +262,7 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 				w := total.Ceil()
 				if w <= x1-x0 {
 					if x+w > x1 {
-						flush()
+						flush(!preserve)
 					}
 					if st.paths && link < 0 && !preserve {
 						if found := render.LinksIn(word); len(found) > 0 {
@@ -273,7 +280,7 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 						if i > start {
 							emit(word[start:i], used.Ceil())
 						}
-						flush()
+						flush(!preserve)
 						start = i
 						used = 0
 					}

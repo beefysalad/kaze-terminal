@@ -10,6 +10,7 @@ import (
 	"gioui.org/unit"
 	"github.com/beefysalad/kaze-terminal/internal/input"
 	"image"
+	"runtime"
 )
 
 type docHits struct {
@@ -54,6 +55,10 @@ func (win *window) docKey(gtx layout.Context, e key.Event) {
 	}
 	d := win.shownDoc()
 	if d == nil {
+		return
+	}
+	if warpClipKey(runtime.GOOS, e.Name, e.Modifiers, win.docSelText(d) != "") == actCopy {
+		win.copyDocSel(gtx)
 		return
 	}
 	y := d.scroll
@@ -107,6 +112,11 @@ func (win *window) docPointer(gtx layout.Context, e pointer.Event) {
 				return
 			}
 		}
+		win.docSelPress(gtx, d, p)
+	case pointer.Drag:
+		win.docSelDrag(gtx, d, p)
+	case pointer.Release:
+		win.docSelRelease()
 	}
 }
 func (win *window) drawDocOutline(gtx layout.Context, d *docView, r image.Rectangle) {

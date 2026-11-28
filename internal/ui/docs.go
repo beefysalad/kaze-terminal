@@ -37,6 +37,7 @@ type docsState struct {
 	list        []*docView
 	shown, last docID
 	tag         int
+	sel         docSel
 }
 
 func (win *window) openDoc(session tabs.TabID, path string) *docView {
@@ -167,7 +168,7 @@ func (win *window) sessionDocs(id tabs.TabID) []*docView {
 func (win *window) docEvents(gtx layout.Context) {
 	tag := &win.docs.tag
 	for {
-		ev, ok := gtx.Event(key.FocusFilter{Target: tag}, key.Filter{Focus: tag, Optional: allMods}, pointer.Filter{Target: tag, Kinds: pointer.Press | pointer.Scroll, ScrollY: pointer.ScrollRange{Min: -1 << 20, Max: 1 << 20}})
+		ev, ok := gtx.Event(key.FocusFilter{Target: tag}, key.Filter{Focus: tag, Optional: allMods}, pointer.Filter{Target: tag, Kinds: pointer.Press | pointer.Drag | pointer.Release | pointer.Scroll, ScrollY: pointer.ScrollRange{Min: -1 << 20, Max: 1 << 20}})
 		if !ok {
 			return
 		}
