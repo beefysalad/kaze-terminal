@@ -1371,6 +1371,7 @@ scrolling, idle CPU, memory), including the goals it missed:
 
 Done:
 
+- 0.49.1: Ctrl+T, Cmd+T and the sidebar plus open new sessions in the current space and join it at once.
 - 0.49: Settings, Workspaces draws each workspace as one card with tabs on two lines, tab names on the collapsed card, and no leftover click ring.
 - 0.48: agents can list and reach only tabs in their own repository space unless cross-space access is enabled in config.toml. Workers share their parent's space; names are unique within a space. The Claude row uses the real Claude Code mascot, and Settings > Appearance > Sidebar adds Animated status, off by default.
 - 0.47: a first-run tour, a collapsed Workspaces list with search and state filters as it grows, and Geist for interface text. Terminal text, code, paths and commands stay in JetBrains Mono.

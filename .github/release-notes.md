@@ -1,8 +1,7 @@
 ## What's changed
 
-- Each workspace in Settings, Workspaces is now one card. Open it to see its tabs on two lines, with the folder, command and wait tag, and Edit and Delete inside the card.
-- A collapsed card lists its tab names, the All, Open and Closed filters sit on their own, and Run at startup lives in the card's menu.
-- A button you click no longer keeps a purple ring; the ring only shows when you move with the keyboard.
+- Ctrl+T, Cmd+T and the sidebar plus open the new session in the space you are in, so from a repo you no longer land in the shell space and cd back.
+- A new session joins its space at once instead of showing in the shell space for a few seconds first.
 
 ## Download
 
