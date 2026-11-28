@@ -238,3 +238,23 @@ func TestDocSelectionDragOutsideView(t *testing.T) {
 		t.Fatalf("top clamp: scroll %d, head %+v", d.scroll, win.docs.sel.head)
 	}
 }
+
+func TestDocSelectionWrappedListAndStyledWord(t *testing.T) {
+	for _, body := range []string{"- " + strings.TrimSpace(strings.Repeat("word ", 50)), "prefix**suffix**"} {
+		win, d := layoutTestDoc(t, body)
+		width := 150
+		if strings.HasPrefix(body, "prefix") {
+			width = 55
+		}
+		l := win.layoutDoc(pageContext(900, 600), d, width)
+		last := len(l.lines) - 1
+		got := selectedDocText(l, docPos{}, docPos{last, lineRunes(l.lines[last])})
+		want := "prefixsuffix"
+		if strings.HasPrefix(body, "-") {
+			want = l.lines[0].runs[0].text + " " + strings.TrimPrefix(body, "- ")
+		}
+		if got != want {
+			t.Errorf("copied %q, want %q", got, want)
+		}
+	}
+}

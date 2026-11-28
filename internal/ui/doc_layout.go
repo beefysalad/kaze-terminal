@@ -175,6 +175,7 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 	wrap := func(spans []mdoc.Span, x0, x1, y0, h int, size unit.Sp, base font.Font, role docRole, preserve bool) int {
 		x, ly := x0, y0
 		line := docLine{y: ly, h: h}
+		separated := false
 		flush := func(soft ...bool) {
 			line.soft = len(soft) > 0 && soft[0]
 			line.softSpace = len(soft) > 1 && soft[1]
@@ -251,6 +252,7 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 				word := s[:end]
 				s = s[end:]
 				if space && !preserve {
+					separated = true
 					if x > x0 {
 						w := win.runeAdv(gtx, face, size, ' ').Ceil()
 						if x+w <= x1 {
@@ -259,6 +261,8 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 					}
 					continue
 				}
+				wordSpace := separated
+				separated = false
 				var total fixed.Int26_6
 				for _, q := range word {
 					total += win.runeAdv(gtx, face, size, q)
@@ -266,7 +270,7 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 				w := total.Ceil()
 				if w <= x1-x0 {
 					if x+w > x1 {
-						flush(true, !preserve)
+						flush(true, !preserve && wordSpace)
 					}
 					if st.paths && link < 0 && !preserve {
 						if found := render.LinksIn(word); len(found) > 0 {
@@ -284,7 +288,7 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 						if i > start {
 							emit(word[start:i], used.Ceil())
 						}
-						flush(true)
+						flush(true, !preserve && i == 0 && wordSpace)
 						start = i
 						used = 0
 					}
@@ -464,7 +468,10 @@ func (win *window) layoutMarkdown(gtx layout.Context, doc *mdoc.Doc, width int, 
 			}
 			row.runs = append(row.runs, line.runs...)
 			row.h = max(row.h, line.h)
-			row.soft, row.softSpace = false, false
+			row.soft, row.softSpace = line.soft, line.softSpace
+			if line.table {
+				row.soft, row.softSpace = false, false
+			}
 		} else {
 			rows = append(rows, line)
 		}
