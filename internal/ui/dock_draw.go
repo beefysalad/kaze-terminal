@@ -507,7 +507,7 @@ func (win *window) drawDockAgent(gtx layout.Context, s *dockSession, a *subagent
 // drawPanelMarkdown draws l and keeps its links as panel hits.
 func (win *window) drawPanelMarkdown(gtx layout.Context, l *docLayout, view image.Rectangle, origin image.Point, scroll int, h *dockHits, texts *[]string) {
 	var hits []docLinkHit
-	win.drawMarkdown(gtx, l, view, origin, scroll, &hits, texts)
+	win.drawMarkdown(gtx, l, view, origin, scroll, &hits, texts, nil)
 	for _, x := range hits {
 		h.links = append(h.links, dockLink{r: x.rect, url: l.links[x.link]})
 	}

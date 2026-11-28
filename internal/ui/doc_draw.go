@@ -71,12 +71,18 @@ func (win *window) drawDoc(gtx layout.Context, d *docView, r image.Rectangle) {
 		d.anchor = ""
 	}
 	win.drawDocOutline(gtx, d, original)
-	win.drawMarkdown(gtx, l, view, image.Pt(x, y), d.scroll, &win.docs.hits.links, &win.docs.texts)
+	if s := win.docs.sel; s.doc != d.id || s.key != l.key {
+		win.clearDocSel()
+	}
+	pc := clip.Rect(view).Push(ops)
+	pointer.CursorText.Add(ops)
+	pc.Pop()
+	win.drawMarkdown(gtx, l, view, image.Pt(x, y), d.scroll, &win.docs.hits.links, &win.docs.texts, &win.docs.sel)
 }
 
 // drawMarkdown draws layout l clipped to view, its top-left at origin scrolled
 // up by scroll px, adding link hit areas to links and drawn text to texts.
-func (win *window) drawMarkdown(gtx layout.Context, l *docLayout, view image.Rectangle, origin image.Point, scroll int, links *[]docLinkHit, texts *[]string) {
+func (win *window) drawMarkdown(gtx layout.Context, l *docLayout, view image.Rectangle, origin image.Point, scroll int, links *[]docLinkHit, texts *[]string, sel *docSel) {
 	ops := gtx.Ops
 	cl := clip.Rect(view).Push(ops)
 	defer cl.Pop()
@@ -107,11 +113,31 @@ func (win *window) drawMarkdown(gtx layout.Context, l *docLayout, view image.Rec
 		paint.FillShape(ops, col, clip.Rect(rr).Op())
 	}
 	start := sort.Search(len(l.lines), func(i int) bool { return l.lines[i].y+l.lines[i].h > scroll })
+	// Inline backgrounds, like block backgrounds, belong below the highlight.
 	for _, line := range l.lines[start:] {
 		if line.y+offset.Y >= view.Max.Y {
 			break
 		}
 		for _, run := range line.runs {
+			at := offset.Add(image.Pt(run.x, line.y))
+			if run.code {
+				paint.FillShape(ops, mix(win.pal.BG, win.pal.FG, .07), clip.Rect(image.Rect(at.X, at.Y, at.X+run.w, at.Y+line.h)).Op())
+			}
+		}
+	}
+	if sel != nil {
+		if from, to, ok := sel.span(); ok {
+			win.paintDocSel(gtx, l, from, to, offset, view)
+		}
+	}
+	for _, line := range l.lines[start:] {
+		if line.y+offset.Y >= view.Max.Y {
+			break
+		}
+		for _, run := range line.runs {
+			if run.spacer {
+				continue
+			}
 			at := offset.Add(image.Pt(run.x, line.y))
 			if run.link >= 0 {
 				hit := image.Rect(at.X, at.Y, at.X+run.w, at.Y+line.h).Intersect(view)
@@ -121,9 +147,6 @@ func (win *window) drawMarkdown(gtx layout.Context, l *docLayout, view image.Rec
 					pointer.CursorPointer.Add(ops)
 					a.Pop()
 				}
-			}
-			if run.code {
-				paint.FillShape(ops, mix(win.pal.BG, win.pal.FG, .07), clip.Rect(image.Rect(at.X, at.Y, at.X+run.w, at.Y+line.h)).Op())
 			}
 			call, _ := win.ui.faceText(gtx, run.text, run.size, run.face, win.docColor(run.role))
 			place(ops, call, at)

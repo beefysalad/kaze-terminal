@@ -1488,6 +1488,9 @@ func (win *window) runShortcut(gtx layout.Context, a action) {
 			gtx.Execute(clipboard.ReadCmd{Tag: v.tag})
 		}
 	case actCopy:
+		if win.copyDocSel(gtx) {
+			return
+		}
 		if v, ok := win.keyView(); ok {
 			win.copySel(gtx, v.tab)
 		}
